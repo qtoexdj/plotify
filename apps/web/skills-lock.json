@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "e2e-studio-tests": {
+      "source": "supabase/supabase",
+      "sourceType": "github",
+      "computedHash": "061295414eaaa53eaf96e29866bfafdafa7bbec34fc5228261146df89434bb19"
+    },
+    "studio-testing": {
+      "source": "supabase/supabase",
+      "sourceType": "github",
+      "computedHash": "d3a863d97064d2f2046cfee1d79e7203b61c826d2f8d01c8765e304091863b4d"
+    },
+    "telemetry-standards": {
+      "source": "supabase/supabase",
+      "sourceType": "github",
+      "computedHash": "f6dbe95291c8fd2f0975ba92e2c3076a1fada07a5f69b9b2b2f78c9ea481e9af"
+    },
+    "vercel-composition-patterns": {
+      "source": "supabase/supabase",
+      "sourceType": "github",
+      "computedHash": "1aa8cc5a812ffcb991f8d9528d2aefc85158cddfdf3c4a810c597f0c9c7bfc89"
+    },
+    "vitest": {
+      "source": "supabase/supabase",
+      "sourceType": "github",
+      "computedHash": "669c7275f7e1379b06b2bcfa593603aead4c983b951c7e8edbc09640aa38d0a1"
+    }
+  }
+}

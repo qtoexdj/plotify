@@ -1,0 +1,9 @@
+{
+  "name": "@plotify/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verify:migrations": "node scripts/assert-canonical-migrations.mjs"
+  }
+}

@@ -1,0 +1,5 @@
+-- Canonical seed file for deterministic static data only.
+--
+-- Do not add business/demo data here. In particular, do not seed projects,
+-- lots, geometries, leads, generated documents, audit logs, MCP credentials,
+-- or user-specific records.
