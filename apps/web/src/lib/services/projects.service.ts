@@ -252,6 +252,11 @@ export async function deleteProject(projectId: string, userId: string): Promise<
 
   if (error) {
     console.error('Error deleting project:', error)
+    if (error.code === '23503') {
+      throw new Error(
+        'El proyecto tiene registros relacionados (por ejemplo aprobaciones o documentos generados) que todavía bloquean su eliminación.'
+      )
+    }
     throw new Error('Error al eliminar proyecto')
   }
 }
