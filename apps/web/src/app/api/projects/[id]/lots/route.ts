@@ -1,12 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
+import { createRouteHandlerClient } from '@/lib/supabase/server'
 import { getLotsWithRecords } from '@/lib/services/lots.service'
+import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createClient()
+    const supabase = createRouteHandlerClient(request)
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -39,7 +40,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       }
     }
 
-    const lots = await getLotsWithRecords(id, filterVendorId)
+    const lots = await getLotsWithRecords(id, filterVendorId, supabase)
     return Response.json({ lots })
   } catch (error) {
     console.error('Error in GET /api/projects/[id]/lots:', error)

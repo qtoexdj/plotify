@@ -38,7 +38,7 @@ export default async function IntegrationsPage() {
     )
   }
 
-  const members = await getOrganizationMembers(workspace.organization.id)
+  const members = await getOrganizationMembers(workspace.organization.id, supabase)
   const isAdmin = members.find((m) => m.id === user.id)?.role === 'admin'
 
   return (

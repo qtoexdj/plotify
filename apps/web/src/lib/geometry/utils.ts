@@ -368,12 +368,12 @@ type FeatureCoordinateGeometry =
 export function getFeatureCoords(feature: {
   geometry: FeatureCoordinateGeometry
 }): number[][] | null {
-  const { type, coordinates } = feature.geometry
-  if (type === 'Polygon') return coordinates[0]
-  if (type === 'MultiPolygon') return coordinates[0]?.[0]
+  const geom = feature.geometry
+  if (geom.type === 'Polygon') return (geom.coordinates as number[][][])[0]
+  if (geom.type === 'MultiPolygon') return (geom.coordinates as number[][][][])[0]?.[0] ?? null
   // LineString: coordenadas directas (común en geometrías importadas desde CAD)
-  if (type === 'LineString') return coordinates
-  if (type === 'MultiLineString') return coordinates[0]
+  if (geom.type === 'LineString') return geom.coordinates as number[][]
+  if (geom.type === 'MultiLineString') return (geom.coordinates as number[][][])[0]
   return null
 }
 
@@ -408,15 +408,19 @@ export function getBoundariesWithNeighbors(
   const roadLines: number[][][] = []
   for (const f of allLotFeatures) {
     if (f.properties.geometry_type !== 'road') continue
-    const { type, coordinates: coords } = f.geometry
-    if (type === 'LineString') {
-      roadLines.push(coords)
-    } else if (type === 'MultiLineString') {
-      for (const line of coords) roadLines.push(line)
-    } else if (type === 'Polygon') {
-      for (const ring of coords) roadLines.push(ring)
-    } else if (type === 'MultiPolygon') {
-      for (const poly of coords) for (const ring of poly) roadLines.push(ring)
+    const geom = f.geometry
+    if (geom.type === 'LineString') {
+      roadLines.push(geom.coordinates as number[][])
+    } else if (geom.type === 'MultiLineString') {
+      for (const line of geom.coordinates as number[][][]) roadLines.push(line)
+    } else if (geom.type === 'Polygon') {
+      for (const ring of geom.coordinates as number[][][]) roadLines.push(ring)
+    } else if (geom.type === 'MultiPolygon') {
+      for (const poly of geom.coordinates as number[][][][]) {
+        for (const ring of poly) {
+          roadLines.push(ring)
+        }
+      }
     }
   }
 

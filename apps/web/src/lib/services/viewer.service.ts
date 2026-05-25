@@ -24,8 +24,13 @@ interface GeometryWithLot extends Geometry {
   > | null
 }
 
-export async function getFeatureCollection(projectId: string): Promise<ViewerFeatureCollection> {
-  const supabase = await createClient()
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+export async function getFeatureCollection(
+  projectId: string,
+  supabaseClient?: SupabaseClient
+): Promise<ViewerFeatureCollection> {
+  const supabase = supabaseClient || (await createClient())
 
   // 1) Geometrías asignadas a un lote (lot_id NOT NULL)
   const { data: lotData, error: lotError } = await supabase

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createRouteHandlerClient } from '@/lib/supabase/server'
 import { getProjectById, deleteProject } from '@/lib/services/projects.service'
 import { getProjectVendors } from '@/lib/services/vendors.service'
 import { NextRequest } from 'next/server'
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createClient()
+    const supabase = createRouteHandlerClient(request)
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -18,13 +18,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const project = await getProjectById(id, user.id)
+    const project = await getProjectById(id, user.id, supabase)
 
     if (!project) {
       return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
-    const vendors = await getProjectVendors(id)
+    const vendors = await getProjectVendors(id, supabase)
 
     return Response.json({
       project: {
@@ -44,7 +44,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const supabase = await createClient()
+    const supabase = createRouteHandlerClient(request)
     const {
       data: { user },
     } = await supabase.auth.getUser()

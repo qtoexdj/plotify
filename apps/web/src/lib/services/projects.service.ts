@@ -27,8 +27,11 @@ async function getOrganizationMembership(
   return data ?? null
 }
 
-export async function getProjectsWithMetrics(userId: string): Promise<ProjectWithMetrics[]> {
-  const supabase = await createClient()
+export async function getProjectsWithMetrics(
+  userId: string,
+  supabaseClient?: SupabaseClient
+): Promise<ProjectWithMetrics[]> {
+  const supabase = supabaseClient || (await createClient())
   const membership = await getOrganizationMembership(supabase, userId)
 
   // Obtener proyectos del usuario
@@ -98,9 +101,10 @@ export async function getProjectsWithMetrics(userId: string): Promise<ProjectWit
 
 export async function getProjectById(
   projectId: string,
-  userId: string
+  userId: string,
+  supabaseClient?: SupabaseClient
 ): Promise<ProjectWithMetrics | null> {
-  const supabase = await createClient()
+  const supabase = supabaseClient || (await createClient())
   const membership = await getOrganizationMembership(supabase, userId)
 
   let projectQuery = supabase.from('projects').select('*').eq('id', projectId)

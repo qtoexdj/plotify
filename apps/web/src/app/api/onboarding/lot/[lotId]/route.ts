@@ -1,3 +1,4 @@
+import { createRouteHandlerClient } from '@/lib/supabase/server'
 import { getLotById, updateLot } from '@/lib/services/onboarding.service'
 import { NextRequest } from 'next/server'
 import { lotUpdateSchema } from '@/lib/validations/lot-update.schema'
@@ -10,7 +11,8 @@ export async function GET(
 ) {
   try {
     const { lotId } = await params
-    const lot = await getLotById(lotId)
+    const supabase = createRouteHandlerClient(request)
+    const lot = await getLotById(lotId, supabase)
 
     if (!lot) {
       return Response.json({ error: 'Lote no encontrado' }, { status: 404 })
@@ -52,7 +54,8 @@ export async function PATCH(
       updateData.area_official_m2 = safeData.m2
     }
 
-    const lot = await updateLot(lotId, updateData)
+    const supabase = createRouteHandlerClient(request)
+    const lot = await updateLot(lotId, updateData, supabase)
 
     return Response.json({
       message: 'Lote actualizado correctamente',

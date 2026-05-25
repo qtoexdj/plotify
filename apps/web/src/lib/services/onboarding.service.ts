@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Lot, Geometry } from '@/types/database.types'
 import type { LotDetails } from '@/types/viewer.types'
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 import type {
   SaveAndAssignGeometryPayload,
   SaveInfrastructurePayload,
@@ -10,8 +12,11 @@ import { computeM2FromGeoJSON } from '@/lib/geometry/compute-m2'
 import { combineLineStrings } from '@/lib/geometry/utils'
 import { calculateServidumbre } from '@/lib/geometry/servidumbre'
 
-export async function getLotsByProject(projectId: string): Promise<Lot[]> {
-  const supabase = await createClient()
+export async function getLotsByProject(
+  projectId: string,
+  supabaseClient?: SupabaseClient
+): Promise<Lot[]> {
+  const supabase = supabaseClient || (await createClient())
 
   const { data, error } = await supabase
     .from('lots')
@@ -27,8 +32,11 @@ export async function getLotsByProject(projectId: string): Promise<Lot[]> {
   return data || []
 }
 
-export async function getLotById(lotId: string): Promise<LotDetails | null> {
-  const supabase = await createClient()
+export async function getLotById(
+  lotId: string,
+  supabaseClient?: SupabaseClient
+): Promise<LotDetails | null> {
+  const supabase = supabaseClient || (await createClient())
 
   const { data: lot, error } = await supabase.from('lots').select('*').eq('id', lotId).single()
 
@@ -55,8 +63,12 @@ export async function getLotById(lotId: string): Promise<LotDetails | null> {
   return { ...lot, etapa_proceso } as LotDetails
 }
 
-export async function updateLot(lotId: string, updates: Partial<Lot>): Promise<Lot> {
-  const supabase = await createClient()
+export async function updateLot(
+  lotId: string,
+  updates: Partial<Lot>,
+  supabaseClient?: SupabaseClient
+): Promise<Lot> {
+  const supabase = supabaseClient || (await createClient())
 
   const { data, error } = await supabase
     .from('lots')
@@ -75,9 +87,10 @@ export async function updateLot(lotId: string, updates: Partial<Lot>): Promise<L
 
 export async function getGeometriesByProject(
   projectId: string,
-  unassignedOnly = false
+  unassignedOnly = false,
+  supabaseClient?: SupabaseClient
 ): Promise<Geometry[]> {
-  const supabase = await createClient()
+  const supabase = supabaseClient || (await createClient())
 
   let query = supabase.from('geometries').select('*').eq('project_id', projectId)
 
@@ -96,9 +109,10 @@ export async function getGeometriesByProject(
 }
 
 export async function saveAndAssignGeometry(
-  payload: SaveAndAssignGeometryPayload
+  payload: SaveAndAssignGeometryPayload,
+  supabaseClient?: SupabaseClient
 ): Promise<Geometry> {
-  const supabase = await createClient()
+  const supabase = supabaseClient || (await createClient())
 
   // Verificar que el lote no tenga geometría asignada
   const { data: existingLot, error: lotError } = await supabase
@@ -154,8 +168,11 @@ export async function saveAndAssignGeometry(
   return geometry
 }
 
-export async function saveInfrastructure(payload: SaveInfrastructurePayload): Promise<Geometry> {
-  const supabase = await createClient()
+export async function saveInfrastructure(
+  payload: SaveInfrastructurePayload,
+  supabaseClient?: SupabaseClient
+): Promise<Geometry> {
+  const supabase = supabaseClient || (await createClient())
 
   const { data, error } = await supabase
     .from('geometries')
@@ -284,8 +301,11 @@ export async function saveInfrastructure(payload: SaveInfrastructurePayload): Pr
   return data
 }
 
-export async function assignGeometry(payload: AssignGeometryPayload): Promise<Geometry> {
-  const supabase = await createClient()
+export async function assignGeometry(
+  payload: AssignGeometryPayload,
+  supabaseClient?: SupabaseClient
+): Promise<Geometry> {
+  const supabase = supabaseClient || (await createClient())
 
   // Verificar que geometría y lote existan
   const { data: geometry, error: geomError } = await supabase
@@ -344,8 +364,11 @@ export async function assignGeometry(payload: AssignGeometryPayload): Promise<Ge
  * Elimina la geometría asignada a un lote y desvincula el lote.
  * Permite corregir asignaciones incorrectas durante el onboarding.
  */
-export async function deleteGeometryByLotId(lotId: string): Promise<void> {
-  const supabase = await createClient()
+export async function deleteGeometryByLotId(
+  lotId: string,
+  supabaseClient?: SupabaseClient
+): Promise<void> {
+  const supabase = supabaseClient || (await createClient())
 
   // Obtener geometry_id del lote
   const { data: lot, error: lotError } = await supabase

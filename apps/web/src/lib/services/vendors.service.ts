@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Profile } from '@/types/database.types'
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
 export interface OrganizationMemberWithProfile extends Profile {
   role: 'admin' | 'user'
   vendor_id?: string
@@ -10,9 +12,10 @@ export interface OrganizationMemberWithProfile extends Profile {
  * Obtiene todos los miembros de una organización con su información de perfil.
  */
 export async function getOrganizationMembers(
-  organizationId: string
+  organizationId: string,
+  supabaseClient?: SupabaseClient
 ): Promise<OrganizationMemberWithProfile[]> {
-  const supabase = await createClient()
+  const supabase = supabaseClient || (await createClient())
 
   // 1. Obtener miembros de la organización con sus perfiles
   const { data: membersData, error: membersError } = await supabase
@@ -86,8 +89,11 @@ export interface ProjectVendorAssignment {
 /**
  * Obtiene todos los vendedores asignados a un proyecto.
  */
-export async function getProjectVendors(projectId: string): Promise<ProjectVendorAssignment[]> {
-  const supabase = await createClient()
+export async function getProjectVendors(
+  projectId: string,
+  supabaseClient?: SupabaseClient
+): Promise<ProjectVendorAssignment[]> {
+  const supabase = supabaseClient || (await createClient())
 
   const { data: assignments, error: assignmentsError } = await supabase
     .from('vendor_projects')
@@ -145,9 +151,10 @@ export async function getProjectVendors(projectId: string): Promise<ProjectVendo
 export async function assignVendorToProject(
   projectId: string,
   vendorId: string,
-  rol: string = 'vendedor'
+  rol: string = 'vendedor',
+  supabaseClient?: SupabaseClient
 ) {
-  const supabase = await createClient()
+  const supabase = supabaseClient || (await createClient())
 
   const { error } = await supabase.from('vendor_projects').upsert(
     {
@@ -171,8 +178,12 @@ export async function assignVendorToProject(
 /**
  * Elimina la asignación de un vendedor a un proyecto.
  */
-export async function unassignVendorFromProject(projectId: string, vendorId: string) {
-  const supabase = await createClient()
+export async function unassignVendorFromProject(
+  projectId: string,
+  vendorId: string,
+  supabaseClient?: SupabaseClient
+) {
+  const supabase = supabaseClient || (await createClient())
 
   const { error } = await supabase
     .from('vendor_projects')

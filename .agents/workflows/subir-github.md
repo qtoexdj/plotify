@@ -8,7 +8,7 @@ Actua como Senior Release Engineer de Plotify. Tu objetivo es validar y publicar
 
 Antes de tocar Git, verifica el alcance del cambio y ejecuta solo los checks necesarios para ese alcance:
 
-- Web: `pnpm --filter web lint`, `pnpm --filter web typecheck`, `pnpm --filter web test` y build si toca rutas productivas.
+- Web: `pnpm format:check`, `pnpm --filter web lint`, `pnpm --filter web typecheck`, `pnpm --filter web test`, `pnpm build:web` y build si toca rutas productivas.
 - API: `cd apps/api` y usar `./venv/bin/pytest -q`; si aplica, ejecutar `ruff`, `mypy` y `pip check`.
 - Contratos/DB: ejecutar validaciones de `packages/contracts` o `packages/database` cuando se modifiquen.
 - Monorepo completo: usar scripts raiz cuando el cambio cruce varias areas.

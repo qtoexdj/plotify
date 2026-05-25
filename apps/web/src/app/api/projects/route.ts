@@ -1,12 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { createRouteHandlerClient } from '@/lib/supabase/server'
 import { getProjectsWithMetrics, createProject } from '@/lib/services/projects.service'
 import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createRouteHandlerClient(request)
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -15,7 +15,7 @@ export async function GET() {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const projects = await getProjectsWithMetrics(user.id)
+    const projects = await getProjectsWithMetrics(user.id, supabase)
 
     // Obtener el rol del usuario en su organización activa para el frontend
     const { data: membership } = await supabase
@@ -37,7 +37,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = createRouteHandlerClient(request)
     const {
       data: { user },
     } = await supabase.auth.getUser()

@@ -15,11 +15,14 @@ function normalizeLotRecord(lot: any): LotWithRecord {
   }
 }
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
 export async function getLotsWithRecords(
   projectId: string,
-  filterVendorId?: string
+  filterVendorId?: string,
+  supabaseClient?: SupabaseClient
 ): Promise<LotWithRecord[]> {
-  const supabase = await createClient()
+  const supabase = supabaseClient || (await createClient())
 
   let query = supabase.from('lots').select('*, lot_records (*)').eq('project_id', projectId)
 
@@ -36,7 +39,7 @@ export async function getLotsWithRecords(
 
   const collator = new Intl.Collator('es-CL', { numeric: true, sensitivity: 'base' })
 
-  return (data || []).map(normalizeLotRecord).sort((a, b) => {
+  return (data || []).map(normalizeLotRecord).sort((a: LotWithRecord, b: LotWithRecord) => {
     const aKey = a.numero_lote ?? ''
     const bKey = b.numero_lote ?? ''
     if (!aKey && !bKey) return 0
