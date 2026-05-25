@@ -55,7 +55,7 @@ export function ProseKitEditor({
     }
 
     return e
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Crear el editor una sola vez
 
   return (
@@ -118,11 +118,7 @@ export function ProseKitEditor({
 }
 
 // Componente interno que vive DENTRO del contexto de ProseKit
-function DocChangeListener({
-  onChange,
-}: {
-  onChange?: (html: string) => void
-}) {
+function DocChangeListener({ onChange }: { onChange?: (html: string) => void }) {
   useDocChange((doc: ProseMirrorNode) => {
     if (!onChange) return
     try {
@@ -149,7 +145,7 @@ function ToolbarButton({ onClick, title, label, className = '' }: ToolbarButtonP
       e.preventDefault() // Evitar que el editor pierda el foco
       onClick()
     },
-    [onClick],
+    [onClick]
   )
 
   return (

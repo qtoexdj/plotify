@@ -93,7 +93,8 @@ describe('F-v2-4.6 seed_escritura_blocks — artículos condicionales', () => {
 
   it('todos los demás artículos son fixed', () => {
     const nonFixed = ESCRITURA_ARTICLES.filter(
-      (a) => a.condition !== 'fixed' && a.id !== 'ART-06' && a.id !== 'ART-11' && a.id !== 'personeria'
+      (a) =>
+        a.condition !== 'fixed' && a.id !== 'ART-06' && a.id !== 'ART-11' && a.id !== 'personeria'
     )
     expect(nonFixed).toHaveLength(0)
   })
@@ -114,7 +115,9 @@ describe('F-v2-4.6 seed_escritura_blocks — auto_generators', () => {
   })
 
   it('solo ART-02 y ART-06 tienen auto_generators', () => {
-    const withGenerators = ESCRITURA_ARTICLES.filter((a) => a.auto_generators && a.auto_generators.length > 0)
+    const withGenerators = ESCRITURA_ARTICLES.filter(
+      (a) => a.auto_generators && a.auto_generators.length > 0
+    )
     expect(withGenerators).toHaveLength(2)
     expect(withGenerators.map((a) => a.id)).toEqual(['ART-02', 'ART-06'])
   })
@@ -179,10 +182,10 @@ describe('F-v2-4.6 seed_escritura_blocks — orden del catálogo', () => {
   })
 
   it('ART-01 a ART-16 están en orden numérico consecutivo', () => {
-    const artPositions = ESCRITURA_ARTICLES
-      .map((a, i) => ({ id: a.id, i }))
-      .filter(({ id }) => id.startsWith('ART-'))
-    
+    const artPositions = ESCRITURA_ARTICLES.map((a, i) => ({ id: a.id, i })).filter(({ id }) =>
+      id.startsWith('ART-')
+    )
+
     expect(artPositions).toHaveLength(16)
     // Verificar que el índice 0→comparecencia, 1→ART-01, ..., 16→ART-16
     artPositions.forEach(({ id, i }) => {

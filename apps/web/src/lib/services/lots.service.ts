@@ -6,8 +6,8 @@ export type LotWithRecord = Lot & { lot_records: LotRecord | null }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeLotRecord(lot: any): LotWithRecord {
   const record = Array.isArray(lot.lot_records)
-    ? lot.lot_records[0] ?? null
-    : lot.lot_records ?? null
+    ? (lot.lot_records[0] ?? null)
+    : (lot.lot_records ?? null)
 
   return {
     ...lot,
@@ -15,13 +15,13 @@ function normalizeLotRecord(lot: any): LotWithRecord {
   }
 }
 
-export async function getLotsWithRecords(projectId: string, filterVendorId?: string): Promise<LotWithRecord[]> {
+export async function getLotsWithRecords(
+  projectId: string,
+  filterVendorId?: string
+): Promise<LotWithRecord[]> {
   const supabase = await createClient()
 
-  let query = supabase
-    .from('lots')
-    .select('*, lot_records (*)')
-    .eq('project_id', projectId)
+  let query = supabase.from('lots').select('*, lot_records (*)').eq('project_id', projectId)
 
   if (filterVendorId) {
     query = query.eq('vendedor_id', filterVendorId)
@@ -36,16 +36,14 @@ export async function getLotsWithRecords(projectId: string, filterVendorId?: str
 
   const collator = new Intl.Collator('es-CL', { numeric: true, sensitivity: 'base' })
 
-  return (data || [])
-    .map(normalizeLotRecord)
-    .sort((a, b) => {
-      const aKey = a.numero_lote ?? ''
-      const bKey = b.numero_lote ?? ''
-      if (!aKey && !bKey) return 0
-      if (!aKey) return 1
-      if (!bKey) return -1
-      return collator.compare(aKey, bKey)
-    })
+  return (data || []).map(normalizeLotRecord).sort((a, b) => {
+    const aKey = a.numero_lote ?? ''
+    const bKey = b.numero_lote ?? ''
+    if (!aKey && !bKey) return 0
+    if (!aKey) return 1
+    if (!bKey) return -1
+    return collator.compare(aKey, bKey)
+  })
 }
 
 export async function updateLotAndRecord(

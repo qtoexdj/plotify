@@ -3,10 +3,7 @@ import { getLotsWithRecords } from '@/lib/services/lots.service'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const supabase = await createClient()
@@ -35,7 +32,7 @@ export async function GET(
         .eq('organization_id', project.organization_id)
         .eq('user_id', user.id)
         .maybeSingle()
-      
+
       // 3. Si no es admin, filtrar por su ID
       if (membership?.role !== 'admin') {
         filterVendorId = user.id
@@ -46,9 +43,6 @@ export async function GET(
     return Response.json({ lots })
   } catch (error) {
     console.error('Error in GET /api/projects/[id]/lots:', error)
-    return Response.json(
-      { error: 'Error al obtener lotes' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al obtener lotes' }, { status: 500 })
   }
 }

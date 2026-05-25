@@ -391,8 +391,8 @@ class TestGetDelinquentLots:
 
             result = await get_delinquent_lots.ainvoke({"organization_id": ORG_ID})
 
-        assert "42" in result, "Lote 42 (>30 días) debe aparecer"
-        assert "10" not in result, "Lote 10 (<30 días) no debe aparecer"
+        assert "- Lote 42 " in result, "Lote 42 (>30 días) debe aparecer"
+        assert "- Lote 10 " not in result, "Lote 10 (<30 días) no debe aparecer"
         assert "Lotes en posible mora (1)" in result
 
 

@@ -59,9 +59,9 @@ export interface EscrituraVariables {
 
   // Lote a vender (auto-generado desde lot + deslinde-generator)
   lote: {
-    numero_nombre: string      // ej. "LOTE N CIENTO SESENTA Y TRES"
-    superficie_total: string   // ej. "DOSCIENTOS CINCUENTA METROS CUADRADOS"
-    deslindes: string          // Output de deslindeGenerator()
+    numero_nombre: string // ej. "LOTE N CIENTO SESENTA Y TRES"
+    superficie_total: string // ej. "DOSCIENTOS CINCUENTA METROS CUADRADOS"
+    deslindes: string // Output de deslindeGenerator()
     rol_tramite?: string
   }
 
@@ -69,7 +69,7 @@ export interface EscrituraVariables {
   servidumbre: {
     aplica: boolean
     superficie?: string
-    deslindes_tramo?: string   // Output de servidumbreGenerator()
+    deslindes_tramo?: string // Output de servidumbreGenerator()
   }
 
   // Transacción
@@ -102,10 +102,24 @@ export interface EscrituraVariables {
 
 export type ArticleType =
   | 'comparecencia'
-  | 'ART-01' | 'ART-02' | 'ART-03' | 'ART-04' | 'ART-05'
-  | 'ART-06' | 'ART-07' | 'ART-08' | 'ART-09' | 'ART-10'
-  | 'ART-11' | 'ART-12' | 'ART-13' | 'ART-14' | 'ART-15'
-  | 'ART-16' | 'personeria' | 'cierre'
+  | 'ART-01'
+  | 'ART-02'
+  | 'ART-03'
+  | 'ART-04'
+  | 'ART-05'
+  | 'ART-06'
+  | 'ART-07'
+  | 'ART-08'
+  | 'ART-09'
+  | 'ART-10'
+  | 'ART-11'
+  | 'ART-12'
+  | 'ART-13'
+  | 'ART-14'
+  | 'ART-15'
+  | 'ART-16'
+  | 'personeria'
+  | 'cierre'
 
 export type ArticleCondition = 'fixed' | 'optional' | 'conditional'
 
@@ -127,12 +141,20 @@ export const ESCRITURA_ARTICLES: ArticleMetadata[] = [
   {
     id: 'comparecencia',
     titulo: 'Comparecencia',
-    descripcion: 'Identifica a vendedor y comprador (personas naturales o jurídicas con representantes)',
+    descripcion:
+      'Identifica a vendedor y comprador (personas naturales o jurídicas con representantes)',
     condition: 'fixed',
     variables_required: [
-      'vendedor.tipo', 'vendedor.nombre', 'vendedor.rut', 'vendedor.domicilio',
-      'comprador.tipo', 'comprador.nombre', 'comprador.rut', 'comprador.estado_civil',
-      'comprador.profesion_giro', 'comprador.domicilio',
+      'vendedor.tipo',
+      'vendedor.nombre',
+      'vendedor.rut',
+      'vendedor.domicilio',
+      'comprador.tipo',
+      'comprador.nombre',
+      'comprador.rut',
+      'comprador.estado_civil',
+      'comprador.profesion_giro',
+      'comprador.domicilio',
     ],
   },
   {
@@ -141,9 +163,15 @@ export const ESCRITURA_ARTICLES: ArticleMetadata[] = [
     descripcion: 'Propiedad del predio matriz, deslindes, historia de títulos y rol',
     condition: 'fixed',
     variables_required: [
-      'matriz.nombre_predio', 'matriz.ubicacion', 'matriz.deslindes',
-      'matriz.adquisicion_modo', 'matriz.adquisicion_notaria', 'matriz.adquisicion_fecha',
-      'matriz.inscripcion_fojas', 'matriz.inscripcion_cbr', 'matriz.rol_avaluo',
+      'matriz.nombre_predio',
+      'matriz.ubicacion',
+      'matriz.deslindes',
+      'matriz.adquisicion_modo',
+      'matriz.adquisicion_notaria',
+      'matriz.adquisicion_fecha',
+      'matriz.inscripcion_fojas',
+      'matriz.inscripcion_cbr',
+      'matriz.rol_avaluo',
     ],
   },
   {
@@ -152,8 +180,12 @@ export const ESCRITURA_ARTICLES: ArticleMetadata[] = [
     descripcion: 'Certificado SAG y descripción del lote con sus deslindes específicos',
     condition: 'fixed',
     variables_required: [
-      'sag.certificado_numero', 'sag.plano_cbr_numero',
-      'lote.numero_nombre', 'lote.superficie_total', 'lote.deslindes', 'lote.rol_tramite',
+      'sag.certificado_numero',
+      'sag.plano_cbr_numero',
+      'lote.numero_nombre',
+      'lote.superficie_total',
+      'lote.deslindes',
+      'lote.rol_tramite',
     ],
     auto_generators: ['deslindes'],
   },
@@ -170,7 +202,9 @@ export const ESCRITURA_ARTICLES: ArticleMetadata[] = [
     descripcion: 'Monto de la compraventa y renuncia a acciones resolutorias',
     condition: 'fixed',
     variables_required: [
-      'transaccion.precio_numeros', 'transaccion.precio_letras', 'transaccion.forma_pago',
+      'transaccion.precio_numeros',
+      'transaccion.precio_letras',
+      'transaccion.forma_pago',
     ],
   },
   {
@@ -266,7 +300,9 @@ export const ESCRITURA_ARTICLES: ArticleMetadata[] = [
     condition: 'conditional',
     condition_field: 'personeria.aplica',
     variables_required: [
-      'personeria.tipo_documento', 'personeria.notaria', 'personeria.fecha',
+      'personeria.tipo_documento',
+      'personeria.notaria',
+      'personeria.fecha',
       'personeria.inscripcion_cbr',
     ],
   },
@@ -275,8 +311,6 @@ export const ESCRITURA_ARTICLES: ArticleMetadata[] = [
     titulo: 'Cierre y Firmas',
     descripcion: 'Párrafo notarial de cierre y líneas de firma con RUT',
     condition: 'fixed',
-    variables_required: [
-      'vendedor.nombre', 'vendedor.rut', 'comprador.nombre', 'comprador.rut',
-    ],
+    variables_required: ['vendedor.nombre', 'vendedor.rut', 'comprador.nombre', 'comprador.rut'],
   },
 ]

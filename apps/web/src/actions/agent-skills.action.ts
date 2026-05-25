@@ -4,13 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/logger'
 
-export async function toggleOrgSkill(
-  organizationId: string,
-  skillId: string,
-  enabled: boolean
-) {
+export async function toggleOrgSkill(organizationId: string, skillId: string, enabled: boolean) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'No autenticado' }
 
   // Verificar que el usuario es admin de esta org
@@ -38,18 +36,16 @@ export async function toggleOrgSkill(
   }
 
   // Upsert en org_skill_configs
-  const { error } = await supabase
-    .from('org_skill_configs')
-    .upsert(
-      {
-        organization_id: organizationId,
-        skill_id: skillId,
-        enabled,
-        enabled_by: user.id,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'organization_id,skill_id' }
-    )
+  const { error } = await supabase.from('org_skill_configs').upsert(
+    {
+      organization_id: organizationId,
+      skill_id: skillId,
+      enabled,
+      enabled_by: user.id,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'organization_id,skill_id' }
+  )
 
   if (error) {
     logger.error({ error, skillId, organizationId }, 'toggle_skill_failed')

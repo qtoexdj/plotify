@@ -241,16 +241,12 @@ export function AssignmentMapLayers({
         'case',
         ['in', ['get', 'tempId'], ['literal', selectedArr]],
         0.95,
-        hoveredFeatureId
-          ? ['case', ['==', ['get', 'tempId'], hoveredFeatureId], 0.85, 0.4]
-          : 0.4,
+        hoveredFeatureId ? ['case', ['==', ['get', 'tempId'], hoveredFeatureId], 0.85, 0.4] : 0.4,
       ])
     } else {
       map.setPaintProperty(LOT_FILL_LAYER, 'fill-opacity', [
         'case',
-        hoveredFeatureId
-          ? ['==', ['get', 'tempId'], hoveredFeatureId]
-          : false,
+        hoveredFeatureId ? ['==', ['get', 'tempId'], hoveredFeatureId] : false,
         0.85,
         0.75,
       ])
@@ -267,9 +263,7 @@ export function AssignmentMapLayers({
       'case',
       ['in', ['get', 'tempId'], ['literal', selectedArr.length > 0 ? selectedArr : ['__none__']]],
       3.5,
-      hoveredFeatureId
-        ? ['case', ['==', ['get', 'tempId'], hoveredFeatureId], 2.5, 1.5]
-        : 1.5,
+      hoveredFeatureId ? ['case', ['==', ['get', 'tempId'], hoveredFeatureId], 2.5, 1.5] : 1.5,
     ])
 
     // --- Road selection + hover ---
@@ -284,9 +278,7 @@ export function AssignmentMapLayers({
       'case',
       ['in', ['get', 'tempId'], ['literal', selOrNone]],
       4.5,
-      hoveredFeatureId
-        ? ['case', ['==', ['get', 'tempId'], hoveredFeatureId], 4, 2.5]
-        : 2.5,
+      hoveredFeatureId ? ['case', ['==', ['get', 'tempId'], hoveredFeatureId], 4, 2.5] : 2.5,
     ])
     map.setPaintProperty(ROAD_LAYER, 'line-opacity', [
       'case',
@@ -320,7 +312,11 @@ export function AssignmentMapLayers({
       map.setPaintProperty(LOT_LABELS_LAYER, 'text-color', defaultLabelColor)
     }
 
-    map.setPaintProperty(LOT_LABELS_LAYER, 'text-halo-color', isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)')
+    map.setPaintProperty(
+      LOT_LABELS_LAYER,
+      'text-halo-color',
+      isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)'
+    )
     map.setPaintProperty(LOT_LABELS_LAYER, 'text-halo-width', 2)
   }, [map, isLoaded, selectedIds, hoveredFeatureId, isDark])
 
@@ -340,8 +336,12 @@ export function AssignmentMapLayers({
         }
 
         const layers = [
-          LOT_LABELS_LAYER, ROAD_LAYER, LOT_OUTLINE_LAYER,
-          LOT_FILL_LAYER, COMMON_AREA_OUTLINE_LAYER, COMMON_AREA_FILL_LAYER,
+          LOT_LABELS_LAYER,
+          ROAD_LAYER,
+          LOT_OUTLINE_LAYER,
+          LOT_FILL_LAYER,
+          COMMON_AREA_OUTLINE_LAYER,
+          COMMON_AREA_FILL_LAYER,
         ]
         for (const id of layers) {
           if (map.getLayer(id)) map.removeLayer(id)

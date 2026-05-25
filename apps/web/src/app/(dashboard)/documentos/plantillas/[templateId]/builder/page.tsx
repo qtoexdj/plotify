@@ -50,10 +50,7 @@ export default async function TemplateBuilderPage({
         </div>
       </div>
 
-      <TemplateBuilder
-        template={template}
-        availableBlocks={allBlocks}
-      />
+      <TemplateBuilder template={template} availableBlocks={allBlocks} />
     </div>
   )
 }

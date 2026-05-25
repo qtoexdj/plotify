@@ -37,9 +37,7 @@ export default async function SuperAdminAuditLogs() {
                     <tr key={log.id} className="border-t border-slate-100">
                       <td className="py-3 font-medium">{log.action}</td>
                       <td className="py-3">{log.entity}</td>
-                      <td className="py-3 text-slate-500">
-                        {log.actor || 'system'}
-                      </td>
+                      <td className="py-3 text-slate-500">{log.actor || 'system'}</td>
                       <td className="py-3">{log.created_at}</td>
                     </tr>
                   ))}

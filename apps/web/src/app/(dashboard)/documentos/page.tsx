@@ -6,12 +6,7 @@ import {
   File02Icon,
   PlusSignIcon,
 } from '@hugeicons/core-free-icons'
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const ACCESOS = [
   {
@@ -52,7 +47,7 @@ export default function DocumentosPage() {
 
       {/* ── Acceso rápido ────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {ACCESOS.map(item => (
+        {ACCESOS.map((item) => (
           <Link key={item.href} href={item.href} className="group">
             <Card className="h-full transition-shadow hover:shadow-md">
               <CardHeader className="gap-3">

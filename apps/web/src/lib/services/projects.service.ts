@@ -52,46 +52,46 @@ export async function getProjectsWithMetrics(userId: string): Promise<ProjectWit
   }
 
   // Obtener métricas de lotes para cada proyecto
-    const projectsWithMetrics: ProjectWithMetrics[] = await Promise.all(
-      projects.map(async (project) => {
-        const { data: lots, error: lotsError } = await supabase
-          .from('lots')
-          .select('estado, vendedor_id, vendors(id, nombre)')
-          .eq('project_id', project.id)
+  const projectsWithMetrics: ProjectWithMetrics[] = await Promise.all(
+    projects.map(async (project) => {
+      const { data: lots, error: lotsError } = await supabase
+        .from('lots')
+        .select('estado, vendedor_id, vendors(id, nombre)')
+        .eq('project_id', project.id)
 
-        if (lotsError) {
-          console.error('Error fetching lots:', lotsError)
-          return {
-            ...project,
-            lotes_libres: 0,
-            lotes_reservados: 0,
-            lotes_vendidos: 0,
-            vendedores: [],
-          }
-        }
-
-        const lotes_libres = lots?.filter((l) => l.estado === 'disponible').length || 0
-        const lotes_reservados = lots?.filter((l) => l.estado === 'reservado').length || 0
-        const lotes_vendidos = lots?.filter((l) => l.estado === 'vendido').length || 0
-
-        const uniqueVendorsMap = new Map<string, { id: string; nombre: string }>()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        lots?.forEach((lot: any) => {
-          if (lot.vendors && lot.vendors.id && lot.vendors.nombre) {
-            uniqueVendorsMap.set(lot.vendors.id, { id: lot.vendors.id, nombre: lot.vendors.nombre })
-          }
-        })
-        const vendedores = Array.from(uniqueVendorsMap.values())
-
+      if (lotsError) {
+        console.error('Error fetching lots:', lotsError)
         return {
           ...project,
-          lotes_libres,
-          lotes_reservados,
-          lotes_vendidos,
-          vendedores,
+          lotes_libres: 0,
+          lotes_reservados: 0,
+          lotes_vendidos: 0,
+          vendedores: [],
+        }
+      }
+
+      const lotes_libres = lots?.filter((l) => l.estado === 'disponible').length || 0
+      const lotes_reservados = lots?.filter((l) => l.estado === 'reservado').length || 0
+      const lotes_vendidos = lots?.filter((l) => l.estado === 'vendido').length || 0
+
+      const uniqueVendorsMap = new Map<string, { id: string; nombre: string }>()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lots?.forEach((lot: any) => {
+        if (lot.vendors && lot.vendors.id && lot.vendors.nombre) {
+          uniqueVendorsMap.set(lot.vendors.id, { id: lot.vendors.id, nombre: lot.vendors.nombre })
         }
       })
-    )
+      const vendedores = Array.from(uniqueVendorsMap.values())
+
+      return {
+        ...project,
+        lotes_libres,
+        lotes_reservados,
+        lotes_vendidos,
+        vendedores,
+      }
+    })
+  )
 
   return projectsWithMetrics
 }
@@ -223,10 +223,7 @@ export async function createProject(
     valor_reserva: payload.valor_reserva ?? null,
   }))
 
-  const { data: lots, error: lotsError } = await supabase
-    .from('lots')
-    .insert(lotsToCreate)
-    .select()
+  const { data: lots, error: lotsError } = await supabase.from('lots').insert(lotsToCreate).select()
 
   if (lotsError) {
     console.error('Error creating lots:', lotsError)

@@ -115,9 +115,7 @@ export function BlockEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col gap-0 p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-          <DialogTitle>
-            {isEditing ? `Editar: ${block.name}` : 'Nuevo Bloque'}
-          </DialogTitle>
+          <DialogTitle>{isEditing ? `Editar: ${block.name}` : 'Nuevo Bloque'}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden grid grid-cols-3 gap-0 border-t">
@@ -131,10 +129,7 @@ export function BlockEditorDialog({
                   <FormItem>
                     <FormLabel>Nombre del artículo</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="PRIMERO — Antecedentes"
-                      />
+                      <Input {...field} placeholder="PRIMERO — Antecedentes" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -147,10 +142,7 @@ export function BlockEditorDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoría</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar categoría" />
@@ -177,14 +169,9 @@ export function BlockEditorDialog({
                   <FormItem>
                     <FormLabel>Tags</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="escritura, art-02, lote"
-                      />
+                      <Input {...field} placeholder="escritura, art-02, lote" />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      Separados por coma
-                    </p>
+                    <p className="text-xs text-muted-foreground">Separados por coma</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -193,9 +180,7 @@ export function BlockEditorDialog({
 
             {/* Variables detectadas en tiempo real */}
             <div>
-              <p className="text-sm font-medium mb-2">
-                Variables detectadas
-              </p>
+              <p className="text-sm font-medium mb-2">Variables detectadas</p>
               <VariableChips content={content} maxVisible={20} />
             </div>
           </div>
@@ -211,20 +196,11 @@ export function BlockEditorDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t shrink-0">
-          {serverError && (
-            <p className="text-sm text-destructive mr-auto">{serverError}</p>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-          >
+          {serverError && <p className="text-sm text-destructive mr-auto">{serverError}</p>}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button
-            onClick={form.handleSubmit(handleSave)}
-            disabled={saving}
-          >
+          <Button onClick={form.handleSubmit(handleSave)} disabled={saving}>
             {saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear bloque'}
           </Button>
         </DialogFooter>

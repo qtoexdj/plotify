@@ -87,13 +87,9 @@ export function PromptHistory({ promptId, versions, accessToken }: PromptHistory
                 <div key={v.id}>
                   <button
                     type="button"
-                    onClick={() =>
-                      setSelectedVersion(selectedVersion?.id === v.id ? null : v)
-                    }
+                    onClick={() => setSelectedVersion(selectedVersion?.id === v.id ? null : v)}
                     className={`w-full text-left p-3 rounded-lg transition-colors text-sm ${
-                      selectedVersion?.id === v.id
-                        ? 'bg-slate-900 text-white'
-                        : 'hover:bg-slate-50'
+                      selectedVersion?.id === v.id ? 'bg-slate-900 text-white' : 'hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -183,8 +179,8 @@ export function PromptHistory({ promptId, versions, accessToken }: PromptHistory
                             line.type === 'added'
                               ? 'bg-green-100 text-green-800'
                               : line.type === 'removed'
-                              ? 'bg-red-100 text-red-800'
-                              : 'text-slate-600'
+                                ? 'bg-red-100 text-red-800'
+                                : 'text-slate-600'
                           }
                         >
                           <span className="mr-2 select-none">

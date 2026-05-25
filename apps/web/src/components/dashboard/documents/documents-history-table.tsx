@@ -27,13 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { GeneratedDocument } from '@/types/v2'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -44,36 +38,30 @@ type DocWithTemplate = GeneratedDocument & {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const FORMAT_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-  pdf:  { label: 'PDF',  variant: 'default' },
+const FORMAT_LABELS: Record<
+  string,
+  { label: string; variant: 'default' | 'secondary' | 'outline' }
+> = {
+  pdf: { label: 'PDF', variant: 'default' },
   docx: { label: 'DOCX', variant: 'secondary' },
 }
 
 const DOCTYPE_LABELS: Record<string, string> = {
-  compraventa:        'Compraventa',
-  promesa:            'Promesa de C/V',
-  mandato:            'Mandato',
-  servidumbre:        'Servidumbre',
-  poder:              'Poder Notarial',
-  otro:               'Otro',
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-CL', {
-    day:   '2-digit',
-    month: '2-digit',
-    year:  'numeric',
-  })
+  compraventa: 'Compraventa',
+  promesa: 'Promesa de C/V',
+  mandato: 'Mandato',
+  servidumbre: 'Servidumbre',
+  poder: 'Poder Notarial',
+  otro: 'Otro',
 }
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('es-CL', {
-    day:    '2-digit',
-    month:  '2-digit',
-    year:   'numeric',
-    hour:   '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
   })
 }
@@ -85,18 +73,18 @@ interface DocumentsHistoryTableProps {
 }
 
 export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps) {
-  const [search, setSearch]         = useState('')
+  const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<string>('todos')
   const [filterFrom, setFilterFrom] = useState('')
-  const [filterTo, setFilterTo]     = useState('')
+  const [filterTo, setFilterTo] = useState('')
 
   const filtered = useMemo(() => {
-    return documents.filter(doc => {
+    return documents.filter((doc) => {
       // Filtro texto (template name o tipo)
       if (search) {
         const q = search.toLowerCase()
         const templateName = doc.document_templates?.name?.toLowerCase() ?? ''
-        const docType      = doc.document_type.toLowerCase()
+        const docType = doc.document_type.toLowerCase()
         if (!templateName.includes(q) && !docType.includes(q)) return false
       }
       // Filtro tipo de documento
@@ -116,14 +104,14 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
   }, [documents, search, filterType, filterFrom, filterTo])
 
   const uniqueTypes = useMemo(() => {
-    return Array.from(new Set(documents.map(d => d.document_type)))
+    return Array.from(new Set(documents.map((d) => d.document_type)))
   }, [documents])
 
   function handleDownload(fileUrl: string, format: string) {
     const a = document.createElement('a')
-    a.href   = fileUrl
+    a.href = fileUrl
     a.target = '_blank'
-    a.rel    = 'noopener noreferrer'
+    a.rel = 'noopener noreferrer'
     a.download = `documento.${format}`
     document.body.appendChild(a)
     a.click()
@@ -142,7 +130,6 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-
         {/* ── Barra de filtros ───────────────────────────────────────── */}
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-50">
@@ -153,7 +140,7 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
             <Input
               placeholder="Buscar por plantilla o tipo…"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -164,7 +151,7 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los tipos</SelectItem>
-              {uniqueTypes.map(type => (
+              {uniqueTypes.map((type) => (
                 <SelectItem key={type} value={type}>
                   {DOCTYPE_LABELS[type] ?? type}
                 </SelectItem>
@@ -173,11 +160,14 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
           </Select>
 
           <div className="flex items-center gap-2">
-            <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4 text-muted-foreground shrink-0" />
+            <HugeiconsIcon
+              icon={Calendar01Icon}
+              className="w-4 h-4 text-muted-foreground shrink-0"
+            />
             <Input
               type="date"
               value={filterFrom}
-              onChange={e => setFilterFrom(e.target.value)}
+              onChange={(e) => setFilterFrom(e.target.value)}
               className="w-35"
               title="Desde"
             />
@@ -185,7 +175,7 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
             <Input
               type="date"
               value={filterTo}
-              onChange={e => setFilterTo(e.target.value)}
+              onChange={(e) => setFilterTo(e.target.value)}
               className="w-35"
               title="Hasta"
             />
@@ -215,8 +205,11 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(doc => {
-                  const fmt = FORMAT_LABELS[doc.file_format] ?? { label: doc.file_format.toUpperCase(), variant: 'outline' as const }
+                {filtered.map((doc) => {
+                  const fmt = FORMAT_LABELS[doc.file_format] ?? {
+                    label: doc.file_format.toUpperCase(),
+                    variant: 'outline' as const,
+                  }
                   return (
                     <TableRow key={doc.id}>
                       <TableCell className="font-medium">

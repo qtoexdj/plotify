@@ -17,9 +17,6 @@ export async function GET(
     return Response.json(featureCollection)
   } catch (error) {
     console.error('Error in GET /api/viewer/[projectId]/feature-collection:', error)
-    return Response.json(
-      { error: 'Error al obtener geometrías del visor' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al obtener geometrías del visor' }, { status: 500 })
   }
 }

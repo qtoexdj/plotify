@@ -39,10 +39,16 @@ function renderPlanToCanvas(
   ctx.lineWidth = 0.5
   const gridSize = 60
   for (let x = 0; x <= width; x += gridSize) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, height)
+    ctx.stroke()
   }
   for (let y = 0; y <= height; y += gridSize) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(0, y)
+    ctx.lineTo(width, y)
+    ctx.stroke()
   }
 
   const features = fc.features
@@ -155,7 +161,10 @@ function renderPlanToCanvas(
   return canvas
 }
 
-export function MapExportButton({ projectName = 'Proyecto', featureCollection }: MapExportButtonProps) {
+export function MapExportButton({
+  projectName = 'Proyecto',
+  featureCollection,
+}: MapExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false)
 
   const handleExport = () => {
@@ -185,7 +194,9 @@ export function MapExportButton({ projectName = 'Proyecto', featureCollection }:
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(100, 100, 100)
         const now = new Date().toLocaleDateString('es-CL', {
-          year: 'numeric', month: 'long', day: 'numeric',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
         })
         doc.text(`Generado el ${now} · Plotify`, margin, margin + 12)
 
@@ -258,4 +269,3 @@ export function MapExportButton({ projectName = 'Proyecto', featureCollection }:
     </Tooltip>
   )
 }
-

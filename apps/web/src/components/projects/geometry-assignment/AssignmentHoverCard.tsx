@@ -80,7 +80,14 @@ export function AssignmentHoverCard({ featureId, featureCollection }: Assignment
             {Object.entries(feature.properties)
               .filter(
                 ([k]) =>
-                  !['tempId', 'geometryType', 'name', 'Name', '_fill_color', '_stroke_color'].includes(k)
+                  ![
+                    'tempId',
+                    'geometryType',
+                    'name',
+                    'Name',
+                    '_fill_color',
+                    '_stroke_color',
+                  ].includes(k)
               )
               .slice(0, 2)
               .map(([key, val]) => (

@@ -48,10 +48,9 @@ describe('PATCH /api/projects/[id]/lots/[lotId]', () => {
       },
     } as any)
 
-    const response = await PATCH(
-      buildRequest({ record: { cliente_email: 'not-an-email' } }),
-      { params: Promise.resolve({ id: 'project-1', lotId: 'lot-1' }) }
-    )
+    const response = await PATCH(buildRequest({ record: { cliente_email: 'not-an-email' } }), {
+      params: Promise.resolve({ id: 'project-1', lotId: 'lot-1' }),
+    })
 
     expect(response.status).toBe(400)
     expect(updateLotAndRecordMock).not.toHaveBeenCalled()

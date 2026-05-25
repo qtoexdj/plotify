@@ -106,10 +106,7 @@ export async function PATCH(
     const hasRecordUpdates = recordUpdates && Object.keys(recordUpdates).length > 0
 
     if (!hasLotUpdates && !hasRecordUpdates) {
-      return Response.json(
-        { error: 'No hay campos para actualizar' },
-        { status: 400 }
-      )
+      return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
 
     const result = await updateLotAndRecord(
@@ -124,9 +121,6 @@ export async function PATCH(
     })
   } catch (error) {
     console.error('Error in PATCH /api/projects/[id]/lots/[lotId]:', error)
-    return Response.json(
-      { error: 'Error al actualizar lote' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al actualizar lote' }, { status: 500 })
   }
 }

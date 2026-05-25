@@ -28,11 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { BlockEditorDialog } from './block-editor-dialog'
 import { SortableArticleItem, type ArticleItem } from './sortable-article-item'
 import { saveTemplateBlocksAction } from '@/actions/documents.action'
@@ -75,10 +71,9 @@ function initItems(template: TemplateWithBlocks): ArticleItem[] {
 interface BlockLibraryProps {
   blocks: DocumentBlock[]
   onAdd: (block: DocumentBlock) => void
-  organizationId: string
 }
 
-function BlockLibrary({ blocks, onAdd, organizationId }: BlockLibraryProps) {
+function BlockLibrary({ blocks, onAdd }: BlockLibraryProps) {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('todos')
 
@@ -128,7 +123,9 @@ function BlockLibrary({ blocks, onAdd, organizationId }: BlockLibraryProps) {
         <SelectContent>
           <SelectItem value="todos">Todas las categorías</SelectItem>
           {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-            <SelectItem key={k} value={k}>{v}</SelectItem>
+            <SelectItem key={k} value={k}>
+              {v}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -154,9 +151,7 @@ function BlockLibrary({ blocks, onAdd, organizationId }: BlockLibraryProps) {
                       key={block.id}
                       className="flex items-center gap-2 p-2 rounded-md border bg-card hover:bg-accent/40 transition-colors text-sm"
                     >
-                      <span className="flex-1 text-xs leading-tight truncate">
-                        {block.name}
-                      </span>
+                      <span className="flex-1 text-xs leading-tight truncate">{block.name}</span>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -174,9 +169,7 @@ function BlockLibrary({ blocks, onAdd, organizationId }: BlockLibraryProps) {
           ))}
 
           {filtered.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">
-              Sin resultados
-            </p>
+            <p className="text-xs text-muted-foreground text-center py-4">Sin resultados</p>
           )}
         </div>
       </ScrollArea>
@@ -248,9 +241,7 @@ export function TemplateBuilder({ template, availableBlocks }: TemplateBuilderPr
   }, [])
 
   const handleToggleOptional = useCallback((id: string, value: boolean) => {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, is_optional: value } : i))
-    )
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, is_optional: value } : i)))
   }, [])
 
   const handleChangeCondition = useCallback((id: string, field: string | null) => {
@@ -293,11 +284,7 @@ export function TemplateBuilder({ template, availableBlocks }: TemplateBuilderPr
     <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden min-h-0">
       {/* ── Panel izquierdo: biblioteca ─────────────────────────────────── */}
       <div className="col-span-1 border rounded-lg p-4 flex flex-col overflow-hidden">
-        <BlockLibrary
-          blocks={availableBlocks}
-          onAdd={handleAdd}
-          organizationId={orgId}
-        />
+        <BlockLibrary blocks={availableBlocks} onAdd={handleAdd} />
       </div>
 
       {/* ── Panel derecho: secuencia ─────────────────────────────────────── */}
@@ -344,9 +331,7 @@ export function TemplateBuilder({ template, availableBlocks }: TemplateBuilderPr
 
         {/* ── Barra de guardado ─────────────────────────────────────────── */}
         <div className="flex items-center gap-3 shrink-0 pt-2 border-t">
-          {saveError && (
-            <p className="text-xs text-destructive flex-1">{saveError}</p>
-          )}
+          {saveError && <p className="text-xs text-destructive flex-1">{saveError}</p>}
           {savedOk && (
             <p className="text-xs text-green-600 flex-1">Estructura guardada correctamente.</p>
           )}
@@ -363,7 +348,9 @@ export function TemplateBuilder({ template, availableBlocks }: TemplateBuilderPr
       {editingBlock && (
         <BlockEditorDialog
           open={!!editingBlockId}
-          onOpenChange={(open) => { if (!open) setEditingBlockId(null) }}
+          onOpenChange={(open) => {
+            if (!open) setEditingBlockId(null)
+          }}
           block={editingBlock}
           organizationId={orgId}
         />

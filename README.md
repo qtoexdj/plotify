@@ -47,25 +47,24 @@ pnpm verify:migrations
 - Cliente TS generado: `apps/web/src/lib/services/plotify-chat.generated.ts`.
 
 ## No crear nuevas migraciones en `apps/web/supabase/migrations` ni en
+
 `apps/api/supabase/migrations`.
 
+Desde la raíz del monorepo, corre estos 3:
 
- Desde la raíz del monorepo, corre estos 3:
+pnpm dev:web
 
-  pnpm dev:web
+pnpm dev:api
 
-  pnpm dev:api
-
-  pnpm dev:worker
-
+pnpm dev:worker
 
 ## Comando completo, todo en una línea
+
 1. Registrar el webhook:
 
 curl -X POST "https://api.telegram.org/bot<TU_TELEGRAM_BOT_TOKEN>/setWebhook" -d "url=https://<TU_NGROK_URL>/api/v1/webhook/telegram/<TU_WEBHOOK_SECRET>"
 
 2. Respuesta esperada:
-
 
 {"ok":true,"result":true,"description":"Webhook was set"}
 

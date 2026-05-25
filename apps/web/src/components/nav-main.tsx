@@ -1,15 +1,11 @@
-"use client"
+'use client'
 
-import { HugeiconsIcon } from "@hugeicons/react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from '@hugeicons/react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 import {
   SidebarGroup,
@@ -20,7 +16,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@/components/ui/sidebar"
+} from '@/components/ui/sidebar'
 
 export function NavMain({
   items,
@@ -47,7 +43,7 @@ export function NavMain({
       <SidebarMenu>
         {items.map((item) => {
           const isItemActive = item.url ? pathname.startsWith(item.url) : false
-          const isAnyChildActive = item.items?.some(subItem => pathname.startsWith(subItem.url))
+          const isAnyChildActive = item.items?.some((subItem) => pathname.startsWith(subItem.url))
 
           if (item.items && item.items.length > 0) {
             return (
@@ -60,7 +56,11 @@ export function NavMain({
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton tooltip={item.title}>
-                      {item.hugeIcon ? <HugeiconsIcon icon={item.hugeIcon} /> : item.icon && <item.icon />}
+                      {item.hugeIcon ? (
+                        <HugeiconsIcon icon={item.hugeIcon} />
+                      ) : (
+                        item.icon && <item.icon />
+                      )}
                       <span>{item.title}</span>
                       <HugeiconsIcon
                         icon={ArrowRight01Icon}
@@ -91,13 +91,13 @@ export function NavMain({
 
           return (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                asChild
-                tooltip={item.title}
-                isActive={isItemActive}
-              >
+              <SidebarMenuButton asChild tooltip={item.title} isActive={isItemActive}>
                 <Link href={item.url!}>
-                  {item.hugeIcon ? <HugeiconsIcon icon={item.hugeIcon} /> : item.icon && <item.icon />}
+                  {item.hugeIcon ? (
+                    <HugeiconsIcon icon={item.hugeIcon} />
+                  ) : (
+                    item.icon && <item.icon />
+                  )}
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>

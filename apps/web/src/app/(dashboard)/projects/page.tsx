@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,15 +17,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { 
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage, 
-  AvatarGroup, 
-  AvatarGroupCount 
-} from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PlusSignIcon, Delete02Icon, Folder02Icon, Location01Icon } from '@hugeicons/core-free-icons'
+import {
+  PlusSignIcon,
+  Delete02Icon,
+  Folder02Icon,
+  Location01Icon,
+} from '@hugeicons/core-free-icons'
 import type { ProjectWithMetrics } from '@/types/database.types'
 import { createClient } from '@/lib/supabase/client'
 
@@ -44,7 +43,7 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
-  
+
   const supabase = createClient()
 
   const getFullUrl = (path: string | null | undefined) => {
@@ -54,11 +53,7 @@ export default function ProjectsPage() {
     return data.publicUrl
   }
 
-  useEffect(() => {
-    loadProjects()
-  }, [])
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       const response = await fetch('/api/projects')
       const data = await response.json()
@@ -69,7 +64,15 @@ export default function ProjectsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadProjects()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [loadProjects])
 
   const handleDelete = async (projectId: string) => {
     setDeletingId(projectId)
@@ -120,9 +123,16 @@ export default function ProjectsPage() {
       {projects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <HugeiconsIcon icon={Folder02Icon} className="w-16 h-16 text-gray-400 dark:text-slate-600 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">No hay proyectos</h3>
-            <p className="text-gray-600 dark:text-slate-400 mb-4">Comienza creando tu primer proyecto</p>
+            <HugeiconsIcon
+              icon={Folder02Icon}
+              className="w-16 h-16 text-gray-400 dark:text-slate-600 mb-4"
+            />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">
+              No hay proyectos
+            </h3>
+            <p className="text-gray-600 dark:text-slate-400 mb-4">
+              Comienza creando tu primer proyecto
+            </p>
             <Link href="/onboarding/new">
               <Button>
                 <HugeiconsIcon icon={PlusSignIcon} className="w-4 h-4 mr-2" />
@@ -142,12 +152,14 @@ export default function ProjectsPage() {
               {/* Cover Image */}
               <div className="relative aspect-video w-full bg-slate-100 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-800 shrink-0">
                 {project.images && project.images.length > 0 ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={getFullUrl(project.images[0])}
                     alt={project.name}
                     className="absolute inset-0 object-cover w-full h-full"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Sin+Imagen'
+                      ;(e.target as HTMLImageElement).src =
+                        'https://placehold.co/600x400?text=Sin+Imagen'
                     }}
                   />
                 ) : (
@@ -157,7 +169,10 @@ export default function ProjectsPage() {
                 )}
                 {/* Status Badge overlay */}
                 <div className="absolute top-3 left-3">
-                  <Badge variant="secondary" className="bg-white/95 text-slate-900 border-none shadow-sm backdrop-blur-sm dark:bg-slate-900/95 dark:text-slate-100 font-medium">
+                  <Badge
+                    variant="secondary"
+                    className="bg-white/95 text-slate-900 border-none shadow-sm backdrop-blur-sm dark:bg-slate-900/95 dark:text-slate-100 font-medium"
+                  >
                     {project.estado}
                   </Badge>
                 </div>
@@ -222,13 +237,12 @@ export default function ProjectsPage() {
                           </Avatar>
                         ))}
                         {project.vendedores.length > 3 && (
-                          <AvatarGroupCount>
-                            +{project.vendedores.length - 3}
-                          </AvatarGroupCount>
+                          <AvatarGroupCount>+{project.vendedores.length - 3}</AvatarGroupCount>
                         )}
                       </AvatarGroup>
                       <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        {project.vendedores.length} vendedor{project.vendedores.length !== 1 ? 'es' : ''}
+                        {project.vendedores.length} vendedor
+                        {project.vendedores.length !== 1 ? 'es' : ''}
                       </span>
                     </div>
                   )}
@@ -237,26 +251,36 @@ export default function ProjectsPage() {
                 {/* KPIs Grid */}
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{project.total_lotes}</div>
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">Total</div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                      {project.total_lotes}
+                    </div>
+                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                      Total
+                    </div>
                   </div>
                   <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
                     <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                       {project.lotes_libres}
                     </div>
-                    <div className="text-xs font-medium text-emerald-600/80 dark:text-emerald-500 mt-1">Disponibles</div>
+                    <div className="text-xs font-medium text-emerald-600/80 dark:text-emerald-500 mt-1">
+                      Disponibles
+                    </div>
                   </div>
                   <div className="text-center p-3 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-100 dark:border-amber-900/30">
                     <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                       {project.lotes_reservados}
                     </div>
-                    <div className="text-xs font-medium text-amber-600/80 dark:text-amber-500 mt-1">Reservados</div>
+                    <div className="text-xs font-medium text-amber-600/80 dark:text-amber-500 mt-1">
+                      Reservados
+                    </div>
                   </div>
                   <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {project.lotes_vendidos}
                     </div>
-                    <div className="text-xs font-medium text-blue-600/80 dark:text-blue-500 mt-1">Vendidos</div>
+                    <div className="text-xs font-medium text-blue-600/80 dark:text-blue-500 mt-1">
+                      Vendidos
+                    </div>
                   </div>
                 </div>
               </CardContent>

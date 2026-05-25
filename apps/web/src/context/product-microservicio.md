@@ -9,22 +9,26 @@ El **Plotify Microservicio** es un componente especializado en el procesamiento 
 ## 🚀 Capacidades Principales
 
 ### 1. Procesamiento CAD Multiformato
+
 El servicio soporta la extracción de geometría desde los estándares más comunes de la industria:
+
 - **DXF (Drawing Exchange Format)**: Soporte nativo para formatos ASCII y Binarios.
 - **DWG (AutoCAD Drawing)**: Soporte completo mediante integración con **ODA File Converter**.
 - **Versiones Soportadas**: Desde AutoCAD R12 hasta R2018 (vía ODA).
 
 ### 2. Transformación Geoespacial
+
 - **Reproyección Automática**: Convierte coordenadas locales (ej. PSAD56, UTM Zona 19S) a **WGS84 (EPSG:4326)**, el estándar para GPS y mapas web.
 - **Simplificación Inteligente**: Aplica algoritmos (Douglas-Peucker) para reducir la cantidad de vértices en geometrías complejas sin perder la forma visual, optimizando el rendimiento en el frontend.
 
 ### 3. Clasificación Automática de Entidades
+
 El servicio aplica reglas de negocio durante la extracción para categorizar elementos:
 
-| Tipo GeoJSON | Criterio de Clasificación | Uso en Plotify |
-| :--- | :--- | :--- |
-| **`LOT`** | Polígonos cerrados en capas sin keywords especiales. | Unidades vendibles. |
-| **`ROAD`** | Líneas abiertas o capas de vialidad. | Visualización de calles y accesos. |
+| Tipo GeoJSON      | Criterio de Clasificación                                    | Uso en Plotify                      |
+| :---------------- | :----------------------------------------------------------- | :---------------------------------- |
+| **`LOT`**         | Polígonos cerrados en capas sin keywords especiales.         | Unidades vendibles.                 |
+| **`ROAD`**        | Líneas abiertas o capas de vialidad.                         | Visualización de calles y accesos.  |
 | **`COMMON_AREA`** | Polígonos con keywords como "plaza", "parque", "área verde". | Zonas de equipamiento no vendibles. |
 
 ---
@@ -32,13 +36,16 @@ El servicio aplica reglas de negocio durante la extracción para categorizar ele
 ## 🔄 Flujos de Usuario (Input/Output)
 
 ### Input (Lo que recibe)
+
 1. **Archivo**: Binario `.dxf` o `.dwg`.
 2. **Sistema de Coordenadas (EPSG)**: Código numérico del sistema de origen (ej. `32719` para Chile Central UTM).
 3. **ID de Proyecto**: Header `x-project-id` para trazabilidad y aislamiento.
 
 ### Output (Lo que entrega)
+
 ### Output (Lo que entrega)
-Un objeto **`GeoJSON FeatureCollection` extendido**. 
+
+Un objeto **`GeoJSON FeatureCollection` extendido**.
 
 ```json
 {
@@ -82,6 +89,7 @@ Un objeto **`GeoJSON FeatureCollection` extendido**.
 ---
 
 ## 🎯 Objetivos de Calidad
+
 - **Tiempo de Respuesta**: < 5 segundos para archivos de complejidad media (5MB).
 - **Precisión**: Desviación < 10cm en transformación de coordenadas.
 - **Resiliencia**: Si falla un archivo DWG, debe reportar claramente si es por corrupción del archivo o fallo del conversor.

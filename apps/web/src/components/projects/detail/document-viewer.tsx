@@ -6,10 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ViewIcon } from "@hugeicons/core-free-icons"
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ViewIcon } from '@hugeicons/core-free-icons'
 
 interface DocumentViewerProps {
   url: string
@@ -32,11 +32,7 @@ export function DocumentViewer({ url, title }: DocumentViewerProps) {
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="flex-1 w-full bg-slate-100/50 dark:bg-slate-900/50">
-          <iframe 
-            src={`${url}#view=FitH`} 
-            className="w-full h-full border-0 block" 
-            title={title}
-          />
+          <iframe src={`${url}#view=FitH`} className="w-full h-full border-0 block" title={title} />
         </div>
       </DialogContent>
     </Dialog>

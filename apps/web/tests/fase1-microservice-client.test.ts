@@ -143,7 +143,7 @@ describe('microserviceFetch', () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ([]),
+      json: async () => [],
     } as Response)
 
     const { microserviceFetch } = await import('@/lib/services/microservice.client')

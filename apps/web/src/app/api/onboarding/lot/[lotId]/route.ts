@@ -19,10 +19,7 @@ export async function GET(
     return Response.json({ lot })
   } catch (error) {
     console.error('Error in GET /api/onboarding/lot/[lotId]:', error)
-    return Response.json(
-      { error: 'Error al obtener lote' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al obtener lote' }, { status: 500 })
   }
 }
 
@@ -46,10 +43,7 @@ export async function PATCH(
     const safeData = validation.data
 
     if (Object.keys(safeData).length === 0) {
-      return Response.json(
-        { error: 'No hay campos para actualizar' },
-        { status: 400 }
-      )
+      return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 })
     }
 
     // Sync bidireccional: si viene m2, también actualizar area_official_m2
@@ -66,10 +60,6 @@ export async function PATCH(
     })
   } catch (error) {
     console.error('Error in PATCH /api/onboarding/lot/[lotId]:', error)
-    return Response.json(
-      { error: 'Error al actualizar lote' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al actualizar lote' }, { status: 500 })
   }
 }
-

@@ -40,10 +40,7 @@ export default async function PlantillasPage() {
         </p>
       </div>
 
-      <TemplatesList
-        initialTemplates={templates}
-        organizationId={workspace.organization.id}
-      />
+      <TemplatesList initialTemplates={templates} organizationId={workspace.organization.id} />
     </div>
   )
 }

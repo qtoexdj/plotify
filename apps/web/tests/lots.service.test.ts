@@ -55,9 +55,7 @@ describe('lots.service', () => {
     const lotEq = vi.fn().mockReturnValue({ select: lotSelect })
     const lotUpdate = vi.fn().mockReturnValue({ eq: lotEq })
 
-    const recordSingle = vi
-      .fn()
-      .mockResolvedValue({ data: { lot_id: 'lot-1' }, error: null })
+    const recordSingle = vi.fn().mockResolvedValue({ data: { lot_id: 'lot-1' }, error: null })
     const recordSelect = vi.fn().mockReturnValue({ single: recordSingle })
     const recordUpsert = vi.fn().mockReturnValue({ select: recordSelect })
 

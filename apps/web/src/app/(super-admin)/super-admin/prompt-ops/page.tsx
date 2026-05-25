@@ -13,17 +13,6 @@ export default async function PromptOpsPage() {
 
   const supabase = await createClient()
 
-  const { data: prompts } = await supabase
-    .from('system_prompts')
-    .select(`
-      *,
-      active_version:prompt_versions!inner(
-        id, version, created_at, is_active, change_note
-      )
-    `)
-    .eq('prompt_versions.is_active', true)
-    .order('created_at', { ascending: true })
-
   // Normalizar estructura (activa_version puede ser null si no hay versión activa aún)
   const { data: allPrompts } = await supabase
     .from('system_prompts')

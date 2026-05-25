@@ -7,7 +7,9 @@ export const dynamic = 'force-dynamic'
 
 export default async function SkillsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const { data: member } = await supabase
@@ -28,10 +30,7 @@ export default async function SkillsPage() {
           Habilita o deshabilita las herramientas que tu agente de IA puede utilizar
         </p>
       </div>
-      <SkillsGrid
-        skills={skills}
-        organizationId={member.organization_id}
-      />
+      <SkillsGrid skills={skills} organizationId={member.organization_id} />
     </div>
   )
 }

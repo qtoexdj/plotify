@@ -33,21 +33,23 @@ import { createClient } from '@/lib/supabase/server'
 import { microserviceFetch } from '@/lib/services/microservice.client'
 
 import {
-  listBlocks, getBlock, createBlock, updateBlock, softDeleteBlock,
-  listTemplates, getTemplateWithBlocks, createTemplate, saveTemplateBlocks,
+  listBlocks,
+  createBlock,
+  softDeleteBlock,
+  listTemplates,
+  saveTemplateBlocks,
   listGeneratedDocs,
 } from '@/lib/services/documents.service'
 
-import {
-  previewDocument, generateDocument,
-} from '@/lib/services/document-generation.service'
+import { previewDocument, generateDocument } from '@/lib/services/document-generation.service'
 
 import {
-  createBlockAction, updateBlockAction, deleteBlockAction,
-  createTemplateAction, saveTemplateBlocksAction, generateDocumentAction,
+  createBlockAction,
+  deleteBlockAction,
+  generateDocumentAction,
 } from '@/actions/documents.action'
 
-import type { DocumentBlock, DocumentTemplate, GeneratedDocument } from '@/types/v2'
+import type { DocumentBlock, DocumentTemplate } from '@/types/v2'
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -168,7 +170,13 @@ describe('createBlock', () => {
     ;(createClient as ReturnType<typeof vi.fn>).mockResolvedValue({ from: () => chain })
 
     await expect(
-      createBlock({ organization_id: ORG_ID, name: 'X', category: 'general', content: 'y', created_by: USER_ID })
+      createBlock({
+        organization_id: ORG_ID,
+        name: 'X',
+        category: 'general',
+        content: 'y',
+        created_by: USER_ID,
+      })
     ).rejects.toBeTruthy()
   })
 })
@@ -246,12 +254,16 @@ describe('previewDocument', () => {
       status: 200,
     })
 
-    const result = await previewDocument({ template_id: TEMPLATE_ID, lot_id: LOT_ID, organization_id: ORG_ID })
+    const result = await previewDocument({
+      template_id: TEMPLATE_ID,
+      lot_id: LOT_ID,
+      organization_id: ORG_ID,
+    })
     expect(result).toEqual({ html: '<p>Preview</p>' })
-    expect(microserviceFetch).toHaveBeenCalledWith(
-      '/api/v1/documents/preview',
-      { method: 'POST', body: { template_id: TEMPLATE_ID, lot_id: LOT_ID, organization_id: ORG_ID } }
-    )
+    expect(microserviceFetch).toHaveBeenCalledWith('/api/v1/documents/preview', {
+      method: 'POST',
+      body: { template_id: TEMPLATE_ID, lot_id: LOT_ID, organization_id: ORG_ID },
+    })
   })
 
   it('lanza error si microserviceFetch devuelve error', async () => {
@@ -373,7 +385,9 @@ describe('generateDocumentAction', () => {
   it('retorna { success: true, data } con microservicio OK', async () => {
     const payload = { file_url: 'https://storage/doc.pdf', format: 'pdf' }
     ;(microserviceFetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: payload, error: null, status: 200,
+      data: payload,
+      error: null,
+      status: 200,
     })
     const lotChain = buildChain({
       data: { id: LOT_ID, projects: { organization_id: ORG_ID } },
@@ -397,7 +411,9 @@ describe('generateDocumentAction', () => {
 
   it('retorna { success: false } si el microservicio falla', async () => {
     ;(microserviceFetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: null, error: 'Service down', status: 503,
+      data: null,
+      error: 'Service down',
+      status: 503,
     })
     const lotChain = buildChain({
       data: { id: LOT_ID, projects: { organization_id: ORG_ID } },

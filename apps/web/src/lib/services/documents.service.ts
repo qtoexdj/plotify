@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import type {
-  DocumentBlock, DocumentBlockInsert,
-  DocumentTemplate, DocumentTemplateInsert,
-  TemplateBlockItem, TemplateWithBlocks,
+  DocumentBlock,
+  DocumentBlockInsert,
+  DocumentTemplate,
+  DocumentTemplateInsert,
+  TemplateWithBlocks,
   GeneratedDocument,
 } from '@/types/v2'
 
@@ -22,21 +24,13 @@ export async function listBlocks(organizationId: string): Promise<DocumentBlock[
 
 export async function getBlock(blockId: string): Promise<DocumentBlock | null> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('document_blocks')
-    .select('*')
-    .eq('id', blockId)
-    .single()
+  const { data } = await supabase.from('document_blocks').select('*').eq('id', blockId).single()
   return data
 }
 
 export async function createBlock(block: DocumentBlockInsert): Promise<DocumentBlock> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('document_blocks')
-    .insert(block)
-    .select()
-    .single()
+  const { data, error } = await supabase.from('document_blocks').insert(block).select().single()
   if (error) throw error
   return data
 }
@@ -80,13 +74,15 @@ export async function getTemplateWithBlocks(templateId: string): Promise<Templat
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('document_templates')
-    .select(`
+    .select(
+      `
       *,
       blocks:template_block_items(
         *,
         block:document_blocks(*)
       )
-    `)
+    `
+    )
     .eq('id', templateId)
     .order('position', { referencedTable: 'template_block_items' })
     .single()
@@ -120,7 +116,7 @@ export async function saveTemplateBlocks(
   if (items.length > 0) {
     const { error } = await supabase
       .from('template_block_items')
-      .insert(items.map(item => ({ ...item, template_id: templateId })))
+      .insert(items.map((item) => ({ ...item, template_id: templateId })))
     if (error) throw error
   }
 }

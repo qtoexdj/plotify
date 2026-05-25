@@ -42,7 +42,9 @@ export default async function PromptDetailPage({ params }: Props) {
     .order('name', { ascending: true })
 
   // Obtener JWT del user para llamadas al microservicio desde el cliente
-  const { data: { session } } = await supabase.auth.getSession()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
   const accessToken = session?.access_token ?? ''
 
   const activeVersion = (versions ?? []).find((v: PromptVersion) => v.is_active) ?? null
@@ -52,7 +54,9 @@ export default async function PromptDetailPage({ params }: Props) {
     <div className="p-6 space-y-6">
       <div>
         <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
-          <Link href="/super-admin/prompt-ops" className="hover:underline">Prompt Ops</Link>
+          <Link href="/super-admin/prompt-ops" className="hover:underline">
+            Prompt Ops
+          </Link>
           <span>/</span>
           <span className="font-mono text-slate-700">{promptTyped.slug}</span>
         </div>
@@ -78,11 +82,7 @@ export default async function PromptDetailPage({ params }: Props) {
         </TabsContent>
 
         <TabsContent value="historial" className="mt-6">
-          <PromptHistory
-            promptId={promptId}
-            versions={versions ?? []}
-            accessToken={accessToken}
-          />
+          <PromptHistory promptId={promptId} versions={versions ?? []} accessToken={accessToken} />
         </TabsContent>
 
         <TabsContent value="sandbox" className="mt-6">

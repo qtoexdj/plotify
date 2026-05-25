@@ -43,20 +43,29 @@ interface SortableArticleItemProps {
 function ConditionBadge({ item }: { item: ArticleItem }) {
   if (item.condition_field) {
     return (
-      <Badge variant="secondary" className="text-xs shrink-0 bg-blue-100 text-blue-800 border-blue-200">
+      <Badge
+        variant="secondary"
+        className="text-xs shrink-0 bg-blue-100 text-blue-800 border-blue-200"
+      >
         Condicional
       </Badge>
     )
   }
   if (item.is_optional) {
     return (
-      <Badge variant="outline" className="text-xs shrink-0 bg-yellow-50 text-yellow-800 border-yellow-300">
+      <Badge
+        variant="outline"
+        className="text-xs shrink-0 bg-yellow-50 text-yellow-800 border-yellow-300"
+      >
         Opcional
       </Badge>
     )
   }
   return (
-    <Badge className="text-xs shrink-0 bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-100" variant="outline">
+    <Badge
+      className="text-xs shrink-0 bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-100"
+      variant="outline"
+    >
       Fijo
     </Badge>
   )
@@ -69,14 +78,9 @@ export function SortableArticleItem({
   onToggleOptional,
   onChangeCondition,
 }: SortableArticleItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -110,9 +114,7 @@ export function SortableArticleItem({
         </span>
 
         {/* Nombre del bloque */}
-        <span className="flex-1 text-sm font-medium truncate min-w-0">
-          {item.block_name}
-        </span>
+        <span className="flex-1 text-sm font-medium truncate min-w-0">{item.block_name}</span>
 
         {/* Badge de condición */}
         <ConditionBadge item={item} />
@@ -150,7 +152,10 @@ export function SortableArticleItem({
                 onCheckedChange={(v) => onToggleOptional(item.id, v)}
                 className="h-4 w-7"
               />
-              <Label htmlFor={`optional-${item.id}`} className="text-xs text-muted-foreground cursor-pointer">
+              <Label
+                htmlFor={`optional-${item.id}`}
+                className="text-xs text-muted-foreground cursor-pointer"
+              >
                 Habilitado por defecto
               </Label>
             </div>

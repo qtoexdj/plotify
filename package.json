@@ -2,7 +2,10 @@
   "name": "plotify-monorepo",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@9.15.9",
+  "packageManager": "pnpm@11.3.0",
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "dev:api": "cd apps/api && ./venv/bin/python main.py",
@@ -10,8 +13,13 @@
     "build:web": "pnpm --filter web build",
     "test:web": "pnpm --filter web test",
     "typecheck:web": "pnpm --filter web typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test:api": "cd apps/api && venv/bin/python -m pytest -q",
     "contracts:generate": "cd apps/api && ./venv/bin/python scripts/export_openapi_contract.py",
     "verify:migrations": "pnpm --filter @plotify/database verify:migrations"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
   }
 }

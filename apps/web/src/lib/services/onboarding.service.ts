@@ -30,11 +30,7 @@ export async function getLotsByProject(projectId: string): Promise<Lot[]> {
 export async function getLotById(lotId: string): Promise<LotDetails | null> {
   const supabase = await createClient()
 
-  const { data: lot, error } = await supabase
-    .from('lots')
-    .select('*')
-    .eq('id', lotId)
-    .single()
+  const { data: lot, error } = await supabase.from('lots').select('*').eq('id', lotId).single()
 
   if (error || !lot) {
     console.error('Error fetching lot:', error)
@@ -59,10 +55,7 @@ export async function getLotById(lotId: string): Promise<LotDetails | null> {
   return { ...lot, etapa_proceso } as LotDetails
 }
 
-export async function updateLot(
-  lotId: string,
-  updates: Partial<Lot>
-): Promise<Lot> {
+export async function updateLot(lotId: string, updates: Partial<Lot>): Promise<Lot> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -86,10 +79,7 @@ export async function getGeometriesByProject(
 ): Promise<Geometry[]> {
   const supabase = await createClient()
 
-  let query = supabase
-    .from('geometries')
-    .select('*')
-    .eq('project_id', projectId)
+  let query = supabase.from('geometries').select('*').eq('project_id', projectId)
 
   if (unassignedOnly) {
     query = query.is('lot_id', null)
@@ -164,9 +154,7 @@ export async function saveAndAssignGeometry(
   return geometry
 }
 
-export async function saveInfrastructure(
-  payload: SaveInfrastructurePayload
-): Promise<Geometry> {
+export async function saveInfrastructure(payload: SaveInfrastructurePayload): Promise<Geometry> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -214,7 +202,10 @@ export async function saveInfrastructure(
         const roadWidth = project?.road_width_m || 6 // Fallback a 6m
 
         // 4. Guardar camino unificado en projects
-        console.log('[Servidumbre] Guardando camino combinado en projects:', Object.keys(combinedRoad))
+        console.log(
+          '[Servidumbre] Guardando camino combinado en projects:',
+          Object.keys(combinedRoad)
+        )
         const { error: projUpdateErr } = await supabase
           .from('projects')
           .update({ road_geometry: combinedRoad })
@@ -228,14 +219,16 @@ export async function saveInfrastructure(
         // Hacemos join con geometries para obtener la geometría del lote
         const { data: assignedLots, error: lotsErr } = await supabase
           .from('lots')
-          .select(`
+          .select(
+            `
             id,
             m2,
             geometry_id,
             geometries:geometries!lots_geometry_id_fkey (
               geometry
             )
-          `)
+          `
+          )
           .eq('project_id', payload.projectId)
           .not('geometry_id', 'is', null)
 
@@ -244,7 +237,9 @@ export async function saveInfrastructure(
         }
 
         if (assignedLots) {
-          console.log(`[Servidumbre] Encontrados ${assignedLots.length} lotes asignados para calcular`)
+          console.log(
+            `[Servidumbre] Encontrados ${assignedLots.length} lotes asignados para calcular`
+          )
           // Procesar las actualizaciones en paralelo para mejor rendimiento
           const updatePromises = assignedLots.map(async (lot) => {
             const lotGeom = Array.isArray(lot.geometries)
@@ -259,13 +254,15 @@ export async function saveInfrastructure(
             const calc = calculateServidumbre(lotGeom, combinedRoad, roadWidth)
             const superficieNeta = lot.m2 ? lot.m2 - calc.servidumbreM2 : null
 
-            console.log(`[Servidumbre] Lote ${lot.id} => Servidumbre: ${calc.servidumbreM2}, Neta: ${superficieNeta}`)
+            console.log(
+              `[Servidumbre] Lote ${lot.id} => Servidumbre: ${calc.servidumbreM2}, Neta: ${superficieNeta}`
+            )
 
             const { error: lotUpdateErr } = await supabase
               .from('lots')
               .update({
                 servidumbre_m2: calc.servidumbreM2,
-                superficie_neta_m2: superficieNeta
+                superficie_neta_m2: superficieNeta,
               })
               .eq('id', lot.id)
 
@@ -378,10 +375,7 @@ export async function deleteGeometryByLotId(lotId: string): Promise<void> {
   }
 
   // Eliminar la geometría de la base de datos
-  const { error: deleteError } = await supabase
-    .from('geometries')
-    .delete()
-    .eq('id', geometryId)
+  const { error: deleteError } = await supabase.from('geometries').delete().eq('id', geometryId)
 
   if (deleteError) {
     // Rollback: restaurar geometry_id en el lote

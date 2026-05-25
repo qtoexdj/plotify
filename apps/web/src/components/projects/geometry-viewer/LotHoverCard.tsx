@@ -76,9 +76,7 @@ export function LotHoverCard({ feature }: LotHoverCardProps) {
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           {m2 != null && <span>{m2.toLocaleString()} m²</span>}
-          {precio != null && (
-            <span>${precio.toLocaleString('es-CL')}</span>
-          )}
+          {precio != null && <span>${precio.toLocaleString('es-CL')}</span>}
         </div>
       </div>
     </div>

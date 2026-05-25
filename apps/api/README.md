@@ -14,20 +14,25 @@ Para entender a fondo el sistema, consulta la memoria del proyecto en `../../plo
 6. `Setup Local.md`: comandos útiles y entorno de desarrollo.
 
 ---
-*(Documentación centralizada en `plotify_memori/`.)*
+
+_(Documentación centralizada en `plotify_memori/`.)_
 
 ## 🚀 Comandos de Inicio (Entorno de Desarrollo)
+
 Para correr el backend completo en desarrollo local, necesitas abrir dos terminales:
 
 **1. Levantar la API HTTP (FastAPI)**
 Diseñada para recibir webhooks en < 100ms.
+
 ```bash
 source venv/bin/activate && export $(grep -v '^#' .env | xargs) && python main.py
 ```
-*Por defecto corre en el puerto `8005` para evitar colisiones con Supabase.*
+
+_Por defecto corre en el puerto `8005` para evitar colisiones con Supabase._
 
 **2. Levantar el Worker de Tareas (ARQ)**
 Procesa la lógica pesada (IA, RAG, Notificaciones).
+
 ```bash
 source venv/bin/activate && export $(grep -v '^#' .env | xargs) && arq workers.main_worker.WorkerSettings
 ```
@@ -35,12 +40,14 @@ source venv/bin/activate && export $(grep -v '^#' .env | xargs) && arq workers.m
 ---
 
 ## Propósito
+
 Recibir webhooks de Meta y Telegram (Multi-tenant), encolar mensajes en Redis y orquestar conversaciones inteligentes via LangGraph con acceso a datos reales de Supabase (lotes, precios, disponibilidad).
 
 ## Funcionalidades Clave (Segurizadas y Estabilizadas)
+
 - **Bots Multi-tenant:** Registro dinámico de bots de Telegram con aislamiento estricto vía `organization_id`.
 - **Asincronía Real:** FastAPI + ARQ + Redis. Las herramientas (tools) del agente son ahora asíncronas para no bloquear el Event Loop.
-- **Seguridad Robusta:** Protección de endpoints internos con `X-Internal-Secret`, sanitización de *prompt injection* y CORS restrictivo.
+- **Seguridad Robusta:** Protección de endpoints internos con `X-Internal-Secret`, sanitización de _prompt injection_ y CORS restrictivo.
 - **Resiliencia con DLQ:** Persistencia de jobs fallidos en la tabla `dead_letter_queue` tras agotar reintentos.
 - **Rate Limiting Global:** Control de tráfico (50 req/s) en webhooks de Meta y Telegram.
 - **Auditoría Integrada:** Registro de acciones críticas del Agente AI en la tabla compartida `audit_logs`.
@@ -48,6 +55,7 @@ Recibir webhooks de Meta y Telegram (Multi-tenant), encolar mensajes en Redis y 
 ## Inicio Rápido
 
 ### 1. Requisitos previos
+
 - Python 3.13+
 - Redis en contenedor Docker existente (`redis`, puerto `6379`)
 - Supabase Docker existente (`supabase-kong`, URL `http://127.0.0.1:8000`)
@@ -56,6 +64,7 @@ No levantar un stack Supabase nuevo desde este repo. Las credenciales de
 Supabase y Redis se leen desde `.env`.
 
 ### 2. Instalación
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate
@@ -63,6 +72,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configuración
+
 ```bash
 cp .env.example .env
 # Configura API_PUBLIC_URL con tu link de ngrok/tunnel
@@ -94,5 +104,9 @@ apps/api/
 ```
 
 ---
-*Documentación core actualizada automáticamente al finalizar la Fase VI (Marzo 2021-2026).*
+
+_Documentación core actualizada automáticamente al finalizar la Fase VI (Marzo 2021-2026)._
+
+```
+
 ```

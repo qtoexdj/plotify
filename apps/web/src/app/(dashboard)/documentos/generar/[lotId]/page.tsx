@@ -27,7 +27,8 @@ export default async function GenerarDocumentoPage({
 
   const { data: lotRaw } = await supabase
     .from('lots')
-    .select(`
+    .select(
+      `
       id,
       numero_lote,
       m2,
@@ -50,7 +51,8 @@ export default async function GenerarDocumentoPage({
         region,
         road_width_m
       )
-    `)
+    `
+    )
     .eq('id', lotId)
     .single()
 
@@ -58,7 +60,7 @@ export default async function GenerarDocumentoPage({
 
   // Supabase returns projects as array for 1:many — normalise to single object
   const projectsRaw = lotRaw.projects as unknown
-  const project = Array.isArray(projectsRaw) ? projectsRaw[0] ?? null : projectsRaw
+  const project = Array.isArray(projectsRaw) ? (projectsRaw[0] ?? null) : projectsRaw
 
   const lot = { ...lotRaw, projects: project } as Parameters<typeof GenerationWizard>[0]['lot']
 
@@ -73,11 +75,7 @@ export default async function GenerarDocumentoPage({
           {lot.projects?.name ? ` — ${lot.projects.name}` : ''}
         </p>
       </div>
-      <GenerationWizard
-        lot={lot}
-        templates={templates}
-        organizationId={member.organization_id}
-      />
+      <GenerationWizard lot={lot} templates={templates} organizationId={member.organization_id} />
     </div>
   )
 }

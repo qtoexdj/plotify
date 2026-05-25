@@ -31,7 +31,9 @@ const BlockFormSchema = z.object({
 
 describe('F-v2-4.7/4.8 — VariableChips: extracción de variables', () => {
   it('extrae una variable simple', () => {
-    const vars = extractVariables('El vendedor es {{ vendedor.nombre }} y tiene RUT {{ vendedor.rut }}.')
+    const vars = extractVariables(
+      'El vendedor es {{ vendedor.nombre }} y tiene RUT {{ vendedor.rut }}.'
+    )
     expect(vars).toContain('vendedor.nombre')
     expect(vars).toContain('vendedor.rut')
     expect(vars).toHaveLength(2)
@@ -504,9 +506,7 @@ function addBlock(
 }
 
 function removeBlock(items: ArticleItemTest[], id: string): ArticleItemTest[] {
-  return items
-    .filter((i) => i.id !== id)
-    .map((item, idx) => ({ ...item, position: idx + 1 }))
+  return items.filter((i) => i.id !== id).map((item, idx) => ({ ...item, position: idx + 1 }))
 }
 
 function reorder(items: ArticleItemTest[], oldIdx: number, newIdx: number): ArticleItemTest[] {
@@ -598,10 +598,7 @@ describe('F-v2-4.10 — reorder (DnD)', () => {
   })
 
   it('no cambia nada si oldIdx === newIdx', () => {
-    const items = [
-      makeItem({ id: 'a', position: 1 }),
-      makeItem({ id: 'b', position: 2 }),
-    ]
+    const items = [makeItem({ id: 'a', position: 1 }), makeItem({ id: 'b', position: 2 })]
     const result = reorder(items, 1, 1)
     expect(result.map((i) => i.id)).toEqual(['a', 'b'])
   })
@@ -624,4 +621,3 @@ describe('F-v2-4.10 — ArticleItem shape', () => {
     expect(item.position).toBeGreaterThan(0)
   })
 })
-

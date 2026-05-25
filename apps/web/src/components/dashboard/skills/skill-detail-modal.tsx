@@ -24,18 +24,25 @@ interface SkillDetailModalProps {
 
 function getCategoryIcon(category: string) {
   switch (category) {
-    case 'builtin': return ZapIcon
-    case 'mcp': return DatabaseIcon
-    default: return PuzzleIcon
+    case 'builtin':
+      return ZapIcon
+    case 'mcp':
+      return DatabaseIcon
+    default:
+      return PuzzleIcon
   }
 }
 
 function getCategoryLabel(category: string) {
   switch (category) {
-    case 'builtin': return 'Integrado'
-    case 'mcp': return 'MCP'
-    case 'custom': return 'Custom'
-    default: return category
+    case 'builtin':
+      return 'Integrado'
+    case 'mcp':
+      return 'MCP'
+    case 'custom':
+      return 'Custom'
+    default:
+      return category
   }
 }
 
@@ -47,7 +54,9 @@ function getRoleLabel(roles: string[] | null): string {
 }
 
 // Extraer parámetros del tool_definition
-export function getParameters(toolDefinition: unknown): Array<{ name: string; type: string; description: string; required: boolean }> {
+export function getParameters(
+  toolDefinition: unknown
+): Array<{ name: string; type: string; description: string; required: boolean }> {
   if (!toolDefinition || typeof toolDefinition !== 'object') return []
   const def = toolDefinition as Record<string, unknown>
   const params = def.parameters
@@ -71,15 +80,19 @@ export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDet
   const parameters = getParameters(skill.tool_definition)
 
   return (
-    <Dialog open onOpenChange={open => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${
-              skill.category === 'builtin' ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400' :
-              skill.category === 'mcp' ? 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400' :
-              'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
-            }`}>
+            <div
+              className={`flex items-center justify-center w-10 h-10 rounded-lg ${
+                skill.category === 'builtin'
+                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400'
+                  : skill.category === 'mcp'
+                    ? 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400'
+                    : 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
+              }`}
+            >
               <HugeiconsIcon icon={getCategoryIcon(skill.category ?? 'custom')} size={20} />
             </div>
             <div>
@@ -157,7 +170,7 @@ export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDet
               <Switch
                 checked={enabled}
                 disabled={skill.is_system ?? false}
-                onCheckedChange={value => onToggle(skill, value)}
+                onCheckedChange={(value) => onToggle(skill, value)}
               />
             </div>
           </div>

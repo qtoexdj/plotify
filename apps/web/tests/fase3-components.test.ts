@@ -60,7 +60,8 @@ vi.mock('@/actions/agent-skills.action', () => ({
   toggleOrgSkill: vi.fn(),
 }))
 vi.mock('@/components/dashboard/skills/skill-detail-modal', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/components/dashboard/skills/skill-detail-modal')>()
+  const actual =
+    await importOriginal<typeof import('@/components/dashboard/skills/skill-detail-modal')>()
   return {
     ...actual,
     SkillDetailModal: vi.fn(),
@@ -237,14 +238,14 @@ describe('getParameters', () => {
     const params = getParameters(toolDef)
 
     expect(params).toHaveLength(2)
-    const queryParam = params.find(p => p.name === 'query')
+    const queryParam = params.find((p) => p.name === 'query')
     expect(queryParam).toMatchObject({
       name: 'query',
       type: 'string',
       description: 'Texto a buscar',
       required: true,
     })
-    const limitParam = params.find(p => p.name === 'limit')
+    const limitParam = params.find((p) => p.name === 'limit')
     expect(limitParam).toMatchObject({
       name: 'limit',
       type: 'number',
@@ -264,8 +265,8 @@ describe('getParameters', () => {
       },
     }
     const params = getParameters(toolDef)
-    expect(params.find(p => p.name === 'a')?.required).toBe(true)
-    expect(params.find(p => p.name === 'b')?.required).toBe(false)
+    expect(params.find((p) => p.name === 'a')?.required).toBe(true)
+    expect(params.find((p) => p.name === 'b')?.required).toBe(false)
   })
 
   it('usa "any" como type cuando el schema no define type', () => {
@@ -297,26 +298,26 @@ describe('navItems (app-sidebar)', () => {
   })
 
   it('existe un grupo "Agente" en navItems', () => {
-    const agente = navItems.find(item => item.title === 'Agente')
+    const agente = navItems.find((item) => item.title === 'Agente')
     expect(agente).toBeDefined()
   })
 
   it('el grupo "Agente" tiene sub-items', () => {
-    const agente = navItems.find(item => item.title === 'Agente')
+    const agente = navItems.find((item) => item.title === 'Agente')
     expect(agente?.items).toBeDefined()
     expect(agente!.items!.length).toBeGreaterThan(0)
   })
 
   it('el grupo "Agente" contiene el sub-item "Skills" con url "/agente/skills"', () => {
-    const agente = navItems.find(item => item.title === 'Agente')
-    const skills = agente?.items?.find(sub => sub.title === 'Skills')
+    const agente = navItems.find((item) => item.title === 'Agente')
+    const skills = agente?.items?.find((sub) => sub.title === 'Skills')
     expect(skills).toBeDefined()
     expect(skills?.url).toBe('/agente/skills')
   })
 
   it('el grupo "Agente" también conserva "Chat" e "Integraciones"', () => {
-    const agente = navItems.find(item => item.title === 'Agente')
-    const titles = agente?.items?.map(s => s.title) ?? []
+    const agente = navItems.find((item) => item.title === 'Agente')
+    const titles = agente?.items?.map((s) => s.title) ?? []
     expect(titles).toContain('Chat')
     expect(titles).toContain('Integraciones')
   })

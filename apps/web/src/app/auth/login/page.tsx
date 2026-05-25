@@ -8,9 +8,7 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 overflow-hidden">
       <InteractiveGridPattern
-        className={cn(
-          "mask-[radial-gradient(600px_circle_at_center,white,transparent)]",
-        )}
+        className={cn('mask-[radial-gradient(600px_circle_at_center,white,transparent)]')}
         width={20}
         height={20}
         squares={[80, 80]}

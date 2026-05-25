@@ -5,7 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -25,12 +31,7 @@ interface PromptSandboxProps {
   accessToken: string
 }
 
-export function PromptSandbox({
-  promptId,
-  activeVersion,
-  organizations,
-  accessToken,
-}: PromptSandboxProps) {
+export function PromptSandbox({ activeVersion, organizations, accessToken }: PromptSandboxProps) {
   const [promptContent, setPromptContent] = useState(activeVersion?.content ?? '')
   const [testMessage, setTestMessage] = useState('')
   const [role, setRole] = useState<string>('lead')

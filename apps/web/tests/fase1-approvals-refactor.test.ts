@@ -222,9 +222,7 @@ describe('resolveVendorFromUser', () => {
   })
 
   it('retorna null cuando data es null sin error', async () => {
-    vi.mocked(createClient).mockResolvedValueOnce(
-      buildSupabaseMock(null, null) as never
-    )
+    vi.mocked(createClient).mockResolvedValueOnce(buildSupabaseMock(null, null) as never)
 
     const result = await resolveVendorFromUser('user-no-data')
 

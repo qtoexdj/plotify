@@ -110,7 +110,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
                       ...f.properties,
                       estado: payload.new.estado,
                       precio: payload.new.precio,
-                      m2: payload.new.m2
+                      m2: payload.new.m2,
                     },
                   }
                 }
@@ -120,7 +120,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
           })
 
           if (lotDetails && lotDetails.id === payload.new.id) {
-            setLotDetails(prev => prev ? { ...prev, ...payload.new } : null)
+            setLotDetails((prev) => (prev ? { ...prev, ...payload.new } : null))
           }
         }
       )
@@ -181,7 +181,11 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
   }, [selectedFeatureId, featureCollection])
 
   useEffect(() => {
-    loadLotDetails()
+    const timeoutId = window.setTimeout(() => {
+      void loadLotDetails()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [loadLotDetails])
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -189,7 +193,8 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
   // ─────────────────────────────────────────────────────────────────────────
 
   const stats = useMemo(() => {
-    if (!featureCollection) return { lots: 0, roads: 0, areas: 0, disponibles: 0, reservados: 0, vendidos: 0 }
+    if (!featureCollection)
+      return { lots: 0, roads: 0, areas: 0, disponibles: 0, reservados: 0, vendidos: 0 }
     const counts = { lots: 0, roads: 0, areas: 0, disponibles: 0, reservados: 0, vendidos: 0 }
 
     featureCollection.features.forEach((f) => {
@@ -214,25 +219,28 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
   // Handlers
   // ─────────────────────────────────────────────────────────────────────────
 
-  const handleFeatureClick = useCallback((featureId: string, isMultiSelect: boolean) => {
-    if (isMultiSelect) {
-      setSelectedIds(prev => {
-        const newSet = new Set(prev)
-        if (newSet.has(featureId)) {
-          newSet.delete(featureId)
-        } else {
-          newSet.add(featureId)
-        }
-        if (newSet.size > 0 && isPanelCollapsed) setIsPanelCollapsed(false)
-        if (newSet.size > 0 && isMobile) setIsMobileSheetOpen(true)
-        return newSet
-      })
-    } else {
-      setSelectedIds(new Set([featureId]))
-      setIsPanelCollapsed(false)
-      if (isMobile) setIsMobileSheetOpen(true)
-    }
-  }, [isPanelCollapsed, isMobile])
+  const handleFeatureClick = useCallback(
+    (featureId: string, isMultiSelect: boolean) => {
+      if (isMultiSelect) {
+        setSelectedIds((prev) => {
+          const newSet = new Set(prev)
+          if (newSet.has(featureId)) {
+            newSet.delete(featureId)
+          } else {
+            newSet.add(featureId)
+          }
+          if (newSet.size > 0 && isPanelCollapsed) setIsPanelCollapsed(false)
+          if (newSet.size > 0 && isMobile) setIsMobileSheetOpen(true)
+          return newSet
+        })
+      } else {
+        setSelectedIds(new Set([featureId]))
+        setIsPanelCollapsed(false)
+        if (isMobile) setIsMobileSheetOpen(true)
+      }
+    },
+    [isPanelCollapsed, isMobile]
+  )
 
   const handleFeatureHover = useCallback((featureId: string | null) => {
     setHoveredFeatureId(featureId)
@@ -272,8 +280,8 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
     if (!featureCollection) return
 
     const lotIdsToUpdate: string[] = []
-    ids.forEach(geoId => {
-      const feature = featureCollection.features.find(f => f.properties.geometry_id === geoId)
+    ids.forEach((geoId) => {
+      const feature = featureCollection.features.find((f) => f.properties.geometry_id === geoId)
       if (feature?.properties.lot_id) {
         lotIdsToUpdate.push(feature.properties.lot_id)
       }
@@ -281,13 +289,15 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
 
     if (lotIdsToUpdate.length === 0) return
 
-    await Promise.all(lotIdsToUpdate.map(lotId =>
-      fetch(`/api/onboarding/lot/${lotId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-    ))
+    await Promise.all(
+      lotIdsToUpdate.map((lotId) =>
+        fetch(`/api/onboarding/lot/${lotId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+      )
+    )
 
     const featuresRes = await fetch(`/api/viewer/${projectId}/feature-collection`)
     if (featuresRes.ok) {
@@ -366,7 +376,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
           allFeatures={featureCollection?.features ?? []}
           onClearSelection={handleClearSelection}
           onRemoveFromSelection={(id) => {
-            setSelectedIds(prev => {
+            setSelectedIds((prev) => {
               const newSet = new Set(prev)
               newSet.delete(id)
               return newSet
@@ -408,17 +418,26 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
 
         {/* Legend: hidden on very small screens */}
         <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-card rounded-md border border-border">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Leyenda:</span>
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Leyenda:
+          </span>
           <div className="flex items-center gap-1">
-            {['Disponible', 'Reservado', 'Vendido'].map(status => (
+            {['Disponible', 'Reservado', 'Vendido'].map((status) => (
               <Tooltip key={status}>
                 <TooltipTrigger asChild>
-                  <div className={`w-2.5 h-2.5 rounded-sm border cursor-help ${status === 'Disponible' ? 'bg-emerald-500 border-emerald-600' :
-                    status === 'Reservado' ? 'bg-amber-500 border-amber-600' :
-                      'bg-red-500 border-red-600'
-                    }`} />
+                  <div
+                    className={`w-2.5 h-2.5 rounded-sm border cursor-help ${
+                      status === 'Disponible'
+                        ? 'bg-emerald-500 border-emerald-600'
+                        : status === 'Reservado'
+                          ? 'bg-amber-500 border-amber-600'
+                          : 'bg-red-500 border-red-600'
+                    }`}
+                  />
                 </TooltipTrigger>
-                <TooltipContent><p className="text-xs">{status}</p></TooltipContent>
+                <TooltipContent>
+                  <p className="text-xs">{status}</p>
+                </TooltipContent>
               </Tooltip>
             ))}
           </div>
@@ -444,10 +463,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
 
   const mapArea = (
     <div className="flex-1 relative overflow-hidden">
-      <MapPanel
-        featureCollection={featureCollection}
-        className="w-full h-full"
-      >
+      <MapPanel featureCollection={featureCollection} className="w-full h-full">
         <MapLotLayers
           featureCollection={featureCollection}
           selectedIds={selectedIds}
@@ -459,9 +475,12 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
         {/* Hover card only on desktop (touch devices have no hover) */}
         {!isMobile && (
           <LotHoverCard
-            feature={hoveredFeatureId
-              ? featureCollection.features.find(f => f.properties.geometry_id === hoveredFeatureId) ?? null
-              : null
+            feature={
+              hoveredFeatureId
+                ? (featureCollection.features.find(
+                    (f) => f.properties.geometry_id === hoveredFeatureId
+                  ) ?? null)
+                : null
             }
           />
         )}
@@ -472,11 +491,11 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
         <button
           onClick={() => setIsMobileSheetOpen(true)}
           className={cn(
-            "absolute bottom-4 left-1/2 -translate-x-1/2 z-20",
-            "flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg",
-            "text-sm font-semibold text-white",
-            "bg-primary hover:bg-primary/90 active:scale-95 transition-all",
-            "ring-4 ring-primary/20"
+            'absolute bottom-4 left-1/2 -translate-x-1/2 z-20',
+            'flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg',
+            'text-sm font-semibold text-white',
+            'bg-primary hover:bg-primary/90 active:scale-95 transition-all',
+            'ring-4 ring-primary/20'
           )}
         >
           {selectedIds.size > 1 ? (
@@ -509,10 +528,13 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
         </div>
 
         {/* Bottom Sheet — opens on lot selection */}
-        <Sheet open={isMobileSheetOpen} onOpenChange={(open) => {
-          setIsMobileSheetOpen(open)
-          if (!open) setSelectedIds(new Set())
-        }}>
+        <Sheet
+          open={isMobileSheetOpen}
+          onOpenChange={(open) => {
+            setIsMobileSheetOpen(open)
+            if (!open) setSelectedIds(new Set())
+          }}
+        >
           <SheetContent
             side="bottom"
             className="h-[80dvh] rounded-t-2xl p-0 flex flex-col overflow-hidden"
@@ -520,10 +542,11 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
             <SheetHeader className="flex-row items-center justify-between px-4 py-3 border-b border-border/50 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                  {selectedIds.size > 1
-                    ? <HugeiconsIcon icon={Layers01Icon} className="w-4 h-4" />
-                    : <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
-                  }
+                  {selectedIds.size > 1 ? (
+                    <HugeiconsIcon icon={Layers01Icon} className="w-4 h-4" />
+                  ) : (
+                    <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
+                  )}
                 </div>
                 <div className="flex flex-col text-left">
                   <SheetTitle className="text-sm font-semibold leading-tight">
@@ -537,9 +560,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
             </SheetHeader>
 
             <ScrollArea className="flex-1 min-h-0">
-              <div className="p-4 space-y-4">
-                {renderSidebarContent()}
-              </div>
+              <div className="p-4 space-y-4">{renderSidebarContent()}</div>
             </ScrollArea>
           </SheetContent>
         </Sheet>
@@ -552,7 +573,6 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
   return (
     <TooltipProvider>
       <div className="flex h-[calc(100vh-220px)] min-h-125 bg-muted/20 rounded-xl overflow-hidden text-foreground">
-
         {/* Left Side: Map Card */}
         <div className="flex-1 p-2 flex flex-col min-w-0">
           <div className="flex-1 flex flex-col w-full h-full bg-card rounded-xl border border-border shadow-sm overflow-hidden relative">
@@ -564,19 +584,27 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
         </div>
 
         {/* Right Side: Sidebar Card */}
-        <div className={cn(
-          "p-2 transition-all duration-300 ease-in-out shrink-0",
-          isPanelCollapsed ? 'w-15' : 'w-96 lg:w-112.5'
-        )}>
+        <div
+          className={cn(
+            'p-2 transition-all duration-300 ease-in-out shrink-0',
+            isPanelCollapsed ? 'w-15' : 'w-96 lg:w-112.5'
+          )}
+        >
           <div className="h-full bg-sidebar rounded-xl shadow-lg ring-1 ring-sidebar-border flex flex-col overflow-hidden">
-            <div className={cn(
-              "h-14 flex items-center border-b border-sidebar-border/50",
-              isPanelCollapsed ? 'justify-center px-2' : 'px-4'
-            )}>
+            <div
+              className={cn(
+                'h-14 flex items-center border-b border-sidebar-border/50',
+                isPanelCollapsed ? 'justify-center px-2' : 'px-4'
+              )}
+            >
               {!isPanelCollapsed && (
                 <div className="flex items-center gap-3 flex-1">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                    {selectedIds.size > 1 ? <HugeiconsIcon icon={Layers01Icon} className="w-4 h-4" /> : <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />}
+                    {selectedIds.size > 1 ? (
+                      <HugeiconsIcon icon={Layers01Icon} className="w-4 h-4" />
+                    ) : (
+                      <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
+                    )}
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold text-sidebar-foreground">
@@ -591,29 +619,34 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
               <button
                 onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors",
-                  !isPanelCollapsed && "ml-auto"
+                  'flex h-8 w-8 items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors',
+                  !isPanelCollapsed && 'ml-auto'
                 )}
                 title={isPanelCollapsed ? 'Expandir panel' : 'Colapsar panel'}
               >
-                <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
-                  "w-4 h-4 text-sidebar-foreground/70 transition-transform duration-300",
-                  isPanelCollapsed && "rotate-180"
-                )} />
+                <HugeiconsIcon
+                  icon={ArrowRight01Icon}
+                  className={cn(
+                    'w-4 h-4 text-sidebar-foreground/70 transition-transform duration-300',
+                    isPanelCollapsed && 'rotate-180'
+                  )}
+                />
               </button>
             </div>
 
             {!isPanelCollapsed ? (
               <ScrollArea className="flex-1 min-h-0">
-                <div className="p-4 space-y-4">
-                  {renderSidebarContent()}
-                </div>
+                <div className="p-4 space-y-4">{renderSidebarContent()}</div>
               </ScrollArea>
             ) : (
               <div className="flex-1 flex flex-col items-center pt-4 gap-2">
                 {selectedIds.size > 0 && (
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                    {selectedIds.size > 1 ? <HugeiconsIcon icon={Layers01Icon} className="w-4 h-4 text-primary" /> : <HugeiconsIcon icon={Location01Icon} className="w-4 h-4 text-primary" />}
+                    {selectedIds.size > 1 ? (
+                      <HugeiconsIcon icon={Layers01Icon} className="w-4 h-4 text-primary" />
+                    ) : (
+                      <HugeiconsIcon icon={Location01Icon} className="w-4 h-4 text-primary" />
+                    )}
                   </div>
                 )}
               </div>

@@ -18,13 +18,7 @@ import { AssignmentMapPanel } from './AssignmentMapPanel'
 import { AssignmentMapLayers } from './AssignmentMapLayers'
 import { AssignmentHoverCard } from './AssignmentHoverCard'
 import { AssignmentSidePanel } from './AssignmentSidePanel'
-import type {
-  GeometryAssignmentProps,
-  Lot,
-  FilterType,
-  AssignAsType,
-  ParsedFeature,
-} from './types'
+import type { GeometryAssignmentProps, Lot, FilterType, AssignAsType, ParsedFeature } from './types'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -136,13 +130,11 @@ export function GeometryAssignmentPanel({
 
         const assignedIds = new Set<string>()
         const activeGeometries = geometriesData?.geometries || []
-        activeGeometries.forEach(
-          (g: { geometry_type: string; lot_id?: string }) => {
-            if (g.geometry_type === 'lot' && g.lot_id) {
-              assignedIds.add(g.lot_id)
-            }
+        activeGeometries.forEach((g: { geometry_type: string; lot_id?: string }) => {
+          if (g.geometry_type === 'lot' && g.lot_id) {
+            assignedIds.add(g.lot_id)
           }
-        )
+        })
 
         setAssignedLotIds(assignedIds)
         setAssignedCount(assignedIds.size)
@@ -253,7 +245,15 @@ export function GeometryAssignmentPanel({
     } finally {
       setIsAssigning(false)
     }
-  }, [selectedLotId, selectedShapeIds, parsedFeatures, projectId, sourceType, onFeatureAssigned, onAssignmentComplete])
+  }, [
+    selectedLotId,
+    selectedShapeIds,
+    parsedFeatures,
+    projectId,
+    sourceType,
+    onFeatureAssigned,
+    onAssignmentComplete,
+  ])
 
   // ─── Save infrastructure ──────────────────────────────────────────────
   const handleSaveInfrastructure = useCallback(async () => {
@@ -317,7 +317,16 @@ export function GeometryAssignmentPanel({
     } finally {
       setIsAssigning(false)
     }
-  }, [selectedShapeIds, parsedFeatures, assignAsType, projectId, sourceType, infraName, onFeatureAssigned, onAssignmentComplete])
+  }, [
+    selectedShapeIds,
+    parsedFeatures,
+    assignAsType,
+    projectId,
+    sourceType,
+    infraName,
+    onFeatureAssigned,
+    onAssignmentComplete,
+  ])
 
   // ─── Unassign lot ─────────────────────────────────────────────────────
   const handleUnassignLot = useCallback(
@@ -373,9 +382,7 @@ export function GeometryAssignmentPanel({
 
   const toggleTypeVisibility = useCallback(
     (type: FilterType, show: boolean) => {
-      const ofType = parsedFeatures.filter(
-        (s) => type === 'all' || s.geometryType === type
-      )
+      const ofType = parsedFeatures.filter((s) => type === 'all' || s.geometryType === type)
       setHiddenShapeIds((prev) => {
         const next = new Set(prev)
         ofType.forEach((s) => {
@@ -442,12 +449,34 @@ export function GeometryAssignmentPanel({
               <span className="font-medium text-sm text-foreground">Mapa de Geometrías</span>
             </div>
             <div className="flex items-center gap-1">
-              {([
-                { key: 'all' as const, label: 'Todos', count: parsedFeatures.length - assignedShapeTempIds.size, active: 'bg-foreground text-background' },
-                { key: 'lot' as const, label: 'Lotes', count: lotCount, active: 'bg-emerald-500 text-white' },
-                { key: 'road' as const, label: 'Caminos', count: roadCount, active: 'bg-amber-500 text-white' },
-                { key: 'common_area' as const, label: 'Áreas', count: commonAreaCount, active: 'bg-violet-500 text-white' },
-              ] as const).map((pill) => (
+              {(
+                [
+                  {
+                    key: 'all' as const,
+                    label: 'Todos',
+                    count: parsedFeatures.length - assignedShapeTempIds.size,
+                    active: 'bg-foreground text-background',
+                  },
+                  {
+                    key: 'lot' as const,
+                    label: 'Lotes',
+                    count: lotCount,
+                    active: 'bg-emerald-500 text-white',
+                  },
+                  {
+                    key: 'road' as const,
+                    label: 'Caminos',
+                    count: roadCount,
+                    active: 'bg-amber-500 text-white',
+                  },
+                  {
+                    key: 'common_area' as const,
+                    label: 'Áreas',
+                    count: commonAreaCount,
+                    active: 'bg-violet-500 text-white',
+                  },
+                ] as const
+              ).map((pill) => (
                 <button
                   key={pill.key}
                   onClick={() => setFilterType(pill.key)}
@@ -473,7 +502,10 @@ export function GeometryAssignmentPanel({
                 <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
                   <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4 shrink-0" />
                   <span className="flex-1">{error}</span>
-                  <button onClick={() => setError(null)} className="hover:bg-destructive/20 rounded p-0.5">
+                  <button
+                    onClick={() => setError(null)}
+                    className="hover:bg-destructive/20 rounded p-0.5"
+                  >
                     <HugeiconsIcon icon={Cancel01Icon} className="w-4 h-4" />
                   </button>
                 </div>
@@ -482,7 +514,10 @@ export function GeometryAssignmentPanel({
                 <div className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400">
                   <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4 shrink-0" />
                   <span className="flex-1">{successMessage}</span>
-                  <button onClick={() => setSuccessMessage(null)} className="hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded p-0.5">
+                  <button
+                    onClick={() => setSuccessMessage(null)}
+                    className="hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded p-0.5"
+                  >
                     <HugeiconsIcon icon={Cancel01Icon} className="w-4 h-4" />
                   </button>
                 </div>
@@ -556,4 +591,3 @@ export function GeometryAssignmentPanel({
     </TooltipProvider>
   )
 }
-

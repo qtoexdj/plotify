@@ -27,9 +27,7 @@ export default function ClientsPage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <HugeiconsIcon icon={UserGroupIcon} className="w-16 h-16 text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay leads</h3>
-            <p className="text-gray-600 mb-4">
-              Los leads se gestionarán desde los proyectos
-            </p>
+            <p className="text-gray-600 mb-4">Los leads se gestionarán desde los proyectos</p>
             <Button>
               <HugeiconsIcon icon={PlusSignIcon} className="w-4 h-4 mr-2" />
               Agregar Lead

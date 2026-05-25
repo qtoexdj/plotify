@@ -4,8 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/logger'
 import {
-  createBlock, updateBlock, softDeleteBlock,
-  createTemplate, saveTemplateBlocks,
+  createBlock,
+  updateBlock,
+  softDeleteBlock,
+  createTemplate,
+  saveTemplateBlocks,
 } from '@/lib/services/documents.service'
 import { generateDocument as generateDocApi } from '@/lib/services/document-generation.service'
 import type { DocumentBlockInsert, DocumentTemplateInsert } from '@/types/v2'
@@ -23,7 +26,9 @@ function extractLotOrganizationId(lot: LotOrganizationRow | null): string | null
 
 export async function createBlockAction(block: Omit<DocumentBlockInsert, 'created_by'>) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return { success: false as const, error: 'No autenticado' }
 
   try {
@@ -61,17 +66,20 @@ export async function deleteBlockAction(blockId: string) {
     return { success: true as const }
   } catch (err) {
     logger.error({ err, blockId }, 'delete_block_failed')
-    return { success: false as const, error: 'Error al eliminar bloque (puede tener templates asociados)' }
+    return {
+      success: false as const,
+      error: 'Error al eliminar bloque (puede tener templates asociados)',
+    }
   }
 }
 
 // ─── TEMPLATES ────────────────────────────────────────────────────────────────
 
-export async function createTemplateAction(
-  template: Omit<DocumentTemplateInsert, 'created_by'>
-) {
+export async function createTemplateAction(template: Omit<DocumentTemplateInsert, 'created_by'>) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return { success: false as const, error: 'No autenticado' }
 
   try {
@@ -105,7 +113,9 @@ export async function saveTemplateBlocksAction(
 
 export async function duplicateTemplateAction(templateId: string) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return { success: false as const, error: 'No autenticado' }
 
   try {
@@ -136,22 +146,22 @@ export async function duplicateTemplateAction(templateId: string) {
     if (copyError || !copy) throw copyError ?? new Error('Error copiando template')
 
     // Copiar items del template
-    const items = (original.template_block_items as Array<{
+    const items = original.template_block_items as Array<{
       block_id: string
       position: number
       is_optional: boolean
       condition_field: string | null
-    }>)
+    }>
     if (items.length > 0) {
-      const { error: itemsError } = await supabase
-        .from('template_block_items')
-        .insert(items.map(item => ({
+      const { error: itemsError } = await supabase.from('template_block_items').insert(
+        items.map((item) => ({
           template_id: copy.id,
           block_id: item.block_id,
           position: item.position,
           is_optional: item.is_optional,
           condition_field: item.condition_field,
-        })))
+        }))
+      )
       if (itemsError) throw itemsError
     }
 
@@ -171,7 +181,9 @@ export async function generateDocumentAction(
   format: 'pdf' | 'docx'
 ) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return { success: false as const, error: 'No autenticado' }
 
   try {

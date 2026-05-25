@@ -6,10 +6,7 @@ import { revalidatePath } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const supabase = await createClient()
@@ -27,21 +24,17 @@ export async function GET(
       return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
-
     const vendors = await getProjectVendors(id)
 
-    return Response.json({ 
+    return Response.json({
       project: {
         ...project,
-        vendors
-      } 
+        vendors,
+      },
     })
   } catch (error) {
     console.error('Error in GET /api/projects/[id]:', error)
-    return Response.json(
-      { error: 'Error al obtener proyecto' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al obtener proyecto' }, { status: 500 })
   }
 }
 
@@ -65,9 +58,6 @@ export async function DELETE(
     return Response.json({ message: 'Proyecto eliminado' })
   } catch (error) {
     console.error('Error in DELETE /api/projects/[id]:', error)
-    return Response.json(
-      { error: 'Error al eliminar proyecto' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al eliminar proyecto' }, { status: 500 })
   }
 }

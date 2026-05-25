@@ -20,10 +20,7 @@ export async function GET(
     })
   } catch (error) {
     console.error('Error in GET /api/onboarding/[projectId]/geometries:', error)
-    return Response.json(
-      { error: 'Error al obtener geometrías' },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al obtener geometrías' }, { status: 500 })
   }
 }
 

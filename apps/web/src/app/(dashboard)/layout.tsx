@@ -1,21 +1,13 @@
 import { redirect } from 'next/navigation'
 import { AppSidebar } from '@/components/app-sidebar'
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { BackendStatusBadge } from '@/components/system/BackendStatusBadge'
 import { ModeToggle } from '@/components/mode-toggle'
 import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { getActiveWorkspace } from '@/lib/services/workspace.service'
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isSuperAdmin } = await getUserWithSuperAdmin()
 
   if (!user) {
@@ -55,4 +47,3 @@ export default async function DashboardLayout({
     </SidebarProvider>
   )
 }
-

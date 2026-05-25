@@ -1,7 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Building04Icon, UserGroupIcon, Folder01Icon, Search01Icon } from '@hugeicons/core-free-icons'
+import {
+  Building04Icon,
+  UserGroupIcon,
+  Folder01Icon,
+  Search01Icon,
+} from '@hugeicons/core-free-icons'
 
 function formatCount(value: number | null) {
   return value ?? 0
@@ -70,9 +75,7 @@ export default async function SuperAdminDashboard() {
             <HugeiconsIcon icon={Search01Icon} className="w-5 h-5 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">
-              {formatCount(audits.count)}
-            </div>
+            <div className="text-3xl font-semibold text-slate-900">{formatCount(audits.count)}</div>
           </CardContent>
         </Card>
       </div>

@@ -60,9 +60,7 @@ export function PromptEditor({ prompt, activeVersion, accessToken }: PromptEdito
           throw new Error(err.error ?? 'Error al guardar')
         }
 
-        toast.success(
-          activate ? 'Versión publicada y activa' : 'Borrador guardado correctamente'
-        )
+        toast.success(activate ? 'Versión publicada y activa' : 'Borrador guardado correctamente')
         setChangeNote('')
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Error inesperado')
@@ -83,11 +81,7 @@ export function PromptEditor({ prompt, activeVersion, accessToken }: PromptEdito
                 </span>
               )}
             </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowPreview(!showPreview)}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowPreview(!showPreview)}>
               {showPreview ? 'Editar' : 'Vista previa'}
             </Button>
           </div>
@@ -117,17 +111,10 @@ export function PromptEditor({ prompt, activeVersion, accessToken }: PromptEdito
             />
           </div>
           <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => handleSave(false)}
-              disabled={isPending}
-            >
+            <Button variant="outline" onClick={() => handleSave(false)} disabled={isPending}>
               Guardar como borrador
             </Button>
-            <Button
-              onClick={() => handleSave(true)}
-              disabled={isPending}
-            >
+            <Button onClick={() => handleSave(true)} disabled={isPending}>
               Publicar
             </Button>
           </div>

@@ -22,10 +22,7 @@ import type { EscrituraVariables } from '@/types/documents'
  * Resolución local de variables Jinja2.
  * Soporta: {{ variable.campo }} y {{ variable.campo | default("valor") }}
  */
-function resolveTemplate(
-  templateHtml: string,
-  variables: EscrituraVariables
-): string {
+function resolveTemplate(templateHtml: string, variables: EscrituraVariables): string {
   return templateHtml.replace(
     /\{\{\s*([\w.]+)\s*(?:\|\s*default\("([^"]*)"\)|\|[^}]*)?\s*\}\}/g,
     (_: string, key: string, fallback: string) => {
@@ -200,11 +197,9 @@ function buildAutoFill(lot: {
     ? numberToWords(lotNumero).replace(/^UN(\s|$)/, 'UNO$1')
     : lot.numero_lote.toUpperCase()
 
-  const areaWords =
-    area != null && area > 0 ? `${numberToWords(area)} METROS CUADRADOS` : ''
+  const areaWords = area != null && area > 0 ? `${numberToWords(area)} METROS CUADRADOS` : ''
 
-  const precioLetras =
-    precio != null && precio > 0 ? `${numberToWords(precio)} PESOS` : ''
+  const precioLetras = precio != null && precio > 0 ? `${numberToWords(precio)} PESOS` : ''
 
   const tieneServidumbre = (lot.servidumbre_m2 ?? 0) > 0
   const servidumbreWords =
@@ -260,7 +255,8 @@ const FULL_FORM_VALUES: WizardFormValues = {
   sag_plano_cbr_anio: '2024',
   lote_numero_nombre: 'LOTE N CIENTO SESENTA Y TRES',
   lote_superficie_total: 'DOSCIENTOS CINCUENTA METROS CUADRADOS',
-  lote_deslindes: 'NORTE, en treinta metros con camino público; SUR, en treinta metros con lote ciento sesenta y cuatro.',
+  lote_deslindes:
+    'NORTE, en treinta metros con camino público; SUR, en treinta metros con lote ciento sesenta y cuatro.',
   lote_rol_tramite: '789-012',
   servidumbre_aplica: true,
   servidumbre_superficie: 'DIECISIETE METROS CUADRADOS',
@@ -542,23 +538,53 @@ describe('F-v2-4.11 — buildAutoFill: lógica de auto-relleno del Step 2', () =
 describe('F-v2-4.11 — WizardFormSchema: validación Zod del Step 2', () => {
   const validPayload = {
     vendedor_tipo: 'natural' as const,
-    vendedor_nombre: '', vendedor_rut: '', vendedor_domicilio: '',
-    comprador_nombre: '', comprador_rut: '', comprador_domicilio: '',
-    comprador_estado_civil: '', comprador_profesion: '',
-    matriz_nombre_predio: '', matriz_ubicacion: '', matriz_superficie_total: '',
-    matriz_norte: '', matriz_sur: '', matriz_oriente: '', matriz_poniente: '',
-    matriz_adquisicion_modo: '', matriz_adquisicion_notaria: '', matriz_adquisicion_fecha: '',
-    matriz_inscripcion_fojas: '', matriz_inscripcion_numero: '', matriz_inscripcion_anio: '',
-    matriz_inscripcion_cbr: '', matriz_rol_avaluo: '',
-    sag_certificado_numero: '', sag_certificado_fecha: '',
-    sag_plano_cbr_numero: '', sag_plano_cbr_anio: '',
-    lote_numero_nombre: '', lote_superficie_total: '', lote_deslindes: '', lote_rol_tramite: '',
-    servidumbre_aplica: false, servidumbre_superficie: '', servidumbre_deslindes_tramo: '',
-    transaccion_precio_numeros: '', transaccion_precio_letras: '', transaccion_forma_pago: '',
-    mandato_nombre_representante: '', mandato_rut_representante: '',
-    personeria_aplica: false, personeria_tipo_documento: '', personeria_notaria: '',
-    personeria_fecha: '', personeria_inscripcion_fojas: '', personeria_inscripcion_numero: '',
-    personeria_inscripcion_anio: '', personeria_inscripcion_cbr: '',
+    vendedor_nombre: '',
+    vendedor_rut: '',
+    vendedor_domicilio: '',
+    comprador_nombre: '',
+    comprador_rut: '',
+    comprador_domicilio: '',
+    comprador_estado_civil: '',
+    comprador_profesion: '',
+    matriz_nombre_predio: '',
+    matriz_ubicacion: '',
+    matriz_superficie_total: '',
+    matriz_norte: '',
+    matriz_sur: '',
+    matriz_oriente: '',
+    matriz_poniente: '',
+    matriz_adquisicion_modo: '',
+    matriz_adquisicion_notaria: '',
+    matriz_adquisicion_fecha: '',
+    matriz_inscripcion_fojas: '',
+    matriz_inscripcion_numero: '',
+    matriz_inscripcion_anio: '',
+    matriz_inscripcion_cbr: '',
+    matriz_rol_avaluo: '',
+    sag_certificado_numero: '',
+    sag_certificado_fecha: '',
+    sag_plano_cbr_numero: '',
+    sag_plano_cbr_anio: '',
+    lote_numero_nombre: '',
+    lote_superficie_total: '',
+    lote_deslindes: '',
+    lote_rol_tramite: '',
+    servidumbre_aplica: false,
+    servidumbre_superficie: '',
+    servidumbre_deslindes_tramo: '',
+    transaccion_precio_numeros: '',
+    transaccion_precio_letras: '',
+    transaccion_forma_pago: '',
+    mandato_nombre_representante: '',
+    mandato_rut_representante: '',
+    personeria_aplica: false,
+    personeria_tipo_documento: '',
+    personeria_notaria: '',
+    personeria_fecha: '',
+    personeria_inscripcion_fojas: '',
+    personeria_inscripcion_numero: '',
+    personeria_inscripcion_anio: '',
+    personeria_inscripcion_cbr: '',
   }
 
   it('acepta payload mínimo válido (todos los strings vacíos)', () => {

@@ -54,7 +54,10 @@ export async function microserviceFetch<T = unknown>(
       } catch {
         // Ignorar error de parseo
       }
-      logger.warn({ path, status: response.status, error: errorMessage }, '[microservice.client] Respuesta no OK')
+      logger.warn(
+        { path, status: response.status, error: errorMessage },
+        '[microservice.client] Respuesta no OK'
+      )
       return { data: null, error: errorMessage, status: response.status }
     }
 

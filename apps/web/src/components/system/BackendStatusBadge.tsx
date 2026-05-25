@@ -34,5 +34,9 @@ export function BackendStatusBadge() {
     return <Badge variant="destructive">Backend desconectado</Badge>
   }
 
-  return <Badge variant="default" className="bg-green-600">Backend activo</Badge>
+  return (
+    <Badge variant="default" className="bg-green-600">
+      Backend activo
+    </Badge>
+  )
 }

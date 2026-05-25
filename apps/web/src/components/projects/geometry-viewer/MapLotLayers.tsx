@@ -193,10 +193,7 @@ export function MapLotLayers({
       id: LOT_LABELS_LAYER,
       type: 'symbol',
       source: SOURCE_ID,
-      filter: ['all',
-        ['==', ['get', 'geometry_type'], 'lot'],
-        ['has', 'numero_lote'],
-      ],
+      filter: ['all', ['==', ['get', 'geometry_type'], 'lot'], ['has', 'numero_lote']],
       layout: {
         'symbol-placement': 'point',
         'text-field': ['to-string', ['get', 'numero_lote']],
@@ -237,7 +234,8 @@ export function MapLotLayers({
     const handleClick = (e: MapLibreGL.MapLayerMouseEvent) => {
       if (e.features && e.features.length > 0) {
         const geoId = e.features[0].properties?.geometry_id as string
-        const isMulti = e.originalEvent.shiftKey || e.originalEvent.ctrlKey || e.originalEvent.metaKey
+        const isMulti =
+          e.originalEvent.shiftKey || e.originalEvent.ctrlKey || e.originalEvent.metaKey
         onFeatureClick(geoId, isMulti)
       }
     }
@@ -279,9 +277,7 @@ export function MapLotLayers({
     } else {
       map.setPaintProperty(LOT_FILL_LAYER, 'fill-opacity', [
         'case',
-        hoveredFeatureId
-          ? ['==', ['get', 'geometry_id'], hoveredFeatureId]
-          : false,
+        hoveredFeatureId ? ['==', ['get', 'geometry_id'], hoveredFeatureId] : false,
         0.85,
         0.75, // default
       ])
@@ -290,25 +286,29 @@ export function MapLotLayers({
     // --- Lot Outline (F13 selected = blue border) ---
     map.setPaintProperty(LOT_OUTLINE_LAYER, 'line-color', [
       'case',
-      ['in', ['get', 'geometry_id'], ['literal', selectedArr.length > 0 ? selectedArr : ['__none__']]],
+      [
+        'in',
+        ['get', 'geometry_id'],
+        ['literal', selectedArr.length > 0 ? selectedArr : ['__none__']],
+      ],
       '#1d4ed8', // selected blue
       ['get', '_stroke_color'], // default
     ])
     map.setPaintProperty(LOT_OUTLINE_LAYER, 'line-width', [
       'case',
-      ['in', ['get', 'geometry_id'], ['literal', selectedArr.length > 0 ? selectedArr : ['__none__']]],
+      [
+        'in',
+        ['get', 'geometry_id'],
+        ['literal', selectedArr.length > 0 ? selectedArr : ['__none__']],
+      ],
       3.5,
-      hoveredFeatureId
-        ? ['case', ['==', ['get', 'geometry_id'], hoveredFeatureId], 2.5, 1.5]
-        : 1.5,
+      hoveredFeatureId ? ['case', ['==', ['get', 'geometry_id'], hoveredFeatureId], 2.5, 1.5] : 1.5,
     ])
 
     // --- Road hover (F11) ---
     map.setPaintProperty(ROAD_LAYER, 'line-width', [
       'case',
-      hoveredFeatureId
-        ? ['==', ['get', 'geometry_id'], hoveredFeatureId]
-        : false,
+      hoveredFeatureId ? ['==', ['get', 'geometry_id'], hoveredFeatureId] : false,
       4,
       2.5,
     ])
@@ -343,7 +343,11 @@ export function MapLotLayers({
     }
 
     // --- Label halo adapts to theme ---
-    map.setPaintProperty(LOT_LABELS_LAYER, 'text-halo-color', isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)')
+    map.setPaintProperty(
+      LOT_LABELS_LAYER,
+      'text-halo-color',
+      isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)'
+    )
     map.setPaintProperty(LOT_LABELS_LAYER, 'text-halo-width', 2)
   }, [map, isLoaded, selectedIds, hoveredFeatureId, isDark])
 
@@ -353,8 +357,12 @@ export function MapLotLayers({
       if (!map) return
       try {
         const layers = [
-          LOT_LABELS_LAYER, ROAD_LAYER, LOT_OUTLINE_LAYER,
-          LOT_FILL_LAYER, COMMON_AREA_OUTLINE_LAYER, COMMON_AREA_FILL_LAYER,
+          LOT_LABELS_LAYER,
+          ROAD_LAYER,
+          LOT_OUTLINE_LAYER,
+          LOT_FILL_LAYER,
+          COMMON_AREA_OUTLINE_LAYER,
+          COMMON_AREA_FILL_LAYER,
         ]
         for (const id of layers) {
           if (map.getLayer(id)) map.removeLayer(id)

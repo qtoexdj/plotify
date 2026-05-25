@@ -1,7 +1,6 @@
-
 'use client'
 
-import { use, useEffect, useState, useRef } from 'react'
+import { use, useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GeometryViewer } from '@/components/projects/geometry-viewer'
@@ -44,10 +43,12 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   useEffect(() => {
     const checkRole = async () => {
       if (!project?.organization_id) return
-      
+
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
       if (user) {
         const { data } = await supabase
           .from('organization_members')
@@ -55,7 +56,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           .eq('organization_id', project.organization_id)
           .eq('user_id', user.id)
           .maybeSingle()
-        
+
         setUserRole(data?.role || null)
       }
     }
@@ -76,7 +77,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     const loadProject = async () => {
       try {
         const response = await fetch(`/api/projects/${projectId}`, {
-          signal: controller.signal
+          signal: controller.signal,
         })
         if (response.ok) {
           const data = await response.json()
@@ -110,9 +111,8 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   }, [projectId, router])
 
   // Load Lots Data
-  const fetchLots = async () => {
-    // Si ya tenemos lotes, no mostramos loading global, solo refresco silencioso o específico si se desea
-    if (lots.length === 0) setIsLotsLoading(true)
+  const fetchLots = useCallback(async () => {
+    setIsLotsLoading(true)
     setLotsError(null)
 
     try {
@@ -128,12 +128,15 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     } finally {
       setIsLotsLoading(false)
     }
-  }
+  }, [projectId])
 
   useEffect(() => {
-    fetchLots()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId])
+    const timeoutId = window.setTimeout(() => {
+      void fetchLots()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [fetchLots])
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -197,12 +200,28 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           isAdmin={isAdmin}
         >
           <TabsList className="flex-wrap h-auto gap-0.5">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Vista General</TabsTrigger>
-            <TabsTrigger value="lots" className="text-xs sm:text-sm">Lotes</TabsTrigger>
-            <TabsTrigger value="viewer" className="text-xs sm:text-sm">Visor</TabsTrigger>
-            <TabsTrigger value="documents" className="text-xs sm:text-sm">Documentos</TabsTrigger>
-            {isAdmin && <TabsTrigger value="clients" className="text-xs sm:text-sm">Clientes</TabsTrigger>}
-            {isAdmin && <TabsTrigger value="legal" className="text-xs sm:text-sm">Legal</TabsTrigger>}
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">
+              Vista General
+            </TabsTrigger>
+            <TabsTrigger value="lots" className="text-xs sm:text-sm">
+              Lotes
+            </TabsTrigger>
+            <TabsTrigger value="viewer" className="text-xs sm:text-sm">
+              Visor
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="text-xs sm:text-sm">
+              Documentos
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="clients" className="text-xs sm:text-sm">
+                Clientes
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="legal" className="text-xs sm:text-sm">
+                Legal
+              </TabsTrigger>
+            )}
           </TabsList>
         </ProjectHeader>
 
@@ -246,4 +265,3 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     </div>
   )
 }
-

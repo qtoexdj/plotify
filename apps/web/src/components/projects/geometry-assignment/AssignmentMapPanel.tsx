@@ -53,7 +53,11 @@ function MapAutoFit({ featureCollection }: { featureCollection: GeoJSON.FeatureC
 // AssignmentMapPanel
 // ─────────────────────────────────────────────────────────────────────────
 
-export function AssignmentMapPanel({ featureCollection, children, className }: AssignmentMapPanelProps) {
+export function AssignmentMapPanel({
+  featureCollection,
+  children,
+  className,
+}: AssignmentMapPanelProps) {
   const [initialCenter] = useState<[number, number]>(() => {
     const bounds = computeBoundsFromFC(featureCollection)
     if (!bounds) return [-70.65, -33.45] // Santiago default

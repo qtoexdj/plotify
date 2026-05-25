@@ -10,17 +10,17 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "@/components/ui/carousel"
+} from '@/components/ui/carousel'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { 
-    ImageAdd01Icon, 
-    FileUploadIcon, 
-    Delete02Icon as Trash01Icon, 
-    Download01Icon,
-    FileAttachmentIcon,
-    Loading02Icon,
-    ViewIcon,
-    Share01Icon
+import {
+  ImageAdd01Icon,
+  FileUploadIcon,
+  Delete02Icon as Trash01Icon,
+  Download01Icon,
+  FileAttachmentIcon,
+  Loading02Icon,
+  ViewIcon,
+  Share01Icon,
 } from '@hugeicons/core-free-icons'
 import type { ProjectWithMetrics } from '@/types/database.types'
 import { createClient } from '@/lib/supabase/client'
@@ -29,324 +29,363 @@ import { DocumentViewer } from './document-viewer'
 import Image from 'next/image'
 
 interface DocumentsTabProps {
-    project: ProjectWithMetrics
-    isAdmin: boolean
+  project: ProjectWithMetrics
+  isAdmin: boolean
 }
 
 const DOCUMENT_TYPES = [
-    { id: 'doc_dominio_vigente', label: 'Dominio Vigente' },
-    { id: 'doc_hipoteca_gravamen', label: 'Certificado Hipoteca y Gravamen' },
-    { id: 'doc_roles', label: 'Certificado de Roles' },
-    { id: 'doc_subdivision', label: 'Certificado de Subdivisión' },
-    { id: 'doc_plano_oficial', label: 'Plano Oficial' },
-    { id: 'doc_otros', label: 'Otros Documentos' },
+  { id: 'doc_dominio_vigente', label: 'Dominio Vigente' },
+  { id: 'doc_hipoteca_gravamen', label: 'Certificado Hipoteca y Gravamen' },
+  { id: 'doc_roles', label: 'Certificado de Roles' },
+  { id: 'doc_subdivision', label: 'Certificado de Subdivisión' },
+  { id: 'doc_plano_oficial', label: 'Plano Oficial' },
+  { id: 'doc_otros', label: 'Otros Documentos' },
 ]
 
 export function DocumentsTab({ project: initialProject, isAdmin }: DocumentsTabProps) {
-    const [project, setProject] = useState(initialProject)
-    const [isUploading, setIsUploading] = useState<string | null>(null)
-    const supabase = createClient()
+  const [project, setProject] = useState(initialProject)
+  const [isUploading, setIsUploading] = useState<string | null>(null)
+  const supabase = createClient()
 
-    const getFullUrl = (path: string | null | undefined) => {
-        if (!path || path === '[]') return ''
-        // Limpiamos el path por si ya trae el nombre del bucket (pasa a veces en subidas directas)
-        const cleanPath = path.replace(/^project-files\//, '')
-        const { data } = supabase.storage.from('project-files').getPublicUrl(cleanPath)
-        return data.publicUrl
+  const getFullUrl = (path: string | null | undefined) => {
+    if (!path || path === '[]') return ''
+    // Limpiamos el path por si ya trae el nombre del bucket (pasa a veces en subidas directas)
+    const cleanPath = path.replace(/^project-files\//, '')
+    const { data } = supabase.storage.from('project-files').getPublicUrl(cleanPath)
+    return data.publicUrl
+  }
+
+  const handleShare = async (url: string, title: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: title,
+          text: `Revisa este documento: ${title}`,
+          url: url,
+        })
+      } else {
+        await navigator.clipboard.writeText(url)
+        toast.success('Enlace copiado', {
+          description: 'Enlace del documento copiado al portapapeles.',
+        })
+      }
+    } catch (error: unknown) {
+      if ((error as { name?: string }).name !== 'AbortError') {
+        console.error('Error sharing:', error)
+        toast.error('No se pudo compartir el archivo')
+      }
     }
+  }
 
-    const handleShare = async (url: string, title: string) => {
-        try {
-            if (navigator.share) {
-                await navigator.share({
-                    title: title,
-                    text: `Revisa este documento: ${title}`,
-                    url: url
-                })
-            } else {
-                await navigator.clipboard.writeText(url)
-                toast.success('Enlace copiado', {
-                    description: 'Enlace del documento copiado al portapapeles.'
-                })
-            }
-        } catch (error: unknown) {
-            if ((error as { name?: string }).name !== 'AbortError') {
-                console.error('Error sharing:', error)
-                toast.error('No se pudo compartir el archivo')
-            }
-        }
+  const handleShareAllImages = async () => {
+    if (!project.images || project.images.length === 0) return
+
+    const urlsText = project.images
+      .map((path: string, i: number) => `Imagen ${i + 1}: ${getFullUrl(path)}`)
+      .join('\n')
+    const textToShare = `Galería de imágenes del proyecto ${project.name}:\n\n${urlsText}`
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Galería - ${project.name}`,
+          text: textToShare,
+        })
+      } else {
+        await navigator.clipboard.writeText(textToShare)
+        toast.success('Enlaces copiados', {
+          description: 'Los enlaces de todas las imágenes se han copiado al portapapeles.',
+        })
+      }
+    } catch (error: unknown) {
+      if ((error as { name?: string }).name !== 'AbortError') {
+        console.error('Error sharing:', error)
+        toast.error('No se pudo compartir la galería')
+      }
     }
+  }
 
-    const handleShareAllImages = async () => {
-        if (!project.images || project.images.length === 0) return
+  const handleFileUpload = async (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-        const urlsText = project.images.map((path: string, i: number) => `Imagen ${i + 1}: ${getFullUrl(path)}`).join('\n')
-        const textToShare = `Galería de imágenes del proyecto ${project.name}:\n\n${urlsText}`
+    setIsUploading(type)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('projectId', project.id)
+      formData.append('type', type)
 
-        try {
-            if (navigator.share) {
-                await navigator.share({
-                    title: `Galería - ${project.name}`,
-                    text: textToShare
-                })
-            } else {
-                await navigator.clipboard.writeText(textToShare)
-                toast.success('Enlaces copiados', {
-                    description: 'Los enlaces de todas las imágenes se han copiado al portapapeles.'
-                })
-            }
-        } catch (error: unknown) {
-            if ((error as { name?: string }).name !== 'AbortError') {
-                console.error('Error sharing:', error)
-                toast.error('No se pudo compartir la galería')
-            }
-        }
+      const response = await fetch('/api/uploads/project-files', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al validar o subir el archivo')
+      }
+
+      setProject(result.project)
+      toast.success('Archivo validado y subido con éxito')
+    } catch (error: unknown) {
+      console.error('Error uploading:', error)
+      const message = error instanceof Error ? error.message : 'Error al subir el archivo'
+      toast.error(message)
+    } finally {
+      setIsUploading(null)
     }
+  }
 
-    const handleFileUpload = async (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
+  const handleDelete = async (type: string, path: string) => {
+    if (!confirm('¿Estás seguro de eliminar este archivo?')) return
 
-        setIsUploading(type)
-        try {
-            const formData = new FormData()
-            formData.append('file', file)
-            formData.append('projectId', project.id)
-            formData.append('type', type)
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage.from('project-files').remove([path])
 
-            const response = await fetch('/api/uploads/project-files', {
-                method: 'POST',
-                body: formData
-            })
+      if (storageError) throw storageError
 
-            const result = await response.json()
+      // Update database
+      const updates =
+        type === 'images'
+          ? { images: (project.images || []).filter((img: string) => img !== path) }
+          : { [type]: null }
 
-            if (!response.ok) {
-                throw new Error(result.error || 'Error al validar o subir el archivo')
-            }
+      const { data: updatedProject, error: dbError } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', project.id)
+        .select()
+        .single()
 
-            setProject(result.project)
-            toast.success('Archivo validado y subido con éxito')
-        } catch (error: unknown) {
-            console.error('Error uploading:', error)
-            const message = error instanceof Error ? error.message : 'Error al subir el archivo'
-            toast.error(message)
-        } finally {
-            setIsUploading(null)
-        }
+      if (dbError) throw dbError
+
+      setProject(updatedProject)
+      toast.success('Archivo eliminado')
+    } catch (error) {
+      console.error('Error deleting:', error)
+      toast.error('Error al eliminar el archivo')
     }
+  }
 
-    const handleDelete = async (type: string, path: string) => {
-        if (!confirm('¿Estás seguro de eliminar este archivo?')) return
-
-        try {
-            // Delete from storage
-            const { error: storageError } = await supabase.storage
-                .from('project-files')
-                .remove([path])
-
-            if (storageError) throw storageError
-
-            // Update database
-            const updates = type === 'images'
-                ? { images: (project.images || []).filter((img: string) => img !== path) }
-                : { [type]: null }
-
-            const { data: updatedProject, error: dbError } = await supabase
-                .from('projects')
-                .update(updates)
-                .eq('id', project.id)
-                .select()
-                .single()
-
-            if (dbError) throw dbError
-
-            setProject(updatedProject)
-            toast.success('Archivo eliminado')
-        } catch (error) {
-            console.error('Error deleting:', error)
-            toast.error('Error al eliminar el archivo')
-        }
-    }
-
-    return (
-        <div className="space-y-6">
-            {/* Galería de Imágenes */}
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle className="flex items-center gap-2">
-                            <HugeiconsIcon icon={ImageAdd01Icon} className="w-5 h-5 text-blue-600" />
-                            Galería de Imágenes
-                        </CardTitle>
-                        <CardDescription>Hasta 10 imágenes del proyecto.</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {project.images && project.images.length > 0 && (
-                            <Button variant="outline" size="sm" onClick={handleShareAllImages}>
-                                <HugeiconsIcon icon={Share01Icon} className="w-4 h-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Compartir Galería</span>
-                            </Button>
-                        )}
-                        {isAdmin && (project.images?.length || 0) < 10 && (
-                            <div className="relative">
-                                <input
-                                    type="file"
-                                    id="image-upload"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) => handleFileUpload('images', e)}
-                                    disabled={isUploading === 'images'}
-                                />
-                                <Button variant="outline" size="sm" asChild disabled={isUploading === 'images'}>
-                                    <label htmlFor="image-upload" className="cursor-pointer">
-                                        {isUploading === 'images' ? (
-                                            <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
-                                        ) : (
-                                            <HugeiconsIcon icon={ImageAdd01Icon} className="w-4 h-4 mr-2" />
-                                        )}
-                                        Subir Imagen
-                                    </label>
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {(!project.images || project.images.length === 0) ? (
-                        <div className="py-10 text-center text-slate-500 border-2 border-dashed rounded-lg">
-                            No hay imágenes cargadas
-                        </div>
+  return (
+    <div className="space-y-6">
+      {/* Galería de Imágenes */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <HugeiconsIcon icon={ImageAdd01Icon} className="w-5 h-5 text-blue-600" />
+              Galería de Imágenes
+            </CardTitle>
+            <CardDescription>Hasta 10 imágenes del proyecto.</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            {project.images && project.images.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleShareAllImages}>
+                <HugeiconsIcon icon={Share01Icon} className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Compartir Galería</span>
+              </Button>
+            )}
+            {isAdmin && (project.images?.length || 0) < 10 && (
+              <div className="relative">
+                <input
+                  type="file"
+                  id="image-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileUpload('images', e)}
+                  disabled={isUploading === 'images'}
+                />
+                <Button variant="outline" size="sm" asChild disabled={isUploading === 'images'}>
+                  <label htmlFor="image-upload" className="cursor-pointer">
+                    {isUploading === 'images' ? (
+                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
-                        <div className="px-4">
-                            <Carousel
-                                opts={{
-                                    align: "start",
-                                    loop: false,
-                                }}
-                                className="w-full"
-                            >
-                                <CarouselContent className="-ml-2 md:-ml-4">
-                                    {project.images.map((path: string, index: number) => (
-                                        <CarouselItem key={index} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/4">
-                                            <div className="relative aspect-square rounded-lg overflow-hidden border bg-slate-100 group">
-                                                <Image 
-                                                    src={getFullUrl(path)} 
-                                                    alt={`img-${index}`} 
-                                                    fill
-                                                    unoptimized
-                                                    className="object-cover" 
-                                                />
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-2">
-                                                    <Button variant="ghost" size="icon" className="text-white" asChild>
-                                                        <a href={getFullUrl(path)} target="_blank" rel="noopener noreferrer">
-                                                            <HugeiconsIcon icon={ViewIcon} className="w-5 h-5" />
-                                                        </a>
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="text-white" onClick={() => handleShare(getFullUrl(path), 'Imagen del Proyecto')}>
-                                                        <HugeiconsIcon icon={Share01Icon} className="w-5 h-5" />
-                                                    </Button>
-                                                    {isAdmin && (
-                                                        <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-500" onClick={() => handleDelete('images', path)}>
-                                                            <HugeiconsIcon icon={Trash01Icon} className="w-5 h-5" />
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </CarouselItem>
-                                    ))}
-                                </CarouselContent>
-                                <CarouselPrevious className="absolute -left-4 xl:-left-8" />
-                                <CarouselNext className="absolute -right-4 xl:-right-8" />
-                            </Carousel>
-                        </div>
+                      <HugeiconsIcon icon={ImageAdd01Icon} className="w-4 h-4 mr-2" />
                     )}
-                </CardContent>
-            </Card>
+                    Subir Imagen
+                  </label>
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!project.images || project.images.length === 0 ? (
+            <div className="py-10 text-center text-slate-500 border-2 border-dashed rounded-lg">
+              No hay imágenes cargadas
+            </div>
+          ) : (
+            <div className="px-4">
+              <Carousel
+                opts={{
+                  align: 'start',
+                  loop: false,
+                }}
+                className="w-full"
+              >
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {project.images.map((path: string, index: number) => (
+                    <CarouselItem
+                      key={index}
+                      className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/4"
+                    >
+                      <div className="relative aspect-square rounded-lg overflow-hidden border bg-slate-100 group">
+                        <Image
+                          src={getFullUrl(path)}
+                          alt={`img-${index}`}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-2">
+                          <Button variant="ghost" size="icon" className="text-white" asChild>
+                            <a href={getFullUrl(path)} target="_blank" rel="noopener noreferrer">
+                              <HugeiconsIcon icon={ViewIcon} className="w-5 h-5" />
+                            </a>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white"
+                            onClick={() => handleShare(getFullUrl(path), 'Imagen del Proyecto')}
+                          >
+                            <HugeiconsIcon icon={Share01Icon} className="w-5 h-5" />
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-400 hover:text-red-500"
+                              onClick={() => handleDelete('images', path)}
+                            >
+                              <HugeiconsIcon icon={Trash01Icon} className="w-5 h-5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="absolute -left-4 xl:-left-8" />
+                <CarouselNext className="absolute -right-4 xl:-right-8" />
+              </Carousel>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-            {/* Documentos Legales */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-blue-600" />
-                        Documentos Legales
-                    </CardTitle>
-                    <CardDescription>Documentación oficial del proyecto.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {DOCUMENT_TYPES.map((doc) => {
-                            const path = (project as ProjectWithMetrics)[doc.id as keyof ProjectWithMetrics] as string | null
-                            return (
-                                <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600">
-                                            <HugeiconsIcon icon={FileUploadIcon} className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">{doc.label}</p>
-                                            {path ? (
-                                                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
-                                                    Cargado
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="outline" className="text-slate-400 bg-slate-50">
-                                                    Pendiente
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1 sm:gap-2">
-                                        {path ? (
-                                            <>
-                                                <Button variant="outline" size="sm" onClick={() => handleShare(getFullUrl(path), doc.label)}>
-                                                    <HugeiconsIcon icon={Share01Icon} className="w-4 h-4 sm:mr-2" />
-                                                    <span className="hidden sm:inline">Compartir</span>
-                                                </Button>
-                                                <DocumentViewer url={getFullUrl(path)} title={doc.label} />
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <a href={getFullUrl(path)} download={`${doc.label}.pdf`} target="_blank" rel="noopener noreferrer">
-                                                        <HugeiconsIcon icon={Download01Icon} className="w-4 h-4 sm:mr-2" />
-                                                        <span className="hidden sm:inline">Descargar</span>
-                                                    </a>
-                                                </Button>
-                                                {isAdmin && (
-                                                    <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(doc.id, path)}>
-                                                        <HugeiconsIcon icon={Trash01Icon} className="w-4 h-4" />
-                                                    </Button>
-                                                )}
-                                            </>
-                                        ) : (
-                                            isAdmin && (
-                                                <div className="relative">
-                                                    <input
-                                                        type="file"
-                                                        id={`upload-${doc.id}`}
-                                                        accept=".pdf"
-                                                        className="hidden"
-                                                        onChange={(e) => handleFileUpload(doc.id, e)}
-                                                        disabled={isUploading === doc.id}
-                                                    />
-                                                    <Button size="sm" asChild disabled={isUploading === doc.id}>
-                                                        <label htmlFor={`upload-${doc.id}`} className="cursor-pointer">
-                                                            {isUploading === doc.id ? (
-                                                                <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
-                                                            ) : (
-                                                                <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-2" />
-                                                            )}
-                                                            Subir
-                                                        </label>
-                                                    </Button>
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
-                                </div>
-                            )
-                        })}
+      {/* Documentos Legales */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-blue-600" />
+            Documentos Legales
+          </CardTitle>
+          <CardDescription>Documentación oficial del proyecto.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {DOCUMENT_TYPES.map((doc) => {
+              const path = (project as ProjectWithMetrics)[doc.id as keyof ProjectWithMetrics] as
+                | string
+                | null
+              return (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600">
+                      <HugeiconsIcon icon={FileUploadIcon} className="w-5 h-5" />
                     </div>
-                </CardContent>
-            </Card>
-        </div>
-    )
+                    <div>
+                      <p className="font-medium">{doc.label}</p>
+                      {path ? (
+                        <Badge
+                          variant="outline"
+                          className="text-green-600 bg-green-50 border-green-200"
+                        >
+                          Cargado
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-slate-400 bg-slate-50">
+                          Pendiente
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    {path ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleShare(getFullUrl(path), doc.label)}
+                        >
+                          <HugeiconsIcon icon={Share01Icon} className="w-4 h-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Compartir</span>
+                        </Button>
+                        <DocumentViewer url={getFullUrl(path)} title={doc.label} />
+                        <Button variant="outline" size="sm" asChild>
+                          <a
+                            href={getFullUrl(path)}
+                            download={`${doc.label}.pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <HugeiconsIcon icon={Download01Icon} className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Descargar</span>
+                          </a>
+                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500"
+                            onClick={() => handleDelete(doc.id, path)}
+                          >
+                            <HugeiconsIcon icon={Trash01Icon} className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      isAdmin && (
+                        <div className="relative">
+                          <input
+                            type="file"
+                            id={`upload-${doc.id}`}
+                            accept=".pdf"
+                            className="hidden"
+                            onChange={(e) => handleFileUpload(doc.id, e)}
+                            disabled={isUploading === doc.id}
+                          />
+                          <Button size="sm" asChild disabled={isUploading === doc.id}>
+                            <label htmlFor={`upload-${doc.id}`} className="cursor-pointer">
+                              {isUploading === doc.id ? (
+                                <HugeiconsIcon
+                                  icon={Loading02Icon}
+                                  className="w-4 h-4 mr-2 animate-spin"
+                                />
+                              ) : (
+                                <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-2" />
+                              )}
+                              Subir
+                            </label>
+                          </Button>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }

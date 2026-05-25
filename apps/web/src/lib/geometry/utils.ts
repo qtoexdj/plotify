@@ -131,21 +131,23 @@ export function getCentroid(points: number[]): { x: number; y: number } {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function combineLineStrings(geometries: any[]): any {
-  const allCoordinates = geometries.map((geom) => {
-    if (geom.type === 'LineString') {
-      return [geom.coordinates]
-    } else if (geom.type === 'MultiLineString') {
-      return geom.coordinates
-    } else if (geom.type === 'Polygon') {
-      // Usar el anillo exterior como línea
-      return [geom.coordinates[0]]
-    } else if (geom.type === 'MultiPolygon') {
-      // Usar anillos exteriores de todos los polígonos
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return geom.coordinates.map((poly: any[]) => poly[0])
-    }
-    return []
-  }).flat(1)
+  const allCoordinates = geometries
+    .map((geom) => {
+      if (geom.type === 'LineString') {
+        return [geom.coordinates]
+      } else if (geom.type === 'MultiLineString') {
+        return geom.coordinates
+      } else if (geom.type === 'Polygon') {
+        // Usar el anillo exterior como línea
+        return [geom.coordinates[0]]
+      } else if (geom.type === 'MultiPolygon') {
+        // Usar anillos exteriores de todos los polígonos
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return geom.coordinates.map((poly: any[]) => poly[0])
+      }
+      return []
+    })
+    .flat(1)
 
   return {
     type: 'MultiLineString',
@@ -158,14 +160,16 @@ export function combineLineStrings(geometries: any[]): any {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function combinePolygons(geometries: any[]): any {
-  const allCoordinates = geometries.map((geom) => {
-    if (geom.type === 'Polygon') {
-      return [geom.coordinates]
-    } else if (geom.type === 'MultiPolygon') {
-      return geom.coordinates
-    }
-    return []
-  }).flat(1)
+  const allCoordinates = geometries
+    .map((geom) => {
+      if (geom.type === 'Polygon') {
+        return [geom.coordinates]
+      } else if (geom.type === 'MultiPolygon') {
+        return geom.coordinates
+      }
+      return []
+    })
+    .flat(1)
 
   return {
     type: 'MultiPolygon',
@@ -229,9 +233,7 @@ export function calculateBearing(p1: number[], p2: number[]): number {
   const dLon = ((p2[0] - p1[0]) * Math.PI) / 180
 
   const y = Math.sin(dLon) * Math.cos(lat2)
-  const x =
-    Math.cos(lat1) * Math.sin(lat2) -
-    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
   const brng = (Math.atan2(y, x) * 180) / Math.PI
 
   return (brng + 360) % 360
@@ -254,7 +256,7 @@ export function getCardinalDirection(bearing: number): string {
     'Surponiente',
     'Poniente',
     'Norponiente',
-    'Norte'
+    'Norte',
   ]
   const index = Math.round(bearing / 45)
   return directions[index]
@@ -272,7 +274,11 @@ export function getPolygonCentroidGeographic(coordinates: number[][]): number[] 
   const len = coordinates.length
   let validPoints = len
 
-  if (len > 1 && coordinates[0][0] === coordinates[len - 1][0] && coordinates[0][1] === coordinates[len - 1][1]) {
+  if (
+    len > 1 &&
+    coordinates[0][0] === coordinates[len - 1][0] &&
+    coordinates[0][1] === coordinates[len - 1][1]
+  ) {
     validPoints = len - 1
   }
 
@@ -344,18 +350,24 @@ export function getBoundaries(coordinates: number[][]): Boundary[] {
 import type { NeighborMetadata } from '@/types/database.types'
 
 export interface BoundaryWithNeighbor extends Boundary {
-  neighbors: NeighborMetadata[]  // Metadata estructurada de vecinos
-  touchesRoad: boolean  // true si al menos un punto del segmento toca el camino
-  roadContactFull: boolean  // true si TODOS los puntos muestreados tocan el camino
+  neighbors: NeighborMetadata[] // Metadata estructurada de vecinos
+  touchesRoad: boolean // true si al menos un punto del segmento toca el camino
+  roadContactFull: boolean // true si TODOS los puntos muestreados tocan el camino
 }
-
-
 
 /**
  * Obtiene las coordenadas del primer anillo de un polígono desde un feature.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getFeatureCoords(feature: { geometry: { type: string; coordinates: any } }): number[][] | null {
+type FeatureCoordinateGeometry =
+  | { type: 'Polygon'; coordinates: number[][][] }
+  | { type: 'MultiPolygon'; coordinates: number[][][][] }
+  | { type: 'LineString'; coordinates: number[][] }
+  | { type: 'MultiLineString'; coordinates: number[][][] }
+  | { type: string; coordinates: unknown }
+
+export function getFeatureCoords(feature: {
+  geometry: FeatureCoordinateGeometry
+}): number[][] | null {
   const { type, coordinates } = feature.geometry
   if (type === 'Polygon') return coordinates[0]
   if (type === 'MultiPolygon') return coordinates[0]?.[0]
@@ -368,11 +380,10 @@ export function getFeatureCoords(feature: { geometry: { type: string; coordinate
 export function getBoundariesWithNeighbors(
   coordinates: number[][],
   allLotFeatures: Array<{
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    geometry: { type: string; coordinates: any }
+    geometry: FeatureCoordinateGeometry
     properties: { geometry_type?: string; lot_id?: string; numero_lote?: string }
   }>,
-  currentLotId?: string,
+  currentLotId?: string
 ): BoundaryWithNeighbor[] {
   if (!coordinates || coordinates.length < 2) return []
 
@@ -385,31 +396,41 @@ export function getBoundariesWithNeighbors(
   const DEG_TO_M_LON = 111132 * cosLat
 
   const otherLots = allLotFeatures
-    .filter(f => f.properties.geometry_type === 'lot' && f.properties.lot_id !== currentLotId && f.properties.numero_lote)
-    .map(f => ({ name: f.properties.numero_lote!, coords: getFeatureCoords(f) }))
+    .filter(
+      (f) =>
+        f.properties.geometry_type === 'lot' &&
+        f.properties.lot_id !== currentLotId &&
+        f.properties.numero_lote
+    )
+    .map((f) => ({ name: f.properties.numero_lote!, coords: getFeatureCoords(f) }))
     .filter((l): l is { name: string; coords: number[][] } => l.coords !== null)
 
   const roadLines: number[][][] = []
   for (const f of allLotFeatures) {
     if (f.properties.geometry_type !== 'road') continue
     const { type, coordinates: coords } = f.geometry
-    if (type === 'LineString') { roadLines.push(coords) }
-    else if (type === 'MultiLineString') { for (const line of coords) roadLines.push(line) }
-    else if (type === 'Polygon') { for (const ring of coords) roadLines.push(ring) }
-    else if (type === 'MultiPolygon') { for (const poly of coords) for (const ring of poly) roadLines.push(ring) }
+    if (type === 'LineString') {
+      roadLines.push(coords)
+    } else if (type === 'MultiLineString') {
+      for (const line of coords) roadLines.push(line)
+    } else if (type === 'Polygon') {
+      for (const ring of coords) roadLines.push(ring)
+    } else if (type === 'MultiPolygon') {
+      for (const poly of coords) for (const ring of poly) roadLines.push(ring)
+    }
   }
 
   const result: BoundaryWithNeighbor[] = []
 
   // 1. Recolección Inicial de Micro-Aristas con sus vecinos iniciales
   const rawSegments: {
-    p1: number[];
-    p2: number[];
-    distance: number;
-    direction: string;
-    bearing: number;
-    neighbors: { name: string; overlap: number; faceLen: number }[];
-    touchesRoad: boolean;
+    p1: number[]
+    p2: number[]
+    distance: number
+    direction: string
+    bearing: number
+    neighbors: { name: string; overlap: number; faceLen: number }[]
+    touchesRoad: boolean
   }[] = []
 
   for (let i = 0; i < coordinates.length - 1; i++) {
@@ -445,7 +466,8 @@ export function getBoundariesWithNeighbors(
         let totalNeighborFaceLen = 0
 
         for (let j = 0; j < lot.coords.length - 1; j++) {
-          const a = lot.coords[j], b = lot.coords[j + 1]
+          const a = lot.coords[j],
+            b = lot.coords[j + 1]
 
           // 1. Cálculo de Overlap (Proyectado)
           const ax = (a[0] - centroid[0]) * DEG_TO_M_LON
@@ -461,9 +483,15 @@ export function getBoundariesWithNeighbors(
 
           if (overlap > 0.05) {
             const f1 = ta === tb ? 0 : (tMin - ta) / (tb - ta)
-            const d1 = Math.hypot(ax + f1 * (bx - ax) - (mx1 + tMin * ux), ay + f1 * (by - ay) - (my1 + tMin * uy))
+            const d1 = Math.hypot(
+              ax + f1 * (bx - ax) - (mx1 + tMin * ux),
+              ay + f1 * (by - ay) - (my1 + tMin * uy)
+            )
             const f2 = ta === tb ? 1 : (tMax - ta) / (tb - ta)
-            const d2 = Math.hypot(ax + f2 * (bx - ax) - (mx1 + tMax * ux), ay + f2 * (by - ay) - (my1 + tMax * uy))
+            const d2 = Math.hypot(
+              ax + f2 * (bx - ax) - (mx1 + tMax * ux),
+              ay + f2 * (by - ay) - (my1 + tMax * uy)
+            )
 
             if (d1 < 0.1 && d2 < 0.1) {
               isNeighbor = true
@@ -480,19 +508,22 @@ export function getBoundariesWithNeighbors(
           const minDiff = Math.min(diff, 360 - diff)
 
           if (minDiff < 3.0 || Math.abs(minDiff - 180) < 3.0) {
-            const midX = (a[0] + b[0]) / 2;
-            const midY = (a[1] + b[1]) / 2;
+            const midX = (a[0] + b[0]) / 2
+            const midY = (a[1] + b[1]) / 2
 
             // Convertir a coordenadas métricas para cálculo de distancia
-            const midX_m = (midX - centroid[0]) * DEG_TO_M_LON;
-            const midY_m = (midY - centroid[1]) * DEG_TO_M_LAT;
+            const midX_m = (midX - centroid[0]) * DEG_TO_M_LON
+            const midY_m = (midY - centroid[1]) * DEG_TO_M_LAT
 
             // Distancia punto a recta infinita (en metros)
-            const numerator = Math.abs((my2 - my1) * midX_m - (mx2 - mx1) * midY_m + mx2 * my1 - my2 * mx1);
-            const denominator = Math.hypot(my2 - my1, mx2 - mx1);
-            const distToLine = denominator === 0 ? 0 : numerator / denominator;
+            const numerator = Math.abs(
+              (my2 - my1) * midX_m - (mx2 - mx1) * midY_m + mx2 * my1 - my2 * mx1
+            )
+            const denominator = Math.hypot(my2 - my1, mx2 - mx1)
+            const distToLine = denominator === 0 ? 0 : numerator / denominator
 
-            if (distToLine < 3.0) { // ~3 metros de tolerancia para caras adyacentes
+            if (distToLine < 3.0) {
+              // ~3 metros de tolerancia para caras adyacentes
               totalNeighborFaceLen += calculateDistance(a, b)
             }
           }
@@ -502,7 +533,7 @@ export function getBoundariesWithNeighbors(
           segmentNeighbors.push({
             name: lot.name,
             overlap: maxOverlap,
-            faceLen: totalNeighborFaceLen
+            faceLen: totalNeighborFaceLen,
           })
         }
       }
@@ -511,16 +542,22 @@ export function getBoundariesWithNeighbors(
       const SAMPLE_FRACTIONS = [0, 0.5, 1]
       let hits = 0
       for (const frac of SAMPLE_FRACTIONS) {
-        const sx = p1[0] + frac * (p2[0] - p1[0]), sy = p1[1] + frac * (p2[1] - p1[1])
-        const spx = sx * DEG_TO_M_LON, spy = sy * DEG_TO_M_LAT
+        const sx = p1[0] + frac * (p2[0] - p1[0]),
+          sy = p1[1] + frac * (p2[1] - p1[1])
+        const spx = sx * DEG_TO_M_LON,
+          spy = sy * DEG_TO_M_LAT
         let hitAtThisFrac = false
         for (const line of roadLines) {
           if (hitAtThisFrac) break
           for (let j = 0; j < line.length - 1; j++) {
-            const ra = line[j], rb = line[j + 1]
-            const rax = ra[0] * DEG_TO_M_LON, ray = ra[1] * DEG_TO_M_LAT
-            const rbx = rb[0] * DEG_TO_M_LON, rby = rb[1] * DEG_TO_M_LAT
-            const rdx = rbx - rax, rdy = rby - ray
+            const ra = line[j],
+              rb = line[j + 1]
+            const rax = ra[0] * DEG_TO_M_LON,
+              ray = ra[1] * DEG_TO_M_LAT
+            const rbx = rb[0] * DEG_TO_M_LON,
+              rby = rb[1] * DEG_TO_M_LAT
+            const rdx = rbx - rax,
+              rdy = rby - ray
             const rlenSq = rdx * rdx + rdy * rdy
             let dist = 0
             if (rlenSq === 0) dist = Math.hypot(spx - rax, spy - ray)
@@ -529,17 +566,25 @@ export function getBoundariesWithNeighbors(
               t = Math.max(0, Math.min(1, t))
               dist = Math.hypot(spx - (rax + t * rdx), spy - (ray + t * rdy))
             }
-            if (dist < ROAD_THRESHOLD_M) { hitAtThisFrac = true; break; }
+            if (dist < ROAD_THRESHOLD_M) {
+              hitAtThisFrac = true
+              break
+            }
           }
         }
         if (hitAtThisFrac) hits++
       }
-      touchesRoad = (hits > 0)
+      touchesRoad = hits > 0
     }
 
     rawSegments.push({
-      p1, p2, distance: curDistance, direction: curDirection, bearing: curBearing,
-      neighbors: segmentNeighbors, touchesRoad
+      p1,
+      p2,
+      distance: curDistance,
+      direction: curDirection,
+      bearing: curBearing,
+      neighbors: segmentNeighbors,
+      touchesRoad,
     })
   }
 
@@ -561,10 +606,11 @@ export function getBoundariesWithNeighbors(
       const isCollinear = minDiffBearing < 3.0
 
       // Regla 2: Respaldo (Mismo Direction + Mismos Vecinos)
-      const curNSet = new Set(cur.neighbors.map(n => n.name))
-      const lastNSet = new Set(last.neighbors.map(n => n.name))
+      const curNSet = new Set(cur.neighbors.map((n) => n.name))
+      const lastNSet = new Set(last.neighbors.map((n) => n.name))
       const sameDirection = cur.direction === last.direction
-      const sameNeighbors = curNSet.size === lastNSet.size && [...curNSet].every(n => lastNSet.has(n))
+      const sameNeighbors =
+        curNSet.size === lastNSet.size && [...curNSet].every((n) => lastNSet.has(n))
 
       if (isCollinear || (sameDirection && sameNeighbors)) {
         last.p2 = cur.p2
@@ -572,7 +618,7 @@ export function getBoundariesWithNeighbors(
         last.bearing = calculateBearing(last.p1, last.p2) // Re-calcular bearing del tramo fusionado
         // Fusionar vecinos (matemáticamente sumar overlaps si es el mismo vecino)
         for (const curN of cur.neighbors) {
-          const existing = last.neighbors.find(ln => ln.name === curN.name)
+          const existing = last.neighbors.find((ln) => ln.name === curN.name)
           if (existing) {
             existing.overlap += curN.overlap
             existing.faceLen = Math.max(existing.faceLen, curN.faceLen)
@@ -604,17 +650,21 @@ export function getBoundariesWithNeighbors(
       console.log(` - Longitud Compartida (overlap): ${n.overlap.toFixed(3)}m`)
       console.log(` - Longitud Arista Vecino (faceLen): ${n.faceLen.toFixed(3)}m`)
 
-      const isPartial = n.overlap < (n.faceLen - 0.5)
+      const isPartial = n.overlap < n.faceLen - 0.5
 
       if (isPartial) {
-        console.log(` - Resultado: PARTE DEL LOTE (Diff: ${(n.faceLen - n.overlap).toFixed(3)}m > 0.5m)`)
+        console.log(
+          ` - Resultado: PARTE DEL LOTE (Diff: ${(n.faceLen - n.overlap).toFixed(3)}m > 0.5m)`
+        )
       } else {
-        console.log(` - Resultado: LOTE COMPLETO (Diff: ${(n.faceLen - n.overlap).toFixed(3)}m <= 0.5m)`)
+        console.log(
+          ` - Resultado: LOTE COMPLETO (Diff: ${(n.faceLen - n.overlap).toFixed(3)}m <= 0.5m)`
+        )
       }
 
       neighborMetas.push({
         name: `lote ${n.name}`,
-        is_partial: isPartial
+        is_partial: isPartial,
       })
     }
 
@@ -623,10 +673,13 @@ export function getBoundariesWithNeighbors(
       distance: parseFloat(edge.distance.toFixed(2)),
       neighbors: neighborMetas.sort((a, b) => a.name.localeCompare(b.name)),
       touchesRoad: edge.touchesRoad,
-      roadContactFull: false
+      roadContactFull: false,
     })
   }
 
-  console.log('[DEBUG-GEOMETRY] Resultado Final getBoundariesWithNeighbors:', JSON.stringify(result, null, 2))
+  console.log(
+    '[DEBUG-GEOMETRY] Resultado Final getBoundariesWithNeighbors:',
+    JSON.stringify(result, null, 2)
+  )
   return result
 }

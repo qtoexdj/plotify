@@ -3,7 +3,25 @@ import type { ViewerFeatureCollection, ViewerFeature } from '@/types/viewer.type
 import type { Geometry, Lot, EstadoLote } from '@/types/database.types'
 
 interface GeometryWithLot extends Geometry {
-  lots: Pick<Lot, 'id' | 'numero_lote' | 'estado' | 'observaciones' | 'vendedor_id' | 'precio' | 'valor_reserva' | 'm2' | 'servidumbre_m2' | 'superficie_neta_m2' | 'area_official_m2' | 'perimeter_official_m' | 'boundaries_official' | 'verified_status' | 'verified_at' | 'verified_by'> | null
+  lots: Pick<
+    Lot,
+    | 'id'
+    | 'numero_lote'
+    | 'estado'
+    | 'observaciones'
+    | 'vendedor_id'
+    | 'precio'
+    | 'valor_reserva'
+    | 'm2'
+    | 'servidumbre_m2'
+    | 'superficie_neta_m2'
+    | 'area_official_m2'
+    | 'perimeter_official_m'
+    | 'boundaries_official'
+    | 'verified_status'
+    | 'verified_at'
+    | 'verified_by'
+  > | null
 }
 
 export async function getFeatureCollection(projectId: string): Promise<ViewerFeatureCollection> {
@@ -12,7 +30,8 @@ export async function getFeatureCollection(projectId: string): Promise<ViewerFea
   // 1) Geometrías asignadas a un lote (lot_id NOT NULL)
   const { data: lotData, error: lotError } = await supabase
     .from('geometries')
-    .select(`
+    .select(
+      `
       *,
       lots!geometries_lot_id_fkey (
         id,
@@ -32,7 +51,8 @@ export async function getFeatureCollection(projectId: string): Promise<ViewerFea
         verified_at,
         verified_by
       )
-    `)
+    `
+    )
     .eq('project_id', projectId)
     .not('lot_id', 'is', null)
 
@@ -126,7 +146,7 @@ export async function getFeatureCollection(projectId: string): Promise<ViewerFea
         source_type: 'kmz',
         name: 'Camino Principal',
         estado: 'sin_asignar' as EstadoLote,
-      }
+      },
     })
   }
 
@@ -135,4 +155,3 @@ export async function getFeatureCollection(projectId: string): Promise<ViewerFea
     features: [...lotFeatures, ...infraFeatures, ...roadFeatures],
   }
 }
-

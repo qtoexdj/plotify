@@ -19,26 +19,36 @@ interface SkillsGridProps {
 
 export function getCategoryIcon(category: string) {
   switch (category) {
-    case 'builtin': return ZapIcon
-    case 'mcp': return DatabaseIcon
-    default: return PuzzleIcon
+    case 'builtin':
+      return ZapIcon
+    case 'mcp':
+      return DatabaseIcon
+    default:
+      return PuzzleIcon
   }
 }
 
 export function getCategoryLabel(category: string) {
   switch (category) {
-    case 'builtin': return 'Integrado'
-    case 'mcp': return 'MCP'
-    case 'custom': return 'Custom'
-    default: return category
+    case 'builtin':
+      return 'Integrado'
+    case 'mcp':
+      return 'MCP'
+    case 'custom':
+      return 'Custom'
+    default:
+      return category
   }
 }
 
 export function getCategoryVariant(category: string): 'default' | 'secondary' | 'outline' {
   switch (category) {
-    case 'builtin': return 'default'
-    case 'mcp': return 'secondary'
-    default: return 'outline'
+    case 'builtin':
+      return 'default'
+    case 'mcp':
+      return 'secondary'
+    default:
+      return 'outline'
   }
 }
 
@@ -71,11 +81,11 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
       toast.error('Las skills del sistema no se pueden deshabilitar')
       return
     }
-    setOptimisticStates(prev => ({ ...prev, [skill.id]: value }))
+    setOptimisticStates((prev) => ({ ...prev, [skill.id]: value }))
     startTransition(async () => {
       const result = await toggleOrgSkill(organizationId, skill.id, value)
       if (!result.success) {
-        setOptimisticStates(prev => ({ ...prev, [skill.id]: !value }))
+        setOptimisticStates((prev) => ({ ...prev, [skill.id]: !value }))
         toast.error(result.error ?? 'Error al actualizar skill')
       }
     })
@@ -97,19 +107,21 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
   return (
     <TooltipProvider>
       <div className="space-y-8">
-        {sortedCategories.map(category => (
+        {sortedCategories.map((category) => (
           <div key={category}>
             <div className="flex items-center gap-2 mb-4">
-              <HugeiconsIcon icon={getCategoryIcon(category)} size={18} className="text-muted-foreground" />
+              <HugeiconsIcon
+                icon={getCategoryIcon(category)}
+                size={18}
+                className="text-muted-foreground"
+              />
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 {getCategoryLabel(category)}
               </h2>
-              <span className="text-xs text-muted-foreground">
-                ({grouped[category].length})
-              </span>
+              <span className="text-xs text-muted-foreground">({grouped[category].length})</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {grouped[category].map(skill => {
+              {grouped[category].map((skill) => {
                 const enabled = isEnabled(skill)
                 return (
                   <Card
@@ -120,11 +132,15 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className={`flex items-center justify-center w-8 h-8 rounded-lg shrink-0 ${
-                            category === 'builtin' ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400' :
-                            category === 'mcp' ? 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400' :
-                            'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
-                          }`}>
+                          <div
+                            className={`flex items-center justify-center w-8 h-8 rounded-lg shrink-0 ${
+                              category === 'builtin'
+                                ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400'
+                                : category === 'mcp'
+                                  ? 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400'
+                                  : 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
+                            }`}
+                          >
                             <HugeiconsIcon icon={getCategoryIcon(category)} size={16} />
                           </div>
                           <CardTitle className="text-sm font-semibold leading-tight line-clamp-2">
@@ -133,7 +149,7 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
                         </div>
                         <div
                           className="flex items-center gap-1 shrink-0"
-                          onClick={e => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {skill.is_system ? (
                             <Tooltip>
@@ -150,7 +166,7 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
                           <Switch
                             checked={enabled}
                             disabled={isPending || (skill.is_system ?? false)}
-                            onCheckedChange={value => handleToggle(skill, value)}
+                            onCheckedChange={(value) => handleToggle(skill, value)}
                           />
                         </div>
                       </div>
@@ -160,14 +176,23 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
                         {skill.description}
                       </CardDescription>
                       <div className="flex flex-wrap gap-1.5">
-                        <Badge variant={getCategoryVariant(skill.category ?? 'custom')} className="text-xs">
+                        <Badge
+                          variant={getCategoryVariant(skill.category ?? 'custom')}
+                          className="text-xs"
+                        >
                           {getCategoryLabel(skill.category ?? 'custom')}
                         </Badge>
-                        <Badge variant={getRoleBadgeVariant(skill.requires_role as string[] | null)} className="text-xs">
+                        <Badge
+                          variant={getRoleBadgeVariant(skill.requires_role as string[] | null)}
+                          className="text-xs"
+                        >
                           {getRoleLabel(skill.requires_role as string[] | null)}
                         </Badge>
                         {skill.requires_mcp && (
-                          <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-purple-300 text-purple-600"
+                          >
                             Requiere MCP
                           </Badge>
                         )}

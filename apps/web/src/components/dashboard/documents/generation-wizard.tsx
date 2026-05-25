@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod/v4'
 import { Button } from '@/components/ui/button'
@@ -24,11 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
@@ -45,7 +41,10 @@ import {
 import { generateDocumentAction } from '@/actions/documents.action'
 import { numberToWords } from '@/lib/legal/number-to-words'
 import { generateDeslindeText } from '@/lib/legal/deslinde-generator'
-import { generateServidumbreText, generateServidumbreTextLegacy } from '@/lib/legal/servidumbre-generator'
+import {
+  generateServidumbreText,
+  generateServidumbreTextLegacy,
+} from '@/lib/legal/servidumbre-generator'
 import type { DocumentTemplate } from '@/types/v2'
 import type { EscrituraVariables } from '@/types/documents'
 import type { OfficialBoundary, ServidumbreAnalysis } from '@/types/database.types'
@@ -168,10 +167,7 @@ const TEMPLATE_TYPE_BADGE: Record<string, { label: string; className: string }> 
  * Resolución local de variables Jinja2 para el preview.
  * Soporta: {{ variable.campo }} y {{ variable.campo | default("valor") }}
  */
-function resolveTemplate(
-  templateHtml: string,
-  variables: EscrituraVariables
-): string {
+function resolveTemplate(templateHtml: string, variables: EscrituraVariables): string {
   return templateHtml.replace(
     /\{\{\s*([\w.]+)\s*(?:\|\s*default\("([^"]*)"\)|\|[^}]*)?\s*\}\}/g,
     (_: string, key: string, fallback: string) => {
@@ -280,28 +276,58 @@ const STEPS = [
 
 const EMPTY_DEFAULTS: WizardFormValues = {
   vendedor_tipo: 'natural',
-  vendedor_nombre: '', vendedor_rut: '', vendedor_domicilio: '',
-  comprador_nombre: '', comprador_rut: '', comprador_domicilio: '',
-  comprador_estado_civil: '', comprador_profesion: '',
-  matriz_nombre_predio: '', matriz_ubicacion: '', matriz_superficie_total: '',
-  matriz_norte: '', matriz_sur: '', matriz_oriente: '', matriz_poniente: '',
-  matriz_adquisicion_modo: '', matriz_adquisicion_notaria: '', matriz_adquisicion_fecha: '',
-  matriz_inscripcion_fojas: '', matriz_inscripcion_numero: '', matriz_inscripcion_anio: '',
-  matriz_inscripcion_cbr: '', matriz_rol_avaluo: '',
-  sag_certificado_numero: '', sag_certificado_fecha: '',
-  sag_plano_cbr_numero: '', sag_plano_cbr_anio: '',
-  lote_numero_nombre: '', lote_superficie_total: '', lote_deslindes: '', lote_rol_tramite: '',
-  servidumbre_aplica: false, servidumbre_superficie: '', servidumbre_deslindes_tramo: '',
-  transaccion_precio_numeros: '', transaccion_precio_letras: '', transaccion_forma_pago: 'al contado',
-  mandato_nombre_representante: '', mandato_rut_representante: '',
-  personeria_aplica: false, personeria_tipo_documento: '', personeria_notaria: '',
-  personeria_fecha: '', personeria_inscripcion_fojas: '', personeria_inscripcion_numero: '',
-  personeria_inscripcion_anio: '', personeria_inscripcion_cbr: '',
+  vendedor_nombre: '',
+  vendedor_rut: '',
+  vendedor_domicilio: '',
+  comprador_nombre: '',
+  comprador_rut: '',
+  comprador_domicilio: '',
+  comprador_estado_civil: '',
+  comprador_profesion: '',
+  matriz_nombre_predio: '',
+  matriz_ubicacion: '',
+  matriz_superficie_total: '',
+  matriz_norte: '',
+  matriz_sur: '',
+  matriz_oriente: '',
+  matriz_poniente: '',
+  matriz_adquisicion_modo: '',
+  matriz_adquisicion_notaria: '',
+  matriz_adquisicion_fecha: '',
+  matriz_inscripcion_fojas: '',
+  matriz_inscripcion_numero: '',
+  matriz_inscripcion_anio: '',
+  matriz_inscripcion_cbr: '',
+  matriz_rol_avaluo: '',
+  sag_certificado_numero: '',
+  sag_certificado_fecha: '',
+  sag_plano_cbr_numero: '',
+  sag_plano_cbr_anio: '',
+  lote_numero_nombre: '',
+  lote_superficie_total: '',
+  lote_deslindes: '',
+  lote_rol_tramite: '',
+  servidumbre_aplica: false,
+  servidumbre_superficie: '',
+  servidumbre_deslindes_tramo: '',
+  transaccion_precio_numeros: '',
+  transaccion_precio_letras: '',
+  transaccion_forma_pago: 'al contado',
+  mandato_nombre_representante: '',
+  mandato_rut_representante: '',
+  personeria_aplica: false,
+  personeria_tipo_documento: '',
+  personeria_notaria: '',
+  personeria_fecha: '',
+  personeria_inscripcion_fojas: '',
+  personeria_inscripcion_numero: '',
+  personeria_inscripcion_anio: '',
+  personeria_inscripcion_cbr: '',
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function GenerationWizard({ lot, templates, organizationId }: GenerationWizardProps) {
+export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
   const [step, setStep] = useState(1)
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null)
   const [format, setFormat] = useState<'pdf' | 'docx'>('pdf')
@@ -323,7 +349,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
   })
 
   const toggleSection = useCallback((key: string) => {
-    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))
   }, [])
 
   const form = useForm<WizardFormValues>({
@@ -331,9 +357,9 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
     defaultValues: EMPTY_DEFAULTS,
   })
 
-  const watchServidumbreAplica = form.watch('servidumbre_aplica')
-  const watchVendedorTipo = form.watch('vendedor_tipo')
-  const watchPersoneriaAplica = form.watch('personeria_aplica')
+  const watchServidumbreAplica = useWatch({ control: form.control, name: 'servidumbre_aplica' })
+  const watchVendedorTipo = useWatch({ control: form.control, name: 'vendedor_tipo' })
+  const watchPersoneriaAplica = useWatch({ control: form.control, name: 'personeria_aplica' })
 
   // ─── Auto-relleno al montar Step 2 ─────────────────────────────────────
   useEffect(() => {
@@ -348,18 +374,15 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
       ? numberToWords(lotNumero).replace(/^UN(\s|$)/, 'UNO$1')
       : lot.numero_lote.toUpperCase()
 
-    const areaWords = area != null && area > 0
-      ? `${numberToWords(area)} METROS CUADRADOS`
-      : ''
+    const areaWords = area != null && area > 0 ? `${numberToWords(area)} METROS CUADRADOS` : ''
 
-    const precioLetras = precio != null && precio > 0
-      ? `${numberToWords(precio)} PESOS`
-      : ''
+    const precioLetras = precio != null && precio > 0 ? `${numberToWords(precio)} PESOS` : ''
 
     const tieneServidumbre = (lot.servidumbre_m2 ?? 0) > 0
-    const servidumbreWords = tieneServidumbre && lot.servidumbre_m2 != null
-      ? `${numberToWords(lot.servidumbre_m2)} METROS CUADRADOS`
-      : ''
+    const servidumbreWords =
+      tieneServidumbre && lot.servidumbre_m2 != null
+        ? `${numberToWords(lot.servidumbre_m2)} METROS CUADRADOS`
+        : ''
 
     form.reset({
       ...EMPTY_DEFAULTS,
@@ -383,7 +406,11 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
 
     // Abrir sección servidumbre si aplica
     if (tieneServidumbre) {
-      setOpenSections(prev => ({ ...prev, servidumbre: true }))
+      const timeoutId = window.setTimeout(() => {
+        setOpenSections((prev) => ({ ...prev, servidumbre: true }))
+      }, 0)
+
+      return () => window.clearTimeout(timeoutId)
     }
   }, [step, lot, form])
 
@@ -420,8 +447,9 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
   const buildPreviewHtml = useCallback((): string => {
     if (!selectedTemplate) return ''
 
-    const rawContent = (selectedTemplate as unknown as Record<string, unknown>)
-    const templateHtml = (rawContent['content'] as string | undefined) ||
+    const rawContent = selectedTemplate as unknown as Record<string, unknown>
+    const templateHtml =
+      (rawContent['content'] as string | undefined) ||
       (rawContent['header_config'] as string | undefined) ||
       '<p>Este template no tiene contenido HTML configurado.</p>'
 
@@ -452,8 +480,8 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
 
   const countVariableStats = useCallback(() => {
     const vals = form.getValues()
-    const all = Object.values(vals).filter(v => typeof v === 'string') as string[]
-    const filled = all.filter(v => v.trim().length > 0)
+    const all = Object.values(vals).filter((v) => typeof v === 'string') as string[]
+    const filled = all.filter((v) => v.trim().length > 0)
     return { filled: filled.length, total: all.length }
   }, [form])
 
@@ -468,8 +496,8 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
               step === s.id
                 ? 'bg-primary text-primary-foreground'
                 : step > s.id
-                ? 'bg-green-500 text-white'
-                : 'bg-muted text-muted-foreground'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-muted text-muted-foreground'
             }`}
           >
             {step > s.id ? <CheckCircle2 className="h-4 w-4" /> : s.id}
@@ -481,9 +509,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
           >
             {s.label}
           </span>
-          {i < STEPS.length - 1 && (
-            <ChevronRight className="h-4 w-4 text-muted-foreground mx-1" />
-          )}
+          {i < STEPS.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground mx-1" />}
         </div>
       ))}
     </div>
@@ -496,7 +522,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
         Selecciona la plantilla que deseas usar para generar el documento.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {templates.map(template => {
+        {templates.map((template) => {
           const badge = TEMPLATE_TYPE_BADGE[template.document_type] ?? TEMPLATE_TYPE_BADGE.otro
           const isSelected = selectedTemplate?.id === template.id
           return (
@@ -504,9 +530,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
               key={template.id}
               onClick={() => setSelectedTemplate(template)}
               className={`cursor-pointer transition-all hover:shadow-md ${
-                isSelected
-                  ? 'ring-2 ring-primary border-primary'
-                  : 'hover:border-primary/50'
+                isSelected ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/50'
               }`}
             >
               <CardHeader className="pb-2">
@@ -518,10 +542,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
                     </Badge>
                   )}
                 </div>
-                <Badge
-                  variant="outline"
-                  className={`text-xs w-fit ${badge.className}`}
-                >
+                <Badge variant="outline" className={`text-xs w-fit ${badge.className}`}>
                   {badge.label}
                 </Badge>
               </CardHeader>
@@ -569,10 +590,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
     icon: string
     children: React.ReactNode
   }) => (
-    <Collapsible
-      open={openSections[sectionKey]}
-      onOpenChange={() => toggleSection(sectionKey)}
-    >
+    <Collapsible open={openSections[sectionKey]} onOpenChange={() => toggleSection(sectionKey)}>
       <CollapsibleTrigger asChild>
         <button className="flex w-full items-center justify-between rounded-md border px-4 py-3 text-sm font-medium hover:bg-accent transition-colors">
           <span>
@@ -586,9 +604,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="border border-t-0 rounded-b-md p-4 space-y-4">
-          {children}
-        </div>
+        <div className="border border-t-0 rounded-b-md p-4 space-y-4">{children}</div>
       </CollapsibleContent>
     </Collapsible>
   )
@@ -607,7 +623,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
     textarea?: boolean
     trailingButton?: React.ReactNode
   }) => {
-    const val = form.watch(fieldName)
+    const val = useWatch({ control: form.control, name: fieldName })
     return (
       <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">{label}</Label>
@@ -637,17 +653,14 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
   const renderStep2 = () => (
     <ScrollArea className="h-[60vh] pr-4">
       <div className="space-y-3">
-
         {/* Vendedor */}
         <SectionCollapsible sectionKey="vendedor" title="Vendedor" icon="📦">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5 col-span-2">
               <Label className="text-xs text-muted-foreground">Tipo</Label>
               <Select
-                value={form.watch('vendedor_tipo')}
-                onValueChange={v =>
-                  form.setValue('vendedor_tipo', v as 'natural' | 'juridica')
-                }
+                value={watchVendedorTipo}
+                onValueChange={(v) => form.setValue('vendedor_tipo', v as 'natural' | 'juridica')}
               >
                 <SelectTrigger className="text-sm">
                   <SelectValue />
@@ -671,7 +684,11 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Nombre completo" fieldName="comprador_nombre" />
             <FormField label="RUT" fieldName="comprador_rut" placeholder="12.345.678-9" />
-            <FormField label="Estado civil" fieldName="comprador_estado_civil" placeholder="soltero/a, casado/a..." />
+            <FormField
+              label="Estado civil"
+              fieldName="comprador_estado_civil"
+              placeholder="soltero/a, casado/a..."
+            />
             <FormField label="Profesión / Giro" fieldName="comprador_profesion" />
             <div className="col-span-2">
               <FormField label="Domicilio" fieldName="comprador_domicilio" />
@@ -699,12 +716,24 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
             <div className="col-span-2 text-xs font-medium text-muted-foreground">
               Historia de título
             </div>
-            <FormField label="Modo de adquisición" fieldName="matriz_adquisicion_modo" placeholder="compraventa, herencia..." />
+            <FormField
+              label="Modo de adquisición"
+              fieldName="matriz_adquisicion_modo"
+              placeholder="compraventa, herencia..."
+            />
             <FormField label="Notaría" fieldName="matriz_adquisicion_notaria" />
-            <FormField label="Fecha adquisición" fieldName="matriz_adquisicion_fecha" placeholder="dd/mm/aaaa" />
+            <FormField
+              label="Fecha adquisición"
+              fieldName="matriz_adquisicion_fecha"
+              placeholder="dd/mm/aaaa"
+            />
             <FormField label="Fojas inscripción" fieldName="matriz_inscripcion_fojas" />
             <FormField label="N° inscripción" fieldName="matriz_inscripcion_numero" />
-            <FormField label="Año inscripción" fieldName="matriz_inscripcion_anio" placeholder="2024" />
+            <FormField
+              label="Año inscripción"
+              fieldName="matriz_inscripcion_anio"
+              placeholder="2024"
+            />
             <div className="col-span-2">
               <FormField label="CBR" fieldName="matriz_inscripcion_cbr" />
             </div>
@@ -718,7 +747,11 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
         <SectionCollapsible sectionKey="sag" title="SAG (Subdivisión)" icon="📋">
           <div className="grid grid-cols-2 gap-3">
             <FormField label="N° Certificado" fieldName="sag_certificado_numero" />
-            <FormField label="Fecha certificado" fieldName="sag_certificado_fecha" placeholder="dd/mm/aaaa" />
+            <FormField
+              label="Fecha certificado"
+              fieldName="sag_certificado_fecha"
+              placeholder="dd/mm/aaaa"
+            />
             <FormField label="N° plano CBR" fieldName="sag_plano_cbr_numero" />
             <FormField label="Año plano CBR" fieldName="sag_plano_cbr_anio" placeholder="2024" />
           </div>
@@ -754,7 +787,11 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
               />
             </div>
             <div className="col-span-2">
-              <FormField label="Rol de trámite" fieldName="lote_rol_tramite" placeholder="XXX-YYY" />
+              <FormField
+                label="Rol de trámite"
+                fieldName="lote_rol_tramite"
+                placeholder="XXX-YYY"
+              />
             </div>
           </div>
         </SectionCollapsible>
@@ -765,7 +802,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
             <div className="flex items-center gap-3">
               <Switch
                 checked={watchServidumbreAplica}
-                onCheckedChange={v => form.setValue('servidumbre_aplica', v)}
+                onCheckedChange={(v) => form.setValue('servidumbre_aplica', v)}
               />
               <span className="text-sm">
                 {watchServidumbreAplica ? 'Aplica servidumbre' : 'No aplica servidumbre'}
@@ -774,7 +811,10 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
             {watchServidumbreAplica && (
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div className="col-span-2">
-                  <FormField label="Superficie servidumbre (en palabras)" fieldName="servidumbre_superficie" />
+                  <FormField
+                    label="Superficie servidumbre (en palabras)"
+                    fieldName="servidumbre_superficie"
+                  />
                 </div>
                 <div className="col-span-2">
                   <FormField
@@ -804,8 +844,16 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
         {/* Transacción */}
         <SectionCollapsible sectionKey="transaccion" title="Transacción" icon="💰">
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Precio (números)" fieldName="transaccion_precio_numeros" placeholder="25000000" />
-            <FormField label="Forma de pago" fieldName="transaccion_forma_pago" placeholder="al contado" />
+            <FormField
+              label="Precio (números)"
+              fieldName="transaccion_precio_numeros"
+              placeholder="25000000"
+            />
+            <FormField
+              label="Forma de pago"
+              fieldName="transaccion_forma_pago"
+              placeholder="al contado"
+            />
             <div className="col-span-2">
               <FormField label="Precio (en palabras)" fieldName="transaccion_precio_letras" />
             </div>
@@ -816,7 +864,11 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
         <SectionCollapsible sectionKey="mandato" title="Mandato de Rectificación" icon="📜">
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Nombre representante" fieldName="mandato_nombre_representante" />
-            <FormField label="RUT representante" fieldName="mandato_rut_representante" placeholder="12.345.678-9" />
+            <FormField
+              label="RUT representante"
+              fieldName="mandato_rut_representante"
+              placeholder="12.345.678-9"
+            />
           </div>
         </SectionCollapsible>
 
@@ -827,13 +879,17 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
               <div className="flex items-center gap-3">
                 <Switch
                   checked={watchPersoneriaAplica}
-                  onCheckedChange={v => form.setValue('personeria_aplica', v)}
+                  onCheckedChange={(v) => form.setValue('personeria_aplica', v)}
                 />
                 <span className="text-sm">Incluir datos de personería</span>
               </div>
               {watchPersoneriaAplica && (
                 <div className="grid grid-cols-2 gap-3 pt-2">
-                  <FormField label="Tipo documento" fieldName="personeria_tipo_documento" placeholder="escritura pública, resolución..." />
+                  <FormField
+                    label="Tipo documento"
+                    fieldName="personeria_tipo_documento"
+                    placeholder="escritura pública, resolución..."
+                  />
                   <FormField label="Notaría" fieldName="personeria_notaria" />
                   <FormField label="Fecha" fieldName="personeria_fecha" placeholder="dd/mm/aaaa" />
                   <FormField label="Fojas" fieldName="personeria_inscripcion_fojas" />
@@ -863,7 +919,11 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
         <ScrollArea className="h-[60vh] border rounded-lg">
           <div
             className="prose prose-sm max-w-none p-8 bg-white text-black [&_h2]:text-base [&_h3]:text-sm font-serif"
-            dangerouslySetInnerHTML={{ __html: previewHtml || '<p class="text-gray-400 italic">Sin contenido HTML en la plantilla seleccionada.</p>' }}
+            dangerouslySetInnerHTML={{
+              __html:
+                previewHtml ||
+                '<p class="text-gray-400 italic">Sin contenido HTML en la plantilla seleccionada.</p>',
+            }}
           />
         </ScrollArea>
       </div>
@@ -893,7 +953,13 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Variables completadas</span>
-              <span className={stats.filled < stats.total ? 'text-orange-500 font-medium' : 'text-green-600 font-medium'}>
+              <span
+                className={
+                  stats.filled < stats.total
+                    ? 'text-orange-500 font-medium'
+                    : 'text-green-600 font-medium'
+                }
+              >
                 {stats.filled} / {stats.total}
               </span>
             </div>
@@ -914,7 +980,7 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
         <div className="space-y-2">
           <Label className="text-sm font-medium">Formato de salida</Label>
           <div className="flex gap-3">
-            {(['pdf', 'docx'] as const).map(f => (
+            {(['pdf', 'docx'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFormat(f)}
@@ -983,24 +1049,19 @@ export function GenerationWizard({ lot, templates, organizationId }: GenerationW
   // ─── Navigation buttons ───────────────────────────────────────────────────
 
   const canAdvance =
-    step === 1 ? selectedTemplate !== null :
-    step === 2 ? true :
-    step === 3 ? true : false
+    step === 1 ? selectedTemplate !== null : step === 2 ? true : step === 3 ? true : false
 
   const renderNavButtons = () => (
     <div className="flex justify-between pt-6 border-t">
       <Button
         variant="outline"
-        onClick={() => setStep(s => Math.max(1, s - 1))}
+        onClick={() => setStep((s) => Math.max(1, s - 1))}
         disabled={step === 1}
       >
         Anterior
       </Button>
       {step < 4 ? (
-        <Button
-          onClick={() => setStep(s => s + 1)}
-          disabled={!canAdvance}
-        >
+        <Button onClick={() => setStep((s) => s + 1)} disabled={!canAdvance}>
           Siguiente
         </Button>
       ) : null}

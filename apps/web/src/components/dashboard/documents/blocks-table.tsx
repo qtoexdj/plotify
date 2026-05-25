@@ -37,14 +37,7 @@ import type { DocumentBlock } from '@/types/v2'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
-type BlockCategory =
-  | 'todos'
-  | 'encabezado'
-  | 'articulo'
-  | 'precio'
-  | 'clausula'
-  | 'firma'
-  | 'anexo'
+type BlockCategory = 'todos' | 'encabezado' | 'articulo' | 'precio' | 'clausula' | 'firma' | 'anexo'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -57,10 +50,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   anexo: 'Anexo',
 }
 
-const CATEGORY_VARIANTS: Record<
-  string,
-  'default' | 'secondary' | 'outline' | 'destructive'
-> = {
+const CATEGORY_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   encabezado: 'secondary',
   articulo: 'default',
   precio: 'outline',
@@ -88,11 +78,7 @@ interface BlocksTableProps {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function BlocksTable({
-  initialBlocks,
-  organizationId,
-  userId,
-}: BlocksTableProps) {
+export function BlocksTable({ initialBlocks, organizationId, userId }: BlocksTableProps) {
   const [blocks, setBlocks] = useState<DocumentBlock[]>(initialBlocks)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<BlockCategory>('todos')
@@ -113,8 +99,7 @@ export function BlocksTable({
 
   const filtered = useMemo(() => {
     return blocks.filter((b) => {
-      const matchesCategory =
-        categoryFilter === 'todos' || b.category === categoryFilter
+      const matchesCategory = categoryFilter === 'todos' || b.category === categoryFilter
       const matchesSearch =
         !search ||
         b.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -214,9 +199,7 @@ export function BlocksTable({
               >
                 {seeding ? 'Cargando...' : 'Cargar plantilla Escritura'}
               </Button>
-              {seedError && (
-                <p className="text-xs text-destructive">{seedError}</p>
-              )}
+              {seedError && <p className="text-xs text-destructive">{seedError}</p>}
             </>
           )}
           <Button size="sm" onClick={openCreate}>
@@ -234,19 +217,14 @@ export function BlocksTable({
               <TableHead className="w-[110px]">Categoría</TableHead>
               <TableHead>Variables</TableHead>
               <TableHead className="hidden md:table-cell">Tags</TableHead>
-              <TableHead className="hidden lg:table-cell w-[120px]">
-                Actualizado
-              </TableHead>
+              <TableHead className="hidden lg:table-cell w-[120px]">Actualizado</TableHead>
               <TableHead className="w-[100px] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center text-muted-foreground py-8"
-                >
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   {blocks.length === 0
                     ? 'No hay bloques. Usa "Cargar plantilla Escritura" para comenzar.'
                     : 'No hay bloques que coincidan con los filtros.'}
@@ -255,33 +233,22 @@ export function BlocksTable({
             ) : (
               filtered.map((block) => (
                 <TableRow key={block.id}>
-                  <TableCell className="font-medium text-sm">
-                    {block.name}
-                  </TableCell>
+                  <TableCell className="font-medium text-sm">{block.name}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={
-                        CATEGORY_VARIANTS[block.category ?? ''] ?? 'secondary'
-                      }
+                      variant={CATEGORY_VARIANTS[block.category ?? ''] ?? 'secondary'}
                       className="capitalize text-xs"
                     >
                       {CATEGORY_LABELS[block.category ?? ''] ?? block.category}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <VariableChips
-                      content={block.content ?? ''}
-                      maxVisible={3}
-                    />
+                    <VariableChips content={block.content ?? ''} maxVisible={3} />
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {(block.tags ?? []).map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="outline"
-                          className="text-xs font-normal"
-                        >
+                        <Badge key={tag} variant="outline" className="text-xs font-normal">
                           {tag}
                         </Badge>
                       ))}
@@ -335,18 +302,13 @@ export function BlocksTable({
       />
 
       {/* Confirm delete */}
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-      >
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar bloque?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se desactivará el bloque{' '}
-              <strong>{deleteTarget?.name}</strong>. Los templates que lo
-              usen dejarán de incluirlo. Esta acción es reversible desde la
-              base de datos.
+              Se desactivará el bloque <strong>{deleteTarget?.name}</strong>. Los templates que lo
+              usen dejarán de incluirlo. Esta acción es reversible desde la base de datos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

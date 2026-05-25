@@ -22,7 +22,8 @@ export type GeneratedDocument = Database['public']['Tables']['generated_document
 export type McpConnection = Database['public']['Tables']['mcp_connections']['Row']
 
 // ─── Agent Settings ───────────────────────────────────────────────────────────
-export type AgentCustomInstruction = Database['public']['Tables']['agent_custom_instructions']['Row']
+export type AgentCustomInstruction =
+  Database['public']['Tables']['agent_custom_instructions']['Row']
 
 // ─── Utility / Composed Types ─────────────────────────────────────────────────
 export type SkillWithConfig = AgentSkill & {

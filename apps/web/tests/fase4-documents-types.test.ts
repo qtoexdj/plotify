@@ -37,10 +37,24 @@ describe('ESCRITURA_ARTICLES — catálogo completo', () => {
   it('todos los ArticleType están presentes exactamente una vez', () => {
     const expectedIds: ArticleType[] = [
       'comparecencia',
-      'ART-01', 'ART-02', 'ART-03', 'ART-04', 'ART-05',
-      'ART-06', 'ART-07', 'ART-08', 'ART-09', 'ART-10',
-      'ART-11', 'ART-12', 'ART-13', 'ART-14', 'ART-15',
-      'ART-16', 'personeria', 'cierre',
+      'ART-01',
+      'ART-02',
+      'ART-03',
+      'ART-04',
+      'ART-05',
+      'ART-06',
+      'ART-07',
+      'ART-08',
+      'ART-09',
+      'ART-10',
+      'ART-11',
+      'ART-12',
+      'ART-13',
+      'ART-14',
+      'ART-15',
+      'ART-16',
+      'personeria',
+      'cierre',
     ]
     const actualIds = ESCRITURA_ARTICLES.map((a) => a.id)
     expect(actualIds).toEqual(expectedIds)
@@ -56,7 +70,9 @@ describe('ESCRITURA_ARTICLES — catálogo completo', () => {
 
 describe('ESCRITURA_ARTICLES — conditions', () => {
   it('los artículos con condition=conditional son ART-06 y personeria', () => {
-    const conditional = ESCRITURA_ARTICLES.filter((a) => a.condition === 'conditional').map((a) => a.id)
+    const conditional = ESCRITURA_ARTICLES.filter((a) => a.condition === 'conditional').map(
+      (a) => a.id
+    )
     expect(conditional).toEqual(['ART-06', 'personeria'])
   })
 
@@ -205,13 +221,21 @@ describe('EscrituraVariables — grupos completos del diccionario', () => {
         superficie_total: '500 ha',
         deslindes: {
           norte: 'con Río Tinguiririca',
-          nororiente: 'con camino público',  // clave dinámica
+          nororiente: 'con camino público', // clave dinámica
         },
       },
       sag: {},
-      lote: { numero_nombre: 'LOTE DOSCIENTOS', superficie_total: '300 m2', deslindes: 'Norte: ...' },
+      lote: {
+        numero_nombre: 'LOTE DOSCIENTOS',
+        superficie_total: '300 m2',
+        deslindes: 'Norte: ...',
+      },
       servidumbre: { aplica: false },
-      transaccion: { precio_numeros: '50000000', precio_letras: 'CINCUENTA MILLONES', forma_pago: 'al contado' },
+      transaccion: {
+        precio_numeros: '50000000',
+        precio_letras: 'CINCUENTA MILLONES',
+        forma_pago: 'al contado',
+      },
       mandato: {},
       personeria: { aplica: false },
     }

@@ -1,4 +1,11 @@
-import type { GeoJSONGeometry, GeometryType, SourceType, EstadoLote, VerifiedStatus, OfficialBoundaries } from './database.types'
+import type {
+  GeoJSONGeometry,
+  GeometryType,
+  SourceType,
+  EstadoLote,
+  VerifiedStatus,
+  OfficialBoundaries,
+} from './database.types'
 
 // Feature for viewer (combines geometry with lot data)
 export interface ViewerFeature {

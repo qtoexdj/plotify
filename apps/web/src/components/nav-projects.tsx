@@ -1,7 +1,12 @@
-"use client"
+'use client'
 
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Folder02Icon, Share01Icon, MoreHorizontalIcon, Delete02Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  Folder02Icon,
+  Share01Icon,
+  MoreHorizontalIcon,
+  Delete02Icon,
+} from '@hugeicons/core-free-icons'
 
 import {
   DropdownMenu,
@@ -9,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu'
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -18,7 +23,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
+} from '@/components/ui/sidebar'
 
 export function NavProjects({
   projects,
@@ -53,8 +58,8 @@ export function NavProjects({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-48 rounded-lg"
-                side={isMobile ? "bottom" : "right"}
-                align={isMobile ? "end" : "start"}
+                side={isMobile ? 'bottom' : 'right'}
+                align={isMobile ? 'end' : 'start'}
               >
                 <DropdownMenuItem>
                   <HugeiconsIcon icon={Folder02Icon} className="text-muted-foreground" />

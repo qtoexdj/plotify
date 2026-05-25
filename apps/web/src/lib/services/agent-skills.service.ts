@@ -16,9 +16,9 @@ export async function getSkillsForOrg(organizationId: string): Promise<SkillWith
     .select('*')
     .eq('organization_id', organizationId)
 
-  const configMap = new Map(configs?.map(c => [c.skill_id, c]) ?? [])
+  const configMap = new Map(configs?.map((c) => [c.skill_id, c]) ?? [])
 
-  return skills.map(skill => ({
+  return skills.map((skill) => ({
     ...skill,
     org_config: configMap.get(skill.id) ?? null,
   }))

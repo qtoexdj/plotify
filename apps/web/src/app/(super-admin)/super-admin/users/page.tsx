@@ -35,12 +35,8 @@ export default async function SuperAdminUsers() {
                 <tbody className="text-slate-700">
                   {profiles.map((profile) => (
                     <tr key={profile.id} className="border-t border-slate-100">
-                      <td className="py-3 font-mono text-xs text-slate-500">
-                        {profile.id}
-                      </td>
-                      <td className="py-3">
-                        {profile.username || 'sin-username'}
-                      </td>
+                      <td className="py-3 font-mono text-xs text-slate-500">{profile.id}</td>
+                      <td className="py-3">{profile.username || 'sin-username'}</td>
                       <td className="py-3">
                         {profile.is_super_admin ? (
                           <Badge>superadmin</Badge>

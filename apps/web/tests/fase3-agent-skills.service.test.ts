@@ -64,10 +64,7 @@ const mockConfig: OrgSkillConfig = {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function buildSupabaseMock(
-  skills: AgentSkill[] | null,
-  configs: OrgSkillConfig[]
-) {
+function buildSupabaseMock(skills: AgentSkill[] | null, configs: OrgSkillConfig[]) {
   const orderFn = vi.fn().mockResolvedValue({ data: skills, error: null })
   const selectSkills = vi.fn().mockReturnValue({ order: orderFn })
 
@@ -123,7 +120,7 @@ describe('getSkillsForOrg', () => {
 
     const result = await getSkillsForOrg(ORG_ID)
 
-    const skill2 = result.find(s => s.id === 'skill-2')
+    const skill2 = result.find((s) => s.id === 'skill-2')
     expect(skill2?.org_config).toEqual(mockConfig)
     expect(skill2?.org_config?.enabled).toBe(true)
   })
@@ -134,7 +131,7 @@ describe('getSkillsForOrg', () => {
 
     const result = await getSkillsForOrg(ORG_ID)
 
-    const skill1 = result.find(s => s.id === 'skill-1')
+    const skill1 = result.find((s) => s.id === 'skill-1')
     expect(skill1?.org_config).toBeNull()
   })
 

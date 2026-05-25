@@ -24,9 +24,7 @@ interface MapPanelProps {
  * Computes [west, south, east, north] bounds from the FeatureCollection,
  * adding a small padding so polygons don't touch edges.
  */
-function computeBoundsFromFC(
-  fc: ViewerFeatureCollection
-): MapLibreGL.LngLatBoundsLike | null {
+function computeBoundsFromFC(fc: ViewerFeatureCollection): MapLibreGL.LngLatBoundsLike | null {
   if (fc.features.length === 0) return null
 
   try {
@@ -105,11 +103,7 @@ export function MapPanel({ featureCollection, children, className }: MapPanelPro
     >
       <MapAutoFit featureCollection={featureCollection} />
       <MapControls position="top-left" showCompass showZoom={false} />
-      <MapControls
-        position="bottom-left"
-        showZoom
-        showFullscreen
-      />
+      <MapControls position="bottom-left" showZoom showFullscreen />
       {children}
     </Map>
   )

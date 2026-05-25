@@ -37,7 +37,9 @@ if (!existsSync(canonicalDir) || !statSync(canonicalDir).isDirectory()) {
 
   for (const expectedFile of expectedBaselineFiles) {
     if (!canonicalSqlFiles.includes(expectedFile)) {
-      fail(`expected baseline migration is missing: ${relative(workspaceRoot, join(canonicalDir, expectedFile))}`)
+      fail(
+        `expected baseline migration is missing: ${relative(workspaceRoot, join(canonicalDir, expectedFile))}`
+      )
     }
   }
 
@@ -53,7 +55,7 @@ for (const legacyDir of legacyMigrationDirs) {
 
   if (legacySqlFiles.length > 0) {
     fail(
-      `legacy migration directory must stay empty or absent: ${relative(workspaceRoot, legacyDir)} contains ${legacySqlFiles.join(', ')}`,
+      `legacy migration directory must stay empty or absent: ${relative(workspaceRoot, legacyDir)} contains ${legacySqlFiles.join(', ')}`
     )
   }
 }

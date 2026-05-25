@@ -1,6 +1,6 @@
-"use client"
+'use client'
 
-import { HugeiconsIcon } from "@hugeicons/react"
+import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Tick02Icon,
   Notification03Icon,
@@ -8,14 +8,10 @@ import {
   CreditCardIcon,
   Logout01Icon,
   SparklesIcon,
-} from "@hugeicons/core-free-icons"
-import { useRouter } from "next/navigation"
+} from '@hugeicons/core-free-icons'
+import { useRouter } from 'next/navigation'
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,14 +20,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu'
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { createClient } from "@/lib/supabase/client"
+} from '@/components/ui/sidebar'
+import { createClient } from '@/lib/supabase/client'
 
 export function NavUser({
   user,
@@ -47,15 +43,15 @@ export function NavUser({
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push('/auth/login')
     router.refresh()
   }
   const { isMobile } = useSidebar()
 
   const initials = user.name
-    .split(" ")
+    .split(' ')
     .map((n) => n[0])
-    .join("")
+    .join('')
     .toUpperCase()
     .slice(0, 2)
 
@@ -81,7 +77,7 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
+            side={isMobile ? 'bottom' : 'right'}
             align="end"
             sideOffset={4}
           >

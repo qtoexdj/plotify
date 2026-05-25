@@ -17,36 +17,39 @@ import { navItems } from '@/components/app-sidebar'
 // Lógica replicada de documents-history-table.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FORMAT_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-  pdf:  { label: 'PDF',  variant: 'default' },
+const FORMAT_LABELS: Record<
+  string,
+  { label: string; variant: 'default' | 'secondary' | 'outline' }
+> = {
+  pdf: { label: 'PDF', variant: 'default' },
   docx: { label: 'DOCX', variant: 'secondary' },
 }
 
 const DOCTYPE_LABELS: Record<string, string> = {
-  compraventa:  'Compraventa',
-  promesa:      'Promesa de C/V',
-  mandato:      'Mandato',
-  servidumbre:  'Servidumbre',
-  poder:        'Poder Notarial',
-  otro:         'Otro',
+  compraventa: 'Compraventa',
+  promesa: 'Promesa de C/V',
+  mandato: 'Mandato',
+  servidumbre: 'Servidumbre',
+  poder: 'Poder Notarial',
+  otro: 'Otro',
 }
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('es-CL', {
-    day:   '2-digit',
+    day: '2-digit',
     month: '2-digit',
-    year:  'numeric',
+    year: 'numeric',
   })
 }
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('es-CL', {
-    day:    '2-digit',
-    month:  '2-digit',
-    year:   'numeric',
-    hour:   '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
   })
 }
@@ -77,11 +80,11 @@ function filterDocuments(
   filterFrom: string,
   filterTo: string
 ): DocWithTemplate[] {
-  return documents.filter(doc => {
+  return documents.filter((doc) => {
     if (search) {
       const q = search.toLowerCase()
       const templateName = doc.document_templates?.name?.toLowerCase() ?? ''
-      const docType      = doc.document_type.toLowerCase()
+      const docType = doc.document_type.toLowerCase()
       if (!templateName.includes(q) && !docType.includes(q)) return false
     }
     if (filterType !== 'todos' && doc.document_type !== filterType) return false
@@ -98,7 +101,7 @@ function filterDocuments(
 }
 
 function uniqueTypes(documents: DocWithTemplate[]): string[] {
-  return Array.from(new Set(documents.map(d => d.document_type)))
+  return Array.from(new Set(documents.map((d) => d.document_type)))
 }
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -107,18 +110,18 @@ const ORG_ID = 'org-uuid-1'
 
 function makeDoc(overrides: Partial<DocWithTemplate> = {}): DocWithTemplate {
   return {
-    id:                  'doc-uuid-1',
-    organization_id:     ORG_ID,
-    template_id:         'tmpl-uuid-1',
-    lot_id:              'lot-uuid-1',
-    lot_record_id:       null,
-    document_type:       'compraventa',
-    file_format:         'pdf',
-    file_url:            'https://storage.example.com/docs/doc.pdf',
-    generated_by:        'user-uuid-1',
-    variables_snapshot:  {},
-    created_at:          '2026-03-15T10:00:00Z',
-    document_templates:  { name: 'Escritura Rural', document_type: 'compraventa' },
+    id: 'doc-uuid-1',
+    organization_id: ORG_ID,
+    template_id: 'tmpl-uuid-1',
+    lot_id: 'lot-uuid-1',
+    lot_record_id: null,
+    document_type: 'compraventa',
+    file_format: 'pdf',
+    file_url: 'https://storage.example.com/docs/doc.pdf',
+    generated_by: 'user-uuid-1',
+    variables_snapshot: {},
+    created_at: '2026-03-15T10:00:00Z',
+    document_templates: { name: 'Escritura Rural', document_type: 'compraventa' },
     ...overrides,
   }
 }
@@ -172,11 +175,11 @@ describe('F-v2-4.13 — FORMAT_LABELS', () => {
 describe('F-v2-4.13 — DOCTYPE_LABELS', () => {
   const cases: [string, string][] = [
     ['compraventa', 'Compraventa'],
-    ['promesa',     'Promesa de C/V'],
-    ['mandato',     'Mandato'],
+    ['promesa', 'Promesa de C/V'],
+    ['mandato', 'Mandato'],
     ['servidumbre', 'Servidumbre'],
-    ['poder',       'Poder Notarial'],
-    ['otro',        'Otro'],
+    ['poder', 'Poder Notarial'],
+    ['otro', 'Otro'],
   ]
 
   it.each(cases)('DocType "%s" mapea a "%s"', (type, label) => {
@@ -268,7 +271,11 @@ describe('F-v2-4.13 — filterDocuments: búsqueda por texto', () => {
   })
 
   it('doc sin template_name usa el tipo para buscar', () => {
-    const docSinTemplate = makeDoc({ id: 'doc-noname', document_type: 'poder', document_templates: null })
+    const docSinTemplate = makeDoc({
+      id: 'doc-noname',
+      document_type: 'poder',
+      document_templates: null,
+    })
     const result = filterDocuments([docSinTemplate], 'poder', 'todos', '', '')
     expect(result).toHaveLength(1)
   })
@@ -332,7 +339,7 @@ describe('F-v2-4.13 — filterDocuments: filtro por rango de fechas', () => {
     // `new Date('2026-03-21')` se parsea como UTC midnight; setHours(23,59,59) usa
     // hora local, pero siempre queda por encima de doc-2 (2026-03-20T14:00Z).
     const result = filterDocuments(SAMPLE_DOCS, '', 'todos', '2026-03-15', '2026-03-21')
-    const ids = result.map(d => d.id)
+    const ids = result.map((d) => d.id)
     expect(ids).toContain('doc-1')
     expect(ids).toContain('doc-2')
     expect(ids).not.toContain('doc-3')
@@ -404,7 +411,7 @@ describe('F-v2-4.13 — filterDocuments: combinación de filtros', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('F-v2-4.15 — navItems: grupo Documentos', () => {
-  const docGroup = navItems.find(item => item.title === 'Documentos')
+  const docGroup = navItems.find((item) => item.title === 'Documentos')
 
   it('existe el grupo "Documentos" en navItems', () => {
     expect(docGroup).toBeDefined()
@@ -420,19 +427,19 @@ describe('F-v2-4.15 — navItems: grupo Documentos', () => {
   })
 
   it('subitem Plantillas existe con la URL correcta', () => {
-    const sub = docGroup?.items?.find(i => i.title === 'Plantillas')
+    const sub = docGroup?.items?.find((i) => i.title === 'Plantillas')
     expect(sub).toBeDefined()
     expect(sub?.url).toBe('/documentos/plantillas')
   })
 
   it('subitem Bloques existe con la URL correcta', () => {
-    const sub = docGroup?.items?.find(i => i.title === 'Bloques')
+    const sub = docGroup?.items?.find((i) => i.title === 'Bloques')
     expect(sub).toBeDefined()
     expect(sub?.url).toBe('/documentos/bloques')
   })
 
   it('subitem Historial existe con la URL correcta', () => {
-    const sub = docGroup?.items?.find(i => i.title === 'Historial')
+    const sub = docGroup?.items?.find((i) => i.title === 'Historial')
     expect(sub).toBeDefined()
     expect(sub?.url).toBe('/documentos/historial')
   })
@@ -460,33 +467,33 @@ describe('F-v2-4.15 — navItems: estructura global del sidebar', () => {
   })
 
   it('Proyectos existe con URL /projects', () => {
-    const item = navItems.find(i => i.title === 'Proyectos')
+    const item = navItems.find((i) => i.title === 'Proyectos')
     expect(item).toBeDefined()
     expect((item as { url?: string })?.url).toBe('/projects')
   })
 
   it('Agente existe y tiene subitems', () => {
-    const item = navItems.find(i => i.title === 'Agente')
+    const item = navItems.find((i) => i.title === 'Agente')
     expect(item).toBeDefined()
     expect(item?.items?.length).toBeGreaterThan(0)
   })
 
   it('Documentos aparece después de Vendedores', () => {
-    const vendedoresIdx = navItems.findIndex(i => i.title === 'Vendedores')
-    const documentosIdx = navItems.findIndex(i => i.title === 'Documentos')
+    const vendedoresIdx = navItems.findIndex((i) => i.title === 'Vendedores')
+    const documentosIdx = navItems.findIndex((i) => i.title === 'Documentos')
     expect(vendedoresIdx).toBeGreaterThanOrEqual(0)
     expect(documentosIdx).toBeGreaterThan(vendedoresIdx)
   })
 
   it('todos los items tienen al menos title', () => {
-    navItems.forEach(item => {
+    navItems.forEach((item) => {
       expect(item.title).toBeTruthy()
     })
   })
 
   it('todos los items hoja (sin subitems) tienen URL', () => {
-    const leafItems = navItems.filter(i => !i.items || i.items.length === 0)
-    leafItems.forEach(item => {
+    const leafItems = navItems.filter((i) => !i.items || i.items.length === 0)
+    leafItems.forEach((item) => {
       expect((item as { url?: string }).url).toBeTruthy()
     })
   })
@@ -498,9 +505,9 @@ describe('F-v2-4.15 — navItems: estructura global del sidebar', () => {
 
 describe('F-v2-4.14 — /documentos accesos rápidos: rutas correctas', () => {
   const ACCESOS = [
-    { title: 'Plantillas',  href: '/documentos/plantillas' },
-    { title: 'Bloques',     href: '/documentos/bloques'    },
-    { title: 'Historial',   href: '/documentos/historial'  },
+    { title: 'Plantillas', href: '/documentos/plantillas' },
+    { title: 'Bloques', href: '/documentos/bloques' },
+    { title: 'Historial', href: '/documentos/historial' },
   ]
 
   it('hay exactamente 3 accesos rápidos definidos', () => {
@@ -508,20 +515,20 @@ describe('F-v2-4.14 — /documentos accesos rápidos: rutas correctas', () => {
   })
 
   it.each(ACCESOS)('acceso "$title" tiene la href "$href"', ({ title, href }) => {
-    const item = ACCESOS.find(a => a.title === title)
+    const item = ACCESOS.find((a) => a.title === title)
     expect(item?.href).toBe(href)
   })
 
   it('todas las hrefs empiezan con /documentos/', () => {
-    ACCESOS.forEach(a => {
+    ACCESOS.forEach((a) => {
       expect(a.href).toMatch(/^\/documentos\//)
     })
   })
 
   it('las hrefs coinciden con los subitems del sidebar', () => {
-    const docGroup = navItems.find(i => i.title === 'Documentos')
-    const sidebarUrls = new Set(docGroup?.items?.map(i => i.url))
-    ACCESOS.forEach(a => {
+    const docGroup = navItems.find((i) => i.title === 'Documentos')
+    const sidebarUrls = new Set(docGroup?.items?.map((i) => i.url))
+    ACCESOS.forEach((a) => {
       expect(sidebarUrls.has(a.href)).toBe(true)
     })
   })

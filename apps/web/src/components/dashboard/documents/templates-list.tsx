@@ -45,7 +45,10 @@ import type { DocumentTemplate } from '@/types/v2'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const DOCUMENT_TYPE_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; className: string }> = {
+const DOCUMENT_TYPE_CONFIG: Record<
+  string,
+  { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive'; className: string }
+> = {
   escritura: {
     label: 'Escritura',
     variant: 'default',
@@ -104,7 +107,12 @@ interface NewTemplateDialogProps {
   onCreated: (template: DocumentTemplate) => void
 }
 
-function NewTemplateDialog({ open, onOpenChange, organizationId, onCreated }: NewTemplateDialogProps) {
+function NewTemplateDialog({
+  open,
+  onOpenChange,
+  organizationId,
+  onCreated,
+}: NewTemplateDialogProps) {
   const [isPending, startTransition] = useTransition()
   const form = useForm<NewTemplateValues>({
     resolver: zodResolver(NewTemplateSchema),
@@ -234,11 +242,12 @@ function TemplateCard({ template, onDuplicated }: TemplateCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {template.is_default && (
-              <Star className="h-4 w-4 shrink-0 fill-yellow-400 text-yellow-400" aria-label="Plantilla predeterminada" />
+              <Star
+                className="h-4 w-4 shrink-0 fill-yellow-400 text-yellow-400"
+                aria-label="Plantilla predeterminada"
+              />
             )}
-            <CardTitle className="text-base leading-tight truncate">
-              {template.name}
-            </CardTitle>
+            <CardTitle className="text-base leading-tight truncate">{template.name}</CardTitle>
           </div>
           <DocumentTypeBadge type={template.document_type} />
         </div>
@@ -290,11 +299,11 @@ export function TemplatesList({ initialTemplates, organizationId }: TemplatesLis
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const handleCreated = (template: DocumentTemplate) => {
-    setTemplates(prev => [template, ...prev])
+    setTemplates((prev) => [template, ...prev])
   }
 
   const handleDuplicated = (copy: DocumentTemplate) => {
-    setTemplates(prev => [...prev, copy])
+    setTemplates((prev) => [...prev, copy])
   }
 
   return (
@@ -312,12 +321,8 @@ export function TemplatesList({ initialTemplates, organizationId }: TemplatesLis
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {templates.map(template => (
-              <TemplateCard
-                key={template.id}
-                template={template}
-                onDuplicated={handleDuplicated}
-              />
+            {templates.map((template) => (
+              <TemplateCard key={template.id} template={template} onDuplicated={handleDuplicated} />
             ))}
           </div>
 

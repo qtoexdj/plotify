@@ -5,11 +5,7 @@ import { BackendStatusBadge } from '@/components/system/BackendStatusBadge'
 import { UserMenu } from '@/components/auth/UserMenu'
 import Link from 'next/link'
 
-export default async function SuperAdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isSuperAdmin } = await getUserWithSuperAdmin()
 
   if (!user) {

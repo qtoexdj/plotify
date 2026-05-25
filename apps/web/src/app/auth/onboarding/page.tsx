@@ -7,64 +7,64 @@ import { InteractiveGridPattern } from '@/components/ui/interactive-grid-pattern
 import { cn } from '@/lib/utils'
 
 export default async function OnboardingPage() {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-    if (!user) {
-        redirect('/auth/login')
-    }
+  if (!user) {
+    redirect('/auth/login')
+  }
 
-    // Si el usuario ya tiene perfil completo, redirigir al dashboard
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', user.id)
-        .single()
+  // Si el usuario ya tiene perfil completo, redirigir al dashboard
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name')
+    .eq('id', user.id)
+    .single()
 
-    if (profile?.first_name && profile?.last_name) {
-        redirect('/projects')
-    }
+  if (profile?.first_name && profile?.last_name) {
+    redirect('/projects')
+  }
 
-    return (
-        <div className="relative min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 overflow-hidden">
-            <InteractiveGridPattern
-                className={cn(
-                    "mask-[radial-gradient(600px_circle_at_center,white,transparent)]",
-                )}
-                width={20}
-                height={20}
-                squares={[80, 80]}
-                squaresClassName="hover:fill-blue-500"
-            />
+  return (
+    <div className="relative min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 overflow-hidden">
+      <InteractiveGridPattern
+        className={cn('mask-[radial-gradient(600px_circle_at_center,white,transparent)]')}
+        width={20}
+        height={20}
+        squares={[80, 80]}
+        squaresClassName="hover:fill-blue-500"
+      />
 
-            <div className="absolute top-4 right-4 z-50">
-                <ModeToggle />
-            </div>
+      <div className="absolute top-4 right-4 z-50">
+        <ModeToggle />
+      </div>
 
-            <div className="relative z-10 w-full max-w-md space-y-6">
-                <div className="flex flex-col items-center justify-center text-center">
-                    <Image
-                        src="/plotify_logo_ligth.png"
-                        alt="Plotify Logo"
-                        width={200}
-                        height={75}
-                        className="mb-4 block dark:hidden"
-                        priority
-                    />
-                    <Image
-                        src="/plotify_logo_dark.png"
-                        alt="Plotify Logo"
-                        width={200}
-                        height={75}
-                        className="mb-4 hidden dark:block"
-                        priority
-                    />
-                    <p className="text-slate-600 dark:text-slate-400">
-                        ¡Bienvenido! Completa tu perfil para comenzar
-                    </p>
-                </div>
-                <OnboardingForm />
-            </div>
+      <div className="relative z-10 w-full max-w-md space-y-6">
+        <div className="flex flex-col items-center justify-center text-center">
+          <Image
+            src="/plotify_logo_ligth.png"
+            alt="Plotify Logo"
+            width={200}
+            height={75}
+            className="mb-4 block dark:hidden"
+            priority
+          />
+          <Image
+            src="/plotify_logo_dark.png"
+            alt="Plotify Logo"
+            width={200}
+            height={75}
+            className="mb-4 hidden dark:block"
+            priority
+          />
+          <p className="text-slate-600 dark:text-slate-400">
+            ¡Bienvenido! Completa tu perfil para comenzar
+          </p>
         </div>
-    )
+        <OnboardingForm />
+      </div>
+    </div>
+  )
 }

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -58,8 +58,8 @@ export default function OnboardingWizardPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
-    watch,
   } = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
@@ -76,11 +76,11 @@ export default function OnboardingWizardPage() {
   })
 
   // Watch los nuevos valores
-  const usarPrefijo = watch('usar_prefijo_lotes')
-  const precioTipo = watch('precio_tipo')
-  const reservaTipo = watch('reserva_tipo')
-
-  const totalLotes = watch('total_lotes')
+  const usarPrefijo = useWatch({ control, name: 'usar_prefijo_lotes' })
+  const precioTipo = useWatch({ control, name: 'precio_tipo' })
+  const reservaTipo = useWatch({ control, name: 'reserva_tipo' })
+  const totalLotes = useWatch({ control, name: 'total_lotes' })
+  const prefijoLotes = useWatch({ control, name: 'prefijo_lotes' })
 
   const handleCreateProject = async (data: ProjectFormData) => {
     setIsSavingProject(true)
@@ -111,7 +111,7 @@ export default function OnboardingWizardPage() {
       setProject(result.project)
       setCurrentStep(2)
       if (project) {
-          toast.success('Proyecto actualizado')
+        toast.success('Proyecto actualizado')
       }
     } catch (err) {
       setProjectError(err instanceof Error ? err.message : 'Error al procesar el proyecto')
@@ -172,7 +172,9 @@ export default function OnboardingWizardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Nuevo proyecto</h1>
-          <p className="text-slate-600 dark:text-slate-400">Completa el onboarding en pasos antes de ir al proyecto.</p>
+          <p className="text-slate-600 dark:text-slate-400">
+            Completa el onboarding en pasos antes de ir al proyecto.
+          </p>
         </div>
         <div className="flex gap-2">
           {steps.map((step) => {
@@ -181,14 +183,19 @@ export default function OnboardingWizardPage() {
             return (
               <div
                 key={step.id}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${isActive
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-900/20 dark:text-blue-400'
-                  : isDone
-                    ? 'border-green-500 bg-green-50 text-green-700 dark:border-emerald-500/50 dark:bg-emerald-900/20 dark:text-emerald-400'
-                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
-                  }`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${
+                  isActive
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-900/20 dark:text-blue-400'
+                    : isDone
+                      ? 'border-green-500 bg-green-50 text-green-700 dark:border-emerald-500/50 dark:bg-emerald-900/20 dark:text-emerald-400'
+                      : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
+                }`}
               >
-                {isDone ? <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4" /> : <span>{step.id}</span>}
+                {isDone ? (
+                  <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4" />
+                ) : (
+                  <span>{step.id}</span>
+                )}
                 <span>{step.label}</span>
               </div>
             )
@@ -206,11 +213,7 @@ export default function OnboardingWizardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nombre *</Label>
-                  <Input
-                    id="name"
-                    {...register('name')}
-                    placeholder="Parcelas Los Aromos"
-                  />
+                  <Input id="name" {...register('name')} placeholder="Parcelas Los Aromos" />
                   {errors.name && (
                     <p className="text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
                   )}
@@ -224,29 +227,27 @@ export default function OnboardingWizardPage() {
                     {...register('total_lotes', { valueAsNumber: true })}
                   />
                   {errors.total_lotes && (
-                    <p className="text-sm text-red-600 dark:text-red-400">{errors.total_lotes.message}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {errors.total_lotes.message}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="region">Región *</Label>
-                  <Input
-                    id="region"
-                    {...register('region')}
-                    placeholder="Valparaíso"
-                  />
+                  <Input id="region" {...register('region')} placeholder="Valparaíso" />
                   {errors.region && (
-                    <p className="text-sm text-red-600 dark:text-red-400">{errors.region.message}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {errors.region.message}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="comuna">Comuna *</Label>
-                  <Input
-                    id="comuna"
-                    {...register('comuna')}
-                    placeholder="Quillota"
-                  />
+                  <Input id="comuna" {...register('comuna')} placeholder="Quillota" />
                   {errors.comuna && (
-                    <p className="text-sm text-red-600 dark:text-red-400">{errors.comuna.message}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {errors.comuna.message}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -279,7 +280,7 @@ export default function OnboardingWizardPage() {
                             className="max-w-62.5"
                           />
                           <span className="text-sm text-slate-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                            Vista previa: {watch('prefijo_lotes') || ''}1
+                            Vista previa: {prefijoLotes || ''}1
                           </span>
                         </div>
                       </div>
@@ -347,7 +348,10 @@ export default function OnboardingWizardPage() {
                           checked={reservaTipo === 'fijo'}
                           onCheckedChange={(checked) =>
                             register('reserva_tipo').onChange({
-                              target: { name: 'reserva_tipo', value: checked ? 'fijo' : 'variable' },
+                              target: {
+                                name: 'reserva_tipo',
+                                value: checked ? 'fijo' : 'variable',
+                              },
                             })
                           }
                         />
@@ -395,7 +399,8 @@ export default function OnboardingWizardPage() {
                 <Button type="submit" disabled={isSavingProject} className="min-w-40">
                   {isSavingProject ? (
                     <>
-                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" /> Creando...
+                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />{' '}
+                      Creando...
                     </>
                   ) : (
                     'Guardar y continuar'
@@ -409,10 +414,10 @@ export default function OnboardingWizardPage() {
 
       {currentStep === 2 && project && (
         <div className="space-y-4">
-          <ProjectMediaStep 
+          <ProjectMediaStep
             onMediaChange={(media) => {
               handleUpdateMedia(media)
-            }} 
+            }}
           />
           <div className="flex justify-between">
             <Button variant="outline" onClick={goPrev}>
@@ -520,8 +525,7 @@ export default function OnboardingWizardPage() {
                 <CardContent className="space-y-2 text-sm text-slate-700">
                   <p>Revisa el visor y edita lotes en la página del proyecto.</p>
                   <p>
-                    Si faltan asignaciones, puedes completarlas luego en la pestaña de
-                    importación.
+                    Si faltan asignaciones, puedes completarlas luego en la pestaña de importación.
                   </p>
                 </CardContent>
               </Card>
@@ -533,9 +537,7 @@ export default function OnboardingWizardPage() {
               <Button variant="outline" onClick={goPrev}>
                 Anterior
               </Button>
-              <Button onClick={() => router.push(`/projects/${project.id}`)}>
-                Ir al proyecto
-              </Button>
+              <Button onClick={() => router.push(`/projects/${project.id}`)}>Ir al proyecto</Button>
             </div>
           </CardContent>
         </Card>
