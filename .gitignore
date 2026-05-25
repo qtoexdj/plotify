@@ -122,3 +122,6 @@ ehthumbs.db
 # Obsidian local workspace state
 **/.obsidian/workspace*.json
 **/.obsidian/cache/
+
+# Skill de claude
+.claude/ 

@@ -3,6 +3,9 @@
 > **B2B SaaS para inmobiliarias y loteadoras** — Gestión completa de proyectos de loteamiento.
 > **Versión actual:** V2.1 (CAD Freeze)
 
+> [!info] 📊 Dashboard Central
+> Accede al **[[Plotify.base|Dashboard de Proyectos, ADRs e Implementaciones]]** para visualizar métricas, estados y el progreso de los loteamientos en tiempo real.
+
 ---
 
 ## Mapa del Vault
@@ -89,6 +92,7 @@ Glosario, migraciones y roadmap.
 - [[Roadmap Plotify]]
 - [[Hoja de Ruta - Cierre Plotify Piloto Clientes]]
 - [[Backlog Implementable - Cierre Plotify]]
+- [[Plotify.base|📊 Dashboard Interactivo (Bases)]]
 
 ### PRD y ADRs
 Definicion de producto, decisiones arquitectonicas y criterios de cierre del piloto.
@@ -131,12 +135,12 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 
 ## Conteo
 
-- **72 notas** documentadas
-- **10 secciones** temáticas
+- **71 notas** documentadas
+- **6 secciones** temáticas
 - **Wikilinks** entre notas relacionadas
 - **Tags** por dominio (#frontend, #backend, #db, #arquitectura, #legal, #guia, #referencia, #prd, #adr)
 
-*Última actualización: 16 de abril de 2026*
+*Última actualización: 25 de mayo de 2026*
 
 
 
