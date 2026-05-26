@@ -283,8 +283,64 @@
         "title": "CreateVersionRequest",
         "type": "object"
       },
+      "DocumentVariablesGroup": {
+        "properties": {
+          "comprador": {
+            "additionalProperties": true,
+            "title": "Comprador",
+            "type": "object"
+          },
+          "lote": {
+            "additionalProperties": true,
+            "title": "Lote",
+            "type": "object"
+          },
+          "mandato": {
+            "additionalProperties": true,
+            "title": "Mandato",
+            "type": "object"
+          },
+          "matriz": {
+            "additionalProperties": true,
+            "title": "Matriz",
+            "type": "object"
+          },
+          "personeria": {
+            "additionalProperties": true,
+            "title": "Personeria",
+            "type": "object"
+          },
+          "sag": {
+            "additionalProperties": true,
+            "title": "Sag",
+            "type": "object"
+          },
+          "servidumbre": {
+            "additionalProperties": true,
+            "title": "Servidumbre",
+            "type": "object"
+          },
+          "transaccion": {
+            "additionalProperties": true,
+            "title": "Transaccion",
+            "type": "object"
+          },
+          "vendedor": {
+            "additionalProperties": true,
+            "title": "Vendedor",
+            "type": "object"
+          }
+        },
+        "title": "DocumentVariablesGroup",
+        "type": "object"
+      },
       "GenerateRequest": {
         "properties": {
+          "document_type": {
+            "default": "reserva",
+            "title": "Document Type",
+            "type": "string"
+          },
           "format": {
             "default": "pdf",
             "enum": ["pdf", "docx"],
@@ -306,6 +362,11 @@
             "title": "Lot Id",
             "type": "string"
           },
+          "missing_variables_accepted": {
+            "default": false,
+            "title": "Missing Variables Accepted",
+            "type": "boolean"
+          },
           "organization_id": {
             "title": "Organization Id",
             "type": "string"
@@ -321,6 +382,14 @@
       },
       "GenerateResponse": {
         "properties": {
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_type": {
+            "title": "Document Type",
+            "type": "string"
+          },
           "file_url": {
             "title": "File Url",
             "type": "string"
@@ -329,9 +398,34 @@
             "enum": ["pdf", "docx"],
             "title": "Format",
             "type": "string"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "string"
+          },
+          "missing_variables_accepted": {
+            "title": "Missing Variables Accepted",
+            "type": "boolean"
+          },
+          "template_id": {
+            "title": "Template Id",
+            "type": "string"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
           }
         },
-        "required": ["file_url", "format"],
+        "required": [
+          "document_id",
+          "file_url",
+          "format",
+          "document_type",
+          "version_number",
+          "lot_id",
+          "template_id",
+          "missing_variables_accepted"
+        ],
         "title": "GenerateResponse",
         "type": "object"
       },
@@ -859,6 +953,37 @@
         },
         "required": ["loc", "msg", "type"],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VariableStatusResponse": {
+        "properties": {
+          "available": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Available",
+            "type": "array"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "sources": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "object"
+          },
+          "variables": {
+            "$ref": "#/components/schemas/DocumentVariablesGroup"
+          }
+        },
+        "required": ["variables"],
+        "title": "VariableStatusResponse",
         "type": "object"
       }
     },
@@ -1661,9 +1786,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Variables Api V1 Documents Variables  Lot Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/VariableStatusResponse"
                 }
               }
             },

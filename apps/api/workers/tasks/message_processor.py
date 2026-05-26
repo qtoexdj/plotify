@@ -11,6 +11,141 @@ from utils.sanitize import sanitize_user_input
 logger = get_logger(__name__)
 
 
+async def resolve_vendor_telegram_context(
+    org_id: str, telegram_chat_id: str
+) -> dict | None:
+    """Resolve an assigned vendor context from a Telegram chat id."""
+    supabase = get_supabase_client()
+    vendor_res = (
+        supabase.table("vendors")
+        .select("id, organization_id, nombre, phone, active")
+        .eq("phone", telegram_chat_id)
+        .eq("organization_id", org_id)
+        .limit(1)
+        .execute()
+    )
+    if not vendor_res.data:
+        return None
+
+    vendor = vendor_res.data[0]
+    if vendor.get("active") is False:
+        return None
+
+    assignments_res = (
+        supabase.table("vendor_projects")
+        .select("project_id")
+        .eq("vendor_id", vendor["id"])
+        .execute()
+    )
+    project_ids = [row["project_id"] for row in (assignments_res.data or [])]
+    if not project_ids:
+        return None
+
+    return {
+        "vendor_id": vendor["id"],
+        "vendor_name": vendor.get("nombre") or "Vendedor",
+        "organization_id": vendor["organization_id"],
+        "telegram_chat_id": telegram_chat_id,
+        "project_ids": project_ids,
+    }
+
+
+async def process_vendor_telegram_operation(
+    ctx: dict,
+    org_id: str,
+    telegram_chat_id: str,
+    operation: str,
+    data: dict | None = None,
+) -> str:
+    """
+    Minimal deterministic seller Telegram operations used by the MVP foundation.
+
+    The conversational parser can route to this function later; the invariant
+    already lives here: only linked vendors with explicit project assignments
+    can see lot availability or create reservation intents.
+    """
+    data = data or {}
+    context = await resolve_vendor_telegram_context(org_id, telegram_chat_id)
+    telegram_client = await get_telegram_client_for_org(org_id)
+    if not context:
+        if telegram_client:
+            await telegram_client.send_text(
+                telegram_chat_id,
+                "No tienes proyectos asignados para operar desde Telegram.",
+            )
+        return "UNASSIGNED_VENDOR"
+
+    supabase = get_supabase_client()
+
+    if operation == "availability":
+        lots_query = (
+            supabase.table("lots")
+            .select("id, numero_lote, estado, project_id")
+            .eq("estado", "disponible")
+            .in_("project_id", context["project_ids"])
+        )
+        lots_res = lots_query.execute()
+        lots = lots_res.data or []
+        if telegram_client:
+            lot_labels = ", ".join(f"Lote {lot['numero_lote']}" for lot in lots)
+            await telegram_client.send_text(
+                telegram_chat_id,
+                lot_labels or "No hay lotes disponibles asignados.",
+            )
+        return f"AVAILABILITY:{len(lots)}"
+
+    if operation == "reserve":
+        lot_id = data.get("lot_id")
+        payload = data.get("payload") or {}
+        if not lot_id:
+            return "MISSING_LOT_ID"
+
+        lot_res = (
+            supabase.table("lots")
+            .select("id, numero_lote, estado, project_id")
+            .eq("id", lot_id)
+            .limit(1)
+            .execute()
+        )
+        if not lot_res.data:
+            return "LOT_NOT_FOUND"
+
+        lot = lot_res.data[0]
+        if lot.get("project_id") not in context["project_ids"]:
+            return "FOREIGN_PROJECT"
+        if lot.get("estado") != "disponible":
+            return "LOT_NOT_AVAILABLE"
+
+        insert_res = (
+            supabase.table("approval_requests")
+            .insert(
+                {
+                    "lot_id": lot_id,
+                    "organization_id": context["organization_id"],
+                    "vendor_id": context["vendor_id"],
+                    "vendor_name": context["vendor_name"],
+                    "vendor_phone": telegram_chat_id,
+                    "vendor_platform": "telegram",
+                    "payload": payload,
+                    "status": "pending",
+                }
+            )
+            .execute()
+        )
+        approval_id = (insert_res.data or [{}])[0].get("id")
+        redis = ctx.get("redis")
+        if redis and approval_id:
+            await redis.enqueue_job("notify_admin_approval", approval_id)
+        if telegram_client:
+            await telegram_client.send_text(
+                telegram_chat_id,
+                "Solicitud de reserva enviada al administrador.",
+            )
+        return f"RESERVATION_REQUESTED:{approval_id}"
+
+    return "UNKNOWN_OPERATION"
+
+
 async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
     """
     Tarea de arq en background.

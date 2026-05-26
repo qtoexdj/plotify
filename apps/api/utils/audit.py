@@ -11,6 +11,20 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
+# Familias de eventos de auditoría estandarizadas para el MVP de Plotify
+EVENT_RESERVATION_REQUESTED = "reservation.requested"
+EVENT_RESERVATION_APPROVED = "reservation.approved"
+EVENT_RESERVATION_REJECTED = "reservation.rejected"
+EVENT_RESERVATION_RELEASED = "reservation.released"
+EVENT_DOCUMENT_GENERATED = "document.generated"
+EVENT_DOCUMENT_REGENERATED = "document.regenerated"
+EVENT_DOCUMENT_SENT = "document.sent"
+EVENT_DOCUMENT_SEND_FAILED = "document.send_failed"
+EVENT_DOCUMENT_SEND_RETRIED = "document.send_retried"
+EVENT_LOT_VERIFIED = "lot.verified"
+EVENT_TEMPLATE_MODIFIED = "template.modified"
+
+
 async def log_agent_action(
     actor: str,
     action: str,
@@ -23,9 +37,17 @@ async def log_agent_action(
     Guarda de forma asíncrona un evento de auditoría en la tabla `audit_logs`.
     Usado por herramientas o endpoints para mantener trazabilidad.
 
+    El payload debe estructurarse usando las siguientes claves canónicas cuando aplique:
+    - lot_id: UUID del lote si el evento se relaciona con un lote.
+    - project_id: UUID del proyecto si el evento se relaciona con un proyecto.
+    - approval_id: UUID de la solicitud si viene del flujo de aprobaciones.
+    - document_id: UUID del documento generado si viene de generación/envío.
+    - channel: "telegram" o "web" para decisiones y flujos concurrentes.
+    - actor_user_id: UUID del usuario si es un actor humano.
+
     Args:
         actor: Quien realiza la acción (Ej: "ai_agent" o "system")
-        action: Qué hizo (Ej: "REQUEST_RESERVATION_INFO", "REJECT_LEAD")
+        action: Qué hizo (Ej: "reservation.requested", etc.)
         entity: Sobre qué entidad actuó (Ej: "lots", "message")
         entity_id: ID o referencia de la entidad ("1", "Lote-A1")
         organization_id: UUID de la organización asociada (Multi-tenant).

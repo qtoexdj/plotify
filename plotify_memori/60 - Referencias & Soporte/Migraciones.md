@@ -73,5 +73,20 @@ Migraciones canonicas actuales:
 - 20260414000100_baseline_local_validated.sql
 - 20260414000200_fix_security_definer_search_path.sql
 - 20260414000300_add_missing_fk_indexes.sql
+- 20260525000100_mvp_project_templates_documents.sql
+
+## Actualizacion SDD 001 Fase 2 - 2026-05-26
+
+Ver [[Implementacion SDD 001 Fase 2 - Foundation MVP]].
+
+La migracion `20260525000100_mvp_project_templates_documents.sql` agrega:
+
+- `project_active_templates` para template activo por proyecto y tipo documental.
+- Validacion DB para que el template activo pertenezca a la misma organizacion que el proyecto.
+- Campos de versionado y aceptacion de variables faltantes en `generated_documents`.
+- Campos de destinatarios, estado de entrega, intentos fallidos y metadata de entrega en `generated_documents`.
+- Indice de lookup para calcular la siguiente version por lote, template y tipo documental.
+
+Verificacion: `pnpm verify:migrations`.
 
 Las migraciones antiguas en plotify y plotify_chat fueron eliminadas despues de validar supabase db reset. No crear nuevas migraciones en esas rutas.

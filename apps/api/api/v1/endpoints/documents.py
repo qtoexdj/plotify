@@ -22,7 +22,7 @@ import asyncio
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from api.deps import require_lot_organization, verify_internal_secret
 from services.document_engine import render_template, resolve_variables
@@ -57,11 +57,38 @@ class GenerateRequest(BaseModel):
     organization_id: str
     format: Literal["pdf", "docx"] = "pdf"
     generated_by: str | None = None
+    document_type: str = "reserva"
+    missing_variables_accepted: bool = False
 
 
 class GenerateResponse(BaseModel):
+    document_id: str
     file_url: str
     format: Literal["pdf", "docx"]
+    document_type: str
+    version_number: int
+    lot_id: str
+    template_id: str
+    missing_variables_accepted: bool
+
+
+class DocumentVariablesGroup(BaseModel):
+    comprador: dict[str, Any] = Field(default_factory=dict)
+    vendedor: dict[str, Any] = Field(default_factory=dict)
+    matriz: dict[str, Any] = Field(default_factory=dict)
+    sag: dict[str, Any] = Field(default_factory=dict)
+    lote: dict[str, Any] = Field(default_factory=dict)
+    servidumbre: dict[str, Any] = Field(default_factory=dict)
+    transaccion: dict[str, Any] = Field(default_factory=dict)
+    mandato: dict[str, Any] = Field(default_factory=dict)
+    personeria: dict[str, Any] = Field(default_factory=dict)
+
+
+class VariableStatusResponse(BaseModel):
+    variables: DocumentVariablesGroup
+    available: list[str] = Field(default_factory=list)
+    missing: list[str] = Field(default_factory=list)
+    sources: dict[str, str] = Field(default_factory=dict)
 
 
 class CreateBlockRequest(BaseModel):
@@ -105,6 +132,82 @@ class AddBlockToTemplateRequest(BaseModel):
 # ---------------------------------------------------------------
 # Preview + Generación
 # ---------------------------------------------------------------
+
+
+def _source_for_flat_key(key: str) -> str:
+    if key.startswith("cliente_") or key in {
+        "valor",
+        "abono",
+        "saldo",
+        "firma_fecha",
+        "firma_lugar",
+        "firma_estado",
+        "etapa_proceso",
+    }:
+        return "lot_record"
+    if key.startswith("proyecto_"):
+        return "project"
+    if key.startswith("org_"):
+        return "organization"
+    if key.startswith("cbr_"):
+        return "project_legal_data"
+    if key.startswith("servidumbre_"):
+        return "geometry"
+    return "lot"
+
+
+def _canonical_group_for_flat_key(key: str) -> str:
+    if key.startswith("cliente_") or key.startswith("comprador_"):
+        return "comprador"
+    if key.startswith("vendedor_"):
+        return "vendedor"
+    if key.startswith("matriz_") or key.startswith("cbr_"):
+        return "matriz"
+    if key.startswith("sag_"):
+        return "sag"
+    if key.startswith("servidumbre_"):
+        return "servidumbre"
+    if key.startswith("transaccion_") or key in {"valor", "abono", "saldo"}:
+        return "transaccion"
+    if key.startswith("mandato_"):
+        return "mandato"
+    if key.startswith("personeria_"):
+        return "personeria"
+    return "lote"
+
+
+def _build_variable_status(flat_vars: dict[str, Any]) -> VariableStatusResponse:
+    grouped: dict[str, dict[str, Any]] = {
+        "comprador": {},
+        "vendedor": {},
+        "matriz": {},
+        "sag": {},
+        "lote": {},
+        "servidumbre": {},
+        "transaccion": {},
+        "mandato": {},
+        "personeria": {},
+    }
+    available: list[str] = []
+    missing: list[str] = []
+    sources: dict[str, str] = {}
+
+    for key, value in flat_vars.items():
+        group_name = _canonical_group_for_flat_key(key)
+        grouped[group_name][key] = value
+        canonical_key = f"{group_name}.{key}"
+        if value is None or value == "":
+            missing.append(canonical_key)
+        else:
+            available.append(canonical_key)
+        sources[canonical_key] = _source_for_flat_key(key)
+
+    return VariableStatusResponse(
+        variables=DocumentVariablesGroup(**grouped),
+        available=available,
+        missing=missing,
+        sources=sources,
+    )
 
 
 @router.post(
@@ -159,29 +262,41 @@ async def generate_document(body: GenerateRequest) -> GenerateResponse:
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    file_url = await persist_document(
+    persisted = await persist_document(
         file_bytes=file_bytes,
         file_format=body.format,
         template_id=body.template_id,
         lot_id=body.lot_id,
         organization_id=organization_id,
         generated_by=body.generated_by,
+        document_type=body.document_type,
+        missing_variables_accepted=body.missing_variables_accepted,
     )
 
-    return GenerateResponse(file_url=file_url, format=body.format)
+    return GenerateResponse(
+        document_id=persisted["id"],
+        file_url=persisted["file_url"],
+        format=body.format,
+        document_type=persisted["document_type"],
+        version_number=persisted["version_number"],
+        lot_id=persisted["lot_id"],
+        template_id=persisted["template_id"],
+        missing_variables_accepted=persisted["missing_variables_accepted"],
+    )
 
 
-@router.get("/variables/{lot_id}")
-async def get_variables(lot_id: str, organization_id: str) -> dict[str, Any]:
+@router.get("/variables/{lot_id}", response_model=VariableStatusResponse)
+async def get_variables(lot_id: str, organization_id: str) -> VariableStatusResponse:
     """
     Resuelve y retorna todas las variables disponibles para un lote.
     Útil para debug y para el editor visual de bloques en el frontend.
     """
     try:
-        variables = await resolve_variables(lot_id, organization_id)
+        flat_vars = await resolve_variables(lot_id, organization_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return variables
+
+    return _build_variable_status(flat_vars)
 
 
 # ---------------------------------------------------------------

@@ -25,6 +25,19 @@ Orden recomendado:
 4. Llevar Telegram al centro operacional.
 5. Pulir UX responsive y preparar piloto real.
 
+## Actualizacion SDD 001 Fase 1 - 2026-05-26
+
+Ver [[Implementacion SDD 001 Fase 1 - Setup MVP]].
+
+Estado: setup de `specs/001-stabilize-plotify-mvp` cerrado. Se revisaron y bloquearon:
+
+- Alcance MVP y fuera de alcance.
+- Restricciones tecnicas y gates del monorepo.
+- Deltas API.
+- Deltas DB y regla de migraciones canonicas.
+
+Siguiente fase relacionada: [[Implementacion SDD 001 Fase 2 - Foundation MVP]].
+
 ## Fase 0 - Congelar verdad tecnica
 
 Estimado: 3 a 5 dias.
@@ -103,6 +116,31 @@ Criterios de aceptacion:
 - Lote queda reservado con historial.
 - Admin puede liberar una reserva.
 - Venta puede aprobarse y dejar lote vendido.
+
+### Actualizacion SDD 001 Fase 2 - 2026-05-26
+
+Ver [[Implementacion SDD 001 Fase 2 - Foundation MVP]].
+
+Estado: foundation de `specs/001-stabilize-plotify-mvp` cerrada. Quedan completos los prerrequisitos compartidos para iniciar historias P1:
+
+- Migracion canonica para `project_active_templates` y metadata/versionado de `generated_documents`.
+- Contratos OpenAPI/cliente web regenerados desde FastAPI.
+- `DocumentVariables v1` disponible con grupos anidados, variables disponibles/faltantes y fuentes.
+- Fixtures y tests base para multi-tenant, race de aprobaciones, documentos, geometria legal, vendedor Telegram e integraciones externas.
+- Quickstart con fixture de 20 lotes y mediciones de piloto.
+
+Verificado:
+
+- `pnpm verify:migrations`
+- `pnpm contracts:generate`
+- `pnpm typecheck:web`
+- `pnpm test:web`
+- `pnpm test:api`
+- `pnpm --filter web lint`
+- `pnpm format:check`
+- `pnpm build:web`
+
+Siguiente paso SDD: continuar con Fase 3 / US1 desde `T016`.
 
 ## Fase 3 - Documentos de reserva V1
 

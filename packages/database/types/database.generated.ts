@@ -454,6 +454,14 @@ export type Database = {
           organization_id: string
           template_id: string
           variables_snapshot: Json
+          version_number: number
+          missing_variables_accepted: boolean
+          missing_variables: Json
+          selected_recipients: string[]
+          delivery_status: string
+          delivery_failed_attempts: number
+          delivery_error_message: string | null
+          delivery_metadata: Json
         }
         Insert: {
           created_at?: string | null
@@ -467,6 +475,14 @@ export type Database = {
           organization_id: string
           template_id: string
           variables_snapshot: Json
+          version_number?: number
+          missing_variables_accepted?: boolean
+          missing_variables?: Json
+          selected_recipients?: string[]
+          delivery_status?: string
+          delivery_failed_attempts?: number
+          delivery_error_message?: string | null
+          delivery_metadata?: Json
         }
         Update: {
           created_at?: string | null
@@ -480,6 +496,14 @@ export type Database = {
           organization_id?: string
           template_id?: string
           variables_snapshot?: Json
+          version_number?: number
+          missing_variables_accepted?: boolean
+          missing_variables?: Json
+          selected_recipients?: string[]
+          delivery_status?: string
+          delivery_failed_attempts?: number
+          delivery_error_message?: string | null
+          delivery_metadata?: Json
         }
         Relationships: [
           {
@@ -1076,6 +1100,45 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      project_active_templates: {
+        Row: {
+          project_id: string
+          document_type: string
+          template_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          project_id: string
+          document_type: string
+          template_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          project_id?: string
+          document_type?: string
+          template_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_active_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_active_templates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       projects: {
         Row: {

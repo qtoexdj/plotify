@@ -48,16 +48,35 @@ export interface components {
       "change_note"?: string | null
       "content": string
     }
+    "DocumentVariablesGroup": {
+      "comprador"?: Record<string, unknown>
+      "lote"?: Record<string, unknown>
+      "mandato"?: Record<string, unknown>
+      "matriz"?: Record<string, unknown>
+      "personeria"?: Record<string, unknown>
+      "sag"?: Record<string, unknown>
+      "servidumbre"?: Record<string, unknown>
+      "transaccion"?: Record<string, unknown>
+      "vendedor"?: Record<string, unknown>
+    }
     "GenerateRequest": {
+      "document_type"?: string
       "format"?: "pdf" | "docx"
       "generated_by"?: string | null
       "lot_id": string
+      "missing_variables_accepted"?: boolean
       "organization_id": string
       "template_id": string
     }
     "GenerateResponse": {
+      "document_id": string
+      "document_type": string
       "file_url": string
       "format": "pdf" | "docx"
+      "lot_id": string
+      "missing_variables_accepted": boolean
+      "template_id": string
+      "version_number": number
     }
     "HTTPValidationError": {
       "detail"?: Array<components["schemas"]["ValidationError"]>
@@ -160,6 +179,12 @@ export interface components {
       "msg": string
       "type": string
     }
+    "VariableStatusResponse": {
+      "available"?: Array<string>
+      "missing"?: Array<string>
+      "sources"?: Record<string, string>
+      "variables": components["schemas"]["DocumentVariablesGroup"]
+    }
   }
 }
 
@@ -258,7 +283,7 @@ export interface operations {
     method: "GET"
     path: "/api/v1/documents/variables/{lot_id}"
     requestBody: never
-    response: Record<string, unknown>
+    response: components["schemas"]["VariableStatusResponse"]
   }
   "health_check_api_v1_health_get": {
     method: "GET"

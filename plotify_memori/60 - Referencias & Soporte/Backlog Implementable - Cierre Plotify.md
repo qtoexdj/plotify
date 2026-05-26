@@ -105,6 +105,18 @@ status: draft
 
 ## Fase 2 - Reserva/Venta
 
+- [x] SDD 001 Setup MVP: cerrar contexto inicial de `specs/001-stabilize-plotify-mvp`.
+  - Acceptance: T001-T004 completas; scope, plan, deltas API y deltas DB revisados.
+  - Verify: `test -f specs/001-stabilize-plotify-mvp/spec.md`, `test -f specs/001-stabilize-plotify-mvp/plan.md`, `test -f specs/001-stabilize-plotify-mvp/contracts/api-contracts.md`, `pnpm verify:migrations`.
+  - Files: `specs/001-stabilize-plotify-mvp/spec.md`, `plan.md`, `contracts/api-contracts.md`, `contracts/database-contracts.md`, `tasks.md`.
+  - Estado 2026-05-26: completado en [[Implementacion SDD 001 Fase 1 - Setup MVP]].
+
+- [x] SDD 001 Foundation MVP: cerrar prerrequisitos compartidos de `specs/001-stabilize-plotify-mvp`.
+  - Acceptance: T005-T015 y T096-T100 quedan completas; contratos, migracion, fixtures y quickstart estan verificados.
+  - Verify: `pnpm verify:migrations`, `pnpm contracts:generate`, `pnpm typecheck:web`, `pnpm test:web`, `pnpm test:api`, `pnpm --filter web lint`, `pnpm format:check`, `pnpm build:web`.
+  - Files: `specs/001-stabilize-plotify-mvp/**`, `packages/database/**`, `packages/contracts/**`, `apps/api/**`, `apps/web/tests/mvp-*.test.ts`.
+  - Estado 2026-05-26: completado en [[Implementacion SDD 001 Fase 2 - Foundation MVP]].
+
 - [ ] Task 2.1: Definir modelo de eventos por lote.
   - Acceptance: historial representa reserva, liberacion, venta y documentos.
   - Verify: tests DB/API para historial.

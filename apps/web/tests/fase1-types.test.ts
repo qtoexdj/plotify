@@ -200,6 +200,14 @@ describe('Database["public"]["Tables"]["generated_documents"]', () => {
       lot_record_id: null,
       generated_by: 'user-1',
       created_at: null,
+      version_number: 1,
+      missing_variables_accepted: false,
+      missing_variables: [],
+      selected_recipients: ['vendedor'],
+      delivery_status: 'pending',
+      delivery_failed_attempts: 0,
+      delivery_error_message: null,
+      delivery_metadata: {},
     }
     expect(sample.file_format).toBe('pdf')
     expect(sample.variables_snapshot).toHaveProperty('comprador_nombre')

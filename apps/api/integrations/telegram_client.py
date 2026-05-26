@@ -2,11 +2,17 @@ import httpx
 import logging
 import asyncio
 import time
+from urllib.parse import quote
 from typing import Optional, Dict, Tuple
 from core.config import get_settings
 from core.database import get_supabase_client
 
 logger = logging.getLogger(__name__)
+
+TELEGRAM_API_HOST = "api.telegram.org"
+TELEGRAM_SEND_TIMEOUT_SECONDS = 10.0
+TELEGRAM_CALLBACK_TIMEOUT_SECONDS = 5.0
+_ALLOWED_BOT_METHODS = {"sendMessage", "answerCallbackQuery", "editMessageText"}
 
 
 class TelegramClient:
@@ -14,7 +20,16 @@ class TelegramClient:
 
     def __init__(self, bot_token: str):
         self.bot_token = bot_token
-        self.base_url = f"https://api.telegram.org/bot{self.bot_token}"
+        self.base_url = f"https://{TELEGRAM_API_HOST}/bot{quote(self.bot_token, safe=':')}"
+
+    def _bot_api_url(self, method: str) -> str:
+        if method not in _ALLOWED_BOT_METHODS:
+            raise ValueError(f"Telegram method not allowed: {method}")
+
+        url = httpx.URL(f"{self.base_url}/{method}")
+        if url.scheme != "https" or url.host != TELEGRAM_API_HOST:
+            raise ValueError("Unsafe Telegram Bot API host")
+        return str(url)
 
     async def send_text(
         self, chat_id: str, text: str, reply_markup: Optional[dict] = None
@@ -34,7 +49,9 @@ class TelegramClient:
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    f"{self.base_url}/sendMessage", json=payload, timeout=10.0
+                    self._bot_api_url("sendMessage"),
+                    json=payload,
+                    timeout=TELEGRAM_SEND_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -66,7 +83,9 @@ class TelegramClient:
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    f"{self.base_url}/answerCallbackQuery", json=payload, timeout=5.0
+                    self._bot_api_url("answerCallbackQuery"),
+                    json=payload,
+                    timeout=TELEGRAM_CALLBACK_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
                 return True
@@ -97,7 +116,9 @@ class TelegramClient:
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    f"{self.base_url}/editMessageText", json=payload, timeout=5.0
+                    self._bot_api_url("editMessageText"),
+                    json=payload,
+                    timeout=TELEGRAM_CALLBACK_TIMEOUT_SECONDS,
                 )
                 response.raise_for_status()
                 return True

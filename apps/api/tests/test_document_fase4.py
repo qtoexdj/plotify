@@ -134,8 +134,25 @@ def _make_supabase_mock(
 
     # Mock estable para generated_documents (no se recrea en cada llamada a .table())
     gen_doc_tbl = MagicMock()
+    latest_version_result = MagicMock()
+    latest_version_result.data = []
+    gen_doc_tbl.select.return_value.eq.return_value.eq.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = latest_version_result
     gen_doc_insert = MagicMock()
-    gen_doc_insert.execute.return_value = MagicMock(data=[{"id": "gen-doc-1"}])
+    gen_doc_insert.execute.return_value = MagicMock(
+        data=[
+            {
+                "id": "gen-doc-1",
+                "file_url": "https://storage.example.com/test.pdf",
+                "file_format": "pdf",
+                "document_type": "generated",
+                "version_number": 1,
+                "lot_id": LOT_ID,
+                "template_id": TEMPLATE_ID,
+                "missing_variables_accepted": False,
+                "missing_variables": [],
+            }
+        ]
+    )
     gen_doc_tbl.insert.return_value = gen_doc_insert
 
     def table_side_effect(table_name):
@@ -448,7 +465,7 @@ class TestPersistDocument:
         ):
             from services.document_generator import persist_document
 
-            url = await persist_document(
+            document = await persist_document(
                 file_bytes=b"%PDF-1.4 fake",
                 file_format="pdf",
                 template_id=TEMPLATE_ID,
@@ -456,7 +473,8 @@ class TestPersistDocument:
                 organization_id=ORG_ID,
             )
 
-        assert url == "https://storage.example.com/test.pdf"
+        assert document["file_url"] == "https://storage.example.com/test.pdf"
+        assert document["id"] == "gen-doc-1"
         supabase_mock.storage.from_.assert_called_with("documents")
         supabase_mock.storage.from_().upload.assert_called_once()
         supabase_mock._gen_doc_tbl.insert.assert_called_once()
@@ -506,6 +524,53 @@ class TestPersistDocument:
         assert snapshot["numero_lote"] == "42"
         assert snapshot["cliente_nombre"] == "Juan Pérez González"
         assert captured_payload["generated_by"] == "user-uuid-abc"
+
+    async def test_persist_calcula_version_siguiente_por_lote_template_tipo(self):
+        """La regeneración debe incrementar version_number sin sobrescribir documentos previos."""
+        captured_payload = {}
+        supabase_mock = _make_supabase_mock()
+        supabase_mock._gen_doc_tbl.select.return_value.eq.return_value.eq.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
+            data=[{"version_number": 3}]
+        )
+
+        def capture_insert(payload):
+            captured_payload.update(payload)
+            insert_mock = MagicMock()
+            insert_mock.execute.return_value = MagicMock(
+                data=[{"id": "gen-doc-4", **payload}]
+            )
+            return insert_mock
+
+        supabase_mock._gen_doc_tbl.insert.side_effect = capture_insert
+
+        with (
+            patch(
+                "services.document_generator.get_supabase_client",
+                return_value=supabase_mock,
+            ),
+            patch(
+                "services.document_engine.get_supabase_client",
+                return_value=supabase_mock,
+            ),
+            patch(
+                "asyncio.to_thread",
+                new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+            ),
+        ):
+            from services.document_generator import persist_document
+
+            document = await persist_document(
+                file_bytes=b"%PDF-1.4 fake",
+                file_format="pdf",
+                template_id=TEMPLATE_ID,
+                lot_id=LOT_ID,
+                organization_id=ORG_ID,
+                document_type="reserva",
+            )
+
+        assert captured_payload["version_number"] == 4
+        assert document["version_number"] == 4
+        assert document["document_type"] == "reserva"
 
 
 # ---------------------------------------------------------------------------
@@ -710,6 +775,8 @@ class TestDocumentsAPI:
         data = response.json()
         assert "file_url" in data
         assert data["format"] == "pdf"
+        assert data["document_id"] == "gen-doc-1"
+        assert data["version_number"] == 1
 
     def test_generate_formato_invalido_retorna_422(self, client):
         """POST /api/v1/documents/generate con format inválido debe retornar 422."""

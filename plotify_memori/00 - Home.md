@@ -123,6 +123,8 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[Implementacion Infra Local Docker Compartida]]
 - [[Implementacion Punto 3 - Monorepo pnpm]]
 - [[Implementacion Punto 4 - Consolidacion Operativa Monorepo]]
+- [[Implementacion SDD 001 Fase 1 - Setup MVP]]
+- [[Implementacion SDD 001 Fase 2 - Foundation MVP]]
 
 ---
 
@@ -150,3 +152,5 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[Implementacion Infra Local Docker Compartida]] - Plotify usa el stack Supabase Docker compartido de 14 contenedores y Redis Docker existente; se eliminaron contenedores `supabase_*_plotify`, se normalizaron `.env`/`.env.example` y se verificaron Redis, LangGraph checkpointer y tests backend.
 - [[Implementacion Punto 3 - Monorepo pnpm]] - Workspace pnpm con `apps/web`, `apps/api`, `packages/database` y `packages/contracts`.
 - [[Implementacion Punto 4 - Consolidacion Operativa Monorepo]] - Documentacion centralizada, `.gitignore` monorepo, scripts de arranque y endpoint del visor restaurado.
+- [[Implementacion SDD 001 Fase 1 - Setup MVP]] - Setup de `001-stabilize-plotify-mvp` cerrado: scope, plan, contratos API y contratos DB revisados antes de foundation.
+- [[Implementacion SDD 001 Fase 2 - Foundation MVP]] - Foundation de `001-stabilize-plotify-mvp` cerrada: migracion de templates/documentos, versionado, contratos OpenAPI, fixtures multi-tenant, tests MVP y quickstart de piloto 20 lotes.

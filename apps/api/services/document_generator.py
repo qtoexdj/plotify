@@ -12,6 +12,7 @@ Ref: plotify_memori/Generacion de Documentos.md
 import asyncio
 import time
 from io import BytesIO
+from typing import Any, TypedDict
 
 from weasyprint import HTML  # type: ignore
 from docx import Document as DocxDocument  # type: ignore
@@ -51,6 +52,18 @@ p  { margin-bottom: 8pt; }
     font-size: 10pt;
 }
 """
+
+
+class PersistedDocument(TypedDict):
+    id: str
+    file_url: str
+    file_format: str
+    document_type: str
+    version_number: int
+    lot_id: str
+    template_id: str
+    missing_variables_accepted: bool
+    missing_variables: list[str]
 
 
 async def generate_pdf(template_id: str, lot_id: str, organization_id: str) -> bytes:
@@ -125,12 +138,14 @@ async def persist_document(
     organization_id: str,
     generated_by: str | None = None,
     document_type: str = "generated",
-) -> str:
+    missing_variables_accepted: bool = False,
+    missing_variables: list[str] | None = None,
+) -> PersistedDocument:
     """
     Sube el documento a Supabase Storage y registra en generated_documents.
 
     Returns:
-        URL pública del archivo en Storage.
+        Metadata persistida del documento generado.
     """
     supabase = get_supabase_client()
     content_type_map = {
@@ -158,6 +173,25 @@ async def persist_document(
 
     # Snapshot de variables para trazabilidad legal (inmutable)
     variables = await resolve_variables(lot_id, organization_id)
+    missing_variables = missing_variables or []
+
+    latest_version_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("generated_documents")
+            .select("version_number")
+            .eq("lot_id", lot_id)
+            .eq("template_id", template_id)
+            .eq("document_type", document_type)
+            .order("version_number", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    latest_rows: list[dict[str, Any]] = latest_version_result.data or []
+    latest_version = (
+        int(latest_rows[0].get("version_number") or 0) if latest_rows else 0
+    )
+    version_number = latest_version + 1
 
     record: dict = {
         "organization_id": organization_id,
@@ -167,13 +201,17 @@ async def persist_document(
         "file_url": file_url,
         "file_format": file_format,
         "variables_snapshot": variables,
+        "version_number": version_number,
+        "missing_variables_accepted": missing_variables_accepted,
+        "missing_variables": missing_variables,
     }
     if generated_by:
         record["generated_by"] = generated_by
 
-    await asyncio.to_thread(
+    insert_result = await asyncio.to_thread(
         lambda: supabase.table("generated_documents").insert(record).execute()
     )
+    inserted = (insert_result.data or [{}])[0]
 
     logger.info(
         "Documento generado y persistido",
@@ -182,4 +220,16 @@ async def persist_document(
         lot_id=lot_id,
         organization_id=organization_id,
     )
-    return file_url
+    return {
+        "id": inserted.get("id", ""),
+        "file_url": inserted.get("file_url", file_url),
+        "file_format": inserted.get("file_format", file_format),
+        "document_type": inserted.get("document_type", document_type),
+        "version_number": int(inserted.get("version_number") or version_number),
+        "lot_id": inserted.get("lot_id", lot_id),
+        "template_id": inserted.get("template_id", template_id),
+        "missing_variables_accepted": bool(
+            inserted.get("missing_variables_accepted", missing_variables_accepted)
+        ),
+        "missing_variables": inserted.get("missing_variables", missing_variables),
+    }

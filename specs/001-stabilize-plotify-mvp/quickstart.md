@@ -125,7 +125,30 @@ pnpm build:web
 pnpm test:api
 ```
 
-## 6. Stop Criteria
+## 6. Pilot Measurement Fixture
+
+Use this fixture path before marking the foundation ready for user-story work:
+
+1. Create one pilot organization with one admin and one assigned vendor.
+2. Import or seed one project with at least 20 lots from a representative
+   KMZ/KML file.
+3. Confirm each lot has geometry-derived:
+   - north/south/east/west boundary groups
+   - square meters and hectares
+   - perimeter
+   - generated legal deslinde text input
+4. Assign the vendor to the project.
+5. Time the reservation path on one available lot:
+   - vendor opens lot and submits buyer/reservation data
+   - target: under 5 minutes from lot selection to submitted request
+6. Time the admin visibility path:
+   - admin sees the pending approval in web or Telegram
+   - target: under 2 minutes from submission to visible decision surface
+7. Generate a reservation document for one approved reservation and verify
+   version, template, lot, generated-by, snapshot, selected recipients, and
+   delivery status metadata remain attached to the generated row.
+
+## 7. Stop Criteria
 
 P1 is complete when:
 
