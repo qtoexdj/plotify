@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import type { ApprovalRequestPayload, ApprovalStatus } from '@/types/database.types'
 import { microserviceFetch } from './microservice.client'
 import type { OperationRequestBody, OperationResponse } from './plotify-chat.generated'
@@ -78,32 +77,35 @@ export async function createApprovalRequest(
 }
 
 /**
- * Resuelve la información del vendedor a partir del usuario autenticado.
- * Busca el registro de vendor vinculado al user_id actual.
+ * Resuelve una solicitud de aprobación (aprobación/rechazo) desde el Frontend.
+ * Envía la decisión al microservicio de approvals.
  */
-export async function resolveVendorFromUser(userId: string): Promise<{
-  vendor_id: string
-  vendor_name: string
-  vendor_phone: string
-  organization_id: string
-} | null> {
-  const supabase = await createClient()
+export async function resolveApprovalRequest(
+  approvalId: string,
+  action: 'approve' | 'reject',
+  adminId: string,
+  organizationId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const { data, error } = await microserviceFetch<{ success: boolean; error?: string }>(
+    `/api/v1/approvals/${approvalId}/decide`,
+    {
+      method: 'POST',
+      body: {
+        action,
+        admin_id: adminId,
+        organization_id: organizationId,
+      },
+    }
+  )
 
-  const { data: vendor, error } = await supabase
-    .from('vendors')
-    .select('id, nombre, phone, organization_id')
-    .eq('user_id', userId)
-    .single()
-
-  if (error || !vendor) {
-    console.error('[approvals.service] Vendor not found for user:', userId, error)
-    return null
+  if (error || !data || !data.success) {
+    return {
+      success: false,
+      error: error ?? data?.error ?? 'Error al procesar la decisión',
+    }
   }
 
   return {
-    vendor_id: vendor.id,
-    vendor_name: vendor.nombre,
-    vendor_phone: vendor.phone || '',
-    organization_id: vendor.organization_id || '',
+    success: true,
   }
 }

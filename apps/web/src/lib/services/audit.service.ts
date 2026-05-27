@@ -39,6 +39,7 @@ export async function logAudit(params: {
   action: AuditAction
   entity: string
   entity_id: string
+  organization_id?: string
   payload?: Record<string, unknown>
 }) {
   const supabase = await createClient()
@@ -47,6 +48,7 @@ export async function logAudit(params: {
     action: params.action,
     entity: params.entity,
     entity_id: params.entity_id,
+    organization_id: params.organization_id || null,
     payload: params.payload || {},
   })
 }

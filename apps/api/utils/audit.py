@@ -65,7 +65,7 @@ async def log_agent_action(
                     "action": action,
                     "entity": entity,
                     "entity_id": str(entity_id),
-                    "organization_id": str(organization_id),
+                    "organization_id": str(organization_id) if organization_id is not None else None,
                     "payload": payload,
                 }
             ).execute()

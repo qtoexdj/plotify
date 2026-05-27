@@ -1,13 +1,14 @@
 import httpx
-import logging
 import asyncio
 import time
 from urllib.parse import quote
 from typing import Optional, Dict, Tuple
 from core.config import get_settings
 from core.database import get_supabase_client
+from core.logger import get_logger
+from utils.audit import log_agent_action
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 TELEGRAM_API_HOST = "api.telegram.org"
 TELEGRAM_SEND_TIMEOUT_SECONDS = 10.0
@@ -18,8 +19,9 @@ _ALLOWED_BOT_METHODS = {"sendMessage", "answerCallbackQuery", "editMessageText"}
 class TelegramClient:
     """Cliente asíncrono básico para interactuar con el Bot API de Telegram."""
 
-    def __init__(self, bot_token: str):
+    def __init__(self, bot_token: str, org_id: Optional[str] = None):
         self.bot_token = bot_token
+        self.org_id = org_id
         self.base_url = f"https://{TELEGRAM_API_HOST}/bot{quote(self.bot_token, safe=':')}"
 
     def _bot_api_url(self, method: str) -> str:
@@ -60,13 +62,105 @@ class TelegramClient:
                 )
                 return data
             except httpx.HTTPStatusError as e:
+                # Log JSON estructurado rico
                 logger.error(
-                    f"Error HTTP de Telegram al enviar mensaje: {e.response.text}"
+                    "Telegram API failure in sendMessage (HTTPStatusError)",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "sendMessage",
+                        "chat_id": chat_id,
+                        "status_code": e.response.status_code,
+                        "error_detail": e.response.text,
+                        "retryable": e.response.status_code in [429, 500, 502, 503, 504],
+                    }
                 )
+                
+                # Obtener organization_id UUID válido o None
+                org_id_val = None
+                if self.org_id:
+                    try:
+                        import uuid
+                        uuid.UUID(str(self.org_id))
+                        org_id_val = str(self.org_id)
+                    except ValueError:
+                        pass
+
+                # Auditoría asíncrona no bloqueante con captura de errores
+                def _handle_task_result(t: asyncio.Task):
+                    try:
+                        t.result()
+                    except Exception as task_err:
+                        logger.error("Audit logging task failed in Telegram Client", error=str(task_err))
+
+                task = asyncio.create_task(
+                    log_agent_action(
+                        actor="telegram_client",
+                        action="telegram.send_failed",
+                        entity="telegram_message",
+                        entity_id=chat_id,
+                        organization_id=org_id_val,  # type: ignore
+                        payload={
+                            "method": "sendMessage",
+                            "status_code": e.response.status_code,
+                            "error": e.response.text,
+                            "retryable": e.response.status_code in [429, 500, 502, 503, 504],
+                        }
+                    )
+                )
+                task.add_done_callback(_handle_task_result)
             except httpx.RequestError as e:
-                logger.error(f"Error de red enviando a Telegram: {str(e)}")
+                logger.error(
+                    "Telegram API network failure in sendMessage (RequestError)",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "sendMessage",
+                        "chat_id": chat_id,
+                        "error_detail": str(e),
+                        "retryable": True,
+                    }
+                )
+
+                org_id_val = None
+                if self.org_id:
+                    try:
+                        import uuid
+                        uuid.UUID(str(self.org_id))
+                        org_id_val = str(self.org_id)
+                    except ValueError:
+                        pass
+
+                def _handle_task_result_req(t: asyncio.Task):
+                    try:
+                        t.result()
+                    except Exception as task_err:
+                        logger.error("Audit logging task failed in Telegram Client", error=str(task_err))
+
+                task = asyncio.create_task(
+                    log_agent_action(
+                        actor="telegram_client",
+                        action="telegram.send_failed",
+                        entity="telegram_message",
+                        entity_id=chat_id,
+                        organization_id=org_id_val,  # type: ignore
+                        payload={
+                            "method": "sendMessage",
+                            "error": str(e),
+                            "retryable": True,
+                        }
+                    )
+                )
+                task.add_done_callback(_handle_task_result_req)
             except Exception as e:
-                logger.error(f"Error inesperado usando TelegramClient: {str(e)}")
+                logger.error(
+                    "Unexpected Telegram Client error in sendMessage",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "sendMessage",
+                        "chat_id": chat_id,
+                        "error_detail": str(e),
+                        "retryable": False,
+                    }
+                )
         return None
 
     async def answer_callback_query(
@@ -90,7 +184,16 @@ class TelegramClient:
                 response.raise_for_status()
                 return True
             except Exception as e:
-                logger.error(f"Error respondiendo a callback_query: {str(e)}")
+                logger.error(
+                    "Telegram API failure in answerCallbackQuery",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "answerCallbackQuery",
+                        "callback_query_id": callback_query_id,
+                        "error_detail": str(e),
+                        "retryable": not isinstance(e, httpx.HTTPStatusError) or e.response.status_code in [429, 500, 502, 503, 504],
+                    }
+                )
         return False
 
     async def edit_message_text(
@@ -123,7 +226,17 @@ class TelegramClient:
                 response.raise_for_status()
                 return True
             except Exception as e:
-                logger.error(f"Error editando mensaje: {str(e)}")
+                logger.error(
+                    "Telegram API failure in editMessageText",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "editMessageText",
+                        "chat_id": chat_id,
+                        "message_id": message_id,
+                        "error_detail": str(e),
+                        "retryable": not isinstance(e, httpx.HTTPStatusError) or e.response.status_code in [429, 500, 502, 503, 504],
+                    }
+                )
         return False
 
 
@@ -165,7 +278,7 @@ async def get_telegram_client_for_org(org_id: str) -> Optional[TelegramClient]:
         token = await asyncio.to_thread(_fetch_decrypted_token, org_id)
 
         if token:
-            client = TelegramClient(bot_token=token)
+            client = TelegramClient(bot_token=token, org_id=org_id)
             _client_cache[org_id] = (client, now)
             return client
     except Exception as e:
@@ -175,11 +288,11 @@ async def get_telegram_client_for_org(org_id: str) -> Optional[TelegramClient]:
     global_token = get_settings().TELEGRAM_BOT_TOKEN
     if global_token:
         logger.info(f"Usando token global para org {org_id} como fallback")
-        return TelegramClient(bot_token=global_token)
+        return TelegramClient(bot_token=global_token, org_id=org_id)
 
     return None
 
 
 # Mantenemos esto por compatibilidad, pero idealmente las nuevas funciones
 # deberían inyectar el org_id y usar el factory
-telegram_client = TelegramClient(bot_token=get_settings().TELEGRAM_BOT_TOKEN)
+telegram_client = TelegramClient(bot_token=get_settings().TELEGRAM_BOT_TOKEN, org_id=None)

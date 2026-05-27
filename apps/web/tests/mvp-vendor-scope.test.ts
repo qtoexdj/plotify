@@ -17,15 +17,13 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/services/approvals.service', () => ({
   createApprovalRequest: vi.fn(),
-  resolveVendorFromUser: vi.fn(),
 }))
 
 import { requestReservationApproval } from '../src/actions/request-approval.action'
-import { createApprovalRequest, resolveVendorFromUser } from '@/lib/services/approvals.service'
+import { createApprovalRequest } from '@/lib/services/approvals.service'
 
 describe('MVP vendor project scoping and reservation validation', () => {
   const createApprovalRequestMock = vi.mocked(createApprovalRequest)
-  const resolveVendorFromUserMock = vi.mocked(resolveVendorFromUser)
 
   let mockProjectResult: any
   let mockOrgMemberResult: any
@@ -42,17 +40,18 @@ describe('MVP vendor project scoping and reservation validation', () => {
       error: null,
     })
 
-    // Mock resolveVendorFromUser por defecto
-    resolveVendorFromUserMock.mockResolvedValue({
-      vendor_id: 'vendor-123',
-      vendor_name: 'Juan Perez',
-      vendor_phone: '+56999999999',
-    } as any)
-
     // Resultados de base de datos mockeados por defecto
     mockProjectResult = { data: { organization_id: 'org-123' }, error: null }
     mockOrgMemberResult = { data: { role: 'user' }, error: null } // No es admin
-    mockVendorResult = { data: { id: 'vendor-123' }, error: null }
+    mockVendorResult = {
+      data: {
+        id: 'vendor-123',
+        nombre: 'Juan Perez',
+        phone: '+56999999999',
+        organization_id: 'org-123',
+      },
+      error: null,
+    }
     mockVendorProjectResult = { data: { vendor_id: 'vendor-123' }, error: null }
     mockLotResult = { data: { project_id: 'project-123' }, error: null }
 
@@ -82,6 +81,7 @@ describe('MVP vendor project scoping and reservation validation', () => {
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockImplementation(() => Promise.resolve(mockVendorResult)),
               eq: vi.fn().mockReturnValue({
                 maybeSingle: vi.fn().mockImplementation(() => Promise.resolve(mockVendorResult)),
               }),
@@ -111,7 +111,9 @@ describe('MVP vendor project scoping and reservation validation', () => {
           }),
         }
       }
-      return {} as any
+      return {
+        insert: vi.fn().mockImplementation(() => Promise.resolve({ data: null, error: null })),
+      } as any
     })
 
     // Mock de creación de solicitud exitoso por defecto

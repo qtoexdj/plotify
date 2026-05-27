@@ -44,6 +44,70 @@
         "title": "AddBlockToTemplateRequest",
         "type": "object"
       },
+      "ApprovalRequestDetailResponse": {
+        "description": "Detalle completo de una solicitud de aprobación de reserva.",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ReservationPayload"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "vendor_id": {
+            "title": "Vendor Id",
+            "type": "string"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          },
+          "vendor_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Phone"
+          },
+          "vendor_platform": {
+            "title": "Vendor Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lot_id",
+          "organization_id",
+          "vendor_id",
+          "vendor_name",
+          "vendor_platform",
+          "status",
+          "created_at",
+          "payload"
+        ],
+        "title": "ApprovalRequestDetailResponse",
+        "type": "object"
+      },
       "BotResponse": {
         "properties": {
           "bot_username": {
@@ -281,6 +345,49 @@
         },
         "required": ["content"],
         "title": "CreateVersionRequest",
+        "type": "object"
+      },
+      "DecisionRequest": {
+        "properties": {
+          "action": {
+            "pattern": "^(approve|reject)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "admin_id": {
+            "title": "Admin Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          }
+        },
+        "required": ["action", "organization_id", "admin_id"],
+        "title": "DecisionRequest",
+        "type": "object"
+      },
+      "DecisionResponse": {
+        "description": "Respuesta a una decisión del administrador.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": ["success"],
+        "title": "DecisionResponse",
         "type": "object"
       },
       "DocumentVariablesGroup": {
@@ -1043,6 +1150,117 @@
           }
         ],
         "summary": "Request Reservation",
+        "tags": ["approvals"]
+      }
+    },
+    "/api/v1/approvals/{approval_id}": {
+      "get": {
+        "description": "Obtiene el detalle de una solicitud de aprobación.\nValida que pertenezca a la organización reclamada (multi-tenant).",
+        "operationId": "getApprovalRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Approval Request",
+        "tags": ["approvals"]
+      }
+    },
+    "/api/v1/approvals/{approval_id}/decide": {
+      "post": {
+        "description": "Procesa la decisión de un admin por la vía web.\nValida multi-tenant y encola el procesamiento.",
+        "operationId": "decideApprovalRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Decide Approval Request",
         "tags": ["approvals"]
       }
     },

@@ -79,25 +79,25 @@
 
 ### Tests for User Story 2
 
-- [ ] T027 [P] [US2] Add reservation request contract tests in apps/api/tests/test_mvp_approval.py; Acceptance: available lot succeeds, unavailable lot fails, duplicate pending request fails; Verify: `pnpm test:api`
-- [ ] T028 [P] [US2] Add cross-tenant approval tests in apps/api/tests/test_tenant_validation.py; Acceptance: foreign admin cannot view, approve, reject, or mutate another organization approval; Verify: `pnpm test:api`
-- [ ] T029 [P] [US2] Add web approval action tests in apps/web/tests/mvp-approval-web.test.ts; Acceptance: web admin approve/reject resolves pending reservation and reports already processed after Telegram wins; Verify: `pnpm test:web`
-- [ ] T030 [P] [US2] Add Telegram callback idempotency tests in apps/api/tests/test_notifications_fase7.py; Acceptance: repeated approve/reject callbacks do not duplicate lot state changes; Verify: `pnpm test:api`
+- [x] T027 [P] [US2] Add reservation request contract tests in apps/api/tests/test_mvp_approval.py; Acceptance: available lot succeeds, unavailable lot fails, duplicate pending request fails; Verify: `pnpm test:api`
+- [x] T028 [P] [US2] Add cross-tenant approval tests in apps/api/tests/test_tenant_validation.py; Acceptance: foreign admin cannot view, approve, reject, or mutate another organization approval; Verify: `pnpm test:api`
+- [x] T029 [P] [US2] Add web approval action tests in apps/web/tests/mvp-approval-web.test.ts; Acceptance: web admin approve/reject resolves pending reservation and reports already processed after Telegram wins; Verify: `pnpm test:web`
+- [x] T030 [P] [US2] Add Telegram callback idempotency tests in apps/api/tests/test_notifications_fase7.py; Acceptance: repeated approve/reject callbacks do not duplicate lot state changes; Verify: `pnpm test:api`
 
 ### Implementation for User Story 2
 
-- [ ] T031 [US2] Strengthen reservation request tenant checks in apps/api/api/v1/endpoints/approvals.py; Acceptance: organization is derived from persisted lot/project and mismatches are rejected before approval_requests insert; Verify: `pnpm test:api`
-- [ ] T032 [US2] Preserve duplicate-pending protection in apps/api/api/v1/endpoints/approvals.py; Acceptance: one lot cannot have multiple pending reservation requests; Verify: `pnpm test:api`
-- [ ] T033 [US2] Add web admin decision contract in apps/api/api/v1/endpoints/approvals.py; Acceptance: authenticated admin can approve or reject pending reservation through web with first-decision-wins semantics; Verify: `pnpm contracts:generate`
-- [ ] T034 [US2] Use shared decision processing in apps/api/workers/tasks/approval_processor.py; Acceptance: Telegram and web decisions both lock request/lot, return already processed when appropriate, and emit audit events; Verify: `pnpm test:api`
-- [ ] T035 [US2] Keep Telegram notification payload complete in apps/api/workers/tasks/approval_notifier.py; Acceptance: admin notification includes vendor, buyer, project, lot, price/reserve value, and approve/reject actions; Verify: `pnpm test:api`
-- [ ] T036 [US2] Update Telegram webhook handling in apps/api/api/v1/endpoints/webhook.py; Acceptance: callback responses are idempotent and stale buttons are removed or made harmless after resolution; Verify: `pnpm test:api`
-- [ ] T037 [US2] Update web approval client service in apps/web/src/lib/services/approvals.service.ts; Acceptance: frontend can list pending requests and call approve/reject using generated or verified API shape; Verify: `pnpm typecheck:web`
-- [ ] T038 [US2] Add admin pending approvals UI in apps/web/src/components/dashboard/approvals/pending-approvals-panel.tsx; Acceptance: admin sees pending reservation data and can decide without Telegram; Verify: `pnpm test:web`
-- [ ] T039 [US2] Integrate pending approvals into dashboard in apps/web/src/app/dashboard/page.tsx; Acceptance: reservation approval is visible in web notifications or dashboard without navigating to raw lot records; Verify: `pnpm build:web`
-- [ ] T040 [US2] Write reservation request history from apps/web/src/actions/request-approval.action.ts and reservation resolution history from the shared API/worker decision processor; Acceptance: request created, approved, rejected, and channel fields appear in audit/history regardless of whether Telegram or web resolves the request; Verify: `pnpm test:api && pnpm test:web`
-- [ ] T103 [US2] Implement seller Telegram lot query and reservation intent handling in apps/api/workers/tasks/message_processor.py; Acceptance: linked assigned vendor can ask for assigned lot availability and submit buyer/reservation data through Telegram using the same request contract as web; Verify: `pnpm test:api`
-- [ ] T104 [US2] Harden Telegram client construction in apps/api/integrations/telegram_client.py; Acceptance: Bot API calls use a fixed Telegram host, no user-controlled URL, explicit timeouts <=10s, and structured failure logs for retry/audit; Verify: `pnpm test:api`
+- [x] T031 [US2] Strengthen reservation request tenant checks in apps/api/api/v1/endpoints/approvals.py; Acceptance: organization is derived from persisted lot/project and mismatches are rejected before approval_requests insert; Verify: `pnpm test:api`
+- [x] T032 [US2] Preserve duplicate-pending protection in apps/api/api/v1/endpoints/approvals.py; Acceptance: one lot cannot have multiple pending reservation requests; Verify: `pnpm test:api`
+- [x] T033 [US2] Add web admin decision contract in apps/api/api/v1/endpoints/approvals.py; Acceptance: authenticated admin can approve or reject pending reservation through web with first-decision-wins semantics; Verify: `pnpm contracts:generate`
+- [x] T034 [US2] Use shared decision processing in apps/api/workers/tasks/approval_processor.py; Acceptance: Telegram and web decisions both lock request/lot, return already processed when appropriate, and emit audit events; Verify: `pnpm test:api`
+- [x] T035 [US2] Keep Telegram notification payload complete in apps/api/workers/tasks/approval_notifier.py; Acceptance: admin notification includes vendor, buyer, project, lot, price/reserve value, and approve/reject actions; Verify: `pnpm test:api`
+- [x] T036 [US2] Update Telegram webhook handling in apps/api/api/v1/endpoints/webhook.py; Acceptance: callback responses are idempotent and stale buttons are removed or made harmless after resolution; Verify: `pnpm test:api`
+- [x] T037 [US2] Update web approval client service in apps/web/src/lib/services/approvals.service.ts; Acceptance: frontend can list pending requests and call approve/reject using generated or verified API shape; Verify: `pnpm typecheck:web`
+- [x] T038 [US2] Add admin pending approvals UI in apps/web/src/components/dashboard/approvals/pending-approvals-panel.tsx; Acceptance: admin sees pending reservation data and can decide without Telegram; Verify: `pnpm test:web`
+- [x] T039 [US2] Integrate pending approvals into dashboard in apps/web/src/app/dashboard/page.tsx; Acceptance: reservation approval is visible in web notifications or dashboard without navigating to raw lot records; Verify: `pnpm build:web`
+- [x] T040 [US2] Write reservation request history from apps/web/src/actions/request-approval.action.ts and reservation resolution history from the shared API/worker decision processor; Acceptance: request created, approved, rejected, and channel fields appear in audit/history regardless of whether Telegram or web resolves the request; Verify: `pnpm test:api && pnpm test:web`
+- [x] T103 [US2] Implement seller Telegram lot query and reservation intent handling in apps/api/workers/tasks/message_processor.py; Acceptance: linked assigned vendor can ask for assigned lot availability and submit buyer/reservation data through Telegram using the same request contract as web; Verify: `pnpm test:api`
+- [x] T104 [US2] Harden Telegram client construction in apps/api/integrations/telegram_client.py; Acceptance: Bot API calls use a fixed Telegram host, no user-controlled URL, explicit timeouts <=10s, and structured failure logs for retry/audit; Verify: `pnpm test:api`
 
 **Checkpoint**: US2 can be tested independently with Telegram-first and web-first decision flows.
 

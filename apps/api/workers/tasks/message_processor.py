@@ -14,16 +14,42 @@ logger = get_logger(__name__)
 async def resolve_vendor_telegram_context(
     org_id: str, telegram_chat_id: str
 ) -> dict | None:
-    """Resolve an assigned vendor context from a Telegram chat id."""
+    """Resolve an assigned vendor context from a Telegram chat id using profiles linking."""
     supabase = get_supabase_client()
-    vendor_res = (
-        supabase.table("vendors")
-        .select("id, organization_id, nombre, phone, active")
-        .eq("phone", telegram_chat_id)
-        .eq("organization_id", org_id)
+    
+    # 1. Buscar en profiles por telegram_chat_id
+    profile_res = (
+        supabase.table("profiles")
+        .select("id, phone")
+        .eq("telegram_chat_id", str(telegram_chat_id))
         .limit(1)
         .execute()
     )
+    
+    vendor_res = None
+    if profile_res.data:
+        profile = profile_res.data[0]
+        # Buscar el vendor vinculado al perfil de usuario
+        vendor_res = (
+            supabase.table("vendors")
+            .select("id, user_id, organization_id, nombre, phone, active")
+            .eq("user_id", profile["id"])
+            .eq("organization_id", org_id)
+            .limit(1)
+            .execute()
+        )
+
+    # Fallback histórico: vendors.phone == telegram_chat_id
+    if not vendor_res or not vendor_res.data:
+        vendor_res = (
+            supabase.table("vendors")
+            .select("id, user_id, organization_id, nombre, phone, active")
+            .eq("phone", telegram_chat_id)
+            .eq("organization_id", org_id)
+            .limit(1)
+            .execute()
+        )
+
     if not vendor_res.data:
         return None
 
@@ -47,6 +73,7 @@ async def resolve_vendor_telegram_context(
         "organization_id": vendor["organization_id"],
         "telegram_chat_id": telegram_chat_id,
         "project_ids": project_ids,
+        "vendor_phone": vendor.get("phone") or "",
     }
 
 
@@ -96,50 +123,55 @@ async def process_vendor_telegram_operation(
 
     if operation == "reserve":
         lot_id = data.get("lot_id")
-        payload = data.get("payload") or {}
+        payload_data = data.get("payload") or {}
         if not lot_id:
             return "MISSING_LOT_ID"
 
-        lot_res = (
-            supabase.table("lots")
-            .select("id, numero_lote, estado, project_id")
-            .eq("id", lot_id)
-            .limit(1)
-            .execute()
-        )
-        if not lot_res.data:
-            return "LOT_NOT_FOUND"
+        from schemas.approval import ReservationRequest, ReservationPayload
+        from api.v1.endpoints.approvals import request_reservation
 
-        lot = lot_res.data[0]
-        if lot.get("project_id") not in context["project_ids"]:
-            return "FOREIGN_PROJECT"
-        if lot.get("estado") != "disponible":
-            return "LOT_NOT_AVAILABLE"
-
-        insert_res = (
-            supabase.table("approval_requests")
-            .insert(
-                {
-                    "lot_id": lot_id,
-                    "organization_id": context["organization_id"],
-                    "vendor_id": context["vendor_id"],
-                    "vendor_name": context["vendor_name"],
-                    "vendor_phone": telegram_chat_id,
-                    "vendor_platform": "telegram",
-                    "payload": payload,
-                    "status": "pending",
-                }
-            )
-            .execute()
+        # Estructurar payload de la reserva
+        payload_obj = ReservationPayload(
+            cliente_nombre=payload_data.get("cliente_nombre", "?"),
+            cliente_run=payload_data.get("cliente_run", "?"),
+            valor_reserva=float(payload_data.get("valor_reserva", 0.0)),
+            notaria=payload_data.get("notaria"),
+            fecha_firma=payload_data.get("fecha_firma"),
         )
-        approval_id = (insert_res.data or [{}])[0].get("id")
-        redis = ctx.get("redis")
-        if redis and approval_id:
-            await redis.enqueue_job("notify_admin_approval", approval_id)
+
+        body = ReservationRequest(
+            lot_id=lot_id,
+            organization_id=context["organization_id"],
+            vendor_id=context["vendor_id"],
+            vendor_name=context["vendor_name"],
+            vendor_phone=telegram_chat_id,
+            vendor_platform="telegram",
+            payload=payload_obj,
+        )
+
+        redis_pool = ctx.get("redis")
+
+        try:
+            # Llamar directamente al endpoint FastAPI centralizado (M1.2 / US2.1)
+            res_val = await request_reservation(body, redis=redis_pool)
+            approval_id = res_val.approval_id
+        except Exception as err:
+            logger.error("Error al invocar request_reservation en Telegram.", error=str(err))
+            if telegram_client:
+                from fastapi import HTTPException
+                detail = str(err)
+                if isinstance(err, HTTPException):
+                    detail = err.detail
+                await telegram_client.send_text(
+                    telegram_chat_id,
+                    f"⚠️ No se pudo procesar la reserva:\n{detail}",
+                )
+            return "RESERVATION_FAILED"
+
         if telegram_client:
             await telegram_client.send_text(
                 telegram_chat_id,
-                "Solicitud de reserva enviada al administrador.",
+                "Solicitud de reserva enviada al administrador exitosamente.",
             )
         return f"RESERVATION_REQUESTED:{approval_id}"
 
@@ -169,12 +201,37 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
         lead_name = "Cliente"
 
         # Primero buscamos si es un Vendedor B2B
-        vendor_res = (
-            supabase.table("vendors")
-            .select("id, organization_id, nombre")
-            .eq("phone", payload.phone_id)
-            .execute()
-        )
+        vendor_res = None
+        
+        # En Telegram, resolvemos mediante vinculación profiles.telegram_chat_id
+        if payload.platform == "telegram":
+            profile_res = (
+                supabase.table("profiles")
+                .select("id")
+                .eq("telegram_chat_id", str(payload.phone_id))
+                .limit(1)
+                .execute()
+            )
+            if profile_res.data:
+                profile = profile_res.data[0]
+                vendor_res = (
+                    supabase.table("vendors")
+                    .select("id, organization_id, nombre")
+                    .eq("user_id", profile["id"])
+                    .eq("organization_id", payload.organization_id)
+                    .execute()
+                )
+
+        # Fallback o WhatsApp: vendors.phone == payload.phone_id
+        if not vendor_res or not vendor_res.data:
+            vendor_res = (
+                supabase.table("vendors")
+                .select("id, organization_id, nombre")
+                .eq("phone", payload.phone_id)
+                .eq("organization_id", payload.organization_id)
+                .execute()
+            )
+
         if vendor_res.data:
             role = "vendor"
             org_id = vendor_res.data[0].get("organization_id")
@@ -204,6 +261,56 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
                     "Nuevo lead registrado exitosamente en el CRM.",
                     phone=payload.phone_id,
                 )
+
+        # M1.2 / T103: Si es Vendedor en Telegram, interceptar comandos estructurados antes del LLM
+        if role == "vendor" and payload.platform == "telegram":
+            text_strip = payload.message_text.strip()
+            if text_strip.startswith("/lotes") or text_strip.lower() in ("lotes", "disponibles", "/disponibles"):
+                op_res = await process_vendor_telegram_operation(
+                    ctx, org_id, payload.phone_id, "availability"
+                )
+                return op_res
+            
+            elif text_strip.startswith("/reserva"):
+                # Formato esperado: /reserva <lot_id> <cliente_nombre> <cliente_run> <valor_reserva>
+                import shlex
+                try:
+                    parts = shlex.split(text_strip)
+                except Exception as parse_err:
+                    logger.warning("Error parsing /reserva command with shlex. Fallback to space-split.", error=str(parse_err))
+                    parts = text_strip.split()
+
+                if len(parts) < 5:
+                    telegram_client = await get_telegram_client_for_org(org_id)
+                    if telegram_client:
+                        await telegram_client.send_text(
+                            payload.phone_id,
+                            "⚠️ *Formato incorrecto.*\n\n"
+                            "Uso: `/reserva <lote_id> <cliente_nombre> <cliente_run> <valor_reserva>`\n"
+                            "Ejemplo: `/reserva UUID \"Juan Pérez\" \"12345678-9\" 500000`"
+                        )
+                    return "MISSING_RESERVE_ARGS"
+                
+                lot_id = parts[1]
+                cliente_nombre = parts[2].strip()
+                cliente_run = parts[3].strip()
+                try:
+                    valor_reserva = float(parts[4])
+                except ValueError:
+                    valor_reserva = 0.0
+
+                reserve_data = {
+                    "lot_id": lot_id,
+                    "payload": {
+                        "cliente_nombre": cliente_nombre,
+                        "cliente_run": cliente_run,
+                        "valor_reserva": valor_reserva,
+                    }
+                }
+                op_res = await process_vendor_telegram_operation(
+                    ctx, org_id, payload.phone_id, "reserve", data=reserve_data
+                )
+                return op_res
 
         # 2. IA / LangGraph: Ejecutar Grafo con State Avanzado
         # M2.1: thread_id con prefijo de org para aislar conversaciones entre tenants.

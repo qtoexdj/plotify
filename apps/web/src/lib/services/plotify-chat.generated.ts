@@ -11,6 +11,18 @@ export interface components {
       "overrides"?: Record<string, unknown> | null
       "position": number
     }
+    "ApprovalRequestDetailResponse": {
+      "created_at": string
+      "id": string
+      "lot_id": string
+      "organization_id": string
+      "payload": components["schemas"]["ReservationPayload"]
+      "status": string
+      "vendor_id": string
+      "vendor_name": string
+      "vendor_phone"?: string | null
+      "vendor_platform": string
+    }
     "BotResponse": {
       "bot_username": string
       "is_active": boolean
@@ -47,6 +59,15 @@ export interface components {
       "author_id"?: string | null
       "change_note"?: string | null
       "content": string
+    }
+    "DecisionRequest": {
+      "action": string
+      "admin_id": string
+      "organization_id": string
+    }
+    "DecisionResponse": {
+      "error"?: string | null
+      "success": boolean
     }
     "DocumentVariablesGroup": {
       "comprador"?: Record<string, unknown>
@@ -194,6 +215,18 @@ export interface operations {
     path: "/api/v1/approvals/request-reservation"
     requestBody: components["schemas"]["ReservationRequest"]
     response: components["schemas"]["ReservationResponse"]
+  }
+  "getApprovalRequest": {
+    method: "GET"
+    path: "/api/v1/approvals/{approval_id}"
+    requestBody: never
+    response: components["schemas"]["ApprovalRequestDetailResponse"]
+  }
+  "decideApprovalRequest": {
+    method: "POST"
+    path: "/api/v1/approvals/{approval_id}/decide"
+    requestBody: components["schemas"]["DecisionRequest"]
+    response: components["schemas"]["DecisionResponse"]
   }
   "register_bot_api_v1_bots_register_post": {
     method: "POST"

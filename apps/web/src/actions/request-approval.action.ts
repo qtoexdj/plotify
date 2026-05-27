@@ -5,13 +5,45 @@ import {
   reservationFormSchema,
   type ReservationFormInput,
 } from '@/lib/validations/approval-request.schema'
-import { createApprovalRequest, resolveVendorFromUser } from '@/lib/services/approvals.service'
+import { createApprovalRequest } from '@/lib/services/approvals.service'
 import { checkVendorAssignment } from './vendor-actions.action'
 import type { ApprovalRequestPayload } from '@/types/database.types'
+import { logAudit } from '@/lib/services/audit.service'
 
 export type RequestApprovalResult =
   | { success: true; approval_id: string; message: string }
   | { success: false; error: string }
+
+/**
+ * Resuelve la información del vendedor a partir del usuario autenticado.
+ * Busca el registro de vendor vinculado al user_id actual.
+ */
+export async function resolveVendorFromUser(userId: string): Promise<{
+  vendor_id: string
+  vendor_name: string
+  vendor_phone: string
+  organization_id: string
+} | null> {
+  const supabase = await createClient()
+
+  const { data: vendor, error } = await supabase
+    .from('vendors')
+    .select('id, nombre, phone, organization_id')
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !vendor) {
+    console.error('[approvals.service] Vendor not found for user:', userId, error)
+    return null
+  }
+
+  return {
+    vendor_id: vendor.id,
+    vendor_name: vendor.nombre,
+    vendor_phone: vendor.phone || '',
+    organization_id: vendor.organization_id || '',
+  }
+}
 
 /**
  * Server Action invocada desde LotReservationForm cuando mode === 'reservation'.
@@ -81,6 +113,27 @@ export async function requestReservationApproval(
 
   if (!result.success) {
     return { success: false, error: result.error }
+  }
+
+  // 7. Auditar la acción de creación de solicitud
+  try {
+    await logAudit({
+      actor: check.userId!,
+      action: 'reservation.requested',
+      entity: 'approval_requests',
+      entity_id: result.approval_id,
+      organization_id: project.organization_id,
+      payload: {
+        lot_id: lotId,
+        project_id: projectId,
+        approval_id: result.approval_id,
+        channel: 'web',
+        actor_user_id: check.userId!,
+        vendor_id: vendorInfo.vendor_id,
+      },
+    })
+  } catch (auditErr) {
+    console.error('[request-approval.action] Error recording audit log:', auditErr)
   }
 
   return {

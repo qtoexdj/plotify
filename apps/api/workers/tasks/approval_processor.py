@@ -2,6 +2,7 @@ from core.logger import get_logger
 from core.database import get_supabase_client
 from integrations.telegram_client import get_telegram_client_for_org
 from integrations.meta_client import meta_client
+from utils.audit import log_agent_action, EVENT_RESERVATION_APPROVED, EVENT_RESERVATION_REJECTED
 
 logger = get_logger(__name__)
 
@@ -16,6 +17,28 @@ async def process_admin_decision(
     try:
         supabase = get_supabase_client()
         telegram_client = await get_telegram_client_for_org(org_id)
+
+        # Validar tenant de la solicitud de aprobación (cross-tenant safety)
+        check_res = (
+            supabase.table("approval_requests")
+            .select("organization_id")
+            .eq("id", approval_id)
+            .limit(1)
+            .execute()
+        )
+        if not check_res.data:
+            logger.error("Solicitud de aprobación no encontrada en el worker.", approval_id=approval_id)
+            return "NOT_FOUND"
+
+        db_org_id = check_res.data[0].get("organization_id")
+        if str(db_org_id) != str(org_id):
+            logger.error(
+                "Brecha cross-tenant detectada en worker: org_id de la solicitud no coincide con el contexto del canal.",
+                expected_org=db_org_id,
+                actual_org=org_id,
+                approval_id=approval_id,
+            )
+            return "TENANT_MISMATCH"
 
         if action == "approve":
             result = supabase.rpc(
@@ -48,6 +71,25 @@ async def process_admin_decision(
                 "RPC de aprobación falló.", error=error_msg, approval_id=approval_id
             )
             return f"RPC_FAILED: {error_msg}"
+
+        # Registrar en auditoría
+        lot_id = rpc_data.get("lot_id")
+        audit_action = EVENT_RESERVATION_APPROVED if action == "approve" else EVENT_RESERVATION_REJECTED
+        channel = "telegram" if admin_id.isdigit() else "web"
+
+        await log_agent_action(
+            actor=admin_id,
+            action=audit_action,
+            entity="approval_requests",
+            entity_id=approval_id,
+            organization_id=org_id,
+            payload={
+                "lot_id": str(lot_id) if lot_id else None,
+                "approval_id": approval_id,
+                "admin_id": admin_id,
+                "channel": channel,
+            }
+        )
 
         # Notificar al vendedor
         vendor_phone = rpc_data.get("vendor_phone")

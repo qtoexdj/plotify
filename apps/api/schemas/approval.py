@@ -31,3 +31,25 @@ class ReservationResponse(BaseModel):
     approval_id: str
     status: str = "pending"
     message: str = "Solicitud enviada al administrador."
+
+
+class DecisionResponse(BaseModel):
+    """Respuesta a una decisión del administrador."""
+
+    success: bool
+    error: Optional[str] = None
+
+
+class ApprovalRequestDetailResponse(BaseModel):
+    """Detalle completo de una solicitud de aprobación de reserva."""
+
+    id: str
+    lot_id: str
+    organization_id: str
+    vendor_id: str
+    vendor_name: str
+    vendor_phone: Optional[str] = None
+    vendor_platform: str
+    status: str
+    created_at: str
+    payload: ReservationPayload

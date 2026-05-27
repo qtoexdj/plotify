@@ -1,6 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from arq.connections import ArqRedis
-from schemas.approval import ReservationRequest, ReservationResponse
+from schemas.approval import (
+    ReservationRequest,
+    ReservationResponse,
+    DecisionResponse,
+    ApprovalRequestDetailResponse,
+)
 from core.config import get_settings
 from core.database import get_supabase_client
 from core.logger import get_logger
@@ -124,3 +129,104 @@ async def request_reservation(
         raise HTTPException(
             status_code=500, detail="Error interno procesando la solicitud."
         )
+
+
+import asyncio
+from pydantic import BaseModel, Field
+from typing import Any
+
+async def get_approval_organization_id(approval_id: str, supabase: Any | None = None) -> str:
+    from core.database import get_supabase_client
+    client = supabase or get_supabase_client()
+
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("approval_requests")
+            .select("id, organization_id")
+            .eq("id", approval_id)
+            .single()
+            .execute()
+        )
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Solicitud de aprobación no encontrada.")
+
+    row = result.data[0] if isinstance(result.data, list) else result.data
+    return row.get("organization_id")
+
+
+async def require_approval_organization(
+    approval_id: str,
+    claimed_organization_id: str,
+    supabase: Any | None = None,
+) -> str:
+    organization_id = await get_approval_organization_id(approval_id, supabase=supabase)
+    if organization_id != claimed_organization_id:
+        raise HTTPException(
+            status_code=403,
+            detail="organization_id no corresponde a la solicitud de aprobación.",
+        )
+    return organization_id
+
+
+@router.get(
+    "/{approval_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=ApprovalRequestDetailResponse,
+    operation_id="getApprovalRequest",
+)
+async def get_approval_request(
+    approval_id: str,
+    organization_id: str,
+):
+    """
+    Obtiene el detalle de una solicitud de aprobación.
+    Valida que pertenezca a la organización reclamada (multi-tenant).
+    """
+    supabase = get_supabase_client()
+    await require_approval_organization(approval_id, organization_id, supabase=supabase)
+
+    res = supabase.table("approval_requests").select("*").eq("id", approval_id).single().execute()
+    return res.data
+
+
+class DecisionRequest(BaseModel):
+    action: str = Field(..., pattern=r"^(approve|reject)$")
+    organization_id: str
+    admin_id: str
+
+
+@router.post(
+    "/{approval_id}/decide",
+    status_code=status.HTTP_200_OK,
+    response_model=DecisionResponse,
+    operation_id="decideApprovalRequest",
+)
+async def decide_approval_request(
+    approval_id: str,
+    body: DecisionRequest,
+    redis: ArqRedis = Depends(get_arq_pool),
+):
+    """
+    Procesa la decisión de un admin por la vía web.
+    Valida multi-tenant y encola el procesamiento.
+    """
+    supabase = get_supabase_client()
+    await require_approval_organization(approval_id, body.organization_id, supabase=supabase)
+
+    # Comprobar si ya fue procesado
+    approval_res = supabase.table("approval_requests").select("status").eq("id", approval_id).single().execute()
+    if approval_res.data and approval_res.data.get("status") != "pending":
+        raise HTTPException(status_code=409, detail="already_processed")
+
+    # Encolar procesamiento de decisión
+    await redis.enqueue_job(
+        "process_admin_decision",
+        body.organization_id,
+        approval_id,
+        body.action,
+        body.admin_id,
+    )
+
+    return DecisionResponse(success=True)
+

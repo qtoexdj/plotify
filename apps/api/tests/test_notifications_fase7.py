@@ -441,3 +441,183 @@ class TestStageChangeTrigger:
             )
         except ImportError:
             pytest.skip("asyncpg no disponible")
+
+
+mock_redis = AsyncMock()
+
+def _build_webhook_app():
+    from fastapi import FastAPI
+    from api.v1.endpoints.webhook import router as webhook_router
+    from core.redis import get_arq_pool
+
+    app = FastAPI()
+
+    async def _fake_arq_pool():
+        return mock_redis
+
+    app.dependency_overrides[get_arq_pool] = _fake_arq_pool
+    app.include_router(webhook_router, prefix="/api/v1/webhook")
+    return app
+
+
+async def test_telegram_webhook_callback_enqueues_approve_decision():
+    """El webhook de Telegram debe recibir callback de aprobación, responder a Telegram y encolar el job en Redis con argumentos correctos."""
+    from fastapi.testclient import TestClient
+
+    mock_redis.reset_mock()
+    telegram_client = MagicMock()
+    telegram_client.answer_callback_query = AsyncMock(return_value=True)
+    telegram_client.edit_message_text = AsyncMock()
+
+    client = TestClient(_build_webhook_app())
+
+    with (
+        patch(
+            "integrations.telegram_client.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+        ),
+    ):
+        response = client.post(
+            "/api/v1/webhook/telegram/org-a",
+            json={
+                "callback_query": {
+                    "id": "callback-123",
+                    "data": "approve:approval-uuid-abc",
+                    "from": {"id": 999888},
+                    "message": {
+                        "message_id": 555,
+                        "text": "Solicitud de Reserva Lote 12"
+                    }
+                }
+            }
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    telegram_client.answer_callback_query.assert_awaited_once_with("callback-123")
+    telegram_client.edit_message_text.assert_awaited_once()
+    # Verificar encolamiento asertivo de Redis
+    mock_redis.enqueue_job.assert_awaited_once_with(
+        "process_admin_decision", "org-a", "approval-uuid-abc", "approve", "999888"
+    )
+
+
+async def test_telegram_webhook_callback_enqueues_reject_decision():
+    """El webhook de Telegram debe recibir callback de rechazo, responder a Telegram y encolar el job en Redis con argumentos correctos."""
+    from fastapi.testclient import TestClient
+
+    mock_redis.reset_mock()
+    telegram_client = MagicMock()
+    telegram_client.answer_callback_query = AsyncMock(return_value=True)
+    telegram_client.edit_message_text = AsyncMock()
+
+    client = TestClient(_build_webhook_app())
+
+    with (
+        patch(
+            "integrations.telegram_client.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+        ),
+    ):
+        response = client.post(
+            "/api/v1/webhook/telegram/org-a",
+            json={
+                "callback_query": {
+                    "id": "callback-124",
+                    "data": "reject:approval-uuid-abc",
+                    "from": {"id": 999888},
+                    "message": {
+                        "message_id": 555,
+                        "text": "Solicitud de Reserva Lote 12"
+                    }
+                }
+            }
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    telegram_client.answer_callback_query.assert_awaited_once_with("callback-124")
+    telegram_client.edit_message_text.assert_awaited_once()
+    # Verificar encolamiento asertivo de Redis
+    mock_redis.enqueue_job.assert_awaited_once_with(
+        "process_admin_decision", "org-a", "approval-uuid-abc", "reject", "999888"
+    )
+
+
+async def test_telegram_callback_idempotency_repeated_decisions():
+    """Telegram callbacks for decision resolution must be idempotent and handle already processed cases."""
+    from workers.tasks.approval_processor import process_admin_decision
+
+    # 1. Primera llamada: éxito
+    first_rpc = MagicMock(
+        data={
+            "success": True,
+            "vendor_phone": "+56912345678",
+            "vendor_platform": "telegram",
+            "vendor_name": "Vendedor A",
+            "lot_id": "lot-uuid-1",
+        }
+    )
+    # 2. Segunda llamada: ya procesado (error)
+    second_rpc = MagicMock(
+        data={
+            "success": False,
+            "error": "already_processed",
+        }
+    )
+
+    supabase = MagicMock()
+    supabase.rpc.return_value.execute.side_effect = [first_rpc, second_rpc]
+
+    # Simular la cadena para lote y perfiles
+    def get_table_mock(table_name):
+        table_mock = MagicMock()
+        if table_name == "lots":
+            table_mock.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+                data=[{"numero_lote": "24"}]
+            )
+        elif table_name == "profiles":
+            table_mock.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+                data=[{"telegram_chat_id": "chat-1"}]
+            )
+        elif table_name == "approval_requests":
+            table_mock.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+                data=[{"organization_id": "org-a"}]
+            )
+        return table_mock
+
+    supabase.table.side_effect = get_table_mock
+
+    telegram_client = MagicMock()
+    telegram_client.send_text = AsyncMock()
+
+    with (
+        patch("workers.tasks.approval_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.approval_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        # Primer procesamiento (exitoso)
+        res1 = await process_admin_decision(
+            {}, "org-a", "approval-1", "approve", "admin-chat-id"
+        )
+        # Segundo procesamiento (ya procesado, debe retornar gracefully)
+        res2 = await process_admin_decision(
+            {}, "org-a", "approval-1", "approve", "admin-chat-id"
+        )
+
+    assert res1 == "SUCCESS"
+    assert res2 == "RPC_FAILED: already_processed"
+    assert supabase.rpc.call_count == 2
+
+
+

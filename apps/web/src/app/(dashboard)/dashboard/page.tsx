@@ -3,6 +3,8 @@ import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { getGlobalKPIs, getVendorsPerformance } from '@/lib/services/dashboard.service'
 import { DashboardKPIs } from '@/components/dashboard/dashboard-kpis'
 import { VendorsList } from '@/components/dashboard/vendors-list'
+import { createClient } from '@/lib/supabase/server'
+import { PendingApprovalsPanel } from '@/components/dashboard/approvals/pending-approvals-panel'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +18,13 @@ export default async function DashboardPage() {
   if (isSuperAdmin) {
     redirect('/super-admin')
   }
+
+  const supabase = await createClient()
+  const { data: member } = await supabase
+    .from('organization_members')
+    .select('organization_id, role')
+    .eq('user_id', user.id)
+    .single()
 
   const userId = user.id
 
@@ -35,6 +44,10 @@ export default async function DashboardPage() {
           Revisa el rendimiento global de tus proyectos y equipo de ventas.
         </p>
       </div>
+
+      {member?.role === 'admin' && (
+        <PendingApprovalsPanel adminUserId={user.id} organizationId={member.organization_id} />
+      )}
 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">Resumen Global</h2>

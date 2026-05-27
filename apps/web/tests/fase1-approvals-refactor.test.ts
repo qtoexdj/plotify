@@ -20,9 +20,9 @@ import { microserviceFetch } from '@/lib/services/microservice.client'
 import { createClient } from '@/lib/supabase/server'
 import {
   createApprovalRequest,
-  resolveVendorFromUser,
   type CreateApprovalRequestParams,
 } from '@/lib/services/approvals.service'
+import { resolveVendorFromUser } from '@/actions/request-approval.action'
 
 const baseParams: CreateApprovalRequestParams = {
   lotId: 'lot-uuid-1',

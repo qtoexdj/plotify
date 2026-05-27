@@ -31,10 +31,10 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
         request = req_res.data[0]
         payload = request.get("payload", {})
 
-        # 2. Obtener nombre del proyecto a partir del lote
+        # 2. Obtener nombre del proyecto y precio a partir del lote
         lot_res = (
             supabase.table("lots")
-            .select("numero_lote, project_id")
+            .select("numero_lote, project_id, precio")
             .eq("id", request["lot_id"])
             .limit(1)
             .execute()
@@ -89,6 +89,12 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             return "NO_ADMIN_CONTACTS"
 
         # 4. Construir mensaje
+        precio_total = lot_info.get("precio", 0)
+        precio_str = (
+            f"${precio_total:,.0f}"
+            if precio_total
+            else "No definido"
+        )
         valor_str = (
             f"${payload.get('valor_reserva', 0):,.0f}"
             if payload.get("valor_reserva")
@@ -102,10 +108,11 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             f"👤 *Vendedor:* {request['vendor_name']}\n"
             f"📍 *Lote:* {numero_lote} — *Proyecto:* {project_name}\n"
             f"🧑 *Cliente:* {payload.get('cliente_nombre', '?')} ({payload.get('cliente_run', '?')})\n"
-            f"💰 *Valor Reserva:* {valor_str}\n"
+            f"💰 *Precio Lote:* {precio_str}\n"
+            f"💵 *Valor Reserva:* {valor_str}\n"
             f"🏛️ *Notaría:* {notaria_str}\n"
             f"📅 *Fecha Firma:* {fecha_str}\n\n"
-            f"¿Aprobas esta reserva?"
+            f"¿Aprobáis esta reserva?"
         )
 
         # 5. Enviar a cada admin (prioridad: Telegram > WhatsApp)

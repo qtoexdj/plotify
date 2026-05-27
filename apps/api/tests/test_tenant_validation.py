@@ -85,3 +85,142 @@ def test_request_reservation_rejects_cross_tenant_organization_id():
         )
 
     assert response.status_code == 403
+
+
+async def test_process_admin_decision_rejects_tenant_mismatch():
+    """The admin decision worker must reject or fail safely if the database indicates a tenant mismatch."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from workers.tasks.approval_processor import process_admin_decision
+
+    rpc_result = MagicMock(data={"success": False, "error": "tenant_mismatch"})
+
+    supabase = MagicMock()
+    supabase.rpc.return_value.execute.return_value = rpc_result
+
+    # Simular que el approval pertenece a otra org (TENANT_MISMATCH)
+    supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[{"organization_id": "org-other-uuid"}]
+    )
+
+    telegram_client = MagicMock()
+    telegram_client.send_text = AsyncMock()
+
+    with (
+        patch("workers.tasks.approval_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.approval_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        result = await process_admin_decision(
+            {}, "org-b-uuid", "approval-a-uuid", "approve", "telegram-admin"
+        )
+
+    assert result == "TENANT_MISMATCH"
+    assert supabase.rpc.call_count == 0
+
+
+def _make_approval_detail_supabase(org_id: str):
+    from unittest.mock import MagicMock
+    approval_data = {
+        "id": "approval-1",
+        "organization_id": org_id,
+        "status": "pending",
+    }
+
+    query_mock = MagicMock()
+    query_mock.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
+        data=approval_data
+    )
+
+    supabase = MagicMock()
+    supabase.table.return_value = query_mock
+    return supabase
+
+
+def test_get_approval_rejects_cross_tenant():
+    """Un administrador extranjero no puede ver detalles de aprobación de otra organización."""
+    from fastapi.testclient import TestClient
+
+    supabase = _make_approval_detail_supabase(org_id="org-real")
+    client = TestClient(
+        _build_approvals_app(),
+        headers={"X-Internal-Secret": "test-secret"},
+    )
+
+    with (
+        patch("api.v1.endpoints.approvals.get_supabase_client", return_value=supabase),
+        patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+        ),
+    ):
+        response = client.get(
+            "/api/v1/approvals/approval-1?organization_id=org-attacker",
+        )
+
+    assert response.status_code == 403
+    assert "organization_id no corresponde" in response.json()["detail"]
+
+
+def test_decide_approval_rejects_cross_tenant():
+    """Un administrador extranjero no puede decidir/mutar sobre una aprobación de otra organización."""
+    from fastapi.testclient import TestClient
+
+    supabase = _make_approval_detail_supabase(org_id="org-real")
+    client = TestClient(
+        _build_approvals_app(),
+        headers={"X-Internal-Secret": "test-secret"},
+    )
+
+    with (
+        patch("api.v1.endpoints.approvals.get_supabase_client", return_value=supabase),
+        patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+        ),
+    ):
+        response = client.post(
+            "/api/v1/approvals/approval-1/decide",
+            json={
+                "action": "approve",
+                "organization_id": "org-attacker",
+                "admin_id": "admin-1",
+            },
+        )
+
+    assert response.status_code == 403
+    assert "organization_id no corresponde" in response.json()["detail"]
+
+
+def test_decide_reject_approval_rejects_cross_tenant():
+    """Un administrador extranjero no puede decidir/rechazar/mutar sobre una aprobación de otra organización."""
+    from fastapi.testclient import TestClient
+
+    supabase = _make_approval_detail_supabase(org_id="org-real")
+    client = TestClient(
+        _build_approvals_app(),
+        headers={"X-Internal-Secret": "test-secret"},
+    )
+
+    with (
+        patch("api.v1.endpoints.approvals.get_supabase_client", return_value=supabase),
+        patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+        ),
+    ):
+        response = client.post(
+            "/api/v1/approvals/approval-1/decide",
+            json={
+                "action": "reject",
+                "organization_id": "org-attacker",
+                "admin_id": "admin-1",
+            },
+        )
+
+    assert response.status_code == 403
+    assert "organization_id no corresponde" in response.json()["detail"]
+
+
+
