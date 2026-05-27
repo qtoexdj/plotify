@@ -32,6 +32,8 @@ import type { LotDetails } from '@/types/viewer.types'
 import type { OfficialBoundaries, VerifiedStatus } from '@/types/database.types'
 import type { LegalMetrics } from '@/lib/geometry/utm'
 import type { BoundaryWithNeighbor } from '@/lib/geometry/utils'
+import { validateLotDocumentReadiness } from '@/lib/legal/readiness'
+import { generateDeslindeText } from '@/lib/legal/deslinde-generator'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -128,6 +130,10 @@ export function LotVerificationPanel({
     lotDetails.area_official_m2?.toString() ?? ''
   )
 
+  const [perimeterOfficial, setPerimeterOfficial] = useState<string>(
+    lotDetails.perimeter_official_m?.toString() ?? ''
+  )
+
   const [servidumbreOfficial, setServidumbreOfficial] = useState<string>(
     lotDetails.servidumbre_m2?.toString() ?? ''
   )
@@ -189,6 +195,10 @@ export function LotVerificationPanel({
 
   const [isSaving, setIsSaving] = useState(false)
 
+  const [deslindeAceptado, setDeslindeAceptado] = useState<boolean>(() => {
+    return lotDetails.verified_status !== 'draft'
+  })
+
   // ─── Derived Values ─────────────────────────────────────────────────
 
   const statusConfig = STATUS_CONFIG[lotDetails.verified_status ?? 'draft']
@@ -201,6 +211,14 @@ export function LotVerificationPanel({
     return ((official - calculated) / calculated) * 100
   }, [areaOfficial, legalMetrics])
 
+  /** Calculates the percentage difference between official and calculated perimeter */
+  const perimeterDiff = useMemo(() => {
+    const calculated = legalMetrics?.perimeter_legal_m
+    const official = parseFloat(perimeterOfficial)
+    if (!calculated || !official || isNaN(official)) return null
+    return ((official - calculated) / calculated) * 100
+  }, [perimeterOfficial, legalMetrics])
+
   /** Servidumbre diff (calculated vs editable) */
   const servidumbreDiff = useMemo(() => {
     const calculated = lotDetails.servidumbre_m2
@@ -212,11 +230,32 @@ export function LotVerificationPanel({
   /** Whether we have all data required to verify */
   const canVerify = useMemo(() => {
     const hasArea = areaOfficial && parseFloat(areaOfficial) > 0
+    const hasPerimeter = perimeterOfficial && parseFloat(perimeterOfficial) > 0
     const hasBoundaries =
       boundaries.length > 0 &&
       boundaries.every((b) => b.label.trim() !== '' && (b.distance ?? 0) > 0)
-    return hasArea && hasBoundaries
-  }, [areaOfficial, boundaries])
+    return hasArea && hasPerimeter && hasBoundaries && deslindeAceptado
+  }, [areaOfficial, perimeterOfficial, boundaries, deslindeAceptado])
+
+  const readiness = useMemo(() => {
+    return validateLotDocumentReadiness({
+      id: lotDetails.id,
+      verified_status: lotDetails.verified_status,
+      area_official_m2: areaOfficial ? parseFloat(areaOfficial) : null,
+      boundaries_official: boundaries,
+      perimeter_official_m: perimeterOfficial ? parseFloat(perimeterOfficial) : null,
+    })
+  }, [lotDetails.id, lotDetails.verified_status, perimeterOfficial, areaOfficial, boundaries])
+
+  const generatedDeslindeText = useMemo(() => {
+    return generateDeslindeText({
+      numero_lote: lotDetails.numero_lote,
+      area_official_m2: areaOfficial ? parseFloat(areaOfficial) : null,
+      m2: legalMetrics ? Math.round(legalMetrics.area_legal_m2) : null,
+      servidumbre_m2: servidumbreOfficial ? parseFloat(servidumbreOfficial) : null,
+      boundaries_official: boundaries.length > 0 ? boundaries : null,
+    })
+  }, [lotDetails.numero_lote, areaOfficial, legalMetrics, servidumbreOfficial, boundaries])
 
   // ─── Handlers ───────────────────────────────────────────────────────
 
@@ -275,6 +314,7 @@ export function LotVerificationPanel({
         projectId,
         lotId: lotDetails.id,
         area_official_m2: areaOfficial ? parseFloat(areaOfficial) : undefined,
+        perimeter_official_m: perimeterOfficial ? parseFloat(perimeterOfficial) : undefined,
         servidumbre_m2: servidumbreOfficial ? parseFloat(servidumbreOfficial) : undefined,
         servidumbre_ancho_m: servidumbreAncho ? parseFloat(servidumbreAncho) : undefined,
         boundaries_official: boundaries.length > 0 ? boundaries : undefined,
@@ -295,6 +335,7 @@ export function LotVerificationPanel({
     projectId,
     lotDetails.id,
     areaOfficial,
+    perimeterOfficial,
     servidumbreOfficial,
     servidumbreAncho,
     boundaries,
@@ -307,6 +348,7 @@ export function LotVerificationPanel({
       return
     }
     setAreaOfficial(legalMetrics.area_legal_m2.toFixed(2))
+    setPerimeterOfficial(legalMetrics.perimeter_legal_m.toFixed(2))
     if (lotDetails.servidumbre_m2 != null && lotDetails.servidumbre_m2 > 0) {
       setServidumbreOfficial(lotDetails.servidumbre_m2.toFixed(2))
     }
@@ -329,6 +371,7 @@ export function LotVerificationPanel({
     }
 
     const areaNum = parseFloat(areaOfficial)
+    const perimeterNum = parseFloat(perimeterOfficial)
 
     // Determine if exact or override
     const isExact = legalMetrics
@@ -341,6 +384,7 @@ export function LotVerificationPanel({
     console.log('[DEBUG-PANEL] Enviando a markLotVerified:', {
       boundaries_official: boundaries,
       area_official_m2: areaNum,
+      perimeter_official_m: perimeterNum,
       verified_status: verifiedStatus,
     })
     try {
@@ -349,6 +393,7 @@ export function LotVerificationPanel({
         lotId: lotDetails.id,
         verified_status: verifiedStatus,
         area_official_m2: areaNum,
+        perimeter_official_m: perimeterNum,
         boundaries_official: boundaries,
         calculated_snapshot: legalMetrics
           ? {
@@ -369,7 +414,16 @@ export function LotVerificationPanel({
     } finally {
       setIsSaving(false)
     }
-  }, [canVerify, areaOfficial, boundaries, legalMetrics, projectId, lotDetails.id, onLotUpdated])
+  }, [
+    canVerify,
+    areaOfficial,
+    perimeterOfficial,
+    boundaries,
+    legalMetrics,
+    projectId,
+    lotDetails.id,
+    onLotUpdated,
+  ])
 
   // ─── Render ─────────────────────────────────────────────────────────
 
@@ -396,6 +450,31 @@ export function LotVerificationPanel({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Readiness State Alerts */}
+        {!readiness.isReady ? (
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-800 dark:text-amber-400 space-y-1">
+            <div className="font-semibold flex items-center gap-1.5">
+              <HugeiconsIcon
+                icon={InformationSquareIcon}
+                className="w-4 h-4 text-amber-500 shrink-0"
+              />
+              Lote pendiente de verificación y deslindes
+            </div>
+            <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground dark:text-foreground/75">
+              {readiness.errors.map((err, i) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-800 dark:text-emerald-400 space-y-1">
+            <div className="font-semibold flex items-center gap-1.5">
+              <HugeiconsIcon icon={Shield02Icon} className="w-4 h-4 text-emerald-500 shrink-0" />
+              Lote completamente verificado y apto para documentos
+            </div>
+          </div>
+        )}
+
         {/* ─── Comparison Table ──────────────────────────────────── */}
         <div className="rounded-lg border border-border overflow-hidden">
           {/* Header */}
@@ -426,6 +505,28 @@ export function LotVerificationPanel({
               </span>
             </div>
             <DiffBadge diff={areaDiff} />
+          </div>
+
+          {/* Perimeter Row */}
+          <div className="grid grid-cols-[1fr_70px_100px_60px] gap-0 items-center px-3 py-2.5 border-t border-border">
+            <span className="text-xs font-medium text-foreground/70">Perímetro</span>
+            <span className="text-[11px] text-muted-foreground text-right font-mono">
+              {legalMetrics ? `${legalMetrics.perimeter_legal_m.toFixed(1)} ` : 'N/A'}
+            </span>
+            <div className="px-1 relative flex items-center">
+              <Input
+                type="number"
+                step="0.01"
+                value={perimeterOfficial}
+                onChange={(e) => setPerimeterOfficial(e.target.value)}
+                placeholder="0.00"
+                className="h-7 text-xs text-center pr-4 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="absolute right-2 text-[9px] text-muted-foreground pointer-events-none">
+                m
+              </span>
+            </div>
+            <DiffBadge diff={perimeterDiff} />
           </div>
 
           {/* Servidumbre Row */}
@@ -630,6 +731,37 @@ export function LotVerificationPanel({
             })}
           </div>
         </div>
+
+        {/* Previsualización del Deslinde Legal (T102) */}
+        {boundaries.length > 0 && (
+          <div className="space-y-1.5 pt-2">
+            <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 ml-1">
+              Redacción Legal Autogenerada (Escritura)
+            </Label>
+            <div
+              className="text-[10px] text-foreground/80 p-3 rounded-lg bg-muted/40 border border-border leading-relaxed font-mono select-all cursor-help"
+              title="Haz doble clic para seleccionar todo el texto"
+            >
+              {generatedDeslindeText}
+            </div>
+            <div className="flex items-center gap-2 px-1 pt-1.5">
+              <input
+                type="checkbox"
+                id="accept-deslinde"
+                checked={deslindeAceptado}
+                onChange={(e) => setDeslindeAceptado(e.target.checked)}
+                className="h-4 w-4 rounded border-border text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              />
+              <label
+                htmlFor="accept-deslinde"
+                className="text-xs text-muted-foreground select-none cursor-pointer"
+              >
+                Confirmar que la redacción legal de deslindes es correcta y aceptada para
+                escrituras.
+              </label>
+            </div>
+          </div>
+        )}
 
         <Separator />
 

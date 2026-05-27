@@ -20,6 +20,57 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect } from 'react'
 import type { ProjectVendorAssignment } from '@/lib/services/vendors.service'
+import { makeProjectOperational } from '@/actions/lot-verification.action'
+import { cn } from '@/lib/utils'
+
+const ESTADO_PROYECTO_CONFIG: Record<
+  string,
+  { label: string; description: string; className: string }
+> = {
+  draft: {
+    label: 'Borrador',
+    description:
+      'El proyecto está en creación. Falta cargar la geometría (KML/KMZ) e iniciar la verificación legal.',
+    className:
+      'border-slate-300 text-slate-700 bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:bg-slate-500/20 border outline-none',
+  },
+  imported: {
+    label: 'Geometría Importada',
+    description:
+      'Se han importado los lotes y caminos del archivo de geometría. Pendiente de verificación legal de cada lote.',
+    className:
+      'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-500/20 border outline-none',
+  },
+  validated: {
+    label: 'Validado Legalmente',
+    description:
+      'Todos los lotes tienen sus deslindes y superficies verificados. Listo para ser publicado y habilitar ventas.',
+    className:
+      'border-violet-300 text-violet-700 bg-violet-50 dark:border-violet-600 dark:text-violet-400 dark:bg-violet-500/20 border outline-none',
+  },
+  operational: {
+    label: 'Operacional (Ventas Activas)',
+    description:
+      'Proyecto activo y operativo. Los vendedores asignados ya pueden reservar lotes y generar documentos.',
+    className:
+      'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-700 border outline-none',
+  },
+  // Legacy backward-compatibility states
+  activo: {
+    label: 'Operacional (Activo)',
+    description:
+      'Proyecto activo y operativo. Los vendedores asignados ya pueden reservar lotes y generar documentos.',
+    className:
+      'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-700 border outline-none',
+  },
+  inactivo: {
+    label: 'Borrador (Inactivo)',
+    description:
+      'El proyecto está inactivo o en creación. Falta cargar la geometría (KML/KMZ) e iniciar la verificación legal.',
+    className:
+      'border-slate-300 text-slate-700 bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:bg-slate-500/20 border outline-none',
+  },
+}
 
 interface OverviewTabProps {
   project: ProjectWithMetrics & { vendors?: ProjectVendorAssignment[] }
@@ -29,6 +80,7 @@ export function OverviewTab({ project }: OverviewTabProps) {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [isPublishing, setIsPublishing] = useState(false)
 
   useEffect(() => {
     const checkRole = async () => {
@@ -63,6 +115,30 @@ export function OverviewTab({ project }: OverviewTabProps) {
         toast.error(result.error || 'Error al eliminar vendedor')
       }
     })
+  }
+
+  const handleMakeOperational = async () => {
+    if (
+      !confirm(
+        '¿Estás seguro de que deseas hacer este proyecto operacional? Esto habilitará las reservas y ventas.'
+      )
+    )
+      return
+
+    setIsPublishing(true)
+    try {
+      const result = await makeProjectOperational(project.id)
+      if (result.success) {
+        toast.success(result.message || 'Proyecto publicado con éxito')
+        window.location.reload()
+      } else {
+        toast.error(result.error || 'Error al publicar el proyecto')
+      }
+    } catch {
+      toast.error('Error inesperado al publicar')
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   return (
@@ -101,6 +177,57 @@ export function OverviewTab({ project }: OverviewTabProps) {
         </Card>
       </div>
 
+      {/* Estado del Proyecto - Banner Premium (T026) */}
+      <Card
+        className={cn(
+          'border overflow-hidden',
+          project.estado === 'operational'
+            ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-500/10'
+            : project.estado === 'validated'
+              ? 'border-violet-200 bg-violet-500/5 dark:border-violet-500/10'
+              : project.estado === 'imported'
+                ? 'border-blue-200 bg-blue-500/5 dark:border-blue-500/10'
+                : 'border-slate-200 bg-slate-500/5 dark:border-slate-600/10'
+        )}
+      >
+        <CardContent className="p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Estado de Preparación:
+              </span>
+              <Badge
+                className={cn(
+                  'text-[10px] py-0.5 px-1.5',
+                  ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.className
+                )}
+              >
+                {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.label}
+              </Badge>
+            </div>
+            <h4 className="text-sm font-semibold text-foreground mt-1">
+              {project.estado === 'operational'
+                ? '¡Proyecto Activo y Operativo!'
+                : 'Proyecto en Fase de Preparación'}
+            </h4>
+            <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
+              {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.description}
+            </p>
+          </div>
+
+          {isAdmin && project.estado !== 'operational' && (
+            <Button
+              size="sm"
+              onClick={handleMakeOperational}
+              disabled={isPublishing || isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5 shrink-0 self-start md:self-center"
+            >
+              {isPublishing ? 'Publicando...' : 'Habilitar Ventas'}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Project Info */}
         <Card className="lg:col-span-2">
@@ -125,8 +252,10 @@ export function OverviewTab({ project }: OverviewTabProps) {
                 <label className="text-sm font-medium text-gray-600 dark:text-slate-400">
                   Estado
                 </label>
-                <p className="text-lg">
-                  <Badge variant="secondary">{project.estado}</Badge>
+                <p className="text-lg mt-0.5">
+                  <Badge className={ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.className}>
+                    {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.label}
+                  </Badge>
                 </p>
               </div>
               <div>

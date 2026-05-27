@@ -7,6 +7,7 @@ import { LotInfoView } from '@/components/projects/viewer/LotInfoView'
 import { LotEditForm } from '@/components/projects/viewer/LotEditForm'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { LotReservationForm } from '@/components/projects/LotReservationForm'
+import { cn } from '@/lib/utils'
 
 interface ItemDetailPanelProps {
   projectId: string
@@ -141,6 +142,3 @@ export function ItemDetailPanel({
     </div>
   )
 }
-
-// Utility for conditional classes
-import { cn } from '@/lib/utils'

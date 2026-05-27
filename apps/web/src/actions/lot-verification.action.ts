@@ -9,6 +9,13 @@ import {
   type MarkVerifiedInput,
 } from '@/lib/validations/lot-verification.schema'
 import { logger } from '@/lib/logger'
+import { validateLotDocumentReadiness, type MinimalBoundary } from '@/lib/legal/readiness'
+import type { VerifiedStatus } from '@/types/database.types'
+
+interface NonReadyLotDetail {
+  numero_lote: string
+  errors: string[]
+}
 
 interface ActionResult {
   success: boolean
@@ -49,6 +56,7 @@ export async function saveOfficialOverride(
     projectId,
     lotId,
     area_official_m2,
+    perimeter_official_m,
     servidumbre_m2,
     servidumbre_ancho_m,
     boundaries_official,
@@ -80,6 +88,8 @@ export async function saveOfficialOverride(
       updated_at: new Date().toISOString(),
     }
     if (area_official_m2 !== undefined) updatePayload.area_official_m2 = area_official_m2
+    if (perimeter_official_m !== undefined)
+      updatePayload.perimeter_official_m = perimeter_official_m
     if (servidumbre_m2 !== undefined) updatePayload.servidumbre_m2 = servidumbre_m2
     if (servidumbre_ancho_m !== undefined) updatePayload.servidumbre_ancho_m = servidumbre_ancho_m
 
@@ -144,6 +154,7 @@ export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionR
     lotId,
     verified_status,
     area_official_m2,
+    perimeter_official_m,
     boundaries_official,
     calculated_snapshot,
   } = validation.data
@@ -172,7 +183,7 @@ export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionR
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updatePayload: Record<string, any> = {
       area_official_m2,
-
+      perimeter_official_m,
       boundaries_official,
       verified_status,
       verified_at: now,
@@ -221,6 +232,118 @@ export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionR
     }
   } catch (err) {
     logger.error({ lotId, error: err }, 'mark_lot_verified_error')
+    return { success: false, error: 'Error del servidor' }
+  }
+}
+
+// ─── Make Project Operational ───────────────────────────────────────────────
+
+export async function makeProjectOperational(
+  projectId: string
+): Promise<ActionResult & { details?: NonReadyLotDetail[] }> {
+  const supabase = await createClient()
+
+  // 1. Check permissions
+  const { allowed, userId } = await checkUserPermissions(supabase, projectId)
+  if (!allowed) {
+    return { success: false, error: 'No tienes permisos para realizar esta acción' }
+  }
+
+  try {
+    // 2. Fetch project details and current status
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('estado, name')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      return { success: false, error: 'Proyecto no encontrado' }
+    }
+
+    // 3. Fetch all lots belonging to the project
+    const { data: lots, error: lotsError } = await supabase
+      .from('lots')
+      .select(
+        'id, numero_lote, verified_status, area_official_m2, boundaries_official, perimeter_official_m'
+      )
+      .eq('project_id', projectId)
+
+    if (lotsError || !lots) {
+      return { success: false, error: 'Error al consultar los lotes del proyecto' }
+    }
+
+    if (lots.length === 0) {
+      return {
+        success: false,
+        error: 'El proyecto debe contener al menos un lote para ser operacional',
+      }
+    }
+
+    // 4. Validate each lot
+    const nonReadyLots: { numero_lote: string; errors: string[] }[] = []
+    for (const lot of lots) {
+      const readiness = validateLotDocumentReadiness({
+        id: lot.id,
+        verified_status: lot.verified_status as VerifiedStatus,
+        area_official_m2: lot.area_official_m2,
+        boundaries_official: lot.boundaries_official as MinimalBoundary[] | null,
+        perimeter_official_m: lot.perimeter_official_m,
+      })
+      if (!readiness.isReady) {
+        nonReadyLots.push({
+          numero_lote: lot.numero_lote,
+          errors: readiness.errors,
+        })
+      }
+    }
+
+    if (nonReadyLots.length > 0) {
+      return {
+        success: false,
+        error: 'Algunos lotes no cumplen con los requisitos mínimos de verificación y deslindes',
+        details: nonReadyLots,
+      }
+    }
+
+    // 5. Update project status to operational
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({
+        estado: 'operational',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', projectId)
+
+    if (updateError) {
+      logger.error({ projectId, error: updateError }, 'make_project_operational_failed')
+      return { success: false, error: 'Error al actualizar el estado del proyecto' }
+    }
+
+    // 6. Audit log
+    await supabase.from('audit_logs').insert({
+      actor: userId,
+      action: 'UPDATE',
+      entity: 'projects',
+      entity_id: projectId,
+      payload: {
+        type: 'project_operational',
+        prev_status: project.estado,
+        next_status: 'operational',
+        validated_lots_count: lots.length,
+      },
+    })
+
+    revalidatePath(`/projects/${projectId}`)
+    revalidatePath(`/proyectos/${projectId}`)
+    revalidatePath('/projects')
+
+    return {
+      success: true,
+      message: `El proyecto "${project.name}" ahora está operacional y listo para ventas.`,
+    }
+  } catch (err) {
+    logger.error({ projectId, error: err }, 'make_project_operational_error')
     return { success: false, error: 'Error del servidor' }
   }
 }

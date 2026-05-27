@@ -397,3 +397,91 @@ export async function removeVendorFromProjectAction(projectId: string, vendorId:
     return { success: false, error: message }
   }
 }
+
+/**
+ * Helper para validar que un vendedor esté asignado a un proyecto específico
+ * antes de poder realizar reservas o ventas.
+ * Si el usuario es un administrador de la organización, se le permite el acceso implícitamente.
+ */
+export async function checkVendorAssignment(
+  projectId: string,
+  lotId?: string
+): Promise<{ allowed: boolean; error?: string; vendorId?: string; userId?: string }> {
+  const supabase = await createClient()
+
+  // 1. Obtener usuario autenticado
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { allowed: false, error: 'No autenticado' }
+  }
+
+  // 2. Obtener organization_id del proyecto
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('organization_id')
+    .eq('id', projectId)
+    .single()
+
+  if (projectError || !project?.organization_id) {
+    return { allowed: false, error: 'Proyecto no encontrado' }
+  }
+
+  // 2.5. Si se proporciona lotId, verificar que pertenezca al projectId
+  if (lotId) {
+    const { data: lot, error: lotError } = await supabase
+      .from('lots')
+      .select('project_id')
+      .eq('id', lotId)
+      .single()
+
+    if (lotError || !lot) {
+      return { allowed: false, error: 'Lote no encontrado' }
+    }
+
+    if (lot.project_id !== projectId) {
+      return { allowed: false, error: 'El lote no pertenece al proyecto especificado' }
+    }
+  }
+
+  // 3. Comprobar si el usuario es administrador de la organización (acceso implícito)
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', project.organization_id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (membership?.role === 'admin') {
+    return { allowed: true, userId: user.id }
+  }
+
+  // 4. Si no es admin, debe ser un vendedor asignado a la organización y al proyecto
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('organization_id', project.organization_id)
+    .maybeSingle()
+
+  if (!vendor) {
+    return { allowed: false, error: 'No se encontró registro de vendedor asociado a tu cuenta' }
+  }
+
+  // 5. Validar asignación del vendedor al proyecto específico en vendor_projects
+  const { data: assignment } = await supabase
+    .from('vendor_projects')
+    .select('vendor_id')
+    .eq('project_id', projectId)
+    .eq('vendor_id', vendor.id)
+    .maybeSingle()
+
+  if (!assignment) {
+    return { allowed: false, error: 'No tienes asignado este proyecto para realizar reservas' }
+  }
+
+  return { allowed: true, vendorId: vendor.id, userId: user.id }
+}

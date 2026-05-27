@@ -50,22 +50,22 @@
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add KMZ/KML invalid-file and no-lot tests in apps/web/tests/mvp-project-readiness.test.ts; Acceptance: corrupt, oversized, unsupported, and no-lot inputs fail with clear errors and no operational project state; Verify: `pnpm test:web`
-- [ ] T017 [P] [US1] Add lot verification tests in apps/web/tests/mvp-project-readiness.test.ts; Acceptance: verified_status, official area, perimeter, and boundaries are required before document readiness; Verify: `pnpm test:web`
-- [ ] T018 [P] [US1] Add vendor project scoping tests in apps/web/tests/mvp-vendor-scope.test.ts; Acceptance: vendor can see assigned project/lots and cannot operate foreign or unassigned lots; Verify: `pnpm test:web`
+- [x] T016 [P] [US1] Add KMZ/KML invalid-file and no-lot tests in apps/web/tests/mvp-project-readiness.test.ts; Acceptance: corrupt, oversized, unsupported, and no-lot inputs fail with clear errors and no operational project state; Verify: `pnpm test:web`
+- [x] T017 [P] [US1] Add lot verification tests in apps/web/tests/mvp-project-readiness.test.ts; Acceptance: verified_status, official area, perimeter, and boundaries are required before document readiness; Verify: `pnpm test:web`
+- [x] T018 [P] [US1] Add vendor project scoping tests in apps/web/tests/mvp-vendor-scope.test.ts; Acceptance: vendor can see assigned project/lots and cannot operate foreign or unassigned lots; Verify: `pnpm test:web`
 
 ### Implementation for User Story 1
 
-- [ ] T019 [US1] Harden geometry upload validation in apps/web/src/app/api/uploads/geometry/route.ts; Acceptance: only valid KMZ/KML produces persisted geometries and partial failures are returned as non-operational; Verify: `pnpm test:web`
-- [ ] T020 [US1] Normalize KMZ/KML parsing errors in apps/web/src/lib/services/kmz-parser.service.ts; Acceptance: parser errors are user-actionable and do not expose internal stack traces; Verify: `pnpm test:web`
-- [ ] T021 [US1] Ensure KML-to-GeoJSON lot extraction preserves source properties in apps/web/src/lib/services/kml-to-geojson.service.ts; Acceptance: lot number, geometry, area inputs, and boundary metadata are available for review; Verify: `pnpm test:web`
-- [ ] T022 [US1] Make project readiness explicit in apps/web/src/actions/lot-verification.action.ts; Acceptance: a project can become operational only after required lot verification and minimum data checks pass; Verify: `pnpm typecheck:web`
-- [ ] T023 [US1] Surface readiness state in apps/web/src/components/projects/LotVerificationPanel.tsx; Acceptance: admin sees which lots block operation and what data must be corrected; Verify: `pnpm test:web`
-- [ ] T024 [US1] Keep geometry map review stable in apps/web/src/components/projects/geometry-viewer/index.tsx; Acceptance: imported lots render with selection, area, boundaries, and empty/error states; Verify: `pnpm build:web`
-- [ ] T025 [US1] Enforce vendor assignment before reservation access in apps/web/src/actions/vendor-actions.action.ts; Acceptance: vendors can operate only projects explicitly assigned through vendor_projects; Verify: `pnpm test:web`
-- [ ] T026 [US1] Update project detail readiness messaging in apps/web/src/components/projects/detail/overview-tab.tsx; Acceptance: project status clearly distinguishes draft/imported/validated/operational states; Verify: `pnpm typecheck:web`
-- [ ] T101 [US1] Persist or expose calculated legal geometry metrics from apps/web/src/lib/geometry/utm.ts and apps/web/src/lib/geometry/utils.ts during project readiness; Acceptance: lot readiness can use calculated area, perimeter, boundary directions, and distances without manual re-entry when geometry is valid; Verify: `pnpm test:web`
-- [ ] T102 [US1] Connect geometry-derived boundary text from apps/web/src/lib/legal/deslinde-generator.ts into lot verification review; Acceptance: admin can accept or correct generated legal deslindes before a lot becomes document-ready; Verify: `pnpm test:web`
+- [x] T019 [US1] Harden geometry upload validation in apps/web/src/app/api/uploads/geometry/route.ts; Acceptance: only valid KMZ/KML produces persisted geometries and partial failures are returned as non-operational; Verify: `pnpm test:web`
+- [x] T020 [US1] Normalize KMZ/KML parsing errors in apps/web/src/lib/services/kmz-parser.service.ts; Acceptance: parser errors are user-actionable and do not expose internal stack traces; Verify: `pnpm test:web`
+- [x] T021 [US1] Ensure KML-to-GeoJSON lot extraction preserves source properties in apps/web/src/lib/services/kml-to-geojson.service.ts; Acceptance: lot number, geometry, area inputs, and boundary metadata are available for review; Verify: `pnpm test:web`
+- [x] T022 [US1] Make project readiness explicit in apps/web/src/actions/lot-verification.action.ts; Acceptance: a project can become operational only after required lot verification and minimum data checks pass; Verify: `pnpm typecheck:web`
+- [x] T023 [US1] Surface readiness state in apps/web/src/components/projects/LotVerificationPanel.tsx; Acceptance: admin sees which lots block operation and what data must be corrected; Verify: `pnpm test:web`
+- [x] T024 [US1] Keep geometry map review stable in apps/web/src/components/projects/geometry-viewer/index.tsx; Acceptance: imported lots render with selection, area, boundaries, and empty/error states; Verify: `pnpm build:web`
+- [x] T025 [US1] Enforce vendor assignment before reservation access in apps/web/src/actions/vendor-actions.action.ts; Acceptance: vendors can operate only projects explicitly assigned through vendor_projects; Verify: `pnpm test:web`
+- [x] T026 [US1] Update project detail readiness messaging in apps/web/src/components/projects/detail/overview-tab.tsx; Acceptance: project status clearly distinguishes draft/imported/validated/operational states; Verify: `pnpm typecheck:web`
+- [x] T101 [US1] Persist or expose calculated legal geometry metrics from apps/web/src/lib/geometry/utm.ts and apps/web/src/lib/geometry/utils.ts during project readiness; Acceptance: lot readiness can use calculated area, perimeter, boundary directions, and distances without manual re-entry when geometry is valid; Verify: `pnpm test:web`
+- [x] T102 [US1] Connect geometry-derived boundary text from apps/web/src/lib/legal/deslinde-generator.ts into lot verification review; Acceptance: admin can accept or correct generated legal deslindes before a lot becomes document-ready; Verify: `pnpm test:web`
 
 **Checkpoint**: US1 can be tested independently with the quickstart project readiness flow.
 

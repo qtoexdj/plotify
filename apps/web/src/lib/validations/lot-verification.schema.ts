@@ -36,6 +36,7 @@ export const officialOverrideSchema = z.object({
   projectId: z.string().uuid('ID de proyecto inválido'),
   lotId: z.string().uuid('ID de lote inválido'),
   area_official_m2: z.coerce.number().positive('La superficie debe ser positiva').optional(),
+  perimeter_official_m: z.coerce.number().positive('El perímetro debe ser positivo').optional(),
   servidumbre_m2: z.coerce.number().nonnegative('La servidumbre no puede ser negativa').optional(),
   servidumbre_ancho_m: z.coerce.number().positive('El ancho debe ser positivo').optional(),
   boundaries_official: officialBoundariesSchema.optional(),
@@ -62,6 +63,9 @@ export const markVerifiedSchema = z.object({
   area_official_m2: z.coerce
     .number()
     .positive('La superficie oficial es obligatoria para verificar'),
+  perimeter_official_m: z.coerce
+    .number()
+    .positive('El perímetro oficial es obligatorio para verificar'),
 
   boundaries_official: officialBoundariesSchema,
   // Snapshot de valores calculados para trazabilidad (se envía desde el cliente)

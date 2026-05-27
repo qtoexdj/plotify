@@ -6,6 +6,7 @@ import {
   type ReservationFormInput,
 } from '@/lib/validations/approval-request.schema'
 import { createApprovalRequest, resolveVendorFromUser } from '@/lib/services/approvals.service'
+import { checkVendorAssignment } from './vendor-actions.action'
 import type { ApprovalRequestPayload } from '@/types/database.types'
 
 export type RequestApprovalResult =
@@ -30,17 +31,14 @@ export async function requestReservationApproval(
   }
   const validData = validation.data
 
-  // 2. Obtener usuario autenticado
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return { success: false, error: 'No autenticado' }
+  // 2. Enforce vendor assignment before reservation access (T025)
+  const check = await checkVendorAssignment(projectId, lotId)
+  if (!check.allowed) {
+    return { success: false, error: check.error || 'Acceso denegado' }
   }
 
   // 3. Resolver info del vendedor desde el usuario
-  const vendorInfo = await resolveVendorFromUser(user.id)
+  const vendorInfo = await resolveVendorFromUser(check.userId!)
   if (!vendorInfo) {
     return { success: false, error: 'No se encontró registro de vendedor asociado a tu cuenta' }
   }

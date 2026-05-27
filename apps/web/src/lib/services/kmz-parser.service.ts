@@ -6,22 +6,31 @@ import JSZip from 'jszip'
  * @returns String XML del KML encontrado
  */
 export async function extractKmlFromKmz(buffer: Buffer): Promise<string> {
+  let zip
   try {
-    const zip = await JSZip.loadAsync(buffer)
+    zip = await JSZip.loadAsync(buffer)
+  } catch {
+    throw new Error('El archivo KMZ está dañado o no es un archivo comprimido válido.')
+  }
 
-    // Buscar archivo .kml dentro del ZIP
-    const kmlFile = Object.keys(zip.files).find((filename) =>
-      filename.toLowerCase().endsWith('.kml')
-    )
+  // Buscar archivo .kml dentro del ZIP
+  const kmlFile = Object.keys(zip.files).find((filename) => filename.toLowerCase().endsWith('.kml'))
 
-    if (!kmlFile) {
-      throw new Error('No se encontró archivo KML dentro del KMZ')
-    }
+  if (!kmlFile) {
+    throw new Error('El archivo KMZ no contiene ningún archivo geográfico .kml en su interior.')
+  }
 
+  try {
     const kmlContent = await zip.files[kmlFile].async('string')
+    if (!kmlContent || kmlContent.trim() === '') {
+      throw new Error('El archivo KML interno está vacío.')
+    }
     return kmlContent
-  } catch (error) {
-    console.error('Error al extraer KML de KMZ:', error)
-    throw new Error(`Error al procesar archivo KMZ: ${error}`)
+  } catch (readError) {
+    throw new Error(
+      `No se pudo leer el contenido geográfico del archivo: ${
+        readError instanceof Error ? readError.message : 'formato corrupto'
+      }`
+    )
   }
 }

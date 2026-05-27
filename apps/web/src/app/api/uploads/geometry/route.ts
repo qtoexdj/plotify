@@ -75,16 +75,46 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
 
     let kmlString = ''
-    if (sourceType === 'kmz') {
-      kmlString = await extractKmlFromKmz(buffer)
-    } else {
-      kmlString = buffer.toString('utf-8')
+    try {
+      if (sourceType === 'kmz') {
+        kmlString = await extractKmlFromKmz(buffer)
+      } else {
+        kmlString = buffer.toString('utf-8')
+      }
+    } catch (zipError) {
+      logger.warn({ projectId, error: zipError }, 'upload_kmz_extraction_failed')
+      return Response.json(
+        { error: 'No se pudo descomprimir el archivo KMZ. Asegúrate de que no esté corrupto.' },
+        { status: 400 }
+      )
     }
-    const geojson = kmlToGeoJSON(kmlString)
+
+    let geojson
+    try {
+      geojson = kmlToGeoJSON(kmlString)
+    } catch (parseError) {
+      logger.warn({ projectId, error: parseError }, 'upload_kml_parse_failed')
+      return Response.json(
+        { error: 'El archivo KML tiene un formato XML inválido o corrupto.' },
+        { status: 400 }
+      )
+    }
 
     // 4. Normalizar y Clasificar
     // normalizeGeoJSON añade 'geometryType' (lot, road, common_area)
     const classifiedFeatures = normalizeGeoJSON(geojson)
+
+    // Validar que existan lotes en las características importadas
+    const lotsCount = classifiedFeatures.filter((f) => f.geometryType === 'lot').length
+    if (lotsCount === 0) {
+      logger.warn({ projectId }, 'upload_no_lots_found')
+      return Response.json(
+        {
+          error: 'El archivo no contiene lotes. Se requiere al menos un lote para la importación.',
+        },
+        { status: 400 }
+      )
+    }
 
     // 5. Preparar Datos para Persistencia
     // Mapeamos a la estructura de la base de datos
@@ -142,6 +172,7 @@ export async function POST(request: NextRequest) {
       features: mappedFeatures,
     })
   } catch (error) {
+    console.error('API UPLOAD GEOMETRY ERROR DETAILS:', error)
     logger.error({ error }, 'upload_geometry_error')
 
     return Response.json(

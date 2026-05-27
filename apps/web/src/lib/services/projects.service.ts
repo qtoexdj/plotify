@@ -196,6 +196,7 @@ export async function createProject(
     descripcion: payload.descripcion || null,
     total_lotes: payload.total_lotes,
     organization_id: membership ? membership.organization_id : undefined,
+    estado: 'draft' as const,
     // Nuevos campos
     images: payload.images || [],
     doc_dominio_vigente: payload.doc_dominio_vigente || null,

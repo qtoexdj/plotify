@@ -92,10 +92,43 @@ export function normalizeGeoJSON(geojson: GeoJSONFeatureCollection): ClassifiedF
 
     const geomType = feature.geometry.type
 
+    // Enriquecer y normalizar propiedades
+    const origProps = feature.properties || {}
+    const name = (origProps.name || origProps.Name || '').toString().trim()
+
+    // Intentar inferir número de lote a partir de campos existentes o del nombre
+    let inferredLotNumber = (
+      origProps.lot_number ||
+      origProps.numero_lote ||
+      origProps.number ||
+      ''
+    )
+      .toString()
+      .trim()
+    if (!inferredLotNumber && name) {
+      const lotMatch = name.match(/(?:lote|lotes|plot|parcela)\s*(\w+)/i)
+      if (lotMatch && lotMatch[1]) {
+        inferredLotNumber = lotMatch[1]
+      } else {
+        const numMatch = name.match(/^\d+$/)
+        if (numMatch) {
+          inferredLotNumber = name
+        }
+      }
+    }
+
+    const enrichedProperties = {
+      ...origProps,
+      name,
+      inferred_lot_number: inferredLotNumber,
+      layer: origProps.layer || origProps.Layer || 'Importado',
+    }
+
     // Aceptar tipos válidos directamente
     if (validTypes.includes(geomType)) {
       validFeatures.push({
         ...feature,
+        properties: enrichedProperties,
         geometryType: detectGeometryType(feature, geomType),
       })
     } else if (geomType === 'GeometryCollection') {
@@ -108,7 +141,7 @@ export function normalizeGeoJSON(geojson: GeoJSONFeatureCollection): ClassifiedF
           validFeatures.push({
             type: 'Feature',
             geometry: geom,
-            properties: feature.properties || {},
+            properties: enrichedProperties,
             geometryType: detectGeometryType(feature, geom.type),
           })
         }

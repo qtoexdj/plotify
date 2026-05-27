@@ -7,6 +7,7 @@ import {
 } from '@/lib/validations/lot-reservation.schema'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/logger'
+import { checkVendorAssignment } from './vendor-actions.action'
 
 export type ReserveLotResult =
   | { success: true; message: string }
@@ -18,6 +19,13 @@ export async function reserveLot(
   data: LotReservationInput
 ): Promise<ReserveLotResult> {
   logger.info({ lotId, projectId }, 'reserve_lot_started')
+
+  // Enforce vendor assignment before reservation access (T025)
+  const check = await checkVendorAssignment(projectId, lotId)
+  if (!check.allowed) {
+    return { success: false, error: check.error || 'Acceso denegado' }
+  }
+
   const supabase = await createClient()
 
   // 1. Validate Input
