@@ -373,11 +373,14 @@ class TestWorkerSettingsRegistration:
         function_names = [f.__name__ for f in WorkerSettings.functions]
         assert "send_notification" in function_names
 
-    def test_worker_has_five_functions(self):
-        """WorkerSettings debe tener exactamente 5 funciones registradas."""
+    def test_worker_has_document_delivery_functions(self):
+        """WorkerSettings debe registrar notificaciones y delivery de documentos."""
         from workers.main_worker import WorkerSettings
 
-        assert len(WorkerSettings.functions) == 5
+        function_names = {fn.__name__ for fn in WorkerSettings.functions}
+        assert len(WorkerSettings.functions) == 7
+        assert "send_generated_document" in function_names
+        assert "retry_generated_document_delivery" in function_names
 
 
 # ---------------------------------------------------------------------------
@@ -618,6 +621,5 @@ async def test_telegram_callback_idempotency_repeated_decisions():
     assert res1 == "SUCCESS"
     assert res2 == "RPC_FAILED: already_processed"
     assert supabase.rpc.call_count == 2
-
 
 

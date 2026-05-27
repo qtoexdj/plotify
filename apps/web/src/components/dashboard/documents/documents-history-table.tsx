@@ -8,6 +8,8 @@ import {
   File02Icon,
   Search01Icon,
   Calendar01Icon,
+  CheckmarkSquare01Icon,
+  CancelSquareIcon,
 } from '@hugeicons/core-free-icons'
 import {
   Table,
@@ -34,6 +36,7 @@ import type { GeneratedDocument } from '@/types/v2'
 
 type DocWithTemplate = GeneratedDocument & {
   document_templates?: { name: string; document_type: string } | null
+  lots?: { numero_lote: string } | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -66,6 +69,15 @@ function formatDateTime(iso: string | null): string {
   })
 }
 
+function truncateEmail(actor: string | null): string {
+  if (!actor) return '—'
+  if (actor.includes('@')) {
+    const [local] = actor.split('@')
+    return local.length > 12 ? local.slice(0, 12) + '…' : local
+  }
+  return actor.length > 14 ? actor.slice(0, 14) + '…' : actor
+}
+
 // ─── Componente principal ────────────────────────────────────────────────────
 
 interface DocumentsHistoryTableProps {
@@ -80,12 +92,20 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
 
   const filtered = useMemo(() => {
     return documents.filter((doc) => {
-      // Filtro texto (template name o tipo)
+      // Filtro texto (template name o tipo o lote)
       if (search) {
         const q = search.toLowerCase()
         const templateName = doc.document_templates?.name?.toLowerCase() ?? ''
         const docType = doc.document_type.toLowerCase()
-        if (!templateName.includes(q) && !docType.includes(q)) return false
+        const lotNumber = doc.lots?.numero_lote?.toLowerCase() ?? ''
+        const actor = (doc.generated_by ?? '').toLowerCase()
+        if (
+          !templateName.includes(q) &&
+          !docType.includes(q) &&
+          !lotNumber.includes(q) &&
+          !actor.includes(q)
+        )
+          return false
       }
       // Filtro tipo de documento
       if (filterType !== 'todos' && doc.document_type !== filterType) return false
@@ -138,7 +158,7 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
             />
             <Input
-              placeholder="Buscar por plantilla o tipo…"
+              placeholder="Buscar por plantilla, lote o usuario…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -197,9 +217,16 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Ver.</TableHead>
+                  <TableHead>Lote</TableHead>
                   <TableHead>Plantilla</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Formato</TableHead>
+                  <TableHead>Generado por</TableHead>
+                  <TableHead>Destinatarios</TableHead>
+                  <TableHead className="text-center" title="¿Blancos aceptados?">
+                    Blancos
+                  </TableHead>
                   <TableHead>Generado el</TableHead>
                   <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
@@ -212,6 +239,12 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
                   }
                   return (
                     <TableRow key={doc.id}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        v{doc.version_number ?? 1}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium whitespace-nowrap">
+                        {doc.lots?.numero_lote ?? '—'}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {doc.document_templates?.name ?? '—'}
                       </TableCell>
@@ -222,6 +255,48 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
                       </TableCell>
                       <TableCell>
                         <Badge variant={fmt.variant}>{fmt.label}</Badge>
+                      </TableCell>
+                      <TableCell
+                        className="text-xs text-muted-foreground whitespace-nowrap"
+                        title={doc.generated_by ?? undefined}
+                      >
+                        {truncateEmail(doc.generated_by)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(doc.selected_recipients ?? []).length > 0 ? (
+                            doc.selected_recipients.map((recipient) => (
+                              <Badge key={recipient} variant="outline" className="capitalize">
+                                {recipient}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {doc.missing_variables_accepted ? (
+                          <span
+                            title="Generado aceptando variables en blanco"
+                            className="flex justify-center"
+                          >
+                            <HugeiconsIcon
+                              icon={CheckmarkSquare01Icon}
+                              className="w-4 h-4 text-amber-500"
+                            />
+                          </span>
+                        ) : (
+                          <span
+                            title="Generado sin variables en blanco"
+                            className="flex justify-center"
+                          >
+                            <HugeiconsIcon
+                              icon={CancelSquareIcon}
+                              className="w-4 h-4 text-green-500"
+                            />
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {formatDateTime(doc.created_at)}

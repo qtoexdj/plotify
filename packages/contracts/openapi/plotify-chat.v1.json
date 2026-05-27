@@ -478,6 +478,14 @@
             "title": "Organization Id",
             "type": "string"
           },
+          "selected_recipients": {
+            "items": {
+              "enum": ["vendedor", "comprador"],
+              "type": "string"
+            },
+            "title": "Selected Recipients",
+            "type": "array"
+          },
           "template_id": {
             "title": "Template Id",
             "type": "string"
@@ -513,6 +521,13 @@
           "missing_variables_accepted": {
             "title": "Missing Variables Accepted",
             "type": "boolean"
+          },
+          "selected_recipients": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Selected Recipients",
+            "type": "array"
           },
           "template_id": {
             "title": "Template Id",
@@ -1996,6 +2011,22 @@
             "schema": {
               "title": "Organization Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
             }
           }
         ],

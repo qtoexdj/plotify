@@ -247,7 +247,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         </TabsContent>
 
         <TabsContent value="documents">
-          <DocumentsTab project={project} isAdmin={isAdmin} />
+          <DocumentsTab project={project} isAdmin={isAdmin} lots={lots} />
         </TabsContent>
 
         {isAdmin && (

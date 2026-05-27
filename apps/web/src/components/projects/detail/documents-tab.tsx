@@ -27,10 +27,13 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { DocumentViewer } from './document-viewer'
 import Image from 'next/image'
+import Link from 'next/link'
+import type { LotWithRecord } from './types'
 
 interface DocumentsTabProps {
   project: ProjectWithMetrics
   isAdmin: boolean
+  lots?: LotWithRecord[]
 }
 
 const DOCUMENT_TYPES = [
@@ -42,10 +45,12 @@ const DOCUMENT_TYPES = [
   { id: 'doc_otros', label: 'Otros Documentos' },
 ]
 
-export function DocumentsTab({ project: initialProject, isAdmin }: DocumentsTabProps) {
+export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: DocumentsTabProps) {
   const [project, setProject] = useState(initialProject)
   const [isUploading, setIsUploading] = useState<string | null>(null)
   const supabase = createClient()
+
+  const reservedLots = lots.filter((l) => l.estado === 'reservado')
 
   const getFullUrl = (path: string | null | undefined) => {
     if (!path || path === '[]') return ''
@@ -172,6 +177,59 @@ export function DocumentsTab({ project: initialProject, isAdmin }: DocumentsTabP
 
   return (
     <div className="space-y-6">
+      {/* ── Documentos de Reserva ─────────────────────────────────── */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-indigo-600" />
+              Documentos de Reserva
+            </CardTitle>
+            <CardDescription>
+              Genera comprobantes de reserva (PDF/DOCX) para los lotes con estado{' '}
+              <span className="font-medium text-foreground">reservado</span> desde la plantilla
+              activa del proyecto.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {reservedLots.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg text-sm">
+                No hay lotes en estado <strong>reservado</strong> en este proyecto.
+              </div>
+            ) : (
+              <div className="divide-y rounded-lg border overflow-hidden">
+                {reservedLots.map((lot) => (
+                  <div
+                    key={lot.id}
+                    className="flex items-center justify-between px-4 py-3 bg-card hover:bg-accent/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge
+                        variant="outline"
+                        className="text-amber-700 bg-amber-50 border-amber-200 text-xs"
+                      >
+                        Reservado
+                      </Badge>
+                      <span className="text-sm font-medium">{lot.numero_lote}</span>
+                    </div>
+                    <Link href={`/documentos/generar/${lot.id}`} id={`generate-doc-${lot.id}`}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                      >
+                        <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
+                        Generar documento
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Galería de Imágenes */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

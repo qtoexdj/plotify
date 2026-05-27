@@ -38,7 +38,11 @@ import {
   Zap,
   Download,
 } from 'lucide-react'
-import { generateDocumentAction } from '@/actions/documents.action'
+import {
+  generateDocumentAction,
+  getVariablesStatusAction,
+  previewDocumentAction,
+} from '@/actions/documents.action'
 import { numberToWords } from '@/lib/legal/number-to-words'
 import { generateDeslindeText } from '@/lib/legal/deslinde-generator'
 import {
@@ -46,7 +50,6 @@ import {
   generateServidumbreTextLegacy,
 } from '@/lib/legal/servidumbre-generator'
 import type { DocumentTemplate } from '@/types/v2'
-import type { EscrituraVariables } from '@/types/documents'
 import type { OfficialBoundary, ServidumbreAnalysis } from '@/types/database.types'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -163,106 +166,6 @@ const TEMPLATE_TYPE_BADGE: Record<string, { label: string; className: string }> 
   otro: { label: 'Otro', className: 'bg-gray-100 text-gray-700 border-gray-200' },
 }
 
-/**
- * Resolución local de variables Jinja2 para el preview.
- * Soporta: {{ variable.campo }} y {{ variable.campo | default("valor") }}
- */
-function resolveTemplate(templateHtml: string, variables: EscrituraVariables): string {
-  return templateHtml.replace(
-    /\{\{\s*([\w.]+)\s*(?:\|\s*default\("([^"]*)"\)|\|[^}]*)?\s*\}\}/g,
-    (_: string, key: string, fallback: string) => {
-      let cursor: unknown = variables as unknown
-      for (const k of key.split('.')) {
-        if (cursor && typeof cursor === 'object') {
-          cursor = (cursor as Record<string, unknown>)[k] ?? null
-        } else {
-          cursor = null
-          break
-        }
-      }
-      if (typeof cursor === 'string') return cursor
-      return fallback ?? `[${key}]`
-    }
-  )
-}
-
-/**
- * Mapea los valores del formulario plano al objeto EscrituraVariables anidado.
- */
-function formValuesToEscrituraVars(vals: WizardFormValues): EscrituraVariables {
-  return {
-    vendedor: {
-      tipo: vals.vendedor_tipo,
-      nombre: vals.vendedor_nombre,
-      rut: vals.vendedor_rut,
-      domicilio: vals.vendedor_domicilio,
-    },
-    comprador: {
-      tipo: 'natural',
-      nombre: vals.comprador_nombre,
-      rut: vals.comprador_rut,
-      domicilio: vals.comprador_domicilio,
-      estado_civil: vals.comprador_estado_civil,
-      profesion_giro: vals.comprador_profesion,
-    },
-    matriz: {
-      nombre_predio: vals.matriz_nombre_predio,
-      ubicacion: vals.matriz_ubicacion,
-      superficie_total: vals.matriz_superficie_total,
-      deslindes: {
-        norte: vals.matriz_norte,
-        sur: vals.matriz_sur,
-        oriente: vals.matriz_oriente,
-        poniente: vals.matriz_poniente,
-      },
-      adquisicion_modo: vals.matriz_adquisicion_modo,
-      adquisicion_notaria: vals.matriz_adquisicion_notaria,
-      adquisicion_fecha: vals.matriz_adquisicion_fecha,
-      inscripcion_fojas: vals.matriz_inscripcion_fojas,
-      inscripcion_numero: vals.matriz_inscripcion_numero,
-      inscripcion_anio: vals.matriz_inscripcion_anio,
-      inscripcion_cbr: vals.matriz_inscripcion_cbr,
-      rol_avaluo: vals.matriz_rol_avaluo,
-    },
-    sag: {
-      certificado_numero: vals.sag_certificado_numero,
-      certificado_fecha: vals.sag_certificado_fecha,
-      plano_cbr_numero: vals.sag_plano_cbr_numero,
-      plano_cbr_anio: vals.sag_plano_cbr_anio,
-    },
-    lote: {
-      numero_nombre: vals.lote_numero_nombre,
-      superficie_total: vals.lote_superficie_total,
-      deslindes: vals.lote_deslindes,
-      rol_tramite: vals.lote_rol_tramite,
-    },
-    servidumbre: {
-      aplica: vals.servidumbre_aplica,
-      superficie: vals.servidumbre_superficie,
-      deslindes_tramo: vals.servidumbre_deslindes_tramo,
-    },
-    transaccion: {
-      precio_numeros: vals.transaccion_precio_numeros,
-      precio_letras: vals.transaccion_precio_letras,
-      forma_pago: vals.transaccion_forma_pago,
-    },
-    mandato: {
-      nombre_representante: vals.mandato_nombre_representante,
-      rut_representante: vals.mandato_rut_representante,
-    },
-    personeria: {
-      aplica: vals.personeria_aplica,
-      tipo_documento: vals.personeria_tipo_documento,
-      notaria: vals.personeria_notaria,
-      fecha: vals.personeria_fecha,
-      inscripcion_fojas: vals.personeria_inscripcion_fojas,
-      inscripcion_numero: vals.personeria_inscripcion_numero,
-      inscripcion_anio: vals.personeria_inscripcion_anio,
-      inscripcion_cbr: vals.personeria_inscripcion_cbr,
-    },
-  }
-}
-
 // ─── Step indicators ──────────────────────────────────────────────────────────
 
 const STEPS = [
@@ -334,6 +237,75 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null)
   const [generateError, setGenerateError] = useState<string | null>(null)
+
+  // Variables disponibles y faltantes obtenidas del backend para el Step 4
+  const [variableStatus, setVariableStatus] = useState<{
+    available: string[]
+    missing: string[]
+    sources: Record<string, string>
+  } | null>(null)
+  const [variableStatusError, setVariableStatusError] = useState<string | null>(null)
+  const [missingVariablesAccepted, setMissingVariablesAccepted] = useState(false)
+  const [isLoadingVariables, setIsLoadingVariables] = useState(false)
+  const [selectedRecipients, setSelectedRecipients] = useState<Array<'vendedor' | 'comprador'>>([
+    'vendedor',
+    'comprador',
+  ])
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
+
+  // Consultar estado de variables del backend al entrar al Step 4
+  useEffect(() => {
+    if (step !== 4 || !selectedTemplate) return
+
+    async function fetchVariableStatus() {
+      setIsLoadingVariables(true)
+      setVariableStatus(null)
+      setVariableStatusError(null)
+      try {
+        const result = await getVariablesStatusAction(lot.id, selectedTemplate!.id)
+        if (result.success) {
+          const { available = [], missing = [], sources = {} } = result.data
+          setVariableStatus({ available, missing, sources })
+        } else {
+          setVariableStatusError(result.error)
+        }
+      } catch (err) {
+        setVariableStatusError('Error al validar variables requeridas')
+        console.error('Error fetching variable status', err)
+      } finally {
+        setIsLoadingVariables(false)
+      }
+    }
+
+    fetchVariableStatus()
+  }, [step, lot.id, selectedTemplate])
+
+  useEffect(() => {
+    if (step !== 3 || !selectedTemplate) return
+
+    async function fetchPreview() {
+      setIsLoadingPreview(true)
+      setPreviewHtml(null)
+      setPreviewError(null)
+      try {
+        const result = await previewDocumentAction(selectedTemplate!.id, lot.id)
+        if (result.success) {
+          setPreviewHtml(result.data.html)
+        } else {
+          setPreviewError(result.error)
+        }
+      } catch (err) {
+        setPreviewError('Error al generar la vista previa')
+        console.error('Error fetching document preview', err)
+      } finally {
+        setIsLoadingPreview(false)
+      }
+    }
+
+    fetchPreview()
+  }, [step, lot.id, selectedTemplate])
 
   // Secciones colapsables del Step 2
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -442,21 +414,6 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
     form.setValue('servidumbre_deslindes_tramo', texto, { shouldDirty: true })
   }, [lot, form])
 
-  // ─── Construir preview HTML local ──────────────────────────────────────
-
-  const buildPreviewHtml = useCallback((): string => {
-    if (!selectedTemplate) return ''
-
-    const rawContent = selectedTemplate as unknown as Record<string, unknown>
-    const templateHtml =
-      (rawContent['content'] as string | undefined) ||
-      (rawContent['header_config'] as string | undefined) ||
-      '<p>Este template no tiene contenido HTML configurado.</p>'
-
-    const vars = formValuesToEscrituraVars(form.getValues())
-    return resolveTemplate(templateHtml, vars)
-  }, [selectedTemplate, form])
-
   // ─── Generar documento (Step 4) ─────────────────────────────────────────
 
   const handleGenerate = useCallback(async () => {
@@ -465,7 +422,13 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
     setGenerateError(null)
 
     try {
-      const result = await generateDocumentAction(selectedTemplate.id, lot.id, format)
+      const result = await generateDocumentAction(
+        selectedTemplate.id,
+        lot.id,
+        format,
+        missingVariablesAccepted,
+        selectedRecipients
+      )
       if (result.success) {
         setGeneratedUrl(result.data.file_url)
       } else {
@@ -474,7 +437,16 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
     } finally {
       setIsGenerating(false)
     }
-  }, [selectedTemplate, lot.id, format])
+  }, [selectedTemplate, lot.id, format, missingVariablesAccepted, selectedRecipients])
+
+  const toggleRecipient = useCallback((recipient: 'vendedor' | 'comprador') => {
+    setSelectedRecipients((current) => {
+      if (current.includes(recipient)) {
+        return current.filter((item) => item !== recipient)
+      }
+      return [...current, recipient]
+    })
+  }, [])
 
   // ─── Contar variables completas / pendientes ─────────────────────────────
 
@@ -909,22 +881,33 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
 
   // ─── Step 3: Preview ──────────────────────────────────────────────────────
   const renderStep3 = () => {
-    const previewHtml = buildPreviewHtml()
     return (
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          Vista previa generada localmente. Las variables sin valor aparecen como{' '}
-          <code className="bg-muted px-1 rounded text-xs">[key]</code>.
+          Vista previa renderizada por el servicio de documentos con las variables actuales del
+          lote.
         </p>
+        {previewError && (
+          <div className="flex items-start gap-2 text-destructive bg-destructive/10 rounded-md p-3 text-sm">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{previewError}</span>
+          </div>
+        )}
         <ScrollArea className="h-[60vh] border rounded-lg">
-          <div
-            className="prose prose-sm max-w-none p-8 bg-white text-black [&_h2]:text-base [&_h3]:text-sm font-serif"
-            dangerouslySetInnerHTML={{
-              __html:
-                previewHtml ||
-                '<p class="text-gray-400 italic">Sin contenido HTML en la plantilla seleccionada.</p>',
-            }}
-          />
+          {isLoadingPreview ? (
+            <div className="flex h-[60vh] items-center justify-center text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Generando vista previa...
+            </div>
+          ) : (
+            <div
+              className="prose prose-sm max-w-none p-8 bg-white text-black [&_h2]:text-base [&_h3]:text-sm font-serif"
+              dangerouslySetInnerHTML={{
+                __html:
+                  previewHtml || '<p class="text-gray-400 italic">Sin vista previa disponible.</p>',
+              }}
+            />
+          )}
         </ScrollArea>
       </div>
     )
@@ -933,6 +916,14 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
   // ─── Step 4: Confirmar y generar ──────────────────────────────────────────
   const renderStep4 = () => {
     const stats = countVariableStats()
+    const hasMissing = variableStatus ? variableStatus.missing.length > 0 : false
+    const isGenerationBlocked =
+      isLoadingVariables ||
+      Boolean(variableStatusError) ||
+      !variableStatus ||
+      selectedRecipients.length === 0 ||
+      (hasMissing && !missingVariablesAccepted)
+
     return (
       <div className="space-y-6">
         {/* Resumen */}
@@ -963,18 +954,96 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
                 {stats.filled} / {stats.total}
               </span>
             </div>
-            {stats.filled < stats.total && (
-              <div className="flex items-start gap-2 text-orange-600 bg-orange-50 rounded-md p-3 text-xs">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>
-                  Hay {stats.total - stats.filled} variables sin completar. El documento se generará
-                  con los campos vacíos marcados como{' '}
-                  <code className="bg-orange-100 px-1 rounded">___________</code>.
-                </span>
-              </div>
-            )}
           </CardContent>
         </Card>
+
+        {/* Validación de variables del backend */}
+        {isLoadingVariables ? (
+          <div className="flex items-center justify-center p-6 border rounded-lg bg-muted/20">
+            <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+            <span className="text-sm text-muted-foreground">
+              Validando variables requeridas por el template...
+            </span>
+          </div>
+        ) : variableStatus ? (
+          <div className="space-y-4">
+            {variableStatus.missing.length > 0 ? (
+              <div className="space-y-3 p-4 border border-destructive/20 bg-destructive/5 rounded-lg">
+                <div className="flex items-center gap-2 text-destructive font-medium text-sm">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>Atención: Faltan variables requeridas por la plantilla</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {variableStatus.missing.map((v) => (
+                    <Badge
+                      key={v}
+                      variant="destructive"
+                      className="text-[10px] uppercase font-mono tracking-wider"
+                    >
+                      {v}
+                    </Badge>
+                  ))}
+                </div>
+
+                <Separator className="bg-destructive/10" />
+
+                <div className="flex items-center justify-between gap-4 pt-1">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold text-foreground">
+                      Aceptar generación con espacios en blanco
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      El documento dejará las variables faltantes vacías.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={missingVariablesAccepted}
+                    onCheckedChange={setMissingVariablesAccepted}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 border border-green-200 bg-green-50/50 text-green-700 rounded-lg text-sm">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>¡Todas las variables requeridas están completadas correctamente!</span>
+              </div>
+            )}
+          </div>
+        ) : variableStatusError ? (
+          <div className="flex items-start gap-2 text-destructive bg-destructive/10 rounded-md p-3 text-sm">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{variableStatusError}</span>
+          </div>
+        ) : (
+          <div className="flex items-start gap-2 text-destructive bg-destructive/10 rounded-md p-3 text-sm">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>No se pudo validar el estado de variables requeridas.</span>
+          </div>
+        )}
+
+        {/* Destinatarios */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Destinatarios</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(['vendedor', 'comprador'] as const).map((recipient) => {
+              const checked = selectedRecipients.includes(recipient)
+              return (
+                <div
+                  key={recipient}
+                  className={`flex items-center justify-between rounded-lg border px-4 py-3 text-sm transition-colors ${
+                    checked ? 'border-primary bg-primary/5 text-primary' : 'hover:border-primary/50'
+                  }`}
+                >
+                  <span className="capitalize">{recipient}</span>
+                  <Switch checked={checked} onCheckedChange={() => toggleRecipient(recipient)} />
+                </div>
+              )
+            })}
+          </div>
+          {selectedRecipients.length === 0 && (
+            <p className="text-xs text-destructive">Selecciona al menos un destinatario.</p>
+          )}
+        </div>
 
         {/* Selector de formato */}
         <div className="space-y-2">
@@ -1025,7 +1094,7 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
         {!generatedUrl && (
           <Button
             onClick={handleGenerate}
-            disabled={isGenerating || !selectedTemplate}
+            disabled={isGenerating || !selectedTemplate || isGenerationBlocked}
             className="w-full"
             size="lg"
           >

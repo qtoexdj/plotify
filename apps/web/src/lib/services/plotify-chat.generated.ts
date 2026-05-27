@@ -87,6 +87,7 @@ export interface components {
       "lot_id": string
       "missing_variables_accepted"?: boolean
       "organization_id": string
+      "selected_recipients"?: Array<"vendedor" | "comprador">
       "template_id": string
     }
     "GenerateResponse": {
@@ -96,6 +97,7 @@ export interface components {
       "format": "pdf" | "docx"
       "lot_id": string
       "missing_variables_accepted": boolean
+      "selected_recipients"?: Array<string>
       "template_id": string
       "version_number": number
     }

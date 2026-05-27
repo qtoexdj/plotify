@@ -25,9 +25,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from api.deps import require_lot_organization, verify_internal_secret
-from services.document_engine import render_template, resolve_variables
+from services.document_engine import (
+    get_project_active_template,
+    render_template,
+    resolve_variable_status,
+    resolve_variables,
+)
 from services.document_generator import generate_pdf, generate_docx, persist_document
 from core.database import get_supabase_client
+from utils.audit import (
+    log_agent_action,
+    EVENT_DOCUMENT_GENERATED,
+    EVENT_DOCUMENT_REGENERATED,
+)
 
 router = APIRouter(
     prefix="/documents",
@@ -59,6 +69,9 @@ class GenerateRequest(BaseModel):
     generated_by: str | None = None
     document_type: str = "reserva"
     missing_variables_accepted: bool = False
+    selected_recipients: list[Literal["vendedor", "comprador"]] = Field(
+        default_factory=lambda: ["vendedor", "comprador"]
+    )
 
 
 class GenerateResponse(BaseModel):
@@ -70,6 +83,7 @@ class GenerateResponse(BaseModel):
     lot_id: str
     template_id: str
     missing_variables_accepted: bool
+    selected_recipients: list[str] = Field(default_factory=list)
 
 
 class DocumentVariablesGroup(BaseModel):
@@ -89,6 +103,32 @@ class VariableStatusResponse(BaseModel):
     available: list[str] = Field(default_factory=list)
     missing: list[str] = Field(default_factory=list)
     sources: dict[str, str] = Field(default_factory=dict)
+
+
+async def _require_template_organization(
+    template_id: str,
+    organization_id: str,
+    *,
+    supabase: Any,
+) -> None:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("document_templates")
+            .select("id, organization_id")
+            .eq("id", template_id)
+            .single()
+            .execute()
+        )
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada.")
+
+    row = result.data[0] if isinstance(result.data, list) else result.data
+    if row.get("organization_id") != organization_id:
+        raise HTTPException(
+            status_code=403,
+            detail="template_id no corresponde a la organización del lote.",
+        )
 
 
 class CreateBlockRequest(BaseModel):
@@ -221,6 +261,9 @@ async def preview_document(body: PreviewRequest) -> PreviewResponse:
     organization_id = await require_lot_organization(
         body.lot_id, body.organization_id, supabase=supabase
     )
+    await _require_template_organization(
+        body.template_id, organization_id, supabase=supabase
+    )
     try:
         html = await render_template(
             body.template_id, body.lot_id, organization_id
@@ -250,14 +293,40 @@ async def generate_document(body: GenerateRequest) -> GenerateResponse:
         body.lot_id, body.organization_id, supabase=supabase
     )
 
+    template_id = body.template_id
+    if template_id == "active" or not template_id:
+        try:
+            template_id = await get_project_active_template(
+                body.lot_id, body.document_type
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+    else:
+        await _require_template_organization(
+            template_id, organization_id, supabase=supabase
+        )
+
+    variable_status = await resolve_variable_status(
+        body.lot_id, organization_id, template_id
+    )
+    missing_variables = variable_status.get("missing", [])
+    if missing_variables and not body.missing_variables_accepted:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Faltan variables requeridas para generar el documento.",
+                "missing": missing_variables,
+            },
+        )
+
     try:
         if body.format == "pdf":
             file_bytes = await generate_pdf(
-                body.template_id, body.lot_id, organization_id
+                template_id, body.lot_id, organization_id
             )
         else:
             file_bytes = await generate_docx(
-                body.template_id, body.lot_id, organization_id
+                template_id, body.lot_id, organization_id
             )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -265,13 +334,40 @@ async def generate_document(body: GenerateRequest) -> GenerateResponse:
     persisted = await persist_document(
         file_bytes=file_bytes,
         file_format=body.format,
-        template_id=body.template_id,
+        template_id=template_id,
         lot_id=body.lot_id,
         organization_id=organization_id,
         generated_by=body.generated_by,
         document_type=body.document_type,
         missing_variables_accepted=body.missing_variables_accepted,
+        missing_variables=missing_variables,
+        selected_recipients=body.selected_recipients,
     )
+
+    # ── T057: Audit event ─────────────────────────────────────────────────
+    version_num: int = persisted.get("version_number", 1)
+    audit_action = EVENT_DOCUMENT_REGENERATED if version_num > 1 else EVENT_DOCUMENT_GENERATED
+    actor = body.generated_by or "system"
+    try:
+        await log_agent_action(
+            actor=actor,
+            action=audit_action,
+            entity="generated_documents",
+            entity_id=persisted["id"],
+            organization_id=organization_id,
+            payload={
+                "document_id": persisted["id"],
+                "lot_id": body.lot_id,
+                "template_id": template_id,
+                "version": version_num,
+                "format": body.format,
+                "missing_variables_accepted": body.missing_variables_accepted,
+                "selected_recipients": body.selected_recipients,
+            },
+        )
+    except Exception as _audit_err:
+        import logging as _log
+        _log.getLogger(__name__).warning("Audit log failed (non-blocking): %s", _audit_err)
 
     return GenerateResponse(
         document_id=persisted["id"],
@@ -282,21 +378,40 @@ async def generate_document(body: GenerateRequest) -> GenerateResponse:
         lot_id=persisted["lot_id"],
         template_id=persisted["template_id"],
         missing_variables_accepted=persisted["missing_variables_accepted"],
+        selected_recipients=persisted.get(
+            "selected_recipients", body.selected_recipients
+        ),
     )
 
 
 @router.get("/variables/{lot_id}", response_model=VariableStatusResponse)
-async def get_variables(lot_id: str, organization_id: str) -> VariableStatusResponse:
+async def get_variables(
+    lot_id: str,
+    organization_id: str,
+    template_id: str | None = None,
+) -> VariableStatusResponse:
     """
     Resuelve y retorna todas las variables disponibles para un lote.
     Útil para debug y para el editor visual de bloques en el frontend.
     """
+    supabase = get_supabase_client()
+    verified_org_id = await require_lot_organization(
+        lot_id, organization_id, supabase=supabase
+    )
+    if template_id:
+        await _require_template_organization(
+            template_id, verified_org_id, supabase=supabase
+        )
+
     try:
-        flat_vars = await resolve_variables(lot_id, organization_id)
+        status_data = await resolve_variable_status(
+            lot_id, verified_org_id, template_id
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    return _build_variable_status(flat_vars)
+    return VariableStatusResponse(**status_data)
+
 
 
 # ---------------------------------------------------------------
@@ -514,7 +629,9 @@ async def list_generated_documents(
     query = (
         supabase.table("generated_documents")
         .select(
-            "id, document_type, file_url, file_format, created_at, lot_id, template_id"
+            "id, document_type, file_url, file_format, created_at, lot_id, template_id, "
+            "version_number, generated_by, missing_variables_accepted, selected_recipients, "
+            "delivery_status, delivery_failed_attempts, delivery_error_message"
         )
         .eq("organization_id", organization_id)
         .order("created_at", desc=True)

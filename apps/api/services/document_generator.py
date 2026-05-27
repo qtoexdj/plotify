@@ -64,6 +64,10 @@ class PersistedDocument(TypedDict):
     template_id: str
     missing_variables_accepted: bool
     missing_variables: list[str]
+    selected_recipients: list[str]
+    delivery_status: str
+    delivery_failed_attempts: int
+    delivery_error_message: str | None
 
 
 async def generate_pdf(template_id: str, lot_id: str, organization_id: str) -> bytes:
@@ -140,6 +144,7 @@ async def persist_document(
     document_type: str = "generated",
     missing_variables_accepted: bool = False,
     missing_variables: list[str] | None = None,
+    selected_recipients: list[str] | None = None,
 ) -> PersistedDocument:
     """
     Sube el documento a Supabase Storage y registra en generated_documents.
@@ -174,6 +179,7 @@ async def persist_document(
     # Snapshot de variables para trazabilidad legal (inmutable)
     variables = await resolve_variables(lot_id, organization_id)
     missing_variables = missing_variables or []
+    selected_recipients = selected_recipients or []
 
     latest_version_result = await asyncio.to_thread(
         lambda: (
@@ -204,6 +210,9 @@ async def persist_document(
         "version_number": version_number,
         "missing_variables_accepted": missing_variables_accepted,
         "missing_variables": missing_variables,
+        "selected_recipients": selected_recipients,
+        "delivery_status": "pending",
+        "delivery_failed_attempts": 0,
     }
     if generated_by:
         record["generated_by"] = generated_by
@@ -232,4 +241,12 @@ async def persist_document(
             inserted.get("missing_variables_accepted", missing_variables_accepted)
         ),
         "missing_variables": inserted.get("missing_variables", missing_variables),
+        "selected_recipients": inserted.get(
+            "selected_recipients", selected_recipients
+        ),
+        "delivery_status": inserted.get("delivery_status", "pending"),
+        "delivery_failed_attempts": int(
+            inserted.get("delivery_failed_attempts") or 0
+        ),
+        "delivery_error_message": inserted.get("delivery_error_message"),
     }

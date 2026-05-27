@@ -8,7 +8,11 @@ from workers.tasks.message_processor import (
 )
 from workers.tasks.approval_notifier import notify_admin_approval
 from workers.tasks.approval_processor import process_admin_decision
-from workers.tasks.notification_worker import send_notification
+from workers.tasks.notification_worker import (
+    retry_generated_document_delivery,
+    send_generated_document,
+    send_notification,
+)
 
 from core.checkpointer import setup_checkpointer, close_checkpointer
 
@@ -117,6 +121,8 @@ class WorkerSettings:
         process_admin_decision,
         link_telegram_account,
         send_notification,  # Fase 7 — Notificaciones proactivas
+        send_generated_document,
+        retry_generated_document_delivery,
     ]
 
     # Eventos de ciclo de vida

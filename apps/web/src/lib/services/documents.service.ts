@@ -130,7 +130,7 @@ export async function listGeneratedDocs(
   const supabase = await createClient()
   let query = supabase
     .from('generated_documents')
-    .select('*, document_templates(name, document_type)')
+    .select('*, document_templates(name, document_type), lots(numero_lote)')
     .eq('organization_id', organizationId)
     .order('created_at', { ascending: false })
 

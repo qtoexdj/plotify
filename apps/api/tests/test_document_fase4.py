@@ -129,6 +129,8 @@ def _make_supabase_mock(
 
     mock_result_blocks = MagicMock()
     mock_result_blocks.data = blocks_data
+    mock_result_template = MagicMock()
+    mock_result_template.data = {"id": TEMPLATE_ID, "organization_id": ORG_ID}
 
     supabase = MagicMock()
 
@@ -161,10 +163,14 @@ def _make_supabase_mock(
         tbl = MagicMock()
         if table_name == "lots":
             tbl.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_result_lot
+        elif table_name == "document_templates":
+            tbl.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_result_template
         elif table_name == "organization_payment_info":
             tbl.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = mock_result_payment
         elif table_name == "template_block_items":
-            tbl.select.return_value.eq.return_value.order.return_value.execute.return_value = mock_result_blocks
+            eq_query = tbl.select.return_value.eq.return_value
+            eq_query.order.return_value.execute.return_value = mock_result_blocks
+            eq_query.execute.return_value = mock_result_blocks
         return tbl
 
     supabase.table.side_effect = table_side_effect
@@ -671,6 +677,8 @@ class TestDocumentsAPI:
         mock_result_payment.data = FAKE_PAYMENT
         mock_result_blocks = MagicMock()
         mock_result_blocks.data = []  # sin bloques
+        mock_result_template = MagicMock()
+        mock_result_template.data = {"id": TEMPLATE_ID, "organization_id": ORG_ID}
 
         supabase = MagicMock()
 
@@ -678,10 +686,14 @@ class TestDocumentsAPI:
             tbl = MagicMock()
             if table_name == "lots":
                 tbl.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_result_lot
+            elif table_name == "document_templates":
+                tbl.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_result_template
             elif table_name == "organization_payment_info":
                 tbl.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = mock_result_payment
             elif table_name == "template_block_items":
-                tbl.select.return_value.eq.return_value.order.return_value.execute.return_value = mock_result_blocks
+                eq_query = tbl.select.return_value.eq.return_value
+                eq_query.order.return_value.execute.return_value = mock_result_blocks
+                eq_query.execute.return_value = mock_result_blocks
             return tbl
 
         supabase.table.side_effect = table_side

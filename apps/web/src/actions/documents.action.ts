@@ -10,7 +10,10 @@ import {
   createTemplate,
   saveTemplateBlocks,
 } from '@/lib/services/documents.service'
-import { generateDocument as generateDocApi } from '@/lib/services/document-generation.service'
+import {
+  generateDocument as generateDocApi,
+  previewDocument as previewDocApi,
+} from '@/lib/services/document-generation.service'
 import type { DocumentBlockInsert, DocumentTemplateInsert } from '@/types/v2'
 
 type LotOrganizationRow = {
@@ -178,7 +181,9 @@ export async function duplicateTemplateAction(templateId: string) {
 export async function generateDocumentAction(
   templateId: string,
   lotId: string,
-  format: 'pdf' | 'docx'
+  format: 'pdf' | 'docx',
+  missingVariablesAccepted: boolean = false,
+  selectedRecipients: Array<'vendedor' | 'comprador'> = ['vendedor', 'comprador']
 ) {
   const supabase = await createClient()
   const {
@@ -205,11 +210,109 @@ export async function generateDocumentAction(
       organization_id: organizationId,
       format,
       generated_by: user.id,
+      missing_variables_accepted: missingVariablesAccepted,
+      selected_recipients: selectedRecipients,
     })
     revalidatePath('/documentos/historial')
     return { success: true as const, data: result }
   } catch (err) {
     logger.error({ err, templateId, lotId }, 'generate_document_failed')
     return { success: false as const, error: 'Error al generar documento' }
+  }
+}
+
+export async function previewDocumentAction(templateId: string, lotId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false as const, error: 'No autenticado' }
+
+  try {
+    const { data: lot, error: lotError } = await supabase
+      .from('lots')
+      .select('id, projects!inner(organization_id)')
+      .eq('id', lotId)
+      .single()
+
+    const organizationId = extractLotOrganizationId(lot as LotOrganizationRow | null)
+    if (lotError || !organizationId) {
+      logger.error({ lotError, lotId }, 'preview_document_lot_org_lookup_failed')
+      return { success: false as const, error: 'No se pudo validar la organización del lote' }
+    }
+
+    const result = await previewDocApi({
+      template_id: templateId,
+      lot_id: lotId,
+      organization_id: organizationId,
+    })
+    return { success: true as const, data: result }
+  } catch (err) {
+    logger.error({ err, templateId, lotId }, 'preview_document_failed')
+    return { success: false as const, error: 'Error al previsualizar documento' }
+  }
+}
+
+export async function getVariablesStatusAction(lotId: string, templateId?: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false as const, error: 'No autenticado' }
+
+  try {
+    const { data: lot, error: lotError } = await supabase
+      .from('lots')
+      .select('id, projects!inner(organization_id)')
+      .eq('id', lotId)
+      .single()
+
+    const organizationId = extractLotOrganizationId(lot as LotOrganizationRow | null)
+    if (lotError || !organizationId) {
+      logger.error({ lotError, lotId }, 'get_variables_lot_org_lookup_failed')
+      return { success: false as const, error: 'No se pudo validar la organización del lote' }
+    }
+
+    const { getVariables } = await import('@/lib/services/document-generation.service')
+    const result = await getVariables(lotId, organizationId, templateId)
+    return { success: true as const, data: result }
+  } catch (err) {
+    logger.error({ err, lotId, templateId }, 'get_variables_status_failed')
+    return { success: false as const, error: 'Error al obtener estado de variables' }
+  }
+}
+
+export async function setActiveProjectTemplateAction(
+  projectId: string,
+  templateId: string,
+  documentType: string = 'reserva'
+) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false as const, error: 'No autenticado' }
+
+  try {
+    const { error } = await supabase.from('project_active_templates').upsert(
+      {
+        project_id: projectId,
+        document_type: documentType,
+        template_id: templateId,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'project_id,document_type' }
+    )
+
+    if (error) throw error
+
+    revalidatePath('/documentos/plantillas')
+    return { success: true as const }
+  } catch (err) {
+    logger.error({ err, projectId, templateId, documentType }, 'set_active_project_template_failed')
+    return {
+      success: false as const,
+      error: 'Error al establecer plantilla activa para el proyecto',
+    }
   }
 }

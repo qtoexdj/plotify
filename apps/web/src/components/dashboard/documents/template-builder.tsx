@@ -31,7 +31,10 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { BlockEditorDialog } from './block-editor-dialog'
 import { SortableArticleItem, type ArticleItem } from './sortable-article-item'
-import { saveTemplateBlocksAction } from '@/actions/documents.action'
+import {
+  saveTemplateBlocksAction,
+  setActiveProjectTemplateAction,
+} from '@/actions/documents.action'
 import type { DocumentBlock, TemplateWithBlocks } from '@/types/v2'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -182,13 +185,43 @@ function BlockLibrary({ blocks, onAdd }: BlockLibraryProps) {
 interface TemplateBuilderProps {
   template: TemplateWithBlocks
   availableBlocks: DocumentBlock[]
+  projects?: Array<{ id: string; name: string }>
 }
 
-export function TemplateBuilder({ template, availableBlocks }: TemplateBuilderProps) {
+export function TemplateBuilder({
+  template,
+  availableBlocks,
+  projects = [],
+}: TemplateBuilderProps) {
   const [items, setItems] = useState<ArticleItem[]>(() => initItems(template))
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [savedOk, setSavedOk] = useState(false)
+
+  // Asignación de plantilla activa por proyecto
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [isSettingActive, setIsSettingActive] = useState(false)
+  const [activeMessage, setActiveMessage] = useState<string | null>(null)
+
+  const handleSetActive = async () => {
+    if (!selectedProjectId) return
+    setIsSettingActive(true)
+    setActiveMessage(null)
+
+    const result = await setActiveProjectTemplateAction(
+      selectedProjectId,
+      template.id,
+      template.document_type
+    )
+
+    setIsSettingActive(false)
+    if (result.success) {
+      setActiveMessage('Plantilla establecida como activa con éxito.')
+      setTimeout(() => setActiveMessage(null), 3000)
+    } else {
+      setActiveMessage(result.error)
+    }
+  }
 
   // Dialog de edición de bloque
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
@@ -281,80 +314,133 @@ export function TemplateBuilder({ template, availableBlocks }: TemplateBuilderPr
   const sortableIds = items.map((i) => i.id)
 
   return (
-    <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden min-h-0">
-      {/* ── Panel izquierdo: biblioteca ─────────────────────────────────── */}
-      <div className="col-span-1 border rounded-lg p-4 flex flex-col overflow-hidden">
-        <BlockLibrary blocks={availableBlocks} onAdd={handleAdd} />
-      </div>
-
-      {/* ── Panel derecho: secuencia ─────────────────────────────────────── */}
-      <div className="col-span-2 border rounded-lg p-4 flex flex-col gap-3 overflow-hidden">
-        <div className="flex items-center justify-between shrink-0">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Secuencia del documento
-          </p>
-          <span className="text-xs text-muted-foreground">
-            {items.length} artículo{items.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-
-        <ScrollArea className="flex-1">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2 pr-2">
-                {items.map((item) => (
-                  <SortableArticleItem
-                    key={item.id}
-                    item={item}
-                    onRemove={handleRemove}
-                    onEdit={setEditingBlockId}
-                    onToggleOptional={handleToggleOptional}
-                    onChangeCondition={handleChangeCondition}
-                  />
+    <div className="flex flex-col gap-4 flex-1 overflow-hidden">
+      {/* ── Configuración de Plantilla Activa por Proyecto ────────────────── */}
+      {projects && projects.length > 0 && (
+        <div className="border rounded-lg p-4 bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+          <div className="flex-1 space-y-0.5">
+            <h4 className="text-sm font-semibold">Configuración de Plantilla Activa</h4>
+            <p className="text-xs text-muted-foreground">
+              Establece esta plantilla como la versión oficial y activa para documentos de tipo{' '}
+              <span className="font-medium text-foreground">{template.document_type}</span> en el
+              proyecto seleccionado.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <Select value={selectedProjectId || undefined} onValueChange={setSelectedProjectId}>
+              <SelectTrigger className="w-[220px] h-9 text-sm" id="project-template-select">
+                <SelectValue placeholder="Seleccionar proyecto..." />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
                 ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+              </SelectContent>
+            </Select>
 
-          {items.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-lg mt-2">
-              <p className="text-muted-foreground text-sm">
-                Agrega bloques desde la biblioteca para construir la secuencia.
-              </p>
-            </div>
-          )}
-        </ScrollArea>
+            <Button
+              onClick={handleSetActive}
+              disabled={isSettingActive || !selectedProjectId}
+              size="sm"
+              variant="secondary"
+              className="h-9"
+              id="set-active-template-btn"
+            >
+              {isSettingActive ? 'Estableciendo...' : 'Establecer como activa'}
+            </Button>
 
-        {/* ── Barra de guardado ─────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 shrink-0 pt-2 border-t">
-          {saveError && <p className="text-xs text-destructive flex-1">{saveError}</p>}
-          {savedOk && (
-            <p className="text-xs text-green-600 flex-1">Estructura guardada correctamente.</p>
-          )}
-          {!saveError && !savedOk && <span className="flex-1" />}
-
-          <Button onClick={handleSave} disabled={isSaving}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Guardando...' : 'Guardar estructura'}
-          </Button>
+            {activeMessage && (
+              <span
+                className={`text-xs px-2.5 py-1.5 rounded-md border shrink-0 ${
+                  activeMessage.includes('éxito')
+                    ? 'bg-green-50 text-green-700 border-green-200'
+                    : 'bg-destructive/10 text-destructive border-destructive/20'
+                }`}
+              >
+                {activeMessage}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* ── Dialog de edición de bloque ───────────────────────────────── */}
-      {editingBlock && (
-        <BlockEditorDialog
-          open={!!editingBlockId}
-          onOpenChange={(open) => {
-            if (!open) setEditingBlockId(null)
-          }}
-          block={editingBlock}
-          organizationId={orgId}
-        />
       )}
+
+      <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden min-h-0">
+        {/* ── Panel izquierdo: biblioteca ─────────────────────────────────── */}
+        <div className="col-span-1 border rounded-lg p-4 flex flex-col overflow-hidden">
+          <BlockLibrary blocks={availableBlocks} onAdd={handleAdd} />
+        </div>
+
+        {/* ── Panel derecho: secuencia ─────────────────────────────────────── */}
+        <div className="col-span-2 border rounded-lg p-4 flex flex-col gap-3 overflow-hidden">
+          <div className="flex items-center justify-between shrink-0">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Secuencia del documento
+            </p>
+            <span className="text-xs text-muted-foreground">
+              {items.length} artículo{items.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2 pr-2">
+                  {items.map((item) => (
+                    <SortableArticleItem
+                      key={item.id}
+                      item={item}
+                      onRemove={handleRemove}
+                      onEdit={setEditingBlockId}
+                      onToggleOptional={handleToggleOptional}
+                      onChangeCondition={handleChangeCondition}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+
+            {items.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-lg mt-2">
+                <p className="text-muted-foreground text-sm">
+                  Agrega bloques desde la biblioteca para construir la secuencia.
+                </p>
+              </div>
+            )}
+          </ScrollArea>
+
+          {/* ── Barra de guardado ─────────────────────────────────────────── */}
+          <div className="flex items-center gap-3 shrink-0 pt-2 border-t">
+            {saveError && <p className="text-xs text-destructive flex-1">{saveError}</p>}
+            {savedOk && (
+              <p className="text-xs text-green-600 flex-1">Estructura guardada correctamente.</p>
+            )}
+            {!saveError && !savedOk && <span className="flex-1" />}
+
+            <Button onClick={handleSave} disabled={isSaving}>
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? 'Guardando...' : 'Guardar estructura'}
+            </Button>
+          </div>
+        </div>
+
+        {/* ── Dialog de edición de bloque ───────────────────────────────── */}
+        {editingBlock && (
+          <BlockEditorDialog
+            open={!!editingBlockId}
+            onOpenChange={(open) => {
+              if (!open) setEditingBlockId(null)
+            }}
+            block={editingBlock}
+            organizationId={orgId}
+          />
+        )}
+      </div>
     </div>
   )
 }

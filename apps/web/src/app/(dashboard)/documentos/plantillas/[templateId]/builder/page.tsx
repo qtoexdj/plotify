@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { getActiveWorkspace } from '@/lib/services/workspace.service'
 import { getTemplateWithBlocks, listBlocks } from '@/lib/services/documents.service'
+import { getProjectsWithMetrics } from '@/lib/services/projects.service'
 import { TemplateBuilder } from '@/components/dashboard/documents/template-builder'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -34,10 +35,16 @@ export default async function TemplateBuilderPage({
     )
   }
 
-  const [template, allBlocks] = await Promise.all([
+  const [template, allBlocks, projectsWithMetrics] = await Promise.all([
     getTemplateWithBlocks(templateId),
     listBlocks(workspace.organization.id),
+    getProjectsWithMetrics(user.id),
   ])
+
+  const projects = projectsWithMetrics.map((p) => ({
+    id: p.id,
+    name: p.name,
+  }))
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col p-6 gap-4">
@@ -50,7 +57,7 @@ export default async function TemplateBuilderPage({
         </div>
       </div>
 
-      <TemplateBuilder template={template} availableBlocks={allBlocks} />
+      <TemplateBuilder template={template} availableBlocks={allBlocks} projects={projects} />
     </div>
   )
 }
