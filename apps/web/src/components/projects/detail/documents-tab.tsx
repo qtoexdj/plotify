@@ -230,6 +230,62 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
         </Card>
       )}
 
+      {/* ── Documentos de Escritura ── */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-green-600" />
+              Documentos de Escritura
+            </CardTitle>
+            <CardDescription>
+              Genera la escritura definitiva de compraventa (PDF/DOCX) para los lotes reservados
+              tras completar la revisión de sus variables legales.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {reservedLots.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg text-sm">
+                No hay lotes en estado <strong>reservado</strong> disponibles para escritura en este
+                proyecto.
+              </div>
+            ) : (
+              <div className="divide-y rounded-lg border overflow-hidden">
+                {reservedLots.map((lot) => (
+                  <div
+                    key={lot.id}
+                    className="flex items-center justify-between px-4 py-3 bg-card hover:bg-accent/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge
+                        variant="outline"
+                        className="text-green-700 bg-green-50 border-green-200 text-xs"
+                      >
+                        Escritura Pendiente
+                      </Badge>
+                      <span className="text-sm font-medium">{lot.numero_lote}</span>
+                    </div>
+                    <Link
+                      href={`/documentos/generar/${lot.id}?type=escritura`}
+                      id={`generate-escritura-${lot.id}`}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-green-600 border-green-200 hover:bg-green-50"
+                      >
+                        <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
+                        Revisar y Generar
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Galería de Imágenes */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

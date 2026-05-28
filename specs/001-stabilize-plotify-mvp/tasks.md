@@ -149,20 +149,20 @@
 
 ### Tests for User Story 4
 
-- [ ] T059 [P] [US4] Add project legal data migration tests in apps/api/tests/test_mvp_escritura.py; Acceptance: reviewed legal values store source document, status, reviewer, and project organization; Verify: `pnpm test:api`
-- [ ] T060 [P] [US4] Add escritura variable status tests in apps/api/tests/test_mvp_escritura.py; Acceptance: variables are classified as project, lot, buyer, geometry, legal document, or missing; Verify: `pnpm test:api`
-- [ ] T061 [P] [US4] Add legal review UI tests in apps/web/tests/mvp-escritura.test.ts; Acceptance: admin can review source, edit manual values, and see pending variables; Verify: `pnpm test:web`
+- [x] T059 [P] [US4] Add project legal data migration tests in apps/api/tests/test_mvp_escritura.py; Acceptance: reviewed legal values store source document, status, reviewer, and project organization; Verify: `pnpm test:api`
+- [x] T060 [P] [US4] Add escritura variable status tests in apps/api/tests/test_mvp_escritura.py; Acceptance: variables are classified as project, lot, buyer, geometry, legal document, or missing; Verify: `pnpm test:api`
+- [x] T061 [P] [US4] Add legal review UI tests in apps/web/tests/mvp-escritura.test.ts; Acceptance: admin can review source, edit manual values, and see pending variables; Verify: `pnpm test:web`
 
 ### Implementation for User Story 4
 
-- [ ] T062 [US4] Add project legal data migration in packages/database/supabase/migrations/20260525000200_mvp_project_legal_data.sql; Acceptance: structured legal variables support dominio, roles, SAG/subdivision, plano, matriz, and personeria values, with source document, review status, reviewer, and reviewed_at fields; Verify: `pnpm verify:migrations`
-- [ ] T063 [US4] Regenerate DB types for legal data in packages/database/types/database.generated.ts; Acceptance: web and API consumers have typed legal data rows; Verify: `pnpm typecheck:web`
-- [ ] T064 [US4] Validate project legal file uploads in apps/web/src/app/api/uploads/project-files/route.ts; Acceptance: allowed document types and sizes are enforced before storage; Verify: `pnpm test:web`
-- [ ] T065 [US4] Add legal data review actions in apps/web/src/actions/documents.action.ts; Acceptance: admin can save reviewed legal variables and their source document references; Verify: `pnpm test:web`
-- [ ] T066 [US4] Add legal review UI in apps/web/src/components/projects/detail/legal-tab.tsx; Acceptance: admin sees uploaded documents, extracted/reviewed values, missing values, and review status; Verify: `pnpm build:web`
-- [ ] T067 [US4] Extend resolver with project legal data in apps/api/services/document_engine.py; Acceptance: escritura variables include reviewed legal values with source map and missing classification; Verify: `pnpm test:api`
-- [ ] T068 [US4] Support escritura template generation in apps/api/api/v1/endpoints/documents.py; Acceptance: escritura PDF/DOCX uses same missing-variable policy, snapshot, and versioning as reservation; Verify: `pnpm contracts:generate`
-- [ ] T069 [US4] Show escritura generation path in apps/web/src/components/projects/detail/documents-tab.tsx; Acceptance: admin can generate escritura for eligible lot with variable review first; Verify: `pnpm test:web`
+- [x] T062 [US4] Add project legal data migration in packages/database/supabase/migrations/20260525000200_mvp_project_legal_data.sql; Acceptance: structured legal variables support dominio, roles, SAG/subdivision, plano, matriz, and personeria values, with source document, review status, reviewer, and reviewed_at fields; Verify: `pnpm verify:migrations`
+- [x] T063 [US4] Regenerate DB types for legal data in packages/database/types/database.generated.ts; Acceptance: web and API consumers have typed legal data rows; Verify: `pnpm typecheck:web`
+- [x] T064 [US4] Validate project legal file uploads in apps/web/src/app/api/uploads/project-files/route.ts; Acceptance: allowed document types and sizes are enforced before storage; Verify: `pnpm test:web`
+- [x] T065 [US4] Add legal data review actions in apps/web/src/actions/documents.action.ts; Acceptance: admin can save reviewed legal variables and their source document references; Verify: `pnpm test:web`
+- [x] T066 [US4] Add legal review UI in apps/web/src/components/projects/detail/legal-tab.tsx; Acceptance: admin sees uploaded documents, extracted/reviewed values, missing values, and review status; Verify: `pnpm build:web`
+- [x] T067 [US4] Extend resolver with project legal data in apps/api/services/document_engine.py; Acceptance: escritura variables include reviewed legal values with source map and missing classification; Verify: `pnpm test:api`
+- [x] T068 [US4] Support escritura template generation in apps/api/api/v1/endpoints/documents.py; Acceptance: escritura PDF/DOCX uses same missing-variable policy, snapshot, and versioning as reservation; Verify: `pnpm contracts:generate`
+- [x] T069 [US4] Show escritura generation path in apps/web/src/components/projects/detail/documents-tab.tsx; Acceptance: admin can generate escritura for eligible lot with variable review first; Verify: `pnpm test:web`
 
 **Checkpoint**: US4 extends document generation without weakening P1 reservation behavior.
 

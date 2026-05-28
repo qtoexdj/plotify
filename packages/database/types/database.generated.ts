@@ -1140,6 +1140,102 @@ export type Database = {
           }
         ]
       }
+      project_legal_data: {
+        Row: {
+          id: string
+          project_id: string
+          organization_id: string
+          dominio_cbr_fojas: string | null
+          dominio_cbr_numero: string | null
+          dominio_cbr_ano: string | null
+          dominio_fojas_vigente: string | null
+          roles: Json
+          sag_resolucion_numero: string | null
+          sag_resolucion_ano: string | null
+          sag_subdivision_aprobada: boolean
+          plano_archivo_numero: string | null
+          matriz_cbr_fojas: string | null
+          matriz_cbr_numero: string | null
+          matriz_cbr_ano: string | null
+          personeria_notario: string | null
+          personeria_repre_nombre: string | null
+          personeria_repre_rut: string | null
+          source_document: string | null
+          review_status: string
+          reviewer_id: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          organization_id: string
+          dominio_cbr_fojas?: string | null
+          dominio_cbr_numero?: string | null
+          dominio_cbr_ano?: string | null
+          dominio_fojas_vigente?: string | null
+          roles?: Json
+          sag_resolucion_numero?: string | null
+          sag_resolucion_ano?: string | null
+          sag_subdivision_aprobada?: boolean
+          plano_archivo_numero?: string | null
+          matriz_cbr_fojas?: string | null
+          matriz_cbr_numero?: string | null
+          matriz_cbr_ano?: string | null
+          personeria_notario?: string | null
+          personeria_repre_nombre?: string | null
+          personeria_repre_rut?: string | null
+          source_document?: string | null
+          review_status?: string
+          reviewer_id?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          organization_id?: string
+          dominio_cbr_fojas?: string | null
+          dominio_cbr_numero?: string | null
+          dominio_cbr_ano?: string | null
+          dominio_fojas_vigente?: string | null
+          roles?: Json
+          sag_resolucion_numero?: string | null
+          sag_resolucion_ano?: string | null
+          sag_subdivision_aprobada?: boolean
+          plano_archivo_numero?: string | null
+          matriz_cbr_fojas?: string | null
+          matriz_cbr_numero?: string | null
+          matriz_cbr_ano?: string | null
+          personeria_notario?: string | null
+          personeria_repre_nombre?: string | null
+          personeria_repre_rut?: string | null
+          source_document?: string | null
+          review_status?: string
+          reviewer_id?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_legal_data_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_legal_data_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       projects: {
         Row: {
           comuna: string | null

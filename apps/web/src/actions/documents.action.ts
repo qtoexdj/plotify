@@ -183,7 +183,8 @@ export async function generateDocumentAction(
   lotId: string,
   format: 'pdf' | 'docx',
   missingVariablesAccepted: boolean = false,
-  selectedRecipients: Array<'vendedor' | 'comprador'> = ['vendedor', 'comprador']
+  selectedRecipients: Array<'vendedor' | 'comprador'> = ['vendedor', 'comprador'],
+  documentType: 'reserva' | 'escritura' = 'reserva'
 ) {
   const supabase = await createClient()
   const {
@@ -212,6 +213,7 @@ export async function generateDocumentAction(
       generated_by: user.id,
       missing_variables_accepted: missingVariablesAccepted,
       selected_recipients: selectedRecipients,
+      document_type: documentType,
     })
     revalidatePath('/documentos/historial')
     return { success: true as const, data: result }
@@ -314,5 +316,66 @@ export async function setActiveProjectTemplateAction(
       success: false as const,
       error: 'Error al establecer plantilla activa para el proyecto',
     }
+  }
+}
+
+export interface ProjectLegalDataInput {
+  dominio_cbr_fojas?: string
+  dominio_cbr_numero?: string
+  dominio_cbr_ano?: string
+  sag_resolucion_numero?: string
+  sag_resolucion_ano?: string
+  source_document?: string
+  review_status?: 'pending' | 'approved' | 'rejected'
+}
+
+export async function saveProjectLegalDataAction(
+  projectId: string,
+  legalData: ProjectLegalDataInput
+) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false as const, error: 'No autenticado' }
+
+  try {
+    // 1. Obtener organización del proyecto para garantizar multi-tenant
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('organization_id')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      throw projectError ?? new Error('Proyecto no encontrado')
+    }
+
+    // 2. Hacer upsert de project_legal_data sobre project_id con mapeo explícito (allowlist)
+    const { error: upsertError } = await supabase.from('project_legal_data').upsert(
+      {
+        project_id: projectId,
+        organization_id: project.organization_id,
+        dominio_cbr_fojas: legalData.dominio_cbr_fojas ?? null,
+        dominio_cbr_numero: legalData.dominio_cbr_numero ?? null,
+        dominio_cbr_ano: legalData.dominio_cbr_ano ?? null,
+        sag_resolucion_numero: legalData.sag_resolucion_numero ?? null,
+        sag_resolucion_ano: legalData.sag_resolucion_ano ?? null,
+        source_document: legalData.source_document ?? null,
+        review_status: legalData.review_status ?? 'pending',
+        reviewer_id: user.id,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'project_id' }
+    )
+
+    if (upsertError) throw upsertError
+
+    revalidatePath(`/proyectos/${projectId}`)
+    return { success: true as const }
+  } catch (err) {
+    logger.error({ err, projectId }, 'save_project_legal_data_failed')
+    return { success: false as const, error: 'Error al guardar los datos legales del proyecto' }
   }
 }

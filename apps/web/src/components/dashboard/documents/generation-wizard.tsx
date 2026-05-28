@@ -83,6 +83,7 @@ interface GenerationWizardProps {
   lot: LotWithRelations
   templates: DocumentTemplate[]
   organizationId: string
+  documentType?: 'reserva' | 'escritura'
 }
 
 // ─── Zod Schema para Step 2 ───────────────────────────────────────────────────
@@ -230,7 +231,11 @@ const EMPTY_DEFAULTS: WizardFormValues = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
+export function GenerationWizard({
+  lot,
+  templates,
+  documentType = 'reserva',
+}: GenerationWizardProps) {
   const [step, setStep] = useState(1)
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null)
   const [format, setFormat] = useState<'pdf' | 'docx'>('pdf')
@@ -427,7 +432,8 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
         lot.id,
         format,
         missingVariablesAccepted,
-        selectedRecipients
+        selectedRecipients,
+        documentType
       )
       if (result.success) {
         setGeneratedUrl(result.data.file_url)
@@ -437,7 +443,7 @@ export function GenerationWizard({ lot, templates }: GenerationWizardProps) {
     } finally {
       setIsGenerating(false)
     }
-  }, [selectedTemplate, lot.id, format, missingVariablesAccepted, selectedRecipients])
+  }, [selectedTemplate, lot.id, format, missingVariablesAccepted, selectedRecipients, documentType])
 
   const toggleRecipient = useCallback((recipient: 'vendedor' | 'comprador') => {
     setSelectedRecipients((current) => {

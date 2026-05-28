@@ -5,10 +5,14 @@ import { GenerationWizard } from '@/components/dashboard/documents/generation-wi
 
 export default async function GenerarDocumentoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ lotId: string }>
+  searchParams: Promise<{ type?: string }>
 }) {
   const { lotId } = await params
+  const { type } = await searchParams
+  const documentType = type === 'escritura' ? 'escritura' : 'reserva'
   const supabase = await createClient()
 
   const {
@@ -75,7 +79,12 @@ export default async function GenerarDocumentoPage({
           {lot.projects?.name ? ` — ${lot.projects.name}` : ''}
         </p>
       </div>
-      <GenerationWizard lot={lot} templates={templates} organizationId={member.organization_id} />
+      <GenerationWizard
+        lot={lot}
+        templates={templates}
+        organizationId={member.organization_id}
+        documentType={documentType}
+      />
     </div>
   )
 }

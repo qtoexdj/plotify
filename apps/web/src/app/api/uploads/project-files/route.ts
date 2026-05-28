@@ -7,6 +7,14 @@ export const runtime = 'nodejs'
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const ALLOWED_DOC_TYPES = ['application/pdf']
+const ALLOWED_PROJECT_DOC_FIELDS = [
+  'doc_dominio_vigente',
+  'doc_hipoteca_gravamen',
+  'doc_roles',
+  'doc_subdivision',
+  'doc_plano_oficial',
+  'doc_otros',
+]
 const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15MB
 
 export async function POST(request: NextRequest) {
@@ -28,6 +36,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: 'El archivo excede el límite de 15MB' }, { status: 413 })
+    }
+
+    // Validación por type
+    if (type === 'images') {
+      // Permitido para imágenes
+    } else if (ALLOWED_PROJECT_DOC_FIELDS.includes(type)) {
+      // Permitido para documentos legales
+    } else {
+      return NextResponse.json(
+        { error: 'Tipo de carga no reconocido o no permitido.' },
+        { status: 400 }
+      )
+    }
+
     // Validación Server-Side con Magic Bytes
     const chunk = file.slice(0, 4096)
     const headerBuffer = Buffer.from(await chunk.arrayBuffer())
@@ -41,7 +65,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validación por type
     if (type === 'images') {
       if (!ALLOWED_IMAGE_TYPES.includes(typeInfo.mime)) {
         return NextResponse.json(
@@ -49,19 +72,30 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-    } else if (type.startsWith('doc_')) {
+    } else {
       if (!ALLOWED_DOC_TYPES.includes(typeInfo.mime)) {
         return NextResponse.json(
           { error: 'Formato de documento inválido. Solo se permiten PDFs.' },
           { status: 400 }
         )
       }
-    } else {
-      return NextResponse.json({ error: 'Tipo de carga no reconocido.' }, { status: 400 })
     }
 
-    // Proceder con la subida a Supabase
     const supabase = await createClient()
+
+    // 1. Validar la existencia del proyecto ANTES de subir el archivo al Storage
+    const { data: project, error: fetchError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .single()
+
+    if (fetchError || !project) {
+      logger.error({ projectId, fetchError }, 'upload_project_not_found')
+      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+    }
+
+    // 2. Proceder con la subida a Supabase Storage ahora que sabemos que el proyecto existe
     const fileExt = file.name.split('.').pop()
     const fileName = `${type}-${Math.random().toString(36).substring(2)}.${fileExt}`
     const filePath = `${projectId}/docs/${fileName}`
@@ -71,18 +105,6 @@ export async function POST(request: NextRequest) {
     if (error) {
       logger.error({ projectId, error }, 'upload_supabase_storage_error')
       throw new Error('Error al subir a Storage')
-    }
-
-    // Actualizar la base de datos
-    // Primero obtener el proyecto
-    const { data: project, error: fetchError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', projectId)
-      .single()
-
-    if (fetchError || !project) {
-      throw fetchError || new Error('No se encontró el proyecto')
     }
 
     const updates =
@@ -97,6 +119,8 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       logger.error({ projectId, error: dbError }, 'upload_db_update_error')
+      // Intentar remover el archivo subido en caso de error en base de datos para no dejarlo huérfano
+      await supabase.storage.from('project-files').remove([filePath])
       throw dbError
     }
 

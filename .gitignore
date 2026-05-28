@@ -124,4 +124,5 @@ ehthumbs.db
 **/.obsidian/cache/
 
 # Skill de claude
-.claude/ 
+.claude/
+.cursor/

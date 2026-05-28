@@ -29,7 +29,7 @@ def _canonical_group_for_flat_key(key: str) -> str:
         return "comprador"
     if key.startswith("vendedor_"):
         return "vendedor"
-    if key.startswith("matriz_") or key.startswith("cbr_"):
+    if key.startswith("matriz_") or key.startswith("cbr_") or key.startswith("dominio_"):
         return "matriz"
     if key.startswith("sag_"):
         return "sag"
@@ -60,6 +60,8 @@ def _source_for_flat_key(key: str) -> str:
     if key.startswith("org_"):
         return "organization"
     if key.startswith("cbr_"):
+        return "project_legal_data"
+    if key.startswith("dominio_") or key.startswith("sag_") or key.startswith("matriz_") or key.startswith("personeria_") or key.startswith("plano_"):
         return "project_legal_data"
     if key.startswith("servidumbre_"):
         return "geometry"
@@ -95,6 +97,21 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
     record = lot.get("lot_records") or {}
     project = lot.get("projects") or {}
     org = project.get("organizations") or {}
+
+    # Consultar project_legal_data para el proyecto del lote
+    project_id = project.get("id")
+    legal_data = {}
+    if project_id:
+        legal_result = await asyncio.to_thread(
+            lambda: (
+                supabase.table("project_legal_data")
+                .select("*")
+                .eq("project_id", project_id)
+                .maybe_single()
+                .execute()
+            )
+        )
+        legal_data = legal_result.data or {}
 
     payment_result = await asyncio.to_thread(
         lambda: (
@@ -142,6 +159,20 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
         "cbr_fecha_salida_estimada": str(
             record.get("cbr_fecha_salida_estimada", "") or ""
         ),
+        # CBR / Dominio desde project_legal_data
+        "dominio_cbr_fojas": legal_data.get("dominio_cbr_fojas", "") or record.get("cbr_numero_petitorio", ""),
+        "dominio_cbr_numero": legal_data.get("dominio_cbr_numero", ""),
+        "dominio_cbr_ano": legal_data.get("dominio_cbr_ano", ""),
+        "dominio_fojas_vigente": legal_data.get("dominio_fojas_vigente", ""),
+        "sag_resolucion_numero": legal_data.get("sag_resolucion_numero", ""),
+        "sag_resolucion_ano": legal_data.get("sag_resolucion_ano", ""),
+        "plano_archivo_numero": legal_data.get("plano_archivo_numero", ""),
+        "matriz_cbr_fojas": legal_data.get("matriz_cbr_fojas", ""),
+        "matriz_cbr_numero": legal_data.get("matriz_cbr_numero", ""),
+        "matriz_cbr_ano": legal_data.get("matriz_cbr_ano", ""),
+        "personeria_notario": legal_data.get("personeria_notario", ""),
+        "personeria_repre_nombre": legal_data.get("personeria_repre_nombre", ""),
+        "personeria_repre_rut": legal_data.get("personeria_repre_rut", ""),
         # Proyecto
         "proyecto_nombre": project.get("name", ""),
         "proyecto_comuna": project.get("comuna", ""),
