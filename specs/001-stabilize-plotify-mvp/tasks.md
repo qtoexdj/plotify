@@ -204,16 +204,16 @@
 
 ### Tests for User Story 6
 
-- [ ] T082 [P] [US6] Add responsive smoke tests for reservation UI in apps/web/tests/mvp-responsive.test.ts; Acceptance: vendor can complete reservation request at mobile and desktop widths; Verify: `pnpm test:web`
-- [ ] T083 [P] [US6] Add responsive smoke tests for admin approval UI in apps/web/tests/mvp-responsive.test.ts; Acceptance: admin approve/reject controls are visible and usable at mobile and desktop widths; Verify: `pnpm test:web`
-- [ ] T084 [P] [US6] Add responsive smoke tests for document generation UI in apps/web/tests/mvp-responsive.test.ts; Acceptance: variable review and generation controls remain accessible on mobile and usable on desktop; Verify: `pnpm test:web`
+- [x] T082 [P] [US6] Add responsive smoke tests for reservation UI in apps/web/tests/mvp-responsive.test.ts; Acceptance: vendor can complete reservation request at mobile and desktop widths; Verify: `pnpm test:web`
+- [x] T083 [P] [US6] Add responsive smoke tests for admin approval UI in apps/web/tests/mvp-responsive.test.ts; Acceptance: admin approve/reject controls are visible and usable at mobile and desktop widths; Verify: `pnpm test:web`
+- [x] T084 [P] [US6] Add responsive smoke tests for document generation UI in apps/web/tests/mvp-responsive.test.ts; Acceptance: variable review and generation controls remain accessible on mobile and usable on desktop; Verify: `pnpm test:web`
 
 ### Implementation for User Story 6
 
-- [ ] T085 [US6] Make lot reservation form responsive in apps/web/src/components/projects/LotReservationForm.tsx; Acceptance: buyer fields, validation errors, and submit action fit mobile without overlap; Verify: `pnpm build:web`
-- [ ] T086 [US6] Make admin approval panel responsive in apps/web/src/components/dashboard/approvals/pending-approvals-panel.tsx; Acceptance: decision controls stay visible and primary context remains readable on mobile; Verify: `pnpm build:web`
-- [ ] T087 [US6] Make document generation wizard responsive in apps/web/src/components/dashboard/documents/generation-wizard.tsx; Acceptance: variables, preview, missing-data controls, and generate actions remain usable across widths; Verify: `pnpm build:web`
-- [ ] T088 [US6] Document responsive manual QA in specs/001-stabilize-plotify-mvp/quickstart.md; Acceptance: quickstart lists desktop and mobile checks for P1 flows; Verify: `pnpm build:web`
+- [x] T085 [US6] Make lot reservation form responsive in apps/web/src/components/projects/LotReservationForm.tsx; Acceptance: buyer fields, validation errors, and submit action fit mobile without overlap; Verify: `pnpm build:web`
+- [x] T086 [US6] Make admin approval panel responsive in apps/web/src/components/dashboard/approvals/pending-approvals-panel.tsx; Acceptance: decision controls stay visible and primary context remains readable on mobile; Verify: `pnpm build:web`
+- [x] T087 [US6] Make document generation wizard responsive in apps/web/src/components/dashboard/documents/generation-wizard.tsx; Acceptance: variables, preview, missing-data controls, and generate actions remain usable across widths; Verify: `pnpm build:web`
+- [x] T088 [US6] Document responsive manual QA in specs/001-stabilize-plotify-mvp/quickstart.md; Acceptance: quickstart lists desktop and mobile checks for P1 flows; Verify: `pnpm build:web`
 
 **Checkpoint**: US6 confirms pilot usability across target devices.
 

@@ -633,8 +633,8 @@ export function GenerationWizard({
       <div className="space-y-3">
         {/* Vendedor */}
         <SectionCollapsible sectionKey="vendedor" title="Vendedor" icon="📦">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5 col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5 col-span-1 sm:col-span-2">
               <Label className="text-xs text-muted-foreground">Tipo</Label>
               <Select
                 value={watchVendedorTipo}
@@ -651,7 +651,7 @@ export function GenerationWizard({
             </div>
             <FormField label="Nombre / Razón Social" fieldName="vendedor_nombre" />
             <FormField label="RUT" fieldName="vendedor_rut" placeholder="12.345.678-9" />
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField label="Domicilio" fieldName="vendedor_domicilio" />
             </div>
           </div>
@@ -659,7 +659,7 @@ export function GenerationWizard({
 
         {/* Comprador */}
         <SectionCollapsible sectionKey="comprador" title="Comprador" icon="👤">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Nombre completo" fieldName="comprador_nombre" />
             <FormField label="RUT" fieldName="comprador_rut" placeholder="12.345.678-9" />
             <FormField
@@ -668,7 +668,7 @@ export function GenerationWizard({
               placeholder="soltero/a, casado/a..."
             />
             <FormField label="Profesión / Giro" fieldName="comprador_profesion" />
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField label="Domicilio" fieldName="comprador_domicilio" />
             </div>
           </div>
@@ -676,22 +676,22 @@ export function GenerationWizard({
 
         {/* Predio Matriz */}
         <SectionCollapsible sectionKey="matriz" title="Predio Matriz" icon="🏡">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Nombre del predio" fieldName="matriz_nombre_predio" />
             <FormField label="Ubicación" fieldName="matriz_ubicacion" />
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField label="Superficie total" fieldName="matriz_superficie_total" />
             </div>
-            <Separator className="col-span-2" />
-            <div className="col-span-2 text-xs font-medium text-muted-foreground">
+            <Separator className="col-span-1 sm:col-span-2" />
+            <div className="col-span-1 sm:col-span-2 text-xs font-medium text-muted-foreground">
               Deslindes del predio matriz
             </div>
             <FormField label="Norte" fieldName="matriz_norte" textarea />
             <FormField label="Sur" fieldName="matriz_sur" textarea />
             <FormField label="Oriente" fieldName="matriz_oriente" textarea />
             <FormField label="Poniente" fieldName="matriz_poniente" textarea />
-            <Separator className="col-span-2" />
-            <div className="col-span-2 text-xs font-medium text-muted-foreground">
+            <Separator className="col-span-1 sm:col-span-2" />
+            <div className="col-span-1 sm:col-span-2 text-xs font-medium text-muted-foreground">
               Historia de título
             </div>
             <FormField
@@ -712,10 +712,10 @@ export function GenerationWizard({
               fieldName="matriz_inscripcion_anio"
               placeholder="2024"
             />
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField label="CBR" fieldName="matriz_inscripcion_cbr" />
             </div>
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField label="Rol Avalúo" fieldName="matriz_rol_avaluo" placeholder="XXX-YYY" />
             </div>
           </div>
@@ -723,7 +723,7 @@ export function GenerationWizard({
 
         {/* SAG */}
         <SectionCollapsible sectionKey="sag" title="SAG (Subdivisión)" icon="📋">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="N° Certificado" fieldName="sag_certificado_numero" />
             <FormField
               label="Fecha certificado"
@@ -737,14 +737,14 @@ export function GenerationWizard({
 
         {/* Lote */}
         <SectionCollapsible sectionKey="lote" title="Lote" icon="📐">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="col-span-1 sm:col-span-2">
               <FormField label="Número del lote (en palabras)" fieldName="lote_numero_nombre" />
             </div>
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField label="Superficie total (en palabras)" fieldName="lote_superficie_total" />
             </div>
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField
                 label="Deslindes del lote"
                 fieldName="lote_deslindes"
@@ -764,7 +764,7 @@ export function GenerationWizard({
                 }
               />
             </div>
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField
                 label="Rol de trámite"
                 fieldName="lote_rol_tramite"
@@ -787,14 +787,14 @@ export function GenerationWizard({
               </span>
             </div>
             {watchServidumbreAplica && (
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="col-span-1 sm:col-span-2">
                   <FormField
                     label="Superficie servidumbre (en palabras)"
                     fieldName="servidumbre_superficie"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-2">
                   <FormField
                     label="Deslindes del tramo de servidumbre"
                     fieldName="servidumbre_deslindes_tramo"
@@ -821,7 +821,7 @@ export function GenerationWizard({
 
         {/* Transacción */}
         <SectionCollapsible sectionKey="transaccion" title="Transacción" icon="💰">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField
               label="Precio (números)"
               fieldName="transaccion_precio_numeros"
@@ -832,7 +832,7 @@ export function GenerationWizard({
               fieldName="transaccion_forma_pago"
               placeholder="al contado"
             />
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <FormField label="Precio (en palabras)" fieldName="transaccion_precio_letras" />
             </div>
           </div>
@@ -840,7 +840,7 @@ export function GenerationWizard({
 
         {/* Mandato */}
         <SectionCollapsible sectionKey="mandato" title="Mandato de Rectificación" icon="📜">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Nombre representante" fieldName="mandato_nombre_representante" />
             <FormField
               label="RUT representante"
@@ -862,7 +862,7 @@ export function GenerationWizard({
                 <span className="text-sm">Incluir datos de personería</span>
               </div>
               {watchPersoneriaAplica && (
-                <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <FormField
                     label="Tipo documento"
                     fieldName="personeria_tipo_documento"
@@ -873,7 +873,7 @@ export function GenerationWizard({
                   <FormField label="Fojas" fieldName="personeria_inscripcion_fojas" />
                   <FormField label="N° inscripción" fieldName="personeria_inscripcion_numero" />
                   <FormField label="Año" fieldName="personeria_inscripcion_anio" />
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <FormField label="CBR" fieldName="personeria_inscripcion_cbr" />
                   </div>
                 </div>

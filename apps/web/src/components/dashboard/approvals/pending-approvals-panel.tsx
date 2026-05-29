@@ -283,13 +283,13 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0">
+                  <div className="flex w-full md:w-auto gap-2 justify-stretch sm:justify-end border-t md:border-t-0 pt-3 md:pt-0">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleDecision(approval.id, 'reject')}
                       disabled={actionLoading !== null}
-                      className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-medium h-9 px-3.5 flex items-center gap-1.5"
+                      className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-medium h-9 px-3.5 flex items-center gap-1.5 flex-1 md:flex-initial justify-center"
                     >
                       {actionLoading === approval.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -302,7 +302,7 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
                       size="sm"
                       onClick={() => handleDecision(approval.id, 'approve')}
                       disabled={actionLoading !== null}
-                      className="bg-green-600 hover:bg-green-700 text-white font-medium h-9 px-3.5 flex items-center gap-1.5"
+                      className="bg-green-600 hover:bg-green-700 text-white font-medium h-9 px-3.5 flex items-center gap-1.5 flex-1 md:flex-initial justify-center"
                     >
                       {actionLoading === approval.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

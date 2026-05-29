@@ -163,3 +163,28 @@ P2 is complete when:
 - Sale approval mirrors reservation approval.
 - Escritura variables are sourced from project/lots/buyer/geometry/legal docs.
 - Escritura PDF/DOCX generation is versioned and traceable.
+
+## 8. Responsive Layout Manual Checks (P3)
+
+Verify usability of the P1 flows on both mobile (e.g. 360px - 480px width) and desktop screen sizes:
+
+### Lot Reservation Form
+
+1. Open the Reservation/Sale modal on a mobile device or responsive simulator.
+2. Verify all inputs (Nombre, RUT, Dirección, etc.) and submit buttons stretch to full width and display without overlaps.
+3. Validate that validation error messages render cleanly under their respective fields.
+4. Ensure the entire form is scrollable within viewports using `overflow-y-auto` wrapping.
+
+### Admin Approvals Panel
+
+1. Access the admin dashboard approvals panel on mobile width.
+2. Confirm the card items stack vertically into a clean layout.
+3. Confirm the decision buttons (Rechazar and Aprobar) expand to equal side-by-side widths on mobile and align inline nicely on desktop.
+4. Ensure no text truncates or overlaps, and all primary client/vendor metadata remains readable.
+
+### Document Generation Wizard
+
+1. Open the document generation flow.
+2. In Step 1, verify that templates render as responsive cards stacking from 1 column on mobile to 2 columns on tablet/desktop.
+3. In Step 2, confirm variables sections open/collapse smoothly, and form fields wrap elegantly using `grid-cols-1 sm:grid-cols-2`.
+4. In Step 3, confirm the HTML preview scales correctly to screen width without causing horizontal body scrolling.

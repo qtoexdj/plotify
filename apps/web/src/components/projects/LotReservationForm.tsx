@@ -97,7 +97,7 @@ export function LotReservationForm({
   }
 
   return (
-    <div className="space-y-4 py-2">
+    <div className="space-y-4 py-2 max-h-[80vh] overflow-y-auto px-1">
       <div className="mb-4">
         <h3 className="text-lg font-medium">
           {mode === 'direct_sale' ? `Venta Lote ${lotNumber}` : `Reservar Lote ${lotNumber}`}
@@ -265,11 +265,17 @@ export function LotReservationForm({
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 w-full">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting && (
                 <HugeiconsIcon icon={Loading02Icon} className="mr-2 h-4 w-4 animate-spin" />
               )}
