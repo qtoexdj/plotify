@@ -2,7 +2,7 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/001-stabilize-plotify-mvp/plan.md`
+`specs/002-notification-center-hardening/plan.md`
 
 <!-- SPECKIT END -->
 
@@ -18,9 +18,9 @@ shell commands, and other important information, read the current plan:
 
 This repository uses Spec Kit SDD as the implementation authority. The active feature is:
 
-- `specs/001-stabilize-plotify-mvp/spec.md`
-- `specs/001-stabilize-plotify-mvp/plan.md`
-- `specs/001-stabilize-plotify-mvp/tasks.md`
+- `specs/002-notification-center-hardening/spec.md`
+- `specs/002-notification-center-hardening/plan.md`
+- `specs/002-notification-center-hardening/tasks.md`
 - `.specify/memory/constitution.md`
 
 Before implementation:
@@ -44,7 +44,7 @@ Canonical implementation prompt:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/001-stabilize-plotify-mvp/tasks.md.
+Implementa solo TXXX de specs/002-notification-center-hardening/tasks.md.
 No avances a otra tarea.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
