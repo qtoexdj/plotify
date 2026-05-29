@@ -5,6 +5,7 @@ from schemas.approval import (
     ReservationResponse,
     DecisionResponse,
     ApprovalRequestDetailResponse,
+    SaleRequest,
 )
 from core.config import get_settings
 from core.database import get_supabase_client
@@ -55,6 +56,21 @@ async def request_reservation(
             raise HTTPException(
                 status_code=409,
                 detail=f"El lote no está disponible (estado actual: {lot['estado']}).",
+            )
+
+        # 1.5. Validar asignación del vendedor al proyecto (vendor_projects)
+        vp_res = (
+            supabase.table("vendor_projects")
+            .select("vendor_id")
+            .eq("vendor_id", body.vendor_id)
+            .eq("project_id", lot["project_id"])
+            .limit(1)
+            .execute()
+        )
+        if not vp_res.data:
+            raise HTTPException(
+                status_code=403,
+                detail="El vendedor no está asignado a este proyecto.",
             )
 
         # 2. Validar que no haya solicitud pendiente (doble check, el DB constraint lo bloquea igual)
@@ -126,6 +142,135 @@ async def request_reservation(
         raise
     except Exception as e:
         logger.error("Error procesando solicitud de reserva.", error=str(e))
+        raise HTTPException(
+            status_code=500, detail="Error interno procesando la solicitud."
+        )
+
+
+@router.post(
+    "/request-sale",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=ReservationResponse,
+    operation_id="requestSaleApproval",
+)
+async def request_sale(
+    body: SaleRequest,
+    redis: ArqRedis = Depends(get_arq_pool),
+):
+    """
+    Recibe una solicitud de venta desde el Frontend.
+    1. Valida que el lote esté reservado.
+    2. Valida que no haya otra solicitud de venta pendiente para ese lote.
+    3. Inserta en approval_requests.
+    4. Encola notificación al Admin vía Redis.
+    """
+    supabase = get_supabase_client()
+
+    try:
+        # 1. Validar lote disponible o reservado
+        lot_res = (
+            supabase.table("lots")
+            .select("id, estado, numero_lote, project_id, precio, projects!inner(organization_id)")
+            .eq("id", body.lot_id)
+            .limit(1)
+            .execute()
+        )
+        if not lot_res.data:
+            raise HTTPException(status_code=404, detail="Lote no encontrado.")
+        lot = lot_res.data[0]
+        organization_id = await require_lot_organization(
+            body.lot_id, body.organization_id, supabase=supabase
+        )
+        if lot["estado"] not in ["disponible", "reservado"]:
+            raise HTTPException(
+                status_code=409,
+                detail=f"El lote no está disponible ni reservado (estado actual: {lot['estado']}).",
+            )
+
+        # 1.5. Validar asignación del vendedor al proyecto (vendor_projects)
+        vp_res = (
+            supabase.table("vendor_projects")
+            .select("vendor_id")
+            .eq("vendor_id", body.vendor_id)
+            .eq("project_id", lot["project_id"])
+            .limit(1)
+            .execute()
+        )
+        if not vp_res.data:
+            raise HTTPException(
+                status_code=403,
+                detail="El vendedor no está asignado a este proyecto.",
+            )
+
+        # 2. Validar que no haya NINGUNA solicitud pendiente en total para este lote (bloqueo global)
+        pending_res = (
+            supabase.table("approval_requests")
+            .select("id")
+            .eq("lot_id", body.lot_id)
+            .eq("status", "pending")
+            .limit(1)
+            .execute()
+        )
+        if pending_res.data:
+            raise HTTPException(
+                status_code=409,
+                detail="Ya existe una solicitud pendiente para este lote.",
+            )
+
+        # 2.5. Obtener teléfono del vendedor si viene vacío del frontend
+        vendor_phone = body.vendor_phone
+        if not vendor_phone:
+            profile_res = (
+                supabase.table("profiles")
+                .select("phone, telegram_chat_id")
+                .eq("id", body.vendor_id)
+                .limit(1)
+                .execute()
+            )
+            if profile_res.data:
+                profile = profile_res.data[0]
+                if body.vendor_platform == "telegram" and profile.get("telegram_chat_id"):
+                    vendor_phone = profile["telegram_chat_id"]
+                elif profile.get("phone"):
+                    vendor_phone = profile["phone"]
+
+        # 3. Insertar solicitud
+        insert_data = {
+            "lot_id": body.lot_id,
+            "organization_id": organization_id,
+            "vendor_id": body.vendor_id,
+            "vendor_name": body.vendor_name,
+            "vendor_phone": vendor_phone,
+            "vendor_platform": body.vendor_platform,
+            "payload": body.payload.model_dump(mode="json"),
+            "status": "pending",
+            "request_type": "sale",
+            "sale_mode": "direct" if lot["estado"] == "disponible" else "reserved",
+            "previous_lot_state": lot["estado"],
+        }
+        insert_res = supabase.table("approval_requests").insert(insert_data).execute()
+
+        if not insert_res.data:
+            raise HTTPException(
+                status_code=500, detail="Error al crear la solicitud de aprobación de venta."
+            )
+
+        approval_id = insert_res.data[0]["id"]
+
+        # 4. Encolar notificación al admin
+        await redis.enqueue_job("notify_admin_approval", approval_id)
+        logger.info(
+            "Solicitud de venta creada y encolada.",
+            approval_id=approval_id,
+            lot_id=body.lot_id,
+        )
+
+        return ReservationResponse(approval_id=approval_id)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error procesando solicitud de venta.", error=str(e))
         raise HTTPException(
             status_code=500, detail="Error interno procesando la solicitud."
         )

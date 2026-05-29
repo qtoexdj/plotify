@@ -30,7 +30,7 @@ const nullableDate = z
 
 const lotSchema = z.object({
   numero_lote: z.string().min(1).optional(),
-  estado: z.enum(['disponible', 'reservado', 'vendido']).optional(),
+  estado: z.enum(['disponible', 'reservado']).optional(),
   observaciones: nullableString,
   vendedor_id: nullableUuid,
   precio: nullableNumber,

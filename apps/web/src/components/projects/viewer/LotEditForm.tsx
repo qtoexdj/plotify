@@ -129,7 +129,6 @@ export function LotEditForm({ lotDetails, onSave, onCancel }: LotEditFormProps) 
               <SelectContent>
                 <SelectItem value="disponible">Disponible</SelectItem>
                 <SelectItem value="reservado">Reservado</SelectItem>
-                <SelectItem value="vendido">Vendido</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -623,3 +623,47 @@ async def test_telegram_callback_idempotency_repeated_decisions():
     assert supabase.rpc.call_count == 2
 
 
+async def test_telegram_webhook_callback_enqueues_sale_approve_decision():
+    """El webhook de Telegram debe recibir callback de aprobación de venta, responder a Telegram y encolar el job en Redis con argumentos correctos."""
+    from fastapi.testclient import TestClient
+
+    mock_redis.reset_mock()
+    telegram_client = MagicMock()
+    telegram_client.answer_callback_query = AsyncMock(return_value=True)
+    telegram_client.edit_message_text = AsyncMock()
+
+    client = TestClient(_build_webhook_app())
+
+    with (
+        patch(
+            "integrations.telegram_client.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+        ),
+    ):
+        response = client.post(
+            "/api/v1/webhook/telegram/org-a",
+            json={
+                "callback_query": {
+                    "id": "callback-125",
+                    "data": "approve:approval-uuid-sale",
+                    "from": {"id": 999888},
+                    "message": {
+                        "message_id": 556,
+                        "text": "Solicitud de Venta Lote 12"
+                    }
+                }
+            }
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    telegram_client.answer_callback_query.assert_awaited_once_with("callback-125")
+    telegram_client.edit_message_text.assert_awaited_once()
+    # Verificar encolamiento asertivo de Redis
+    mock_redis.enqueue_job.assert_awaited_once_with(
+        "process_admin_decision", "org-a", "approval-uuid-sale", "approve", "999888"
+    )

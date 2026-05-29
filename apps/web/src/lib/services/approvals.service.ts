@@ -109,3 +109,63 @@ export async function resolveApprovalRequest(
     success: true,
   }
 }
+
+type SaleRequestBody = OperationRequestBody<'requestSaleApproval'>
+type SaleResponseBody = OperationResponse<'requestSaleApproval'>
+
+export interface CreateSaleApprovalRequestParams {
+  lotId: string
+  organizationId: string
+  vendorId: string
+  vendorName: string
+  vendorPhone: string
+  vendorPlatform: 'telegram' | 'whatsapp'
+  payload: {
+    cliente_nombre: string
+    cliente_run: string
+    valor_final: number
+    notaria?: string | null
+    fecha_firma?: string | null
+  }
+}
+
+/**
+ * Crea una solicitud de aprobación de venta.
+ * Delega la lógica de validación e inserción al microservicio (plotify_chat)
+ */
+export async function createSaleApprovalRequest(
+  params: CreateSaleApprovalRequestParams
+): Promise<ApprovalServiceResult> {
+  const body: SaleRequestBody = {
+    lot_id: params.lotId,
+    organization_id: params.organizationId,
+    vendor_id: params.vendorId,
+    vendor_name: params.vendorName,
+    vendor_phone: params.vendorPhone,
+    vendor_platform: params.vendorPlatform,
+    payload: params.payload,
+  }
+
+  const { data, error, status } = await microserviceFetch<SaleResponseBody>(
+    '/api/v1/approvals/request-sale',
+    {
+      method: 'POST',
+      body,
+    }
+  )
+
+  if (error || !data) {
+    return {
+      success: false,
+      error: error ?? 'Error al enviar la solicitud al Agente',
+      code: status === 409 ? 'PENDING_EXISTS' : status === 404 ? 'LOT_NOT_FOUND' : 'INSERT_FAILED',
+    }
+  }
+
+  return {
+    success: true,
+    approval_id: data.approval_id,
+    status: 'pending',
+    message: 'Solicitud de venta enviada al administrador para aprobación.',
+  }
+}

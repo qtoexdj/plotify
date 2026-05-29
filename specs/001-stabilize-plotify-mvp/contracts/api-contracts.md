@@ -167,10 +167,20 @@ Current gap:
 
 Contract requirement:
 
-- Vendor/admin can request sale.
+- Vendor/admin can request sale from an eligible lot:
+  - `disponible` for direct sale.
+  - `reservado` for sale after reservation.
 - Admin can approve/reject from Telegram or web.
 - Approved sale changes lot state to sold atomically.
-- Rejected sale preserves previous commercial state.
+- Rejected sale preserves previous commercial state (`disponible` or
+  `reservado`).
+- The sale request contract must include or server-derive `sale_mode` and
+  `previous_lot_state` so Telegram, audit, and RPC resolution can distinguish
+  direct sale from sale after reservation.
+- The server must validate tenant, vendor assignment, current lot state, and
+  absence of any pending approval for the same lot before inserting.
+- If an admin initiates the sale and is not a vendor, the request must use a
+  valid `vendors.id` from the lot/project context, not the admin `user.id`.
 
 Implementation options:
 

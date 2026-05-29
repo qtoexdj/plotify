@@ -148,20 +148,26 @@ relevantes.
 **Why this priority**: La venta cierra el ciclo comercial después de reserva y
 permite validar que el sistema soporta estados reales del negocio.
 
-**Independent Test**: Puede probarse a partir de un lote reservado; se solicita
-venta, el administrador aprueba desde uno de los canales disponibles, el lote
-queda vendido y el historial refleja la operación.
+**Independent Test**: Puede probarse desde dos puntos de partida: un lote
+disponible vendido de forma directa y un lote reservado que avanza a venta. En
+ambos casos se solicita venta, el administrador aprueba desde uno de los canales
+disponibles, el lote queda vendido y el historial refleja si la venta fue
+directa o posterior a una reserva.
 
 **Acceptance Scenarios**:
 
-1. **Given** un lote reservado, **When** se solicita venta con datos finales del
+1. **Given** un lote disponible, **When** se solicita una venta directa con datos
+   finales del comprador, **Then** el administrador recibe una solicitud de venta
+   directa y puede aprobarla o rechazarla antes de que el lote cambie a vendido.
+2. **Given** un lote reservado, **When** se solicita venta con datos finales del
    comprador, **Then** el administrador recibe la solicitud y puede aprobarla o
-   rechazarla.
-2. **Given** una venta aprobada, **When** el sistema actualiza el lote, **Then**
+   rechazarla como continuidad de la reserva.
+3. **Given** una venta aprobada, **When** el sistema actualiza el lote, **Then**
    el lote queda vendido y no disponible para nuevas reservas.
-3. **Given** una venta rechazada, **When** el vendedor revisa el lote, **Then**
-   el estado comercial previo permanece claro y no se genera documento final de
-   venta sin aprobación.
+4. **Given** una venta rechazada, **When** el vendedor revisa el lote, **Then**
+   el estado comercial previo permanece claro (`disponible` para venta directa
+   rechazada, `reservado` para venta posterior a reserva rechazada) y no se
+   genera documento final de venta sin aprobación.
 
 ---
 

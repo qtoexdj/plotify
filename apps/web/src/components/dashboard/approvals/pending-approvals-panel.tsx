@@ -29,10 +29,14 @@ interface ApprovalRequest {
   vendor_platform: string
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
+  request_type?: 'reservation' | 'sale'
+  sale_mode?: 'direct' | 'reserved' | null
+  previous_lot_state?: 'disponible' | 'reservado' | null
   payload: {
     cliente_nombre: string
     cliente_run: string
-    valor_reserva: number
+    valor_reserva?: number
+    valor_final?: number
     notaria?: string
     fecha_firma?: string
   }
@@ -135,8 +139,8 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
       } else {
         toast.success(
           action === 'approve'
-            ? 'Reserva aprobada exitosamente.'
-            : 'Reserva rechazada exitosamente.'
+            ? 'Solicitud aprobada exitosamente.'
+            : 'Solicitud rechazada exitosamente.'
         )
       }
       // Refrescar localmente
@@ -164,7 +168,7 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <ClipboardList className="h-5 w-5 text-primary" />
-          Aprobaciones de Reserva Pendientes
+          Aprobaciones Pendientes
           {approvals.length > 0 && (
             <Badge variant="destructive" className="ml-auto animate-pulse">
               {approvals.length} pendientes
@@ -172,8 +176,8 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
           )}
         </CardTitle>
         <CardDescription>
-          Revisa y decide sobre las intenciones de reserva cargadas por tus vendedores en tiempo
-          real.
+          Revisa y decide sobre las intenciones de reserva y venta cargadas por tus vendedores en
+          tiempo real.
         </CardDescription>
       </CardHeader>
 
@@ -183,16 +187,22 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
             <ClipboardList className="h-12 w-12 text-muted/60 mb-3 stroke-[1.2]" />
             <p className="font-medium text-sm text-slate-700">Todo al día</p>
             <p className="text-xs max-w-xs mt-1">
-              No hay solicitudes de reserva pendientes para tu organización en este momento.
+              No hay solicitudes de aprobación pendientes para tu organización en este momento.
             </p>
           </div>
         ) : (
           <div className="grid gap-4 max-h-[500px] overflow-y-auto pr-1">
             {approvals.map((approval) => {
+              const amount =
+                approval.request_type === 'sale'
+                  ? approval.payload.valor_final
+                  : approval.payload.valor_reserva
+
               const valorStr = new Intl.NumberFormat('es-CL', {
                 style: 'currency',
                 currency: 'CLP',
-              }).format(approval.payload.valor_reserva)
+                maximumFractionDigits: 0,
+              }).format(amount || 0)
 
               const fechaFirma = approval.payload.fecha_firma
                 ? new Date(approval.payload.fecha_firma).toLocaleDateString('es-CL', {
@@ -201,6 +211,8 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
                     year: 'numeric',
                   })
                 : 'No definida'
+
+              const isSale = approval.request_type === 'sale'
 
               return (
                 <div
@@ -215,6 +227,25 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
                       >
                         Lote {approval.lots?.numero_lote || '?'}
                       </Badge>
+                      {isSale ? (
+                        <Badge
+                          variant="outline"
+                          className={
+                            approval.sale_mode === 'direct'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-purple-50 text-purple-700 border-purple-200'
+                          }
+                        >
+                          {approval.sale_mode === 'direct' ? 'Venta Directa' : 'Venta s/ Reserva'}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-50 text-emerald-700 border-emerald-200"
+                        >
+                          Reserva
+                        </Badge>
+                      )}
                       <span className="text-xs text-muted-foreground font-medium">
                         {approval.lots?.projects?.name || 'Proyecto Desconocido'}
                       </span>
@@ -228,7 +259,10 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
                       </div>
                       <div className="flex items-center gap-1.5">
                         <DollarSign className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="font-semibold text-slate-700">Reserva:</span> {valorStr}
+                        <span className="font-semibold text-slate-700">
+                          {isSale ? 'Valor Final:' : 'Monto Reserva:'}
+                        </span>{' '}
+                        {valorStr}
                       </div>
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5 text-slate-400" />

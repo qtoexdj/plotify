@@ -88,6 +88,8 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             logger.warning("Ningún admin tiene datos de contacto.", org_id=org_id)
             return "NO_ADMIN_CONTACTS"
 
+        request_type = request.get("request_type", "reservation")
+
         # 4. Construir mensaje
         precio_total = lot_info.get("precio", 0)
         precio_str = (
@@ -95,25 +97,48 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             if precio_total
             else "No definido"
         )
-        valor_str = (
-            f"${payload.get('valor_reserva', 0):,.0f}"
-            if payload.get("valor_reserva")
-            else "No definido"
-        )
-        notaria_str = payload.get("notaria", "No definida")
-        fecha_str = payload.get("fecha_firma", "No definida")
 
-        message = (
-            f"📋 *Solicitud de Reserva*\n\n"
-            f"👤 *Vendedor:* {request['vendor_name']}\n"
-            f"📍 *Lote:* {numero_lote} — *Proyecto:* {project_name}\n"
-            f"🧑 *Cliente:* {payload.get('cliente_nombre', '?')} ({payload.get('cliente_run', '?')})\n"
-            f"💰 *Precio Lote:* {precio_str}\n"
-            f"💵 *Valor Reserva:* {valor_str}\n"
-            f"🏛️ *Notaría:* {notaria_str}\n"
-            f"📅 *Fecha Firma:* {fecha_str}\n\n"
-            f"¿Aprobáis esta reserva?"
-        )
+        if request_type == "sale":
+            valor_final_total = payload.get("valor_final", 0)
+            valor_final_str = (
+                f"${valor_final_total:,.0f}"
+                if valor_final_total
+                else "No definido"
+            )
+            notaria_str = payload.get("notaria", "No definida")
+            fecha_str = payload.get("fecha_firma", "No definida")
+
+            message = (
+                f"📋 *Solicitud de Venta*\n\n"
+                f"👤 *Vendedor:* {request['vendor_name']}\n"
+                f"📍 *Lote:* {numero_lote} — *Proyecto:* {project_name}\n"
+                f"🧑 *Cliente:* {payload.get('cliente_nombre', '?')} ({payload.get('cliente_run', '?')})\n"
+                f"💰 *Precio Lote:* {precio_str}\n"
+                f"💵 *Valor Venta Final:* {valor_final_str}\n"
+                f"🏛️ *Notaría:* {notaria_str}\n"
+                f"📅 *Fecha Firma:* {fecha_str}\n\n"
+                f"¿Aprobáis esta venta?"
+            )
+        else:
+            valor_str = (
+                f"${payload.get('valor_reserva', 0):,.0f}"
+                if payload.get("valor_reserva")
+                else "No definido"
+            )
+            notaria_str = payload.get("notaria", "No definida")
+            fecha_str = payload.get("fecha_firma", "No definida")
+
+            message = (
+                f"📋 *Solicitud de Reserva*\n\n"
+                f"👤 *Vendedor:* {request['vendor_name']}\n"
+                f"📍 *Lote:* {numero_lote} — *Proyecto:* {project_name}\n"
+                f"🧑 *Cliente:* {payload.get('cliente_nombre', '?')} ({payload.get('cliente_run', '?')})\n"
+                f"💰 *Precio Lote:* {precio_str}\n"
+                f"💵 *Valor Reserva:* {valor_str}\n"
+                f"🏛️ *Notaría:* {notaria_str}\n"
+                f"📅 *Fecha Firma:* {fecha_str}\n\n"
+                f"¿Aprobáis esta reserva?"
+            )
 
         # 5. Enviar a cada admin (prioridad: Telegram > WhatsApp)
         for contact in admin_contacts:

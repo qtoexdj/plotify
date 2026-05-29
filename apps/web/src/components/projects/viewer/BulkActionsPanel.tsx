@@ -163,7 +163,6 @@ export function BulkActionsPanel({
               <SelectContent>
                 <SelectItem value="disponible">Disponible</SelectItem>
                 <SelectItem value="reservado">Reservado</SelectItem>
-                <SelectItem value="vendido">Vendido</SelectItem>
               </SelectContent>
             </Select>
             <Button

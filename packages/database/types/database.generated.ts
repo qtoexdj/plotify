@@ -106,6 +106,9 @@ export type Database = {
           vendor_name: string
           vendor_phone: string
           vendor_platform: string
+          request_type: string
+          sale_mode: string | null
+          previous_lot_state: string | null
         }
         Insert: {
           admin_phone?: string | null
@@ -120,6 +123,9 @@ export type Database = {
           vendor_name: string
           vendor_phone: string
           vendor_platform: string
+          request_type?: string
+          sale_mode?: string | null
+          previous_lot_state?: string | null
         }
         Update: {
           admin_phone?: string | null
@@ -134,6 +140,9 @@ export type Database = {
           vendor_name?: string
           vendor_phone?: string
           vendor_platform?: string
+          request_type?: string
+          sale_mode?: string | null
+          previous_lot_state?: string | null
         }
         Relationships: [
           {
@@ -1587,6 +1596,10 @@ export type Database = {
         Args: { p_admin_phone: string; p_approval_id: string }
         Returns: Json
       }
+      approve_sale: {
+        Args: { p_admin_phone: string; p_approval_id: string }
+        Returns: Json
+      }
       can_manage_project_files: {
         Args: { project_id_text: string }
         Returns: boolean
@@ -1623,6 +1636,10 @@ export type Database = {
         Returns: undefined
       }
       reject_reservation: {
+        Args: { p_admin_phone?: string; p_approval_id: string }
+        Returns: Json
+      }
+      reject_sale: {
         Args: { p_admin_phone?: string; p_approval_id: string }
         Returns: Json
       }

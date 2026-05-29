@@ -248,19 +248,35 @@ Plan:
 
 ### P2-A: Sale Approval
 
-Current code has `directSale` and `updateLotStage`, but direct sale currently
-acts from the frontend/server action path rather than the same admin approval
-model as reservation.
+Current code has `directSale`, `requestSaleApproval`, and `updateLotStage`.
+Direct sale is a valid business path for a `disponible` lot, but it must mean
+"request a sale approval directly" rather than "mutate the lot to sold from the
+frontend/server action". Sale approval must also support the reserved-lot path,
+where a `reservado` lot advances to sold after admin approval.
 
 Plan:
 
 - Extend the approval model to support sale requests without duplicating the
   reservation pipeline.
+- Support two sale origins: `direct` from `disponible` and `reserved` from
+  `reservado`; derive and persist the origin from the lot state at request time.
 - Add sale-specific validation and atomic resolution so approved sale changes
-  lot state to `vendido` and rejected sale leaves prior state intact.
+  lot state to `vendido` and rejected sale leaves the captured prior state
+  intact (`disponible` or `reservado`).
+- Ensure all "Venta Directa" UI/actions create a `sale` approval request and
+  never mark a lot `vendido` before explicit admin approval.
+- Ensure admin-originated sale requests either use the lot's assigned vendor or
+  require the admin to choose a project-assigned vendor; do not send `user.id`
+  where `vendors.id` is required.
+- Block any second pending approval for the same lot, regardless of
+  `request_type`, before inserting a sale request.
+- Restrict sale resolution RPCs to trusted execution (`service_role`) or
+  validate admin organization membership inside the RPC before mutation.
 - Keep Telegram/web first-decision-wins semantics.
-- Add tests for reservation-to-sale transition, sale rejection, duplicate sale,
-  and cross-tenant sale approval.
+- Add tests for direct sale from `disponible`, reservation-to-sale transition,
+  sale rejection preserving both prior states, duplicate pending requests across
+  request types, vendor/admin sale initiation, RPC authorization, and
+  cross-tenant sale approval.
 
 ### P2-B: Escritura and Legal Project Documents
 

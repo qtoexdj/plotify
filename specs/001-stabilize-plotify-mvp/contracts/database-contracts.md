@@ -115,6 +115,11 @@ Required invariant:
 
 - Sale approval must not allow a pending reservation approval and pending sale
   approval to mutate the same lot into inconsistent states.
+- A lot can have at most one pending approval request total, regardless of
+  whether the request is `reservation` or `sale`.
+- A sale request can originate from `disponible` (`sale_mode = direct`) or
+  `reservado` (`sale_mode = reserved`) and must capture the prior lot state used
+  for rejection semantics and audit.
 
 Allowed approaches:
 
@@ -125,10 +130,14 @@ Required RPC behavior:
 
 - Lock approval row.
 - Lock lot row.
-- Validate current lot state.
+- Validate current lot state is still compatible with the captured sale origin:
+  `disponible` for direct sale or `reservado` for reserved sale.
 - Write `lot_records`.
 - Update lot state and timestamps.
 - Write audit/history.
+- Reject sale without mutating the lot, preserving the prior commercial state.
+- Run only through trusted service-role execution or validate admin membership
+  for the approval's organization inside the RPC before mutation.
 - Return already-processed or invalid-state errors without partial mutation.
 
 ### Project Legal Data

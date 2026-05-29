@@ -16,7 +16,8 @@ export interface components {
       "id": string
       "lot_id": string
       "organization_id": string
-      "payload": components["schemas"]["ReservationPayload"]
+      "payload": Record<string, unknown>
+      "request_type"?: string
       "status": string
       "vendor_id": string
       "vendor_name": string
@@ -173,6 +174,24 @@ export interface components {
       "message"?: string
       "status"?: string
     }
+    "SalePayload": {
+      "cliente_nombre": string
+      "cliente_run": string
+      "fecha_firma"?: string | null
+      "notaria"?: string | null
+      "valor_final": number
+    }
+    "SaleRequest": {
+      "lot_id": string
+      "organization_id": string
+      "payload": components["schemas"]["SalePayload"]
+      "previous_lot_state"?: "disponible" | "reservado" | null
+      "sale_mode"?: "direct" | "reserved" | null
+      "vendor_id": string
+      "vendor_name": string
+      "vendor_phone": string
+      "vendor_platform": string
+    }
     "SandboxRequest": {
       "organization_id": string
       "prompt_content": string
@@ -216,6 +235,12 @@ export interface operations {
     method: "POST"
     path: "/api/v1/approvals/request-reservation"
     requestBody: components["schemas"]["ReservationRequest"]
+    response: components["schemas"]["ReservationResponse"]
+  }
+  "requestSaleApproval": {
+    method: "POST"
+    path: "/api/v1/approvals/request-sale"
+    requestBody: components["schemas"]["SaleRequest"]
     response: components["schemas"]["ReservationResponse"]
   }
   "getApprovalRequest": {

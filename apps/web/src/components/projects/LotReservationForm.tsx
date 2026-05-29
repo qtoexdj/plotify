@@ -20,8 +20,7 @@ import {
   type LotReservationInput,
   formatRut,
 } from '@/lib/validations/lot-reservation.schema'
-import { requestReservationApproval } from '@/actions/request-approval.action'
-import { directSale } from '@/actions/lot-process.action'
+import { requestReservationApproval, requestSaleApproval } from '@/actions/request-approval.action'
 // Assuming we have a toast hook
 import { toast } from 'sonner'
 
@@ -67,10 +66,10 @@ export function LotReservationForm({
     setIsSubmitting(true)
     try {
       if (mode === 'direct_sale') {
-        const result = await directSale(projectId, lotId, data)
+        const result = await requestSaleApproval(projectId, lotId, data)
         if (result.success) {
-          toast.success('Venta Directa exitosa', {
-            description: `El lote ${lotNumber} ha sido reservado para venta directa.`,
+          toast.success('Solicitud de venta enviada', {
+            description: `La solicitud de venta del lote ${lotNumber} fue enviada al administrador para aprobación.`,
           })
           onSuccess()
         } else {
@@ -101,12 +100,10 @@ export function LotReservationForm({
     <div className="space-y-4 py-2">
       <div className="mb-4">
         <h3 className="text-lg font-medium">
-          {mode === 'direct_sale'
-            ? `Venta Directa Lote ${lotNumber}`
-            : `Reservar Lote ${lotNumber}`}
+          {mode === 'direct_sale' ? `Venta Lote ${lotNumber}` : `Reservar Lote ${lotNumber}`}
         </h3>
         <p className="text-sm text-gray-500">
-          Complete los datos del cliente para realizar la{' '}
+          Complete los datos del cliente para solicitar la{' '}
           {mode === 'direct_sale' ? 'venta' : 'reserva'}.
         </p>
       </div>
@@ -256,7 +253,9 @@ export function LotReservationForm({
               name="valor_reserva"
               render={({ field }) => (
                 <FormItem className="col-span-1 md:col-span-2">
-                  <FormLabel>Valor Reserva ($)</FormLabel>
+                  <FormLabel>
+                    {mode === 'direct_sale' ? 'Valor Final Venta ($)' : 'Valor Reserva ($)'}
+                  </FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="500000" {...field} />
                   </FormControl>

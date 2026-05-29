@@ -369,7 +369,6 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                           <SelectContent>
                             <SelectItem value="disponible">Disponible</SelectItem>
                             <SelectItem value="reservado">Reservado</SelectItem>
-                            <SelectItem value="vendido">Vendido</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -606,7 +605,6 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                       <SelectContent>
                         <SelectItem value="disponible">Disponible</SelectItem>
                         <SelectItem value="reservado">Reservado</SelectItem>
-                        <SelectItem value="vendido">Vendido</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

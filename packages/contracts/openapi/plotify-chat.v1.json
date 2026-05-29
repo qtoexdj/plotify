@@ -45,7 +45,7 @@
         "type": "object"
       },
       "ApprovalRequestDetailResponse": {
-        "description": "Detalle completo de una solicitud de aprobación de reserva.",
+        "description": "Detalle completo de una solicitud de aprobación de reserva o venta.",
         "properties": {
           "created_at": {
             "title": "Created At",
@@ -64,7 +64,14 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/ReservationPayload"
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "request_type": {
+            "default": "reservation",
+            "title": "Request Type",
+            "type": "string"
           },
           "status": {
             "title": "Status",
@@ -903,6 +910,120 @@
         "title": "ReservationResponse",
         "type": "object"
       },
+      "SalePayload": {
+        "description": "Datos del cliente y la operación de venta, almacenados como JSONB.",
+        "properties": {
+          "cliente_nombre": {
+            "minLength": 2,
+            "title": "Cliente Nombre",
+            "type": "string"
+          },
+          "cliente_run": {
+            "minLength": 7,
+            "title": "Cliente Run",
+            "type": "string"
+          },
+          "fecha_firma": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Firma"
+          },
+          "notaria": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notaria"
+          },
+          "valor_final": {
+            "exclusiveMinimum": 0.0,
+            "title": "Valor Final",
+            "type": "number"
+          }
+        },
+        "required": ["cliente_nombre", "cliente_run", "valor_final"],
+        "title": "SalePayload",
+        "type": "object"
+      },
+      "SaleRequest": {
+        "description": "Payload completo que envía el Frontend para solicitar una venta.",
+        "properties": {
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SalePayload"
+          },
+          "previous_lot_state": {
+            "anyOf": [
+              {
+                "enum": ["disponible", "reservado"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Lot State"
+          },
+          "sale_mode": {
+            "anyOf": [
+              {
+                "enum": ["direct", "reserved"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sale Mode"
+          },
+          "vendor_id": {
+            "title": "Vendor Id",
+            "type": "string"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          },
+          "vendor_phone": {
+            "title": "Vendor Phone",
+            "type": "string"
+          },
+          "vendor_platform": {
+            "pattern": "^(telegram|whatsapp)$",
+            "title": "Vendor Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lot_id",
+          "organization_id",
+          "vendor_id",
+          "vendor_name",
+          "vendor_phone",
+          "vendor_platform",
+          "payload"
+        ],
+        "title": "SaleRequest",
+        "type": "object"
+      },
       "SandboxRequest": {
         "properties": {
           "organization_id": {
@@ -1165,6 +1286,51 @@
           }
         ],
         "summary": "Request Reservation",
+        "tags": ["approvals"]
+      }
+    },
+    "/api/v1/approvals/request-sale": {
+      "post": {
+        "description": "Recibe una solicitud de venta desde el Frontend.\n1. Valida que el lote esté reservado.\n2. Valida que no haya otra solicitud de venta pendiente para ese lote.\n3. Inserta en approval_requests.\n4. Encola notificación al Admin vía Redis.",
+        "operationId": "requestSaleApproval",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Request Sale",
         "tags": ["approvals"]
       }
     },

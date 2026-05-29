@@ -257,12 +257,22 @@ export function LotInfoView({
 
           {/* ACTION BUTTONS */}
           {lotDetails.estado && ['reservado', 'vendido'].includes(lotDetails.estado) && (
-            <Button variant="outline" className="w-full mt-1" asChild>
-              <Link href={`/documentos/generar/${lotDetails.id}`}>
-                <HugeiconsIcon icon={File02Icon} className="h-4 w-4 mr-2" />
-                Generar Documento Legal
-              </Link>
-            </Button>
+            <div className="flex flex-col gap-2 mt-1">
+              <Button variant="outline" className="w-full" asChild>
+                <Link href={`/documentos/generar/${lotDetails.id}`}>
+                  <HugeiconsIcon icon={File02Icon} className="h-4 w-4 mr-2" />
+                  Generar Documento Legal
+                </Link>
+              </Button>
+              {lotDetails.estado === 'reservado' && (
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-10"
+                  onClick={() => onOpenReservation('direct_sale')}
+                >
+                  Solicitar Venta
+                </Button>
+              )}
+            </div>
           )}
 
           {lotDetails.estado === 'disponible' && (
@@ -359,7 +369,7 @@ export function LotInfoView({
                       size="sm"
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                     >
-                      Confirmar Escritura Firmada (Cerrar Venta)
+                      Confirmar Escritura Firmada
                     </Button>
                   )}
                 </div>

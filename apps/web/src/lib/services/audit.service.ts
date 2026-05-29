@@ -5,6 +5,9 @@ export const AUDIT_EVENT_LABELS: Record<string, string> = {
   'reservation.approved': 'Reserva Aprobada',
   'reservation.rejected': 'Reserva Rechazada',
   'reservation.released': 'Reserva Liberada',
+  'sale.requested': 'Venta Solicitada',
+  'sale.approved': 'Venta Aprobada',
+  'sale.rejected': 'Venta Rechazada',
   'document.generated': 'Documento Generado',
   'document.regenerated': 'Documento Regenerado',
   'document.sent': 'Documento Enviado',
@@ -26,6 +29,9 @@ export type AuditAction =
   | 'reservation.approved'
   | 'reservation.rejected'
   | 'reservation.released'
+  | 'sale.requested'
+  | 'sale.approved'
+  | 'sale.rejected'
   | 'document.generated'
   | 'document.regenerated'
   | 'document.sent'

@@ -2,10 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import {
-  lotReservationSchema,
-  type LotReservationInput,
-} from '@/lib/validations/lot-reservation.schema'
 import { updateStageSchema } from '@/lib/validations/process.schema'
 import { lotUpdateSchema, type LotUpdateInput } from '@/lib/validations/lot-update.schema'
 import type { ProcessStage } from '@/types/database.types'
@@ -92,107 +88,13 @@ export async function updateLotStage(
       return { success: false, error: 'Error al actualizar la etapa (RLS)' }
     }
 
-    // 4. Update Lot Status based on Stage
-    if (newStage === 'escritura_firmada') {
-      // Only 'escritura_firmada' moves lot to 'vendido'
-      const { error: lotUpdateError } = await supabase
-        .from('lots')
-        .update({
-          estado: 'vendido',
-          sold_at: new Date().toISOString(),
-        })
-        .eq('id', lotId)
-
-      if (lotUpdateError) {
-        logger.error({ lotId, error: lotUpdateError }, 'close_sale_failed')
-        return { success: true, message: 'Etapa actualizada, pero error al marcar vendido' }
-      }
-    } else {
-      // Any other stage keeps/reverts lot to 'reservado'
-      const { error: lotUpdateError } = await supabase
-        .from('lots')
-        .update({
-          estado: 'reservado',
-          sold_at: null, // Clear sold_at if moving back
-        })
-        .eq('id', lotId)
-
-      if (lotUpdateError) {
-        logger.error({ lotId, error: lotUpdateError }, 'update_lot_status_failed')
-      }
-    }
+    // 4. Update Lot Status based on Stage is handled exclusively by admin approvals.
 
     revalidatePath(`/proyectos/${projectId}`)
     revalidatePath('/operations')
     return { success: true, message: 'Etapa actualizada correctamente' }
   } catch (err) {
     logger.error({ lotId, error: err }, 'update_stage_server_error')
-    return { success: false, error: 'Error del servidor' }
-  }
-}
-
-export async function directSale(
-  projectId: string,
-  lotId: string,
-  data: LotReservationInput
-): Promise<UpdateStageResult> {
-  const supabase = await createClient()
-
-  // 1. Check permissions
-  const hasPermission = await checkUserPermissions(supabase, projectId)
-  if (!hasPermission) {
-    return { success: false, error: 'No tienes permisos para realizar venta directa' }
-  }
-
-  // 2. Validate Input
-  const validation = lotReservationSchema.safeParse(data)
-  if (!validation.success) {
-    return { success: false, error: validation.error.issues[0].message }
-  }
-  const {
-    cliente_nombre,
-    cliente_run,
-    cliente_direccion,
-    cliente_estado_civil,
-    cliente_ocupacion,
-    cliente_email,
-    cliente_telefono,
-    fecha,
-    notaria,
-    valor_reserva,
-  } = validation.data
-
-  try {
-    // 3 & 4. Llamar a lógica transaccional RPC
-    logger.info({ lotId }, 'direct_sale_rpc_executing')
-    const { data: rpcData, error: rpcError } = await supabase.rpc('direct_sale_lot', {
-      p_lot_id: lotId,
-      p_cliente_nombre: cliente_nombre,
-      p_cliente_run: cliente_run,
-      p_cliente_direccion: cliente_direccion || null,
-      p_cliente_estado_civil: cliente_estado_civil || null,
-      p_cliente_ocupacion: cliente_ocupacion || null,
-      p_cliente_email: cliente_email || null,
-      p_cliente_telefono: cliente_telefono || null,
-      p_firma_fecha: fecha || null,
-      p_firma_lugar: notaria || null,
-      p_abono: valor_reserva || null,
-    })
-
-    if (rpcError) {
-      logger.error({ lotId, error: rpcError }, 'direct_sale_rpc_failed')
-      throw new Error(`RPC call failed: ${rpcError.message}`)
-    }
-
-    if (!rpcData?.success) {
-      return { success: false, error: rpcData?.error || 'Error desconocido al procesar venta' }
-    }
-
-    logger.info({ lotId }, 'direct_sale_success')
-    revalidatePath(`/proyectos/${projectId}`)
-    return { success: true, message: rpcData.message }
-  } catch (err) {
-    logger.error({ lotId, error: err }, 'direct_sale_server_error')
     return { success: false, error: 'Error del servidor' }
   }
 }

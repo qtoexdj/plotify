@@ -2,7 +2,13 @@ from core.logger import get_logger
 from core.database import get_supabase_client
 from integrations.telegram_client import get_telegram_client_for_org
 from integrations.meta_client import meta_client
-from utils.audit import log_agent_action, EVENT_RESERVATION_APPROVED, EVENT_RESERVATION_REJECTED
+from utils.audit import (
+    log_agent_action,
+    EVENT_RESERVATION_APPROVED,
+    EVENT_RESERVATION_REJECTED,
+    EVENT_SALE_APPROVED,
+    EVENT_SALE_REJECTED,
+)
 
 logger = get_logger(__name__)
 
@@ -21,7 +27,7 @@ async def process_admin_decision(
         # Validar tenant de la solicitud de aprobación (cross-tenant safety)
         check_res = (
             supabase.table("approval_requests")
-            .select("organization_id")
+            .select("organization_id, request_type, sale_mode, previous_lot_state")
             .eq("id", approval_id)
             .limit(1)
             .execute()
@@ -31,6 +37,7 @@ async def process_admin_decision(
             return "NOT_FOUND"
 
         db_org_id = check_res.data[0].get("organization_id")
+        request_type = check_res.data[0].get("request_type", "reservation")
         if str(db_org_id) != str(org_id):
             logger.error(
                 "Brecha cross-tenant detectada en worker: org_id de la solicitud no coincide con el contexto del canal.",
@@ -41,16 +48,18 @@ async def process_admin_decision(
             return "TENANT_MISMATCH"
 
         if action == "approve":
+            rpc_name = "approve_sale" if request_type == "sale" else "approve_reservation"
             result = supabase.rpc(
-                "approve_reservation",
+                rpc_name,
                 {
                     "p_approval_id": approval_id,
                     "p_admin_phone": admin_id,  # Se guarda el ID (phone o chat_id)
                 },
             ).execute()
         elif action == "reject":
+            rpc_name = "reject_sale" if request_type == "sale" else "reject_reservation"
             result = supabase.rpc(
-                "reject_reservation",
+                rpc_name,
                 {
                     "p_approval_id": approval_id,
                     "p_admin_phone": admin_id,  # Se guarda el ID (phone o chat_id)
@@ -74,7 +83,10 @@ async def process_admin_decision(
 
         # Registrar en auditoría
         lot_id = rpc_data.get("lot_id")
-        audit_action = EVENT_RESERVATION_APPROVED if action == "approve" else EVENT_RESERVATION_REJECTED
+        if request_type == "sale":
+            audit_action = EVENT_SALE_APPROVED if action == "approve" else EVENT_SALE_REJECTED
+        else:
+            audit_action = EVENT_RESERVATION_APPROVED if action == "approve" else EVENT_RESERVATION_REJECTED
         channel = "telegram" if admin_id.isdigit() else "web"
 
         await log_agent_action(
@@ -88,6 +100,8 @@ async def process_admin_decision(
                 "approval_id": approval_id,
                 "admin_id": admin_id,
                 "channel": channel,
+                "sale_mode": check_res.data[0].get("sale_mode"),
+                "previous_lot_state": check_res.data[0].get("previous_lot_state"),
             }
         )
 
@@ -110,12 +124,20 @@ async def process_admin_decision(
             if lot_res.data:
                 lot_label = f"Lote {lot_res.data[0]['numero_lote']}"
 
-        if action == "approve":
-            vendor_msg = f"✅ ¡Buenas noticias, {vendor_name}! Tu reserva del *{lot_label}* fue *aprobada* por el administrador."
-            admin_msg = f"✅ *Reserva Aprobada*\nSe ha aprobado la reserva del *{lot_label}* y se ha notificado a {vendor_name} exitosamente."
+        if request_type == "sale":
+            if action == "approve":
+                vendor_msg = f"✅ ¡Buenas noticias, {vendor_name}! Tu venta del *{lot_label}* fue *aprobada* por el administrador."
+                admin_msg = f"✅ *Venta Aprobada*\nSe ha aprobado la venta del *{lot_label}* y se ha notificado a {vendor_name} exitosamente."
+            else:
+                vendor_msg = f"❌ Lamentamos informarte, {vendor_name}, que tu venta del *{lot_label}* fue *rechazada* por el administrador."
+                admin_msg = f"❌ *Venta Rechazada*\nSe ha rechazado la venta del *{lot_label}* y se ha notificado a {vendor_name}."
         else:
-            vendor_msg = f"❌ Lamentamos informarte, {vendor_name}, que tu reserva del *{lot_label}* fue *rechazada* por el administrador."
-            admin_msg = f"❌ *Reserva Rechazada*\nSe ha rechazado la reserva del *{lot_label}* y se ha notificado a {vendor_name}."
+            if action == "approve":
+                vendor_msg = f"✅ ¡Buenas noticias, {vendor_name}! Tu reserva del *{lot_label}* fue *aprobada* por el administrador."
+                admin_msg = f"✅ *Reserva Aprobada*\nSe ha aprobado la reserva del *{lot_label}* y se ha notificado a {vendor_name} exitosamente."
+            else:
+                vendor_msg = f"❌ Lamentamos informarte, {vendor_name}, que tu reserva del *{lot_label}* fue *rechazada* por el administrador."
+                admin_msg = f"❌ *Reserva Rechazada*\nSe ha rechazado la reserva del *{lot_label}* y se ha notificado a {vendor_name}."
 
         if vendor_phone:
             # Buscar si el vendedor tiene vinculado su Telegram en profiles usando su vendor_phone

@@ -170,29 +170,29 @@
 
 ## Phase 7: User Story 5 - Complete Sale With Admin Approval (Priority: P2)
 
-**Goal**: Vendor or admin requests sale, admin approves or rejects through Telegram or web, approved sale moves lot to sold atomically, rejected sale preserves prior state, and history is traceable.
+**Goal**: Vendor or admin requests sale either as direct sale from a `disponible` lot or as sale after reservation from a `reservado` lot, admin approves or rejects through Telegram or web, approved sale moves lot to sold atomically, rejected sale preserves the captured prior state, and history is traceable.
 
-**Independent Test**: Start from a reserved lot, request sale, approve from one channel, verify sold state and history, then confirm the second channel is already processed.
+**Independent Test**: Start from a `disponible` lot, request direct sale, approve from one channel, verify sold state and direct-sale history, then repeat from a `reservado` lot and confirm rejection preserves `reservado`; in both paths the second channel reports already processed.
 
 ### Tests for User Story 5
 
-- [ ] T070 [P] [US5] Add sale approval DB/RPC tests in apps/api/tests/test_mvp_sale.py; Acceptance: approve locks approval and lot, updates lot to vendido, and rejects invalid prior state; Verify: `pnpm test:api`
-- [ ] T071 [P] [US5] Add sale rejection tests in apps/api/tests/test_mvp_sale.py; Acceptance: rejection preserves previous lot state and writes audit/history; Verify: `pnpm test:api`
-- [ ] T072 [P] [US5] Add web sale request tests in apps/web/tests/mvp-sale.test.ts; Acceptance: seller/admin can request sale only for eligible assigned lot; Verify: `pnpm test:web`
-- [ ] T073 [P] [US5] Add Telegram sale callback tests in apps/api/tests/test_notifications_fase7.py; Acceptance: sale callbacks use first-decision-wins semantics like reservation; Verify: `pnpm test:api`
+- [x] T070 [P] [US5] Add sale approval DB/RPC tests in apps/api/tests/test_mvp_sale.py; Acceptance: approve locks approval and lot, updates `disponible` direct sale and `reservado` reserved sale to `vendido`, rejects invalid prior state, and enforces RPC authorization; Verify: `pnpm test:api`
+- [x] T071 [P] [US5] Add sale rejection tests in apps/api/tests/test_mvp_sale.py; Acceptance: rejection preserves `disponible` for direct sale and `reservado` for reserved sale, and writes audit/history with sale mode and prior state; Verify: `pnpm test:api`
+- [x] T072 [P] [US5] Add web sale request tests in apps/web/tests/mvp-sale.test.ts; Acceptance: seller/admin can request sale for eligible assigned `disponible` or `reservado` lots, admin-originated sale uses a valid `vendors.id`, and unassigned/foreign users are rejected; Verify: `pnpm test:web`
+- [x] T073 [P] [US5] Add Telegram sale callback tests in apps/api/tests/test_notifications_fase7.py; Acceptance: direct and reserved sale callbacks use first-decision-wins semantics like reservation and surface already-processed responses; Verify: `pnpm test:api`
 
 ### Implementation for User Story 5
 
-- [ ] T074 [US5] Add sale approval migration in packages/database/supabase/migrations/20260525000300_mvp_sale_approval.sql; Acceptance: approval_requests or compatible schema distinguishes reservation and sale without inconsistent pending states; Verify: `pnpm verify:migrations`
-- [ ] T075 [US5] Add sale resolution RPC in packages/database/supabase/migrations/20260525000300_mvp_sale_approval.sql; Acceptance: approve/reject sale mutates approval, lot, lot_record, and audit atomically; Verify: `pnpm verify:migrations`
-- [ ] T076 [US5] Regenerate DB types for sale approval in packages/database/types/database.generated.ts; Acceptance: TypeScript can access request type and sale RPC shapes; Verify: `pnpm typecheck:web`
-- [ ] T077 [US5] Extend approval request endpoint for sale in apps/api/api/v1/endpoints/approvals.py; Acceptance: sale request validates tenant, vendor assignment, and current lot state before pending insert; Verify: `pnpm contracts:generate`
-- [ ] T078 [US5] Extend approval processor for sale in apps/api/workers/tasks/approval_processor.py; Acceptance: sale decisions share idempotency, channel tracking, and audit behavior with reservation; Verify: `pnpm test:api`
-- [ ] T079 [US5] Extend Telegram approval notification for sale in apps/api/workers/tasks/approval_notifier.py; Acceptance: sale message includes enough buyer, lot, project, and price context for admin decision; Verify: `pnpm test:api`
-- [ ] T080 [US5] Replace direct sale path with approval-backed flow in apps/web/src/actions/lot-process.action.ts; Acceptance: lot cannot become vendido without explicit admin approval; Verify: `pnpm test:web`
-- [ ] T081 [US5] Add sale action UI in apps/web/src/components/projects/detail/lots-tab.tsx; Acceptance: eligible reserved lots can request sale and show pending/approved/rejected state; Verify: `pnpm build:web`
+- [x] T074 [US5] Add sale approval migration in packages/database/supabase/migrations/20260525000300_mvp_sale_approval.sql; Acceptance: approval_requests or compatible schema distinguishes reservation and sale, stores/derives sale mode and prior lot state, and enforces one pending approval per lot regardless of request type; Verify: `pnpm verify:migrations`
+- [x] T075 [US5] Add sale resolution RPC in packages/database/supabase/migrations/20260525000300_mvp_sale_approval.sql; Acceptance: approve/reject sale locks approval and lot, validates direct/reserved prior state, mutates approval/lot/lot_record/audit atomically on approval, preserves prior state on rejection, and is restricted to service role or validates admin membership; Verify: `pnpm verify:migrations`
+- [x] T076 [US5] Regenerate DB types for sale approval in packages/database/types/database.generated.ts; Acceptance: generated TypeScript can access request type, sale mode/prior-state fields if persisted, and sale RPC shapes without manual type edits; Verify: `pnpm typecheck:web`
+- [x] T077 [US5] Extend approval request endpoint for sale in apps/api/api/v1/endpoints/approvals.py; Acceptance: sale request validates tenant, vendor assignment, `disponible` or `reservado` state, sale mode/prior state, and absence of any pending approval for the lot before insert; Verify: `pnpm contracts:generate`
+- [x] T078 [US5] Extend approval processor for sale in apps/api/workers/tasks/approval_processor.py; Acceptance: sale decisions share idempotency, channel tracking, sale-mode-aware audit, and already-processed behavior with reservation; Verify: `pnpm test:api`
+- [x] T079 [US5] Extend Telegram approval notification for sale in apps/api/workers/tasks/approval_notifier.py; Acceptance: sale message includes direct/reserved sale mode plus buyer, lot, project, price, vendor, and enough context for admin decision; Verify: `pnpm test:api`
+- [x] T080 [US5] Replace direct sale mutation path with approval-backed flow in apps/web/src/actions/lot-process.action.ts and apps/web/src/actions/request-approval.action.ts; Acceptance: "Venta Directa" creates a sale approval using a valid `vendors.id`, lot cannot become `vendido` without explicit admin approval, and admin-originated sale selects or derives a project-assigned vendor; Verify: `pnpm test:web`
+- [x] T081 [US5] Add sale action UI in apps/web/src/components/projects/viewer/LotInfoView.tsx, apps/web/src/components/projects/LotReservationForm.tsx, and apps/web/src/components/dashboard/approvals/pending-approvals-panel.tsx; Acceptance: `disponible` lots show direct-sale request, `reservado` lots show sale-after-reservation request, pending/approved/rejected state is visible, and labels never imply the sale succeeded before approval; Verify: `pnpm build:web`
 
-**Checkpoint**: US5 completes commercial lifecycle after reservation while preserving approval traceability.
+**Checkpoint**: US5 completes both direct sale and reservation-to-sale lifecycle while preserving approval traceability.
 
 ---
 

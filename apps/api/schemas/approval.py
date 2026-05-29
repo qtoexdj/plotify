@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
 from datetime import date
 
 
@@ -25,6 +25,30 @@ class ReservationRequest(BaseModel):
     payload: ReservationPayload
 
 
+class SalePayload(BaseModel):
+    """Datos del cliente y la operación de venta, almacenados como JSONB."""
+
+    cliente_nombre: str = Field(..., min_length=2)
+    cliente_run: str = Field(..., min_length=7)
+    valor_final: float = Field(..., gt=0)
+    notaria: Optional[str] = None
+    fecha_firma: Optional[date] = None
+
+
+class SaleRequest(BaseModel):
+    """Payload completo que envía el Frontend para solicitar una venta."""
+
+    lot_id: str
+    organization_id: str
+    vendor_id: str
+    vendor_name: str
+    vendor_phone: str
+    vendor_platform: str = Field(..., pattern=r"^(telegram|whatsapp)$")
+    payload: SalePayload
+    sale_mode: Optional[Literal["direct", "reserved"]] = None
+    previous_lot_state: Optional[Literal["disponible", "reservado"]] = None
+
+
 class ReservationResponse(BaseModel):
     """Respuesta del endpoint al Frontend."""
 
@@ -41,7 +65,7 @@ class DecisionResponse(BaseModel):
 
 
 class ApprovalRequestDetailResponse(BaseModel):
-    """Detalle completo de una solicitud de aprobación de reserva."""
+    """Detalle completo de una solicitud de aprobación de reserva o venta."""
 
     id: str
     lot_id: str
@@ -52,4 +76,5 @@ class ApprovalRequestDetailResponse(BaseModel):
     vendor_platform: str
     status: str
     created_at: str
-    payload: ReservationPayload
+    payload: dict
+    request_type: str = "reservation"
