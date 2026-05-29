@@ -223,15 +223,15 @@
 
 **Purpose**: Validate contracts, security, history, and pilot readiness after selected stories are complete.
 
-- [ ] T089 [P] Run migration verification for all MVP migrations in packages/database/supabase/migrations; Acceptance: canonical migration assertion passes with no duplicate or out-of-root migrations; Verify: `pnpm verify:migrations`
-- [ ] T090 [P] Run OpenAPI regeneration and inspect contract diff in packages/contracts/openapi/plotify-chat.v1.json; Acceptance: generated contract contains only intentional approval/document deltas; Verify: `pnpm contracts:generate`
-- [ ] T091 [P] Run web typecheck and fix typed contract usage in apps/web/src; Acceptance: no TypeScript errors after DB/API generated type changes; Verify: `pnpm typecheck:web`
-- [ ] T092 [P] Run web test suite and fix regressions in apps/web/tests; Acceptance: web tests pass for geometry, approval, documents, sale, and responsive coverage; Verify: `pnpm test:web`
-- [ ] T093 [P] Run API test suite and fix regressions in apps/api/tests; Acceptance: API tests pass for tenant validation, approvals, documents, notifications, and sale/escritura coverage; Verify: `pnpm test:api`
-- [ ] T094 Run production web build in apps/web; Acceptance: Next.js build succeeds after all route/action/component changes; Verify: `pnpm build:web`
-- [ ] T095 Validate full quickstart in specs/001-stabilize-plotify-mvp/quickstart.md; Acceptance: P1 passes end-to-end and P2 passes for implemented scope with documented residual gaps; Verify: `pnpm verify:migrations && pnpm contracts:generate && pnpm typecheck:web && pnpm test:web && pnpm build:web && pnpm test:api`
-- [ ] T109 Run timed pilot smoke check from specs/001-stabilize-plotify-mvp/quickstart.md; Acceptance: reservation request can be completed under 5 minutes and admin approval is visible under 2 minutes in the documented smoke path; Verify: `pnpm test:web && pnpm test:api`
-- [ ] T110 Run 20-lot pilot fixture check from specs/001-stabilize-plotify-mvp/quickstart.md; Acceptance: at least 20 lots can be reviewed with reservation, sale/document readiness, generated document history, and no cross-tenant leakage; Verify: `pnpm test:web && pnpm test:api`
+- [x] T089 [P] Run migration verification for all MVP migrations in packages/database/supabase/migrations; Acceptance: canonical migration assertion passes with no duplicate or out-of-root migrations; Verify: `pnpm verify:migrations`
+- [x] T090 [P] Run OpenAPI regeneration and inspect contract diff in packages/contracts/openapi/plotify-chat.v1.json; Acceptance: generated contract contains only intentional approval/document deltas; Verify: `pnpm contracts:generate`
+- [x] T091 [P] Run web typecheck and fix typed contract usage in apps/web/src; Acceptance: no TypeScript errors after DB/API generated type changes; Verify: `pnpm typecheck:web`
+- [x] T092 [P] Run web test suite and fix regressions in apps/web/tests; Acceptance: web tests pass for geometry, approval, documents, sale, and responsive coverage; Verify: `pnpm test:web`
+- [x] T093 [P] Run API test suite and fix regressions in apps/api/tests; Acceptance: API tests pass for tenant validation, approvals, documents, notifications, and sale/escritura coverage; Verify: `pnpm test:api`
+- [x] T094 Run production web build in apps/web; Acceptance: Next.js build succeeds after all route/action/component changes; Verify: `pnpm build:web`
+- [x] T095 Validate full quickstart in specs/001-stabilize-plotify-mvp/quickstart.md; Acceptance: P1 passes end-to-end and P2 passes for implemented scope with documented residual gaps; Verify: `pnpm verify:migrations && pnpm contracts:generate && pnpm typecheck:web && pnpm test:web && pnpm build:web && pnpm test:api`
+- [x] T109 Run timed pilot smoke check from specs/001-stabilize-plotify-mvp/quickstart.md; Acceptance: reservation request can be completed under 5 minutes and admin approval is visible under 2 minutes in the documented smoke path; Verify: `pnpm test:web && pnpm test:api`
+- [x] T110 Run 20-lot pilot fixture check from specs/001-stabilize-plotify-mvp/quickstart.md; Acceptance: at least 20 lots can be reviewed with reservation, sale/document readiness, generated document history, and no cross-tenant leakage; Verify: `pnpm test:web && pnpm test:api`
 
 ---
 

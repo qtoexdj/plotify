@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { resolveApprovalRequest } from '@/lib/services/approvals.service'
+import { resolveApprovalRequestAction } from '@/actions/request-approval.action'
 
 interface ApprovalRequest {
   id: string
@@ -128,7 +128,12 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
   const handleDecision = async (approvalId: string, action: 'approve' | 'reject') => {
     setActionLoading(approvalId)
     try {
-      const result = await resolveApprovalRequest(approvalId, action, adminUserId, organizationId)
+      const result = await resolveApprovalRequestAction(
+        approvalId,
+        action,
+        adminUserId,
+        organizationId
+      )
 
       if (!result.success) {
         if (result.error === 'already_processed') {

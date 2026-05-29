@@ -347,3 +347,16 @@ export async function requestSaleApproval(
     message: result.message,
   }
 }
+
+/**
+ * Server Action para resolver una solicitud de aprobación (aprobación/rechazo) de forma segura desde el servidor.
+ */
+export async function resolveApprovalRequestAction(
+  approvalId: string,
+  action: 'approve' | 'reject',
+  adminId: string,
+  organizationId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const { resolveApprovalRequest } = await import('@/lib/services/approvals.service')
+  return resolveApprovalRequest(approvalId, action, adminId, organizationId)
+}
