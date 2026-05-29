@@ -11,7 +11,8 @@ from core.config import get_settings
 from core.database import get_supabase_client
 from core.logger import get_logger
 from core.redis import get_arq_pool
-from api.deps import require_lot_organization, verify_internal_secret
+from api.deps import require_lot_organization, verify_internal_secret, require_admin_role
+from workers.tasks.approval_processor import execute_admin_decision_db
 
 router = APIRouter(dependencies=[Depends(verify_internal_secret)])
 logger = get_logger(__name__)
@@ -358,20 +359,42 @@ async def decide_approval_request(
     """
     supabase = get_supabase_client()
     await require_approval_organization(approval_id, body.organization_id, supabase=supabase)
+    
+    # Validar que el admin_id tenga rol admin en la organizacion
+    await require_admin_role(body.admin_id, body.organization_id, supabase=supabase)
 
-    # Comprobar si ya fue procesado
-    approval_res = supabase.table("approval_requests").select("status").eq("id", approval_id).single().execute()
-    if approval_res.data and approval_res.data.get("status") != "pending":
-        raise HTTPException(status_code=409, detail="already_processed")
+    # Ejecutar la decision en la base de datos de forma sincrona (usando asyncio.to_thread por debajo)
+    # Si falla (ej: ya procesado), lanzara HTTPException(status_code=409) o ValueError
+    try:
+        db_result = await execute_admin_decision_db(
+            org_id=body.organization_id,
+            approval_id=approval_id,
+            action=body.action,
+            admin_id=body.admin_id,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    # Encolar procesamiento de decisión
-    await redis.enqueue_job(
-        "process_admin_decision",
-        body.organization_id,
-        approval_id,
-        body.action,
-        body.admin_id,
-    )
+    # Encolar únicamente el envío de notificaciones en Redis de forma asíncrona.
+    # Si Redis falla, logueamos el error pero devolvemos éxito ya que la DB ya mutó exitosamente.
+    try:
+        await redis.enqueue_job(
+            "send_decision_notifications",
+            body.organization_id,
+            approval_id,
+            body.action,
+            body.admin_id,
+            db_result,
+        )
+    except Exception as redis_err:
+        logger.error(
+            "notification_enqueue_failed",
+            approval_id=approval_id,
+            org_id=body.organization_id,
+            error=str(redis_err),
+        )
 
     return DecisionResponse(success=True)
 

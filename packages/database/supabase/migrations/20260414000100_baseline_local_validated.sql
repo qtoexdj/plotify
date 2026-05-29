@@ -507,7 +507,7 @@ BEGIN
             payload
         )
         SELECT
-            l.organization_id,
+            p.organization_id,
             'system',
             'STAGE_CHANGE',
             'lot_records',
@@ -518,6 +518,7 @@ BEGIN
                 'lot_id',    NEW.lot_id
             )
         FROM lots l
+        JOIN projects p ON l.project_id = p.id
         WHERE l.id = NEW.lot_id;
     END IF;
     RETURN NEW;

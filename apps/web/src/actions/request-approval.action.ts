@@ -353,10 +353,46 @@ export async function requestSaleApproval(
  */
 export async function resolveApprovalRequestAction(
   approvalId: string,
-  action: 'approve' | 'reject',
-  adminId: string,
-  organizationId: string
+  action: 'approve' | 'reject'
 ): Promise<{ success: true } | { success: false; error: string }> {
+  const supabase = await createClient()
+
+  // 1. Obtener usuario autenticado de forma segura en servidor
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { success: false, error: 'No autenticado' }
+  }
+
+  // 2. Obtener la organización real de la solicitud de aprobación desde base de datos
+  const { data: approval, error: approvalError } = await supabase
+    .from('approval_requests')
+    .select('organization_id')
+    .eq('id', approvalId)
+    .single()
+
+  if (approvalError || !approval?.organization_id) {
+    return { success: false, error: 'Solicitud de aprobación no encontrada o sin organización' }
+  }
+
+  const organizationId = approval.organization_id
+
+  // 3. Validar membresía y rol del administrador en la organización
+  const { data: membership, error: membershipError } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', organizationId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membershipError || !membership || membership.role !== 'admin') {
+    return { success: false, error: 'Acceso denegado: Se requieren privilegios de administrador' }
+  }
+
+  // 4. Invocar el servicio de microservicio pasándole los datos de sesión seguros del servidor
   const { resolveApprovalRequest } = await import('@/lib/services/approvals.service')
-  return resolveApprovalRequest(approvalId, action, adminId, organizationId)
+  return resolveApprovalRequest(approvalId, action, user.id, organizationId)
 }

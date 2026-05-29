@@ -49,11 +49,10 @@ interface ApprovalRequest {
 }
 
 interface PendingApprovalsPanelProps {
-  adminUserId: string
   organizationId: string
 }
 
-export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingApprovalsPanelProps) {
+export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelProps) {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null) // ID de la solicitud procesándose
@@ -128,12 +127,7 @@ export function PendingApprovalsPanel({ adminUserId, organizationId }: PendingAp
   const handleDecision = async (approvalId: string, action: 'approve' | 'reject') => {
     setActionLoading(approvalId)
     try {
-      const result = await resolveApprovalRequestAction(
-        approvalId,
-        action,
-        adminUserId,
-        organizationId
-      )
+      const result = await resolveApprovalRequestAction(approvalId, action)
 
       if (!result.success) {
         if (result.error === 'already_processed') {

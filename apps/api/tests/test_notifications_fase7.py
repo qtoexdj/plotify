@@ -376,9 +376,9 @@ class TestWorkerSettingsRegistration:
     def test_worker_has_document_delivery_functions(self):
         """WorkerSettings debe registrar notificaciones y delivery de documentos."""
         from workers.main_worker import WorkerSettings
-
+    
         function_names = {fn.__name__ for fn in WorkerSettings.functions}
-        assert len(WorkerSettings.functions) == 7
+        assert len(WorkerSettings.functions) == 8
         assert "send_generated_document" in function_names
         assert "retry_generated_document_delivery" in function_names
 

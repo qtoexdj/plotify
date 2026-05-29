@@ -46,7 +46,7 @@ export default async function DashboardPage() {
       </div>
 
       {member?.role === 'admin' && (
-        <PendingApprovalsPanel adminUserId={user.id} organizationId={member.organization_id} />
+        <PendingApprovalsPanel organizationId={member.organization_id} />
       )}
 
       <div className="space-y-4">

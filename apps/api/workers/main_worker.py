@@ -7,7 +7,7 @@ from workers.tasks.message_processor import (
     link_telegram_account,
 )
 from workers.tasks.approval_notifier import notify_admin_approval
-from workers.tasks.approval_processor import process_admin_decision
+from workers.tasks.approval_processor import process_admin_decision, send_decision_notifications
 from workers.tasks.notification_worker import (
     retry_generated_document_delivery,
     send_generated_document,
@@ -119,6 +119,7 @@ class WorkerSettings:
         process_incoming_message,
         notify_admin_approval,
         process_admin_decision,
+        send_decision_notifications,
         link_telegram_account,
         send_notification,  # Fase 7 — Notificaciones proactivas
         send_generated_document,

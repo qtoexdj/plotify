@@ -147,3 +147,45 @@ async def require_lot_organization(
             detail="organization_id no corresponde al lote solicitado.",
         )
     return organization_id
+
+
+async def require_admin_role(
+    admin_id: str,
+    organization_id: str,
+    supabase: Any | None = None,
+) -> None:
+    """
+    Verifica que el admin_id sea miembro de la organización y que tenga rol 'admin'.
+    Usa asyncio.to_thread para evitar bloquear el loop de FastAPI.
+    """
+    import asyncio
+    from fastapi import HTTPException
+    from core.database import get_supabase_client
+    
+    client = supabase or get_supabase_client()
+    
+    try:
+        result = await asyncio.to_thread(
+            lambda: (
+                client.table("organization_members")
+                .select("role")
+                .eq("organization_id", organization_id)
+                .eq("user_id", admin_id)
+                .single()
+                .execute()
+            )
+        )
+        # Validamos que el rol sea 'admin'
+        if not result.data or result.data.get("role") != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Acceso denegado: El usuario no tiene rol de administrador en esta organización.",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Acceso denegado: Error validando permisos de administrador ({str(e)}).",
+        )
+

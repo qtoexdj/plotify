@@ -56,7 +56,7 @@ BEGIN
     -- 2. Verificar que el lote esté en el estado previo capturado
     SELECT * INTO v_lot
     FROM public.lots
-    WHERE id = v_request.lot_id AND estado = COALESCE(v_request.previous_lot_state, 'reservado')
+    WHERE id = v_request.lot_id AND estado::text = COALESCE(v_request.previous_lot_state, 'reservado')
     FOR UPDATE;
 
     IF NOT FOUND THEN

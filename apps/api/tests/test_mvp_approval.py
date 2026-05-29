@@ -247,3 +247,144 @@ def test_tenant_pair_fixture_models_two_isolated_organizations(tenant_pair_fixtu
     assert tenant_a["vendor_project"]["project_id"] == tenant_a["project_id"]
     assert tenant_b["vendor_project"]["vendor_id"] == tenant_b["vendor_id"]
 
+
+async def test_admin_decision_redis_failure_still_returns_success():
+    """If DB mutation succeeds but Redis enqueue fails, the decide endpoint must still return success=True."""
+    from fastapi.testclient import TestClient
+    from core.redis import get_arq_pool
+
+    # Mock de Supabase
+    approval_requests_data = {
+        "organization_id": "org-a-uuid",
+        "request_type": "reservation",
+        "sale_mode": "online",
+        "previous_lot_state": "disponible"
+    }
+    
+    approval_query = MagicMock()
+    # Para require_approval_organization (single().execute())
+    approval_query.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
+        data=approval_requests_data
+    )
+    # Para execute_admin_decision_db (limit(1).execute())
+    approval_query.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[approval_requests_data]
+    )
+
+    org_members_query = MagicMock()
+    # Para require_admin_role (single().execute())
+    org_members_query.select.return_value.eq.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
+        data={"role": "admin"}
+    )
+
+    def get_table_mock(table_name):
+        if table_name == "approval_requests":
+            return approval_query
+        elif table_name == "organization_members":
+            return org_members_query
+        return MagicMock()
+
+    supabase = MagicMock()
+    supabase.table.side_effect = get_table_mock
+    
+    # Para execute_admin_decision_db (rpc().execute())
+    supabase.rpc.return_value.execute.return_value = MagicMock(
+        data={"success": True, "lot_id": "lot-a-uuid"}
+    )
+
+    # Mock Redis que falla
+    redis_mock = AsyncMock()
+    redis_mock.enqueue_job.side_effect = Exception("Redis connection failed")
+
+    app = _build_approvals_app()
+    app.dependency_overrides[get_arq_pool] = lambda: redis_mock
+
+    client = TestClient(app, headers={"X-Internal-Secret": "test-secret"})
+
+    with (
+        patch("api.v1.endpoints.approvals.get_supabase_client", return_value=supabase),
+        patch("core.database.get_supabase_client", return_value=supabase),
+        patch("workers.tasks.approval_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+        ),
+    ):
+        response = client.post(
+            "/api/v1/approvals/approval-123/decide",
+            json={
+                "action": "approve",
+                "organization_id": "org-a-uuid",
+                "admin_id": "admin-uuid-99",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    redis_mock.enqueue_job.assert_called_once()
+
+
+async def test_admin_decision_non_admin_member_returns_403():
+    """An organization member with 'user' role (not admin) attempting to decide must get 403 Forbidden."""
+    from fastapi.testclient import TestClient
+
+    # Mock de Supabase
+    approval_requests_data = {
+        "organization_id": "org-a-uuid",
+        "request_type": "reservation",
+        "sale_mode": "online",
+        "previous_lot_state": "disponible"
+    }
+    
+    approval_query = MagicMock()
+    # Para require_approval_organization (single().execute())
+    approval_query.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
+        data=approval_requests_data
+    )
+    # Para execute_admin_decision_db (limit(1).execute())
+    approval_query.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[approval_requests_data]
+    )
+
+    org_members_query = MagicMock()
+    # Para require_admin_role (single().execute())
+    org_members_query.select.return_value.eq.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
+        data={"role": "user"}
+    )
+
+    def get_table_mock(table_name):
+        if table_name == "approval_requests":
+            return approval_query
+        elif table_name == "organization_members":
+            return org_members_query
+        return MagicMock()
+
+    supabase = MagicMock()
+    supabase.table.side_effect = get_table_mock
+
+    client = TestClient(_build_approvals_app(), headers={"X-Internal-Secret": "test-secret"})
+
+    with (
+        patch("api.v1.endpoints.approvals.get_supabase_client", return_value=supabase),
+        patch("core.database.get_supabase_client", return_value=supabase),
+        patch("workers.tasks.approval_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "asyncio.to_thread",
+            new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+        ),
+    ):
+        response = client.post(
+            "/api/v1/approvals/approval-123/decide",
+            json={
+                "action": "approve",
+                "organization_id": "org-a-uuid",
+                "admin_id": "admin-uuid-99",
+            },
+        )
+
+    assert response.status_code == 403
+    assert "Acceso denegado: El usuario no tiene rol de administrador" in response.json()["detail"]
+
+
+
+
