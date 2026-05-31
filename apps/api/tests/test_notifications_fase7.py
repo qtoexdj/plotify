@@ -452,14 +452,38 @@ def _build_webhook_app():
     from fastapi import FastAPI
     from api.v1.endpoints.webhook import router as webhook_router
     from core.redis import get_arq_pool
+    from core.database import get_supabase_client
+    from unittest.mock import MagicMock
 
     app = FastAPI()
 
     async def _fake_arq_pool():
         return mock_redis
 
+    # Mock por defecto para autorizar a los usuarios de las pruebas existentes (T037 / T032)
+    mock_supabase = MagicMock()
+    
+    # Simular llamadas en cadena y encadenamiento seguro de Supabase de forma infinita
+    def get_table_mock(table_name):
+        table_mock = MagicMock()
+        if table_name == "profiles":
+            table_mock.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+                data=[{"id": "admin-profile-id"}]
+            )
+        elif table_name == "organization_members":
+            table_mock.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+                data=[{"role": "admin", "organization_id": "org-a", "user_id": "admin-profile-id"}]
+            )
+        return table_mock
+
+    mock_supabase.table.side_effect = get_table_mock
+    
+    app.dependency_overrides[get_supabase_client] = lambda: mock_supabase
     app.dependency_overrides[get_arq_pool] = _fake_arq_pool
     app.include_router(webhook_router, prefix="/api/v1/webhook")
+    
+    # Almacenar en el estado para poder usarlo en patches de los tests
+    app.state.mock_supabase = mock_supabase
     return app
 
 
@@ -471,10 +495,16 @@ async def test_telegram_webhook_callback_enqueues_approve_decision():
     telegram_client = MagicMock()
     telegram_client.answer_callback_query = AsyncMock(return_value=True)
     telegram_client.edit_message_text = AsyncMock()
+    telegram_client.send_text = AsyncMock()
 
-    client = TestClient(_build_webhook_app())
+    app = _build_webhook_app()
+    client = TestClient(app)
 
     with (
+        patch(
+            "workers.tasks.message_processor.get_supabase_client",
+            return_value=app.state.mock_supabase,
+        ),
         patch(
             "integrations.telegram_client.get_telegram_client_for_org",
             new=AsyncMock(return_value=telegram_client),
@@ -517,10 +547,16 @@ async def test_telegram_webhook_callback_enqueues_reject_decision():
     telegram_client = MagicMock()
     telegram_client.answer_callback_query = AsyncMock(return_value=True)
     telegram_client.edit_message_text = AsyncMock()
+    telegram_client.send_text = AsyncMock()
 
-    client = TestClient(_build_webhook_app())
+    app = _build_webhook_app()
+    client = TestClient(app)
 
     with (
+        patch(
+            "workers.tasks.message_processor.get_supabase_client",
+            return_value=app.state.mock_supabase,
+        ),
         patch(
             "integrations.telegram_client.get_telegram_client_for_org",
             new=AsyncMock(return_value=telegram_client),
@@ -631,10 +667,16 @@ async def test_telegram_webhook_callback_enqueues_sale_approve_decision():
     telegram_client = MagicMock()
     telegram_client.answer_callback_query = AsyncMock(return_value=True)
     telegram_client.edit_message_text = AsyncMock()
+    telegram_client.send_text = AsyncMock()
 
-    client = TestClient(_build_webhook_app())
+    app = _build_webhook_app()
+    client = TestClient(app)
 
     with (
+        patch(
+            "workers.tasks.message_processor.get_supabase_client",
+            return_value=app.state.mock_supabase,
+        ),
         patch(
             "integrations.telegram_client.get_telegram_client_for_org",
             new=AsyncMock(return_value=telegram_client),
@@ -667,3 +709,47 @@ async def test_telegram_webhook_callback_enqueues_sale_approve_decision():
     mock_redis.enqueue_job.assert_awaited_once_with(
         "process_admin_decision", "org-a", "approval-uuid-sale", "approve", "999888"
     )
+
+async def test_telegram_callback_authorization_denied():
+    """T032: Un callback de usuario no administrador o no vinculado de Telegram debe ser rechazado y no debe encolar la decisión."""
+    from fastapi.testclient import TestClient
+    mock_redis.reset_mock()
+    telegram_client = MagicMock()
+    telegram_client.answer_callback_query = AsyncMock(return_value=True)
+    telegram_client.send_text = AsyncMock()
+
+    app = _build_webhook_app()
+    client = TestClient(app)
+
+    # Mock de base de datos que simula que el usuario no tiene rol admin
+    mock_supabase = MagicMock()
+    mock_supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+
+    # Forzar el override de Supabase para esta prueba en particular
+    from core.database import get_supabase_client
+    client.app.dependency_overrides[get_supabase_client] = lambda: mock_supabase
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=mock_supabase),
+        patch("integrations.telegram_client.get_telegram_client_for_org", new=AsyncMock(return_value=telegram_client)),
+        patch("asyncio.to_thread", new=AsyncMock(side_effect=lambda fn, *a, **kw: fn())),
+    ):
+        response = client.post(
+            "/api/v1/webhook/telegram/org-a",
+            json={
+                "callback_query": {
+                    "id": "callback-126",
+                    "data": "approve:approval-uuid-abc",
+                    "from": {"id": 111111}, # ID no admin
+                    "message": {
+                        "message_id": 555,
+                        "text": "Solicitud de Reserva Lote 12"
+                    }
+                }
+            }
+        )
+
+    # Debería responder 200 OK para evitar reintentos de Telegram, pero no encolar el job y notificar falta de autorización
+    assert response.status_code == 200
+    mock_redis.enqueue_job.assert_not_awaited()
+

@@ -40,10 +40,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "block_id",
-          "position"
-        ],
+        "required": ["block_id", "position"],
         "title": "AddBlockToTemplateRequest",
         "type": "object"
       },
@@ -129,10 +126,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "bot_username",
-          "is_active"
-        ],
+        "required": ["bot_username", "is_active"],
         "title": "BotResponse",
         "type": "object"
       },
@@ -184,13 +178,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "organization_id",
-          "user_id",
-          "provider",
-          "display_name",
-          "credentials"
-        ],
+        "required": ["organization_id", "user_id", "provider", "display_name", "credentials"],
         "title": "ConnectRequest",
         "type": "object"
       },
@@ -252,12 +240,7 @@
             "title": "Variables"
           }
         },
-        "required": [
-          "organization_id",
-          "name",
-          "category",
-          "content"
-        ],
+        "required": ["organization_id", "name", "category", "content"],
         "title": "CreateBlockRequest",
         "type": "object"
       },
@@ -334,11 +317,7 @@
             "title": "Page Config"
           }
         },
-        "required": [
-          "organization_id",
-          "name",
-          "document_type"
-        ],
+        "required": ["organization_id", "name", "document_type"],
         "title": "CreateTemplateRequest",
         "type": "object"
       },
@@ -371,9 +350,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "content"
-        ],
+        "required": ["content"],
         "title": "CreateVersionRequest",
         "type": "object"
       },
@@ -393,11 +370,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "action",
-          "organization_id",
-          "admin_id"
-        ],
+        "required": ["action", "organization_id", "admin_id"],
         "title": "DecisionRequest",
         "type": "object"
       },
@@ -420,9 +393,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "DecisionResponse",
         "type": "object"
       },
@@ -486,10 +457,7 @@
           },
           "format": {
             "default": "pdf",
-            "enum": [
-              "pdf",
-              "docx"
-            ],
+            "enum": ["pdf", "docx"],
             "title": "Format",
             "type": "string"
           },
@@ -519,10 +487,7 @@
           },
           "selected_recipients": {
             "items": {
-              "enum": [
-                "vendedor",
-                "comprador"
-              ],
+              "enum": ["vendedor", "comprador"],
               "type": "string"
             },
             "title": "Selected Recipients",
@@ -533,11 +498,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "template_id",
-          "lot_id",
-          "organization_id"
-        ],
+        "required": ["template_id", "lot_id", "organization_id"],
         "title": "GenerateRequest",
         "type": "object"
       },
@@ -556,10 +517,7 @@
             "type": "string"
           },
           "format": {
-            "enum": [
-              "pdf",
-              "docx"
-            ],
+            "enum": ["pdf", "docx"],
             "title": "Format",
             "type": "string"
           },
@@ -620,10 +578,23 @@
             "type": "string"
           }
         },
-        "required": [
-          "organization_id"
-        ],
+        "required": ["organization_id"],
         "title": "InvalidateCacheRequest",
+        "type": "object"
+      },
+      "MarkReadResponse": {
+        "properties": {
+          "read_at": {
+            "title": "Read At",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": ["success", "read_at"],
+        "title": "MarkReadResponse",
         "type": "object"
       },
       "MetaChange": {
@@ -636,10 +607,7 @@
             "$ref": "#/components/schemas/MetaValue"
           }
         },
-        "required": [
-          "value",
-          "field"
-        ],
+        "required": ["value", "field"],
         "title": "MetaChange",
         "type": "object"
       },
@@ -655,10 +623,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "profile",
-          "wa_id"
-        ],
+        "required": ["profile", "wa_id"],
         "title": "MetaContact",
         "type": "object"
       },
@@ -676,10 +641,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "changes"
-        ],
+        "required": ["id", "changes"],
         "title": "MetaEntry",
         "type": "object"
       },
@@ -709,24 +671,12 @@
           },
           "type": {
             "default": "unknown",
-            "enum": [
-              "text",
-              "image",
-              "audio",
-              "document",
-              "interactive",
-              "button",
-              "unknown"
-            ],
+            "enum": ["text", "image", "audio", "document", "interactive", "button", "unknown"],
             "title": "Type",
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "from",
-          "timestamp"
-        ],
+        "required": ["id", "from", "timestamp"],
         "title": "MetaMessage",
         "type": "object"
       },
@@ -737,9 +687,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "body"
-        ],
+        "required": ["body"],
         "title": "MetaText",
         "type": "object"
       },
@@ -798,10 +746,7 @@
             "title": "Statuses"
           }
         },
-        "required": [
-          "messaging_product",
-          "metadata"
-        ],
+        "required": ["messaging_product", "metadata"],
         "title": "MetaValue",
         "type": "object"
       },
@@ -819,11 +764,189 @@
             "type": "string"
           }
         },
-        "required": [
-          "object",
-          "entry"
-        ],
+        "required": ["object", "entry"],
         "title": "MetaWebhookPayload",
+        "type": "object"
+      },
+      "NotificationCounts": {
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "rejected": {
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": ["pending", "approved", "rejected", "unread"],
+        "title": "NotificationCounts",
+        "type": "object"
+      },
+      "NotificationDecisionRequest": {
+        "properties": {
+          "action": {
+            "enum": ["approve", "reject"],
+            "title": "Action",
+            "type": "string"
+          },
+          "approval_id": {
+            "title": "Approval Id",
+            "type": "string"
+          }
+        },
+        "required": ["approval_id", "action"],
+        "title": "NotificationDecisionRequest",
+        "type": "object"
+      },
+      "NotificationDecisionResponse": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": ["success"],
+        "title": "NotificationDecisionResponse",
+        "type": "object"
+      },
+      "NotificationItem": {
+        "properties": {
+          "approval_id": {
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "can_decide": {
+            "title": "Can Decide",
+            "type": "boolean"
+          },
+          "client_name": {
+            "title": "Client Name",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lot_label": {
+            "title": "Lot Label",
+            "type": "string"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "request_type": {
+            "pattern": "^(reservation|sale)$",
+            "title": "Request Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "approval_id",
+          "request_type",
+          "status",
+          "project_name",
+          "lot_label",
+          "client_name",
+          "vendor_name",
+          "created_at",
+          "can_decide"
+        ],
+        "title": "NotificationItem",
+        "type": "object"
+      },
+      "NotificationListResponse": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/NotificationCounts"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": ["items", "counts"],
+        "title": "NotificationListResponse",
         "type": "object"
       },
       "PreviewRequest": {
@@ -841,11 +964,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "template_id",
-          "lot_id",
-          "organization_id"
-        ],
+        "required": ["template_id", "lot_id", "organization_id"],
         "title": "PreviewRequest",
         "type": "object"
       },
@@ -856,9 +975,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "html"
-        ],
+        "required": ["html"],
         "title": "PreviewResponse",
         "type": "object"
       },
@@ -873,10 +990,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "bot_token",
-          "organization_id"
-        ],
+        "required": ["bot_token", "organization_id"],
         "title": "RegisterBotRequest",
         "type": "object"
       },
@@ -922,11 +1036,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "cliente_nombre",
-          "cliente_run",
-          "valor_reserva"
-        ],
+        "required": ["cliente_nombre", "cliente_run", "valor_reserva"],
         "title": "ReservationPayload",
         "type": "object"
       },
@@ -992,9 +1102,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "approval_id"
-        ],
+        "required": ["approval_id"],
         "title": "ReservationResponse",
         "type": "object"
       },
@@ -1040,11 +1148,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "cliente_nombre",
-          "cliente_run",
-          "valor_final"
-        ],
+        "required": ["cliente_nombre", "cliente_run", "valor_final"],
         "title": "SalePayload",
         "type": "object"
       },
@@ -1065,10 +1169,7 @@
           "previous_lot_state": {
             "anyOf": [
               {
-                "enum": [
-                  "disponible",
-                  "reservado"
-                ],
+                "enum": ["disponible", "reservado"],
                 "type": "string"
               },
               {
@@ -1080,10 +1181,7 @@
           "sale_mode": {
             "anyOf": [
               {
-                "enum": [
-                  "direct",
-                  "reserved"
-                ],
+                "enum": ["direct", "reserved"],
                 "type": "string"
               },
               {
@@ -1137,11 +1235,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "prompt_content",
-          "test_message",
-          "organization_id"
-        ],
+        "required": ["prompt_content", "test_message", "organization_id"],
         "title": "SandboxRequest",
         "type": "object"
       },
@@ -1163,9 +1257,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "profile_id"
-        ],
+        "required": ["profile_id"],
         "title": "TelegramTokenRequest",
         "type": "object"
       },
@@ -1184,11 +1276,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "token",
-          "bot_username",
-          "deep_link"
-        ],
+        "required": ["token", "bot_username", "deep_link"],
         "title": "TelegramTokenResponse",
         "type": "object"
       },
@@ -1302,11 +1390,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError",
         "type": "object"
       },
@@ -1337,9 +1421,7 @@
             "$ref": "#/components/schemas/DocumentVariablesGroup"
           }
         },
-        "required": [
-          "variables"
-        ],
+        "required": ["variables"],
         "title": "VariableStatusResponse",
         "type": "object"
       }
@@ -1400,9 +1482,7 @@
           }
         ],
         "summary": "Request Reservation",
-        "tags": [
-          "approvals"
-        ]
+        "tags": ["approvals"]
       }
     },
     "/api/v1/approvals/request-sale": {
@@ -1447,9 +1527,7 @@
           }
         ],
         "summary": "Request Sale",
-        "tags": [
-          "approvals"
-        ]
+        "tags": ["approvals"]
       }
     },
     "/api/v1/approvals/{approval_id}": {
@@ -1504,9 +1582,7 @@
           }
         ],
         "summary": "Get Approval Request",
-        "tags": [
-          "approvals"
-        ]
+        "tags": ["approvals"]
       }
     },
     "/api/v1/approvals/{approval_id}/decide": {
@@ -1562,9 +1638,7 @@
           }
         ],
         "summary": "Decide Approval Request",
-        "tags": [
-          "approvals"
-        ]
+        "tags": ["approvals"]
       }
     },
     "/api/v1/bots/register": {
@@ -1603,9 +1677,7 @@
           }
         },
         "summary": "Register Bot",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       }
     },
     "/api/v1/bots/{org_id}": {
@@ -1643,9 +1715,7 @@
           }
         },
         "summary": "Delete Bot",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       },
       "get": {
         "operationId": "get_bot_api_v1_bots__org_id__get",
@@ -1691,9 +1761,7 @@
           }
         },
         "summary": "Get Bot",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       }
     },
     "/api/v1/documents/blocks": {
@@ -1760,9 +1828,7 @@
           }
         ],
         "summary": "List Blocks",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       },
       "post": {
         "description": "Crea un nuevo bloque de texto legal con soporte para variables Jinja2.",
@@ -1807,9 +1873,7 @@
           }
         ],
         "summary": "Create Block",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/blocks/{block_id}": {
@@ -1867,9 +1931,7 @@
           }
         ],
         "summary": "Update Block",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/generate": {
@@ -1914,9 +1976,7 @@
           }
         ],
         "summary": "Generate Document",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/generated": {
@@ -1993,9 +2053,7 @@
           }
         ],
         "summary": "List Generated Documents",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/preview": {
@@ -2040,9 +2098,7 @@
           }
         ],
         "summary": "Preview Document",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/templates": {
@@ -2093,9 +2149,7 @@
           }
         ],
         "summary": "List Templates",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       },
       "post": {
         "description": "Crea un nuevo template de documento para una organización.",
@@ -2140,9 +2194,7 @@
           }
         ],
         "summary": "Create Template",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/templates/{template_id}/blocks": {
@@ -2193,9 +2245,7 @@
           }
         ],
         "summary": "Get Template Blocks",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       },
       "post": {
         "description": "Agrega un bloque a un template en una posición específica.",
@@ -2251,9 +2301,7 @@
           }
         ],
         "summary": "Add Block To Template",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/templates/{template_id}/blocks/{item_id}": {
@@ -2301,9 +2349,7 @@
           }
         ],
         "summary": "Remove Block From Template",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/variables/{lot_id}": {
@@ -2374,9 +2420,7 @@
           }
         ],
         "summary": "Get Variables",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/health": {
@@ -2400,9 +2444,7 @@
           }
         },
         "summary": "Health Check",
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     },
     "/api/v1/integrations/": {
@@ -2455,9 +2497,7 @@
           }
         ],
         "summary": "List Integrations",
-        "tags": [
-          "integrations"
-        ]
+        "tags": ["integrations"]
       }
     },
     "/api/v1/integrations/connect": {
@@ -2500,9 +2540,7 @@
           }
         ],
         "summary": "Connect Integration",
-        "tags": [
-          "integrations"
-        ]
+        "tags": ["integrations"]
       }
     },
     "/api/v1/integrations/{connection_id}": {
@@ -2546,9 +2584,7 @@
           }
         ],
         "summary": "Revoke Integration",
-        "tags": [
-          "integrations"
-        ]
+        "tags": ["integrations"]
       }
     },
     "/api/v1/integrations/{connection_id}/test": {
@@ -2592,9 +2628,191 @@
           }
         ],
         "summary": "Test Integration",
-        "tags": [
-          "integrations"
-        ]
+        "tags": ["integrations"]
+      }
+    },
+    "/api/v1/notifications/": {
+      "get": {
+        "description": "Lista las notificaciones de aprobaciones y solicitudes pendientes/recientes\nsegún el rol y la organización del usuario autenticado.",
+        "operationId": "listNotifications",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Organization-Id",
+            "required": true,
+            "schema": {
+              "title": "X-Organization-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "List Notifications",
+        "tags": ["notifications"]
+      }
+    },
+    "/api/v1/notifications/{approval_id}/decide": {
+      "post": {
+        "description": "Procesa la decisión de aprobación/rechazo de un administrador\ndirectamente desde el dropdown de notificaciones web.",
+        "operationId": "decideNotificationApproval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "title": "Approval Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Organization-Id",
+            "required": true,
+            "schema": {
+              "title": "X-Organization-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationDecisionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Decide Notification Approval",
+        "tags": ["notifications"]
+      }
+    },
+    "/api/v1/notifications/{notification_id}/read": {
+      "post": {
+        "description": "Marca una notificación específica como leída por su destinatario.",
+        "operationId": "markNotificationRead",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkReadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Mark Notification Read",
+        "tags": ["notifications"]
       }
     },
     "/api/v1/prompts/": {
@@ -2645,9 +2863,7 @@
           }
         ],
         "summary": "List Prompts",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       }
     },
     "/api/v1/prompts/sandbox": {
@@ -2708,9 +2924,7 @@
           }
         ],
         "summary": "Sandbox Prompt",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       }
     },
     "/api/v1/prompts/{prompt_id}/activate/{version_id}": {
@@ -2779,9 +2993,7 @@
           }
         ],
         "summary": "Activate Version",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       }
     },
     "/api/v1/prompts/{prompt_id}/versions": {
@@ -2841,9 +3053,7 @@
           }
         ],
         "summary": "List Versions",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       },
       "post": {
         "description": "Crea una nueva versión de un prompt (no la activa automáticamente).\nEl número de versión se incrementa automáticamente sobre el máximo existente.",
@@ -2911,9 +3121,7 @@
           }
         ],
         "summary": "Create Version",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       }
     },
     "/api/v1/skills/invalidate-cache": {
@@ -2956,9 +3164,7 @@
           }
         ],
         "summary": "Invalidate Cache",
-        "tags": [
-          "skills"
-        ]
+        "tags": ["skills"]
       }
     },
     "/api/v1/users/telegram-token": {
@@ -3003,9 +3209,7 @@
           }
         ],
         "summary": "Generate Telegram Vincule Token",
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
       }
     },
     "/api/v1/webhook/meta": {
@@ -3023,9 +3227,7 @@
           }
         },
         "summary": "Verify Meta Webhook",
-        "tags": [
-          "webhooks"
-        ]
+        "tags": ["webhooks"]
       },
       "post": {
         "description": "Endpoint para recibir Webhooks de Meta (Mensajes entrantes y estados).\nRegla de Oro: Siempre retornar 200 OK de inmediato a Meta.\nTodo el procesamiento pesado va asíncrono vía la cola Redis (arq).",
@@ -3061,9 +3263,7 @@
           }
         },
         "summary": "Receive Meta Webhook",
-        "tags": [
-          "webhooks"
-        ]
+        "tags": ["webhooks"]
       }
     },
     "/api/v1/webhook/telegram/{org_id}": {
@@ -3078,6 +3278,22 @@
             "schema": {
               "title": "Org Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Telegram-Bot-Api-Secret-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Telegram-Bot-Api-Secret-Token"
             }
           }
         ],
@@ -3102,9 +3318,7 @@
           }
         },
         "summary": "Receive Telegram Webhook",
-        "tags": [
-          "webhooks"
-        ]
+        "tags": ["webhooks"]
       }
     }
   }

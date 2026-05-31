@@ -172,6 +172,7 @@ async def test_process_incoming_message_reserva_quoted_args():
     supabase.table.side_effect = lambda name: {
         "profiles": profiles_table,
         "vendors": vendor_table,
+        "organization_members": _table_with_execute([]),
     }[name]
 
     # 2. Mock de process_vendor_telegram_operation para evitar ejecutar la reserva real, solo verificar qué argumentos le llegan
@@ -291,6 +292,7 @@ async def test_vendor_from_org_a_sent_via_webhook_org_b_does_not_operate():
         "profiles": profiles_table,
         "vendors": vendor_table,
         "leads": leads_table,
+        "organization_members": _table_with_execute([]),
     }[name]
 
     redis = MagicMock()
@@ -351,5 +353,100 @@ async def test_audit_log_saves_none_organization_id_as_null():
         audit_logs_table.insert.assert_called_once()
         inserted_dict = audit_logs_table.insert.call_args[0][0]
         assert inserted_dict["organization_id"] is None
+
+
+async def test_telegram_shortcuts_admin_and_vendor():
+    """T040 [US4]: Validar que los shortcuts estructurados (/pendientes, /aprobadas, /rechazadas) devuelvan respuestas con formato seguro de acuerdo con el rol."""
+    from workers.tasks.message_processor import process_incoming_message
+    
+    profiles_table = _table_with_execute([{"id": "user-1"}])
+    vendor_table = MagicMock()
+    vendor_table.select.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock(
+        data=[{"id": "vendor-1", "organization_id": "org-a", "nombre": "Vendedor A"}]
+    )
+    
+    approvals_table = MagicMock()
+    approvals_table.select.return_value.eq.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[
+            {
+                "id": "app-uuid-1",
+                "request_type": "reservation",
+                "status": "pending",
+                "vendor_name": "Vendedor A",
+                "payload": {"cliente_nombre": "Test Cliente"},
+                "lots": {"numero_lote": "12"}
+            }
+        ]
+    )
+    
+    supabase = MagicMock()
+    supabase.table.side_effect = lambda name: {
+        "profiles": profiles_table,
+        "vendors": vendor_table,
+        "approval_requests": approvals_table,
+        "organization_members": _table_with_execute([]),
+    }[name]
+    
+    redis = MagicMock()
+    telegram_client = MagicMock()
+    telegram_client.send_text = AsyncMock()
+    
+    payload = {
+        "platform": "telegram",
+        "phone_id": "telegram-chat-1",
+        "message_id": "msg-101",
+        "message_text": "/pendientes",
+        "organization_id": "org-a",
+        "raw_payload": {},
+    }
+    
+    with (
+        patch("core.database.get_supabase_client", return_value=supabase),
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch("workers.tasks.message_processor.get_telegram_client_for_org", new=AsyncMock(return_value=telegram_client)),
+    ):
+        result = await process_incoming_message({"redis": redis}, payload)
+        
+    assert result in ("PENDING_SHORTCUT_SUCCESS", "SUCCESS")
+
+async def test_telegram_docs_shortcut_routing():
+    """T041 [US4]: Validar que el shortcut /docs devuelva el enlace a la página segura de documentación del vendedor."""
+    from workers.tasks.message_processor import process_incoming_message
+    
+    profiles_table = _table_with_execute([{"id": "user-1"}])
+    vendor_table = MagicMock()
+    vendor_table.select.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock(
+        data=[{"id": "vendor-1", "organization_id": "org-a", "nombre": "Vendedor A"}]
+    )
+    
+    supabase = MagicMock()
+    supabase.table.side_effect = lambda name: {
+        "profiles": profiles_table,
+        "vendors": vendor_table,
+        "organization_members": _table_with_execute([]),
+    }[name]
+    
+    redis = MagicMock()
+    telegram_client = MagicMock()
+    telegram_client.send_text = AsyncMock()
+    
+    payload = {
+        "platform": "telegram",
+        "phone_id": "telegram-chat-1",
+        "message_id": "msg-102",
+        "message_text": "/docs",
+        "organization_id": "org-a",
+        "raw_payload": {},
+    }
+    
+    with (
+        patch("core.database.get_supabase_client", return_value=supabase),
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch("workers.tasks.message_processor.get_telegram_client_for_org", new=AsyncMock(return_value=telegram_client)),
+    ):
+        result = await process_incoming_message({"redis": redis}, payload)
+        
+    assert result in ("DOCS_SHORTCUT_SUCCESS", "SUCCESS")
+
 
 

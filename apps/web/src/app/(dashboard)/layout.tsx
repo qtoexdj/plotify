@@ -6,6 +6,7 @@ import { BackendStatusBadge } from '@/components/system/BackendStatusBadge'
 import { ModeToggle } from '@/components/mode-toggle'
 import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { getActiveWorkspace } from '@/lib/services/workspace.service'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isSuperAdmin } = await getUserWithSuperAdmin()
@@ -21,6 +22,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const email = user.email ?? ''
   const name = email.split('@')[0] ?? 'Usuario'
   const workspace = await getActiveWorkspace(user.id)
+
+  const organizationId = workspace?.organization?.id ?? ''
+  const userRole = (workspace?.role === 'admin' ? 'admin' : 'vendor') as 'admin' | 'vendor'
 
   return (
     <SidebarProvider>
@@ -38,6 +42,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Separator orientation="vertical" className="mr-2 h-4" />
           </div>
           <div className="ml-auto px-4 flex items-center gap-2">
+            {organizationId && (
+              <NotificationBell
+                userId={user.id}
+                organizationId={organizationId}
+                userRole={userRole}
+              />
+            )}
             <ModeToggle />
             <BackendStatusBadge />
           </div>

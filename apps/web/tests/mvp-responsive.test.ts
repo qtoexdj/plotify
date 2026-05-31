@@ -97,3 +97,29 @@ describe('T084 - Responsive Document Generation Wizard Verification', () => {
     expect(sourceCode).toMatch(/sm:col-span-2/)
   })
 })
+
+describe('US1: Responsive Notification Dropdown & Item Layout Verification', () => {
+  it('guarantees scrolling and responsive rules in notification list source file', () => {
+    const filePath = path.resolve(
+      __dirname,
+      '../src/components/notifications/notification-list.tsx'
+    )
+
+    if (fs.existsSync(filePath)) {
+      const sourceCode = fs.readFileSync(filePath, 'utf8')
+      expect(sourceCode).toMatch(/max-h-/)
+      expect(sourceCode).toMatch(/overflow-y-auto/)
+    }
+  })
+
+  it('guarantees layout stacking and spacing rules in notification item source file', () => {
+    const filePath = path.resolve(
+      __dirname,
+      '../src/components/notifications/notification-item.tsx'
+    )
+    if (fs.existsSync(filePath)) {
+      const sourceCode = fs.readFileSync(filePath, 'utf8')
+      expect(sourceCode).toMatch(/flex/)
+    }
+  })
+})

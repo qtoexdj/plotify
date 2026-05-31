@@ -5,6 +5,7 @@ import { DashboardKPIs } from '@/components/dashboard/dashboard-kpis'
 import { VendorsList } from '@/components/dashboard/vendors-list'
 import { createClient } from '@/lib/supabase/server'
 import { PendingApprovalsPanel } from '@/components/dashboard/approvals/pending-approvals-panel'
+import { VendorRequestsPanel } from '@/components/dashboard/approvals/vendor-requests-panel'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +48,10 @@ export default async function DashboardPage() {
 
       {member?.role === 'admin' && (
         <PendingApprovalsPanel organizationId={member.organization_id} />
+      )}
+
+      {member?.role === 'vendor' && (
+        <VendorRequestsPanel userId={userId} organizationId={member.organization_id} />
       )}
 
       <div className="space-y-4">

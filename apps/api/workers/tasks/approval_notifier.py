@@ -76,13 +76,15 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
         for uid in admin_user_ids:
             profile_res = (
                 supabase.table("profiles")
-                .select("phone, telegram_chat_id")
+                .select("id, phone, telegram_chat_id")
                 .eq("id", uid)
                 .limit(1)
                 .execute()
             )
             if profile_res.data:
-                admin_contacts.append(profile_res.data[0])
+                profile_data = profile_res.data[0]
+                profile_data["profile_id"] = uid
+                admin_contacts.append(profile_data)
 
         if not admin_contacts:
             logger.warning("Ningún admin tiene datos de contacto.", org_id=org_id)
@@ -182,6 +184,38 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
                 )
             else:
                 logger.warning("Admin sin telegram_chat_id ni phone.")
+
+        # --- T053: Registrar evento en notification_events para cada admin ---
+        for contact in admin_contacts:
+            uid = contact.get("profile_id")
+            tg_chat_id = contact.get("telegram_chat_id")
+            phone = contact.get("phone")
+            
+            # delivery_channel estrictamente in ('web', 'telegram')
+            channel = "telegram" if tg_chat_id else "web"
+            status_val = "delivered" if (tg_chat_id or phone) else "pending"
+            
+            try:
+                notif_event = {
+                    "approval_id": approval_id,
+                    "organization_id": org_id,
+                    "recipient_id": uid,
+                    "recipient_role": "admin",
+                    "delivery_channel": channel,
+                    "delivery_status": status_val
+                }
+                supabase.table("notification_events").insert(notif_event).execute()
+                logger.info(
+                    "Evento de notificación registrado en BD para el admin.",
+                    admin_id=uid,
+                    approval_id=approval_id
+                )
+            except Exception as db_err:
+                logger.error(
+                    "Error al insertar evento de notificación para el admin.",
+                    admin_id=uid,
+                    error=str(db_err)
+                )
 
         return "SUCCESS"
 

@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     # Telegram API
     TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_WEBHOOK_SECRET: str = ""
 
     # LLM APIs
     OPENAI_API_KEY: str = ""

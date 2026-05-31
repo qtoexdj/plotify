@@ -11,6 +11,48 @@ from utils.sanitize import sanitize_user_input
 logger = get_logger(__name__)
 
 
+async def resolve_telegram_actor_context(
+    org_id: str, telegram_chat_id: str
+) -> dict | None:
+    """
+    T035 [US5]: Resuelve un actor de Telegram (admin o vendor) a partir de su chat_id.
+    Retorna profile_id, role, organization_id y estado de autorización.
+    """
+    supabase = get_supabase_client()
+    profile_res = (
+        supabase.table("profiles")
+        .select("id")
+        .eq("telegram_chat_id", str(telegram_chat_id))
+        .limit(1)
+        .execute()
+    )
+    
+    if not profile_res.data:
+        return None
+    
+    profile = profile_res.data[0]
+    
+    # Validar membresía en la organización para confirmar tenant
+    member_res = (
+        supabase.table("organization_members")
+        .select("role, organization_id")
+        .eq("organization_id", org_id)
+        .eq("user_id", profile["id"])
+        .limit(1)
+        .execute()
+    )
+    if not member_res.data:
+        return None
+        
+    member = member_res.data[0]
+    return {
+        "profile_id": profile["id"],
+        "role": member["role"],
+        "organization_id": member["organization_id"],
+        "authorized": member["role"] == "admin"
+    }
+
+
 async def resolve_vendor_telegram_context(
     org_id: str, telegram_chat_id: str
 ) -> dict | None:
@@ -199,31 +241,29 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
         role = "lead"  # Default
         org_id = payload.organization_id
         lead_name = "Cliente"
-
-        # Primero buscamos si es un Vendedor B2B
+        profile = None
         vendor_res = None
-        
-        # En Telegram, resolvemos mediante vinculación profiles.telegram_chat_id
+
         if payload.platform == "telegram":
-            profile_res = (
-                supabase.table("profiles")
-                .select("id")
-                .eq("telegram_chat_id", str(payload.phone_id))
-                .limit(1)
-                .execute()
-            )
-            if profile_res.data:
-                profile = profile_res.data[0]
-                vendor_res = (
-                    supabase.table("vendors")
-                    .select("id, organization_id, nombre")
-                    .eq("user_id", profile["id"])
-                    .eq("organization_id", payload.organization_id)
-                    .execute()
-                )
+            # Intentar resolver actor (admin o vendor) de forma segura por vinculación
+            actor_ctx = await resolve_telegram_actor_context(payload.organization_id, payload.phone_id)
+            if actor_ctx:
+                role = actor_ctx["role"]
+                org_id = actor_ctx["organization_id"]
+                # Cargar datos de perfil del actor
+                profile_res = supabase.table("profiles").select("id, first_name, last_name").eq("id", actor_ctx["profile_id"]).limit(1).execute()
+                if profile_res.data:
+                    profile = profile_res.data[0]
+                    lead_name = f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip() or "Usuario"
+            else:
+                # Si no se resolvió por vinculación directa de admin/membresía, buscar en profiles por telegram_chat_id
+                profile_res = supabase.table("profiles").select("id, first_name, last_name").eq("telegram_chat_id", str(payload.phone_id)).limit(1).execute()
+                if profile_res.data:
+                    profile = profile_res.data[0]
+                    vendor_res = supabase.table("vendors").select("id, organization_id, nombre").eq("user_id", profile["id"]).eq("organization_id", payload.organization_id).execute()
 
         # Fallback o WhatsApp: vendors.phone == payload.phone_id
-        if not vendor_res or not vendor_res.data:
+        if payload.platform != "telegram" or (not actor_ctx and (not vendor_res or not vendor_res.data)):
             vendor_res = (
                 supabase.table("vendors")
                 .select("id, organization_id, nombre")
@@ -232,12 +272,13 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
                 .execute()
             )
 
-        if vendor_res.data:
+        if role == "lead" and vendor_res and vendor_res.data:
             role = "vendor"
             org_id = vendor_res.data[0].get("organization_id")
-            lead_name = vendor_res.data[0].get("nombre")
-        else:
-            # Si no es vendedor, es un Lead. Lo creamos/recuperamos.
+            lead_name = vendor_res.data[0].get("nombre") or lead_name
+
+        if role == "lead":
+            # Si no es vendedor ni admin, es un Lead. Lo creamos/recuperamos.
             lead_res = (
                 supabase.table("leads")
                 .select("id, name, organization_id")
@@ -262,9 +303,68 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
                     phone=payload.phone_id,
                 )
 
-        # M1.2 / T103: Si es Vendedor en Telegram, interceptar comandos estructurados antes del LLM
-        if role == "vendor" and payload.platform == "telegram":
+        # M1.2 / T103: Si es Vendedor o Administrador en Telegram, interceptar comandos estructurados antes del LLM
+        if role in ("vendor", "admin") and payload.platform == "telegram":
             text_strip = payload.message_text.strip()
+            # T042 / T043 / T045: Interceptar shortcuts deterministas de Telegram de forma segura
+            if text_strip.lower() in ("/pendientes", "/aprobadas", "/rechazadas"):
+                status_filter = "pending"
+                if text_strip.lower() == "/aprobadas":
+                    status_filter = "approved"
+                elif text_strip.lower() == "/rechazadas":
+                    status_filter = "rejected"
+                    
+                telegram_client = await get_telegram_client_for_org(org_id)
+                
+                # Consultar solicitudes de base de datos
+                query = supabase.table("approval_requests").select(
+                    "id, request_type, status, vendor_name, payload, created_at, lot_id, "
+                    "lots!inner(numero_lote)"
+                ).eq("organization_id", org_id).eq("status", status_filter)
+                
+                # Vendedores solo ven sus propios registros
+                if role == "vendor":
+                    # Buscar el vendor_id correspondiente al perfil para filtrar de forma estricta (US5 / tenant protection)
+                    if profile:
+                        vendor_lookup = supabase.table("vendors").select("id").eq("organization_id", org_id).eq("user_id", profile["id"]).execute()
+                        if vendor_lookup.data:
+                            query = query.eq("vendor_id", vendor_lookup.data[0]["id"])
+                        else:
+                            query = query.eq("vendor_phone", payload.phone_id)
+                    else:
+                        query = query.eq("vendor_phone", payload.phone_id)
+                        
+                app_res = query.order("created_at", desc=True).limit(5).execute()
+                items = app_res.data or []
+                
+                status_label = "Pendientes" if status_filter == "pending" else ("Aprobadas" if status_filter == "approved" else "Rechazadas")
+                
+                if not items:
+                    msg = f"📋 *Solicitudes {status_label}*\n\nNo tienes solicitudes en este estado en este momento."
+                else:
+                    msg = f"📋 *Solicitudes {status_label} (Últimas 5)*:\n\n"
+                    for idx, item in enumerate(items, 1):
+                        lot_num = item["lots"]["numero_lote"]
+                        req_type = "Reserva" if item["request_type"] == "reservation" else "Venta"
+                        client = item["payload"].get("cliente_nombre", "N/A")
+                        msg += f"{idx}. *Lote {lot_num}* — {req_type} ({client})\n"
+                
+                if telegram_client:
+                    await telegram_client.send_text(payload.phone_id, msg)
+                return "PENDING_SHORTCUT_SUCCESS"
+                
+            elif text_strip.lower() == "/docs":
+                telegram_client = await get_telegram_client_for_org(org_id)
+                # T045: Retorna el enlace directo a la página de documentación del vendedor
+                docs_msg = (
+                    "📚 *Centro de Ayuda y Documentación*\n\n"
+                    "Accede a manuales de venta, plantillas de deslindes y guías operativas oficiales de Plotify aquí:\n\n"
+                    "🔗 https://plotify.cl/ayuda/vendedor"
+                )
+                if telegram_client:
+                    await telegram_client.send_text(payload.phone_id, docs_msg)
+                return "DOCS_SHORTCUT_SUCCESS"
+
             if text_strip.startswith("/lotes") or text_strip.lower() in ("lotes", "disponibles", "/disponibles"):
                 op_res = await process_vendor_telegram_operation(
                     ctx, org_id, payload.phone_id, "availability"

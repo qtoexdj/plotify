@@ -907,6 +907,73 @@ export type Database = {
           },
         ]
       }
+      notification_events: {
+        Row: {
+          approval_id: string
+          created_at: string
+          delivery_channel: string
+          delivery_status: string
+          dismissed_at: string | null
+          failed_reason: string | null
+          id: string
+          organization_id: string
+          read_at: string | null
+          recipient_id: string
+          recipient_role: string
+          updated_at: string
+        }
+        Insert: {
+          approval_id: string
+          created_at?: string
+          delivery_channel: string
+          delivery_status?: string
+          dismissed_at?: string | null
+          failed_reason?: string | null
+          id?: string
+          organization_id: string
+          read_at?: string | null
+          recipient_id: string
+          recipient_role: string
+          updated_at?: string
+        }
+        Update: {
+          approval_id?: string
+          created_at?: string
+          delivery_channel?: string
+          delivery_status?: string
+          dismissed_at?: string | null
+          failed_reason?: string | null
+          id?: string
+          organization_id?: string
+          read_at?: string | null
+          recipient_id?: string
+          recipient_role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_events_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "approval_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_events_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_skill_configs: {
         Row: {
           config_overrides: Json | null

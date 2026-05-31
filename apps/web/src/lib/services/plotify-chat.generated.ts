@@ -108,6 +108,10 @@ export interface components {
     "InvalidateCacheRequest": {
       "organization_id": string
     }
+    "MarkReadResponse": {
+      "read_at": string
+      "success": boolean
+    }
     "MetaChange": {
       "field": string
       "value": components["schemas"]["MetaValue"]
@@ -140,6 +144,40 @@ export interface components {
     "MetaWebhookPayload": {
       "entry": Array<components["schemas"]["MetaEntry"]>
       "object": string
+    }
+    "NotificationCounts": {
+      "approved": number
+      "pending": number
+      "rejected": number
+      "unread": number
+    }
+    "NotificationDecisionRequest": {
+      "action": "approve" | "reject"
+      "approval_id": string
+    }
+    "NotificationDecisionResponse": {
+      "code"?: string | null
+      "error"?: string | null
+      "status"?: string | null
+      "success": boolean
+    }
+    "NotificationItem": {
+      "approval_id": string
+      "can_decide": boolean
+      "client_name": string
+      "created_at": string
+      "decided_at"?: string | null
+      "id": string
+      "lot_label": string
+      "project_name": string
+      "read_at"?: string | null
+      "request_type": string
+      "status": string
+      "vendor_name": string
+    }
+    "NotificationListResponse": {
+      "counts": components["schemas"]["NotificationCounts"]
+      "items": Array<components["schemas"]["NotificationItem"]>
     }
     "PreviewRequest": {
       "lot_id": string
@@ -374,6 +412,24 @@ export interface operations {
     path: "/api/v1/integrations/{connection_id}/test"
     requestBody: never
     response: void
+  }
+  "listNotifications": {
+    method: "GET"
+    path: "/api/v1/notifications/"
+    requestBody: never
+    response: components["schemas"]["NotificationListResponse"]
+  }
+  "decideNotificationApproval": {
+    method: "POST"
+    path: "/api/v1/notifications/{approval_id}/decide"
+    requestBody: components["schemas"]["NotificationDecisionRequest"]
+    response: components["schemas"]["NotificationDecisionResponse"]
+  }
+  "markNotificationRead": {
+    method: "POST"
+    path: "/api/v1/notifications/{notification_id}/read"
+    requestBody: never
+    response: components["schemas"]["MarkReadResponse"]
   }
   "list_prompts_api_v1_prompts__get": {
     method: "GET"

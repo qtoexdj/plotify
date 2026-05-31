@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Response, status, HTTPException, Depends
+from fastapi import APIRouter, Request, Response, status, HTTPException, Depends, Header
 from schemas.meta_webhook import MetaWebhookPayload
 from schemas.message_job import MessageJobPayload
 from core.config import get_settings
@@ -115,6 +115,7 @@ async def receive_meta_webhook(
 async def receive_telegram_webhook(
     request: Request,
     org_id: str,
+    x_telegram_token: str | None = Header(None, alias="X-Telegram-Bot-Api-Secret-Token"),
     redis: ArqRedis = Depends(get_arq_pool),
 ):
     """
@@ -123,6 +124,19 @@ async def receive_telegram_webhook(
     1. Mensajes de texto → se encolan para el agente LangGraph.
     2. callback_query (botones inline) → se encolan para procesar decisiones de aprobación.
     """
+    # T056: Validar autenticidad del webhook de Telegram
+    if settings.TELEGRAM_WEBHOOK_SECRET:
+        if not x_telegram_token or x_telegram_token != settings.TELEGRAM_WEBHOOK_SECRET:
+            logger.warning(
+                "Intento de llamada webhook de Telegram no autenticada o falsificada",
+                org_id=org_id,
+                provided_token=x_telegram_token
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Webhook token secreto de autenticación inválido o ausente."
+            )
+
     body = await request.json()
     logger.info("Raw Telegram Payload recibido", payload=body, org_id=org_id)
 
@@ -168,6 +182,37 @@ async def receive_telegram_webhook(
         if ":" in callback_data:
             action, approval_id = callback_data.split(":", 1)
             if action in ("approve", "reject"):
+                # T037: Validar que el usuario que emite el callback tenga rol admin
+                from workers.tasks.message_processor import resolve_telegram_actor_context
+                actor_ctx = await resolve_telegram_actor_context(org_id, chat_id)
+                
+                if not actor_ctx or not actor_ctx.get("authorized"):
+                    logger.warning(
+                        "Intento de decisión no autorizado vía Telegram callback",
+                        chat_id=chat_id,
+                        org_id=org_id,
+                        approval_id=approval_id
+                    )
+                    from utils.audit import log_agent_action
+                    await log_agent_action(
+                        actor=f"telegram:{chat_id}",
+                        action="telegram.unauthorized_callback",
+                        entity="approval_requests",
+                        entity_id=approval_id,
+                        organization_id=org_id,
+                        payload={
+                            "chat_id": chat_id,
+                            "action": action,
+                            "approval_id": approval_id,
+                        }
+                    )
+                    if client:
+                        await client.send_text(
+                            chat_id, 
+                            "⚠️ *Acción no autorizada.*\nNo tienes permisos de administrador vinculados para procesar aprobaciones."
+                        )
+                    return {"status": "ok"}
+
                 await redis.enqueue_job(
                     "process_admin_decision",
                     org_id,

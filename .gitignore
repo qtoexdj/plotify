@@ -126,3 +126,7 @@ ehthumbs.db
 # Skill de claude
 .claude/
 .cursor/
+
+# Scratch folder for agent
+scratch/
+

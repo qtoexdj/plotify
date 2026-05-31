@@ -161,21 +161,67 @@ async def send_decision_notifications(
                 vendor_msg = f"❌ Lamentamos informarte, {vendor_name}, que tu reserva del *{lot_label}* fue *rechazada* por el administrador."
                 admin_msg = f"❌ *Reserva Rechazada*\nSe ha rechazado la reserva del *{lot_label}* y se ha notificado a {vendor_name}."
 
-        if vendor_phone:
-            # Buscar si el vendedor tiene vinculado su Telegram en profiles usando su vendor_phone
-            vendor_telegram_chat_id = None
+        # --- T058 & T053: Resolver la identidad vinculada del vendedor a partir de approval_requests ---
+        recipient_id = None
+        vendor_telegram_chat_id = None
+        
+        # 1. Obtener el vendor_id de la solicitud
+        req_res = await asyncio.to_thread(
+            lambda: (
+                supabase.table("approval_requests")
+                .select("vendor_id")
+                .eq("id", approval_id)
+                .limit(1)
+                .execute()
+            )
+        )
+        if req_res.data and req_res.data[0].get("vendor_id"):
+            vendor_db_id = req_res.data[0]["vendor_id"]
+            # 2. Obtener el user_id (profiles.id) a partir del vendor_id
+            vendor_res = await asyncio.to_thread(
+                lambda: (
+                    supabase.table("vendors")
+                    .select("user_id")
+                    .eq("id", vendor_db_id)
+                    .limit(1)
+                    .execute()
+                )
+            )
+            if vendor_res.data and vendor_res.data[0].get("user_id"):
+                recipient_id = vendor_res.data[0]["user_id"]
+                
+        # 3. Si tenemos recipient_id, buscar su telegram_chat_id y phone
+        if recipient_id:
             profile_res = await asyncio.to_thread(
                 lambda: (
                     supabase.table("profiles")
-                    .select("telegram_chat_id")
+                    .select("phone, telegram_chat_id")
+                    .eq("id", recipient_id)
+                    .limit(1)
+                    .execute()
+                )
+            )
+            if profile_res.data:
+                vendor_telegram_chat_id = profile_res.data[0].get("telegram_chat_id")
+                if not vendor_phone and profile_res.data[0].get("phone"):
+                    vendor_phone = profile_res.data[0].get("phone")
+
+        # 4. Fallback histórico si no se resolvió por vinculación (buscar por teléfono del vendor_phone)
+        if not recipient_id and vendor_phone:
+            profile_res = await asyncio.to_thread(
+                lambda: (
+                    supabase.table("profiles")
+                    .select("id, telegram_chat_id")
                     .eq("phone", vendor_phone)
                     .limit(1)
                     .execute()
                 )
             )
-            if profile_res.data and profile_res.data[0].get("telegram_chat_id"):
-                vendor_telegram_chat_id = profile_res.data[0]["telegram_chat_id"]
+            if profile_res.data:
+                recipient_id = profile_res.data[0]["id"]
+                vendor_telegram_chat_id = profile_res.data[0].get("telegram_chat_id")
 
+        if vendor_phone or vendor_telegram_chat_id:
             used_platform = None
             if vendor_telegram_chat_id and telegram_client:
                 await telegram_client.send_text(vendor_telegram_chat_id, vendor_msg)
@@ -195,7 +241,7 @@ async def send_decision_notifications(
                     else:
                         await meta_client.send_text(vendor_phone, vendor_msg)
                         used_platform = "whatsapp_fallback_tg_fail"
-            else:
+            elif vendor_phone:
                 await meta_client.send_text(vendor_phone, vendor_msg)
                 used_platform = "whatsapp"
 
@@ -207,6 +253,60 @@ async def send_decision_notifications(
                 action=action,
                 approval_id=approval_id,
             )
+
+            # --- T058: Auditoría explícita de fallbacks de entrega ---
+            if used_platform and ("fallback" in used_platform or not recipient_id):
+                try:
+                    await log_agent_action(
+                        actor="system",
+                        action="telegram.delivery_fallback",
+                        entity="approval_requests",
+                        entity_id=approval_id,
+                        organization_id=org_id,
+                        payload={
+                            "vendor_name": vendor_name,
+                            "vendor_phone": vendor_phone,
+                            "platform_used": used_platform,
+                            "recipient_resolved": recipient_id is not None,
+                            "reason": (
+                                "Vendedor no tiene cuenta de Telegram formalmente vinculada en perfiles"
+                                if not recipient_id
+                                else "Falla o incompatibilidad de formato en canal de Telegram"
+                            )
+                        }
+                    )
+                    logger.info("Auditoría de fallback de entrega registrada exitosamente.")
+                except Exception as audit_err:
+                    logger.error("Error al registrar auditoría de fallback de entrega.", error=str(audit_err))
+
+        # --- T053: Registrar evento en notification_events para el vendedor ---
+        if recipient_id:
+            channel = "telegram" if (vendor_telegram_chat_id and telegram_client) else "web"
+            status_val = "delivered" if (vendor_telegram_chat_id or vendor_phone) else "pending"
+            
+            try:
+                notif_event = {
+                    "approval_id": approval_id,
+                    "organization_id": org_id,
+                    "recipient_id": recipient_id,
+                    "recipient_role": "vendor",
+                    "delivery_channel": channel,
+                    "delivery_status": status_val
+                }
+                await asyncio.to_thread(
+                    lambda: supabase.table("notification_events").insert(notif_event).execute()
+                )
+                logger.info(
+                    "Evento de notificación registrado en BD para el vendedor.",
+                    vendor_id=recipient_id,
+                    approval_id=approval_id
+                )
+            except Exception as db_err:
+                logger.error(
+                    "Error al insertar evento de notificación para el vendedor.",
+                    vendor_id=recipient_id,
+                    error=str(db_err)
+                )
 
         # Enviar confirmación final al administrador
         if admin_id and telegram_client and admin_id.isdigit():

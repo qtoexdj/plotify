@@ -9,6 +9,7 @@ from .endpoints import (
     skills,
     documents,
     integrations,
+    notifications,
 )
 
 api_router = APIRouter()
@@ -23,3 +24,4 @@ api_router.include_router(prompts.router)
 api_router.include_router(skills.router)
 api_router.include_router(documents.router)
 api_router.include_router(integrations.router)  # ← Fase 5
+api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])

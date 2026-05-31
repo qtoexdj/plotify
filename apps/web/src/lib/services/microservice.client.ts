@@ -9,6 +9,7 @@ interface MicroserviceOptions {
   method?: HttpMethod
   body?: unknown
   superAdminToken?: string
+  headers?: Record<string, string>
 }
 
 interface MicroserviceResponse<T = unknown> {
@@ -21,7 +22,7 @@ export async function microserviceFetch<T = unknown>(
   path: string,
   options: MicroserviceOptions = {}
 ): Promise<MicroserviceResponse<T>> {
-  const { method = 'GET', body, superAdminToken } = options
+  const { method = 'GET', body, superAdminToken, headers: customHeaders } = options
 
   if (!SECRET) {
     logger.error({ path }, '[microservice.client] INTERNAL_API_SECRET no configurado')
@@ -31,6 +32,7 @@ export async function microserviceFetch<T = unknown>(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Internal-Secret': SECRET,
+    ...customHeaders,
   }
 
   if (superAdminToken) {
@@ -64,7 +66,18 @@ export async function microserviceFetch<T = unknown>(
     const data = (await response.json()) as T
     return { data, error: null, status: response.status }
   } catch (err) {
-    logger.error({ path, err }, '[microservice.client] Excepción al llamar al microservicio')
-    return { data: null, error: 'No se pudo conectar con el microservicio', status: 503 }
+    const errorDetails =
+      err instanceof Error
+        ? { message: err.message, code: (err as any).code, stack: err.stack }
+        : String(err)
+    logger.error(
+      { path, url, err: errorDetails },
+      '[microservice.client] Excepción de conexión al microservicio'
+    )
+    return {
+      data: null,
+      error: `No se pudo conectar con el microservicio en ${url}. Detalle: ${err instanceof Error ? err.message : String(err)}`,
+      status: 503,
+    }
   }
 }

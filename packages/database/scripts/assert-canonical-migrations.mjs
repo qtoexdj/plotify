@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, statSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -46,6 +46,28 @@ if (!existsSync(canonicalDir) || !statSync(canonicalDir).isDirectory()) {
   for (const migrationFile of canonicalSqlFiles) {
     if (!/^\d{14}_[a-z0-9_]+\.sql$/.test(migrationFile)) {
       fail(`canonical migration does not follow timestamp_name.sql format: ${migrationFile}`)
+    }
+
+    // Static assertions for notification migrations to prevent commercial state duplication
+    if (migrationFile.includes('notification')) {
+      const content = readFileSync(join(canonicalDir, migrationFile), 'utf8')
+      const lowerContent = content.toLowerCase()
+
+      if (lowerContent.includes('reservation_status') || lowerContent.includes('sale_status')) {
+        fail(
+          `Notification migration must not duplicate commercial approval state (detected reservation_status or sale_status): ${migrationFile}`
+        )
+      }
+
+      if (!lowerContent.includes('approval_requests') && !lowerContent.includes('approval_id')) {
+        fail(`Notification migration must reference approval_requests: ${migrationFile}`)
+      }
+
+      if (!lowerContent.includes('read_at') && !lowerContent.includes('dismissed_at')) {
+        fail(
+          `Notification migration must contain read or dismissal metadata (read_at/dismissed_at): ${migrationFile}`
+        )
+      }
     }
   }
 }
