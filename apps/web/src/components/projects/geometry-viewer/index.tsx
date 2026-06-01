@@ -314,7 +314,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
       <div className="flex items-center justify-center h-[calc(100dvh-160px)] md:h-[calc(100vh-220px)] min-h-96 bg-muted/50 rounded-xl border border-border">
         <div className="flex flex-col items-center gap-3">
           <HugeiconsIcon icon={Loading02Icon} className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Cargando geometrías...</p>
+          <div className="h-3 w-32 rounded bg-muted animate-pulse" />
         </div>
       </div>
     )
@@ -347,7 +347,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
       return (
         <div className="flex flex-col items-center justify-center py-12">
           <HugeiconsIcon icon={Loading02Icon} className="w-8 h-8 text-primary animate-spin mb-3" />
-          <p className="text-sm text-sidebar-foreground/70">Cargando...</p>
+          <div className="h-3 w-24 rounded bg-sidebar-accent animate-pulse" />
         </div>
       )
     }
@@ -446,13 +446,13 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
 
       {/* Right: Stats badges */}
       <div className="flex items-center gap-1 flex-wrap">
-        <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 text-xs">
+        <Badge className="bg-success/10 text-success border-success/25 dark:bg-success/15 dark:border-success/30 text-xs">
           {stats.disponibles} <span className="hidden sm:inline ml-1">disp.</span>
         </Badge>
-        <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 text-xs">
+        <Badge className="bg-warning/10 text-warning border-warning/25 dark:bg-warning/15 dark:border-warning/30 text-xs">
           {stats.reservados} <span className="hidden sm:inline ml-1">res.</span>
         </Badge>
-        <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 text-xs">
+        <Badge className="bg-destructive/10 text-destructive border-destructive/25 dark:bg-destructive/15 dark:border-destructive/30 text-xs">
           {stats.vendidos} <span className="hidden sm:inline ml-1">vend.</span>
         </Badge>
       </div>
@@ -572,7 +572,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
 
   return (
     <TooltipProvider>
-      <div className="flex h-[calc(100vh-220px)] min-h-125 bg-muted/20 rounded-xl overflow-hidden text-foreground">
+      <div className="flex h-[calc(100vh-220px)] min-h-125 bg-muted/25 rounded-xl overflow-hidden text-foreground">
         {/* Left Side: Map Card */}
         <div className="flex-1 p-2 flex flex-col min-w-0">
           <div className="flex-1 flex flex-col w-full h-full bg-card rounded-xl border border-border shadow-sm overflow-hidden relative">
@@ -590,10 +590,10 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
             isPanelCollapsed ? 'w-15' : 'w-96 lg:w-112.5'
           )}
         >
-          <div className="h-full bg-sidebar rounded-xl shadow-lg ring-1 ring-sidebar-border flex flex-col overflow-hidden">
+          <div className="h-full bg-card rounded-xl shadow-lg ring-1 ring-border flex flex-col overflow-hidden">
             <div
               className={cn(
-                'h-14 flex items-center border-b border-sidebar-border/50',
+                'h-14 flex items-center border-b border-border/70',
                 isPanelCollapsed ? 'justify-center px-2' : 'px-4'
               )}
             >
@@ -607,10 +607,10 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
                     )}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-sidebar-foreground">
+                    <span className="text-sm font-semibold text-foreground">
                       {selectedIds.size > 1 ? 'Acciones Masivas' : 'Detalles'}
                     </span>
-                    <span className="text-[10px] text-sidebar-foreground/60">
+                    <span className="text-[10px] text-muted-foreground">
                       {selectedIds.size > 1 ? 'Panel de edición grupal' : 'Información del lote'}
                     </span>
                   </div>
@@ -619,7 +619,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
               <button
                 onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
                 className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-lg hover:bg-sidebar-accent transition-colors',
+                  'flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors',
                   !isPanelCollapsed && 'ml-auto'
                 )}
                 title={isPanelCollapsed ? 'Expandir panel' : 'Colapsar panel'}
@@ -627,7 +627,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
                 <HugeiconsIcon
                   icon={ArrowRight01Icon}
                   className={cn(
-                    'w-4 h-4 text-sidebar-foreground/70 transition-transform duration-300',
+                    'w-4 h-4 text-muted-foreground transition-transform duration-300',
                     isPanelCollapsed && 'rotate-180'
                   )}
                 />

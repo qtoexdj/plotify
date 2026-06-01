@@ -197,7 +197,7 @@ export function BlocksTable({ initialBlocks, organizationId, userId }: BlocksTab
                 onClick={handleSeedEscritura}
                 disabled={seeding}
               >
-                {seeding ? 'Cargando...' : 'Cargar plantilla Escritura'}
+                {seeding ? 'Preparando...' : 'Cargar plantilla Escritura'}
               </Button>
               {seedError && <p className="text-xs text-destructive">{seedError}</p>}
             </>

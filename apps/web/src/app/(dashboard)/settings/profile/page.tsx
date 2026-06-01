@@ -22,9 +22,9 @@ export default async function ProfileSettingsPage() {
   if (!profile) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-slate-900">Perfil</h1>
-        <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
-          <p className="text-sm text-yellow-800">
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">Perfil</h1>
+        <div className="rounded-xl bg-amber-500/10 p-4 border border-amber-500/20">
+          <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
             No se encontró el perfil para tu cuenta. Por favor, contacta a soporte.
           </p>
         </div>
@@ -35,8 +35,10 @@ export default async function ProfileSettingsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Perfil de Usuario</h1>
-        <p className="text-slate-600 mt-1">Gestiona tu información personal y datos de contacto.</p>
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">Perfil de Usuario</h1>
+        <p className="text-muted-foreground mt-1">
+          Gestiona tu información personal y datos de contacto.
+        </p>
       </div>
 
       <ProfileSettingsForm profile={profile} email={user.email || ''} />

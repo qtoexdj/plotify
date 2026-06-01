@@ -35,7 +35,7 @@ export function BackendStatusBadge() {
   }
 
   return (
-    <Badge variant="default" className="bg-green-600">
+    <Badge variant="default" className="bg-success text-success-foreground hover:bg-success/90">
       Backend activo
     </Badge>
   )

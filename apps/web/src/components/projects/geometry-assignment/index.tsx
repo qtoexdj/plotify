@@ -417,7 +417,7 @@ export function GeometryAssignmentPanel({
       <div className="flex items-center justify-center h-150 bg-muted/50 rounded-xl border border-border">
         <div className="flex flex-col items-center gap-3">
           <HugeiconsIcon icon={Loading02Icon} className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Cargando datos del proyecto...</p>
+          <div className="h-3 w-40 rounded bg-muted animate-pulse" />
         </div>
       </div>
     )

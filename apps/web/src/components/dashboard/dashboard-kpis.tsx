@@ -15,7 +15,7 @@ interface DashboardKPIsProps {
 export function DashboardKPIs({ kpis }: DashboardKPIsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
+      <Card className="transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg hover:border-accent/40 cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Proyectos Activos</CardTitle>
           <HugeiconsIcon icon={Folder02Icon} className="h-4 w-4 text-muted-foreground" />
@@ -25,7 +25,8 @@ export function DashboardKPIs({ kpis }: DashboardKPIsProps) {
           <p className="text-xs text-muted-foreground">Loteos gestionados en tu cuenta</p>
         </CardContent>
       </Card>
-      <Card>
+
+      <Card className="transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg hover:border-accent/40 cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Lotes</CardTitle>
           <HugeiconsIcon icon={LayerIcon} className="h-4 w-4 text-muted-foreground" />
@@ -35,28 +36,28 @@ export function DashboardKPIs({ kpis }: DashboardKPIsProps) {
           <p className="text-xs text-muted-foreground">Suma de lotes en todos los proyectos</p>
         </CardContent>
       </Card>
-      <Card>
+
+      <Card className="transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg hover:border-accent/40 cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Lotes Disponibles</CardTitle>
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} className="h-4 w-4 text-emerald-500" />
+          <HugeiconsIcon icon={CheckmarkCircle02Icon} className="h-4 w-4 text-success" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-            {kpis.availableLots}
-          </div>
+          <div className="text-2xl font-bold text-success">{kpis.availableLots}</div>
           <p className="text-xs text-muted-foreground">Listos para la venta</p>
         </CardContent>
       </Card>
-      <Card>
+
+      <Card className="transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg hover:border-accent/40 cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Lotes Vendidos</CardTitle>
-          <HugeiconsIcon icon={ShoppingBag01Icon} className="h-4 w-4 text-blue-500" />
+          <HugeiconsIcon icon={ShoppingBag01Icon} className="h-4 w-4 text-accent" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{kpis.soldLots}</div>
+          <div className="text-2xl font-bold text-accent">{kpis.soldLots}</div>
           <p className="text-xs text-muted-foreground">
             Con reserva pendiente:{' '}
-            <span className="text-amber-600 font-medium">{kpis.reservedLots}</span> lotes
+            <span className="text-warning font-semibold">{kpis.reservedLots}</span> lotes
           </p>
         </CardContent>
       </Card>

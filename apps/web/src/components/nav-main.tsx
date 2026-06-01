@@ -16,10 +16,12 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarMenuBadge,
 } from '@/components/ui/sidebar'
 
 export function NavMain({
   items,
+  label,
 }: {
   items: {
     title: string
@@ -29,17 +31,19 @@ export function NavMain({
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     hugeIcon?: any
     isActive?: boolean
+    badge?: number
     items?: {
       title: string
       url: string
     }[]
   }[]
+  label?: string
 }) {
   const pathname = usePathname()
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Navegación</SidebarGroupLabel>
+      {label && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
       <SidebarMenu>
         {items.map((item) => {
           const isItemActive = item.url ? pathname.startsWith(item.url) : false
@@ -101,6 +105,11 @@ export function NavMain({
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
+              {item.badge !== undefined && item.badge > 0 && (
+                <SidebarMenuBadge className="bg-accent text-accent-foreground font-semibold px-1.5 py-0.5 rounded-full text-[10px]">
+                  {item.badge}
+                </SidebarMenuBadge>
+              )}
             </SidebarMenuItem>
           )
         })}

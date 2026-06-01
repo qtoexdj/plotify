@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Bell, Loader2 } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Notification01Icon, Loading01Icon } from '@hugeicons/core-free-icons'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -137,24 +137,27 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
       const result = await decideNotificationApproval(approvalId, action, userId, organizationId)
 
       if (!result.success) {
-        if (result.code === 'already_processed') {
-          toast.error('Esta solicitud ya fue procesada por otro canal (ej. Telegram).')
-        } else {
-          throw new Error(result.error)
-        }
-      } else {
-        toast.success(
-          action === 'approve'
-            ? 'Solicitud aprobada exitosamente.'
-            : 'Solicitud rechazada exitosamente.'
-        )
+        const message =
+          result.code === 'already_processed'
+            ? 'Esta solicitud ya fue procesada por otro canal (ej. Telegram).'
+            : result.error || 'Error al procesar la decisión.'
+
+        throw new Error(message)
       }
+
+      toast.success(
+        action === 'approve'
+          ? 'Solicitud aprobada exitosamente.'
+          : 'Solicitud rechazada exitosamente.'
+      )
 
       // Refrescar conteo reactivo global
       await fetchNotifications()
     } catch (err) {
       const errorMsg = err as Error
       toast.error(errorMsg.message || 'Error al procesar la decisión.')
+      await fetchNotifications()
+      throw err
     }
   }
 
@@ -165,17 +168,15 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
           <Button
             variant="ghost"
             size="icon"
-            className="relative hover:bg-slate-100/80 rounded-full h-9 w-9 flex items-center justify-center transition-all duration-200"
+            className="relative hover:bg-muted rounded-full h-9 w-9 flex items-center justify-center transition-all duration-200 group"
             aria-label="Campana de notificaciones"
           >
-            <Bell className="h-5 w-5 text-slate-600 stroke-[1.8] group-hover:scale-105 transition-transform" />
+            <HugeiconsIcon
+              icon={Notification01Icon}
+              className="h-5 w-5 text-muted-foreground stroke-[1.8] group-hover:scale-105 transition-transform"
+            />
             {counts.unread > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1.5 -right-1.5 h-5 min-w-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 animate-pulse border-2 border-background"
-              >
-                {counts.unread}
-              </Badge>
+              <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-primary border-2 border-background animate-in zoom-in duration-200" />
             )}
           </Button>
         </PopoverTrigger>
@@ -184,16 +185,16 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
         <PopoverContent
           align="end"
           sideOffset={8}
-          className="w-[360px] p-0 rounded-2xl border border-slate-100 bg-background shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-3 duration-300 relative z-50"
+          className="w-[360px] p-0 rounded-2xl border border-border bg-background shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-3 duration-300 relative z-50"
         >
-          <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+          <div className="px-4 py-3.5 border-b border-border flex items-center justify-between bg-muted/20">
+            <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
               Notificaciones
-              {counts.unread > 0 && (
-                <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-              )}
+              {counts.unread > 0 && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
             </h3>
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+            {loading && (
+              <HugeiconsIcon icon={Loading01Icon} className="h-4 w-4 animate-spin text-primary" />
+            )}
           </div>
 
           <NotificationList

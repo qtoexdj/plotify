@@ -52,11 +52,11 @@ export function ProjectHeader({
           <HugeiconsIcon icon={ArrowLeft01Icon} className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
+          <h1 className="text-xl md:text-3xl font-bold text-foreground leading-tight">
             {project.name}
           </h1>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+            <span className="flex items-center gap-1 text-sm text-muted-foreground">
               <HugeiconsIcon icon={Location01Icon} className="w-3.5 h-3.5 shrink-0" />
               {project.region} / {project.comuna}
             </span>

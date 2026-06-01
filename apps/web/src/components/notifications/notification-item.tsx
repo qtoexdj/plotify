@@ -1,7 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, X, Loader2, ClipboardList, User, MapPin, Calendar, Sparkles } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  Tick02Icon,
+  Cancel01Icon,
+  Loading01Icon,
+  Task01Icon,
+  UserIcon,
+  Location01Icon,
+  Calendar01Icon,
+  SparklesIcon,
+} from '@hugeicons/core-free-icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { NotificationItem as NotificationItemType } from '@/lib/services/notifications.service'
@@ -16,10 +26,12 @@ interface NotificationItemProps {
 export function NotificationItem({ item, userRole, onMarkRead, onDecide }: NotificationItemProps) {
   const [deciding, setDeciding] = useState<'approve' | 'reject' | null>(null)
   const [markingRead, setMarkingRead] = useState(false)
+  const [optimisticStatus, setOptimisticStatus] = useState<string | null>(null)
 
   const isSale = item.request_type === 'sale'
-  const isPending = item.status === 'pending'
-  const isApproved = item.status === 'approved'
+  const currentStatus = optimisticStatus || item.status
+  const isPending = currentStatus === 'pending'
+  const isApproved = currentStatus === 'approved'
 
   const formattedDate = new Date(item.created_at).toLocaleDateString('es-CL', {
     day: 'numeric',
@@ -31,8 +43,13 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
   const handleAction = async (action: 'approve' | 'reject') => {
     if (!onDecide) return
     setDeciding(action)
+    const targetStatus = action === 'approve' ? 'approved' : 'rejected'
+    setOptimisticStatus(targetStatus)
     try {
       await onDecide(item.approval_id, action)
+    } catch (error) {
+      setOptimisticStatus(null)
+      throw error
     } finally {
       setDeciding(null)
     }
@@ -56,13 +73,13 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
       onClick={handleItemClick}
       className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col gap-3.5 shadow-sm text-left relative overflow-hidden group ${
         !item.read_at
-          ? 'bg-gradient-to-r from-blue-50/50 via-background to-background border-blue-100 hover:from-blue-50 hover:to-background cursor-pointer'
-          : 'bg-background hover:bg-slate-50/50 border-muted'
+          ? 'bg-accent/5 border-accent/15 hover:bg-accent/10 cursor-pointer'
+          : 'bg-background hover:bg-muted/40 border-border'
       }`}
     >
-      {/* Sutil micro-animación pulsante para notificaciones no leídas */}
+      {/* Sutil indicador estático para notificaciones no leídas */}
       {!item.read_at && (
-        <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+        <span className="absolute top-3.5 right-3.5 h-2 w-2 rounded-full bg-primary" />
       )}
 
       <div className="flex items-start justify-between gap-3">
@@ -70,16 +87,16 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
           <div
             className={`p-2 rounded-lg border shrink-0 ${
               isSale
-                ? 'bg-blue-50 text-blue-600 border-blue-100'
-                : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                ? 'bg-accent/10 text-accent border-accent/25'
+                : 'bg-success/10 text-success border-success/25'
             }`}
           >
-            <ClipboardList className="h-4.5 w-4.5 stroke-[1.5]" />
+            <HugeiconsIcon icon={Task01Icon} className="h-4.5 w-4.5 stroke-[1.5]" />
           </div>
 
           <div className="space-y-0.5">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-xs text-slate-800">
+              <span className="font-semibold text-xs text-foreground">
                 {isVendor
                   ? isSale
                     ? 'Solicitud de Venta'
@@ -102,10 +119,10 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
         <Badge
           className={`text-[10px] font-bold py-0.5 px-2 border transition-all duration-300 ${
             isPending
-              ? 'bg-amber-50 text-amber-700 border-amber-200'
+              ? 'bg-warning/10 text-warning border-warning/25 shadow-none'
               : isApproved
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-red-50 text-red-700 border-red-200'
+                ? 'bg-success/10 text-success border-success/25 shadow-none'
+                : 'bg-destructive/10 text-destructive border-destructive/20 shadow-none'
           }`}
         >
           {isPending
@@ -120,30 +137,42 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-100/80 pt-2.5 text-[11px] text-slate-600">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-2.5 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-          <span className="font-semibold text-slate-500">Cliente:</span>
-          <span className="truncate font-medium text-slate-700">{item.client_name}</span>
+          <HugeiconsIcon
+            icon={UserIcon}
+            className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0"
+          />
+          <span className="font-semibold text-muted-foreground/80">Cliente:</span>
+          <span className="truncate font-medium text-foreground">{item.client_name}</span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-          <span className="font-semibold text-slate-500">Vendedor:</span>
-          <span className="truncate font-medium text-slate-700">{item.vendor_name}</span>
+          <HugeiconsIcon
+            icon={Location01Icon}
+            className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0"
+          />
+          <span className="font-semibold text-muted-foreground/80">Vendedor:</span>
+          <span className="truncate font-medium text-foreground">{item.vendor_name}</span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-          <span className="font-semibold text-slate-500">Fecha:</span>
-          <span className="font-medium text-slate-700">{formattedDate}</span>
+          <HugeiconsIcon
+            icon={Calendar01Icon}
+            className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0"
+          />
+          <span className="font-semibold text-muted-foreground/80">Fecha:</span>
+          <span className="font-medium text-foreground">{formattedDate}</span>
         </div>
 
         {item.decided_at && (
           <div className="flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-            <span className="font-semibold text-slate-500">Decisión:</span>
-            <span className="font-medium text-slate-700">
+            <HugeiconsIcon
+              icon={SparklesIcon}
+              className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0"
+            />
+            <span className="font-semibold text-muted-foreground/80">Decisión:</span>
+            <span className="font-medium text-foreground">
               {new Date(item.decided_at).toLocaleDateString('es-CL', {
                 day: 'numeric',
                 month: 'short',
@@ -153,9 +182,9 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
         )}
       </div>
 
-      {/* Botones de acción administrativa (T023 - US2) */}
+      {/* Botones de acción administrativa */}
       {userRole === 'admin' && item.can_decide && onDecide && (
-        <div className="flex w-full gap-2 justify-stretch border-t border-slate-100/80 pt-3">
+        <div className="flex w-full gap-2 justify-stretch border-t border-border pt-3">
           <Button
             variant="outline"
             size="sm"
@@ -164,12 +193,12 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
               handleAction('reject')
             }}
             disabled={deciding !== null}
-            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold h-8 text-[11px] px-3 flex items-center gap-1.5 flex-1 justify-center rounded-lg shadow-sm"
+            className="border-destructive/20 text-destructive hover:bg-destructive/10 font-semibold h-8 text-[11px] px-3 flex items-center gap-1.5 flex-1 justify-center rounded-lg shadow-sm"
           >
             {deciding === 'reject' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <HugeiconsIcon icon={Loading01Icon} className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <X className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={Cancel01Icon} className="h-3.5 w-3.5" />
             )}
             Rechazar
           </Button>
@@ -181,12 +210,12 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
               handleAction('approve')
             }}
             disabled={deciding !== null}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold h-8 text-[11px] px-3 flex items-center gap-1.5 flex-1 justify-center rounded-lg shadow-sm"
+            className="bg-success text-success-foreground hover:bg-success/90 font-semibold h-8 text-[11px] px-3 flex items-center gap-1.5 flex-1 justify-center rounded-lg shadow-sm"
           >
             {deciding === 'approve' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <HugeiconsIcon icon={Loading01Icon} className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Check className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={Tick02Icon} className="h-3.5 w-3.5" />
             )}
             Aprobar
           </Button>

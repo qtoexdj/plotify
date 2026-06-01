@@ -16,37 +16,36 @@ export const ESTADO_CONFIG: Record<
     fill: '#22c55e',
     stroke: '#15803d',
     label: 'Disponible',
-    bgClass: 'bg-emerald-100',
-    textClass: 'text-emerald-700',
+    bgClass: 'bg-success/10',
+    textClass: 'text-success',
     badgeClasses:
-      'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 dark:hover:bg-emerald-500/30',
+      'border-success/25 bg-success/10 text-success hover:bg-success/15 dark:border-success/30 dark:bg-success/15 dark:hover:bg-success/20',
   },
   reservado: {
     fill: '#f59e0b',
     stroke: '#d97706',
     label: 'Reservado',
-    bgClass: 'bg-amber-100',
-    textClass: 'text-amber-700',
+    bgClass: 'bg-warning/10',
+    textClass: 'text-warning',
     badgeClasses:
-      'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-500/20 dark:text-amber-400 dark:hover:bg-amber-500/30',
+      'border-warning/25 bg-warning/10 text-warning hover:bg-warning/15 dark:border-warning/30 dark:bg-warning/15 dark:hover:bg-warning/20',
   },
   vendido: {
     fill: '#ef4444',
     stroke: '#dc2626',
     label: 'Vendido',
-    bgClass: 'bg-red-100',
-    textClass: 'text-red-700',
+    bgClass: 'bg-destructive/10',
+    textClass: 'text-destructive',
     badgeClasses:
-      'border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-700 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30',
+      'border-destructive/25 bg-destructive/10 text-destructive hover:bg-destructive/15 dark:border-destructive/30 dark:bg-destructive/15 dark:hover:bg-destructive/20',
   },
   sin_asignar: {
     fill: '#94a3b8',
     stroke: '#64748b',
     label: 'Sin asignar',
-    bgClass: 'bg-slate-100',
-    textClass: 'text-slate-600',
-    badgeClasses:
-      'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-500/20 dark:text-slate-400',
+    bgClass: 'bg-muted',
+    textClass: 'text-muted-foreground',
+    badgeClasses: 'border-border bg-muted text-muted-foreground hover:bg-muted/80',
   },
 }
 

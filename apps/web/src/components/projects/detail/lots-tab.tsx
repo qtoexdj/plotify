@@ -11,7 +11,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { LotStatusBadge } from '@/components/projects/LotStatusBadge'
+import { SkeletonTable } from '@/components/dashboard/skeleton-card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -470,7 +471,9 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-center py-12 text-gray-600">Cargando lotes...</div>
+          <div className="py-6">
+            <SkeletonTable />
+          </div>
         ) : error ? (
           <div className="text-center py-12 text-gray-600">
             <p className="mb-4">{error}</p>
@@ -525,7 +528,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                       <TableRow key={lot.id}>
                         <TableCell className="font-medium">{lot.numero_lote}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{lot.estado}</Badge>
+                          <LotStatusBadge status={lot.estado || 'disponible'} />
                         </TableCell>
                         <TableCell className="min-w-55">{record?.cliente_nombre || '—'}</TableCell>
                         <TableCell>{record?.cliente_run || '—'}</TableCell>

@@ -189,9 +189,7 @@ export function LotInfoView({
                   )}
                 </div>
                 {lotDetails.area_official_m2 ? (
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 truncate mb-1">
-                    Oficial verificado
-                  </p>
+                  <p className="text-[10px] text-success truncate mb-1">Oficial verificado</p>
                 ) : legalMetrics ? (
                   <p className="text-[10px] text-muted-foreground truncate mb-1">
                     Calculado (UTM Zona {legalMetrics.utm_zone})
@@ -266,7 +264,7 @@ export function LotInfoView({
               </Button>
               {lotDetails.estado === 'reservado' && (
                 <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-10"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm h-10"
                   onClick={() => onOpenReservation('direct_sale')}
                 >
                   Solicitar Venta
@@ -278,14 +276,14 @@ export function LotInfoView({
           {lotDetails.estado === 'disponible' && (
             <div className="flex flex-col gap-2 pt-1">
               <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-10"
+                className="w-full bg-success text-success-foreground hover:bg-success/90 shadow-sm h-10"
                 onClick={() => onOpenReservation('reservation')}
               >
                 Solicitar Reserva
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950 dark:hover:text-blue-300 h-10"
+                className="w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary h-10"
                 onClick={() => onOpenReservation('direct_sale')}
               >
                 Venta Directa
@@ -367,7 +365,7 @@ export function LotInfoView({
                     <Button
                       onClick={() => handleStageChange('escritura_firmada')}
                       size="sm"
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="w-full bg-success text-success-foreground hover:bg-success/90"
                     >
                       Confirmar Escritura Firmada
                     </Button>

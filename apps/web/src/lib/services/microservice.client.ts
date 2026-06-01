@@ -68,7 +68,11 @@ export async function microserviceFetch<T = unknown>(
   } catch (err) {
     const errorDetails =
       err instanceof Error
-        ? { message: err.message, code: (err as any).code, stack: err.stack }
+        ? {
+            message: err.message,
+            code: (err as unknown as Record<string, unknown>).code,
+            stack: err.stack,
+          }
         : String(err)
     logger.error(
       { path, url, err: errorDetails },

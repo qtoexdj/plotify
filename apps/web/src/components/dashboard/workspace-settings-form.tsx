@@ -29,6 +29,8 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import type { WorkspaceDetails } from '@/lib/services/workspace.service'
 import { updateWorkspaceAction } from '@/app/(dashboard)/settings/actions'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { FloppyDiskIcon, Loading02Icon, StarIcon } from '@hugeicons/core-free-icons'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -83,21 +85,29 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="shadow-xs border-border/60 bg-card/65 backdrop-blur-xs rounded-xl">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle>Perfil del Workspace</CardTitle>
-              <CardDescription>
-                Administra la identidad y preferencias de tu entorno de trabajo.
+              <CardTitle className="text-xl font-bold tracking-tight">
+                Perfil del Workspace
+              </CardTitle>
+              <CardDescription className="text-muted-foreground/80">
+                Administra la identidad y preferencias de tu entorno de trabajo en Plotify.
               </CardDescription>
             </div>
             {isPersonal ? (
-              <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-200">
+              <Badge
+                variant="outline"
+                className="bg-muted/65 text-muted-foreground border-border/80 rounded-full w-fit"
+              >
                 Cuenta Independiente
               </Badge>
             ) : (
-              <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+              <Badge
+                variant="default"
+                className="bg-primary hover:bg-primary/95 text-primary-foreground rounded-full w-fit"
+              >
                 Empresa
               </Badge>
             )}
@@ -105,18 +115,21 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre de la Empresa o Equipo</FormLabel>
+                    <FormLabel className="text-xs font-semibold tracking-tight text-foreground/90">
+                      Nombre de la Empresa o Equipo
+                    </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Ej: Inmobiliaria Sur"
                         {...field}
                         disabled={!isAdmin || isPending}
+                        className="rounded-lg h-10"
                       />
                     </FormControl>
                     <FormMessage />
@@ -128,15 +141,18 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
                 name="slug"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Identificador Único (Slug)</FormLabel>
+                    <FormLabel className="text-xs font-semibold tracking-tight text-foreground/90">
+                      Identificador Único (Slug)
+                    </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="inmobiliaria-sur"
                         {...field}
                         disabled={!isAdmin || isPending}
+                        className="rounded-lg h-10"
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-[10px] text-muted-foreground/70">
                       Se usará para enlaces públicos. Solo minúsculas, números y guiones.
                     </FormDescription>
                     <FormMessage />
@@ -145,9 +161,29 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
               />
 
               {isAdmin && (
-                <div className="pt-4 border-t border-slate-100 flex justify-end">
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? 'Guardando...' : 'Guardar cambios'}
+                <div className="pt-4 border-t border-border/50 flex justify-end mt-6">
+                  <Button
+                    type="submit"
+                    disabled={isPending}
+                    className="rounded-lg shadow-sm px-6 h-10"
+                  >
+                    {isPending ? (
+                      <>
+                        <HugeiconsIcon
+                          icon={Loading02Icon}
+                          className="mr-2 h-4 w-4 animate-spin text-primary-foreground"
+                        />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <HugeiconsIcon
+                          icon={FloppyDiskIcon}
+                          className="mr-2 h-4 w-4 text-primary-foreground"
+                        />{' '}
+                        Guardar cambios
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
@@ -157,15 +193,26 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       </Card>
 
       {isPersonal && isAdmin && (
-        <Card className="border-blue-200 bg-blue-50/50">
+        <Card className="border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl shadow-xs">
           <CardHeader>
-            <CardTitle className="text-blue-800">Transformar a Cuenta Empresa</CardTitle>
-            <CardDescription className="text-blue-700/80">
-              Desbloquea la capacidad de invitar a vendedores y colaboradores a tu equipo.
+            <div className="flex items-center gap-2">
+              <HugeiconsIcon
+                icon={StarIcon}
+                className="h-5 w-5 text-indigo-600 dark:text-indigo-400"
+              />
+              <CardTitle className="text-indigo-600 dark:text-indigo-400 text-lg font-bold tracking-tight">
+                Transformar a Cuenta Empresa
+              </CardTitle>
+            </div>
+            <CardDescription className="text-muted-foreground/90 text-xs">
+              Desbloquea la capacidad de invitar a vendedores y colaboradores a tu equipo de loteos.
             </CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button variant="outline" className="text-blue-700 border-blue-300 hover:bg-blue-100">
+            <Button
+              variant="outline"
+              className="border-indigo-500/30 hover:bg-indigo-500/10 hover:border-indigo-500/40 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs"
+            >
               Mejorar Plan (Próximamente)
             </Button>
           </CardFooter>

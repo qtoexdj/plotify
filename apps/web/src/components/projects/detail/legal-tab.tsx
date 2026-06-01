@@ -136,7 +136,7 @@ export function LegalTab({ lots, projectId, project }: LegalTabProps) {
   // ── Generador de servidumbre ──
   const servidumbreText = useMemo(() => {
     if (!selectedLot) return 'Selecciona un lote para generar la servidumbre.'
-    if (isLoadingFC) return 'Cargando geometrías del proyecto...'
+    if (isLoadingFC) return 'Preparando geometrías del proyecto...'
 
     if (servidumbreAnalysis) {
       return generateServidumbreText(servidumbreAnalysis, project.road_width_m || 6)
