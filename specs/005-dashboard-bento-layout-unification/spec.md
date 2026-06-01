@@ -1,6 +1,6 @@
 # Feature Specification: Dashboard Bento Layout Unification
 
-**Feature Branch**: `004-ui-ux-premium-upgrade`
+**Feature Branch**: `005-dashboard-bento-layout-unification`
 
 **Created**: 2026-06-01
 
@@ -77,9 +77,11 @@ verificar que los spans responden correctamente en desktop y mobile.
    **Then** se renderizan en el `BentoGrid` sin cambiar el margen de pagina.
 2. **Given** `/vendors` muestra una tabla, **When** se renderiza en desktop, **Then**
    el panel de tabla ocupa un span ancho sin romper el sistema bento.
-3. **Given** `/settings/workspace` muestra un formulario, **When** se renderiza en
-   desktop, **Then** el formulario ocupa una columna principal con espacio reservado
-   para ayuda/contexto futuro.
+3. **Given** `/settings/workspace` o `/settings/profile` muestra un formulario,
+   **When** se renderiza en desktop, **Then** el formulario se percibe como una
+   composicion completa dentro del rail compartido; no debe quedar un hueco derecho
+   vacio que parezca un panel faltante. Si se usa un span parcial, el espacio restante
+   debe contener un panel real de ayuda/contexto.
 
 ## Requirements
 
@@ -101,6 +103,9 @@ verificar que los spans responden correctamente en desktop y mobile.
   de cards cuando aportan escaneo o estado.
 - **FR-010**: Actualizar `design.md` con la decision canonica de margen, bento grid
   y uso de iconos.
+- **FR-011**: Las paginas de settings no deben dejar columnas vacias a la derecha en
+  desktop; formularios de perfil y workspace deben ocupar un ancho visual completo o
+  acompanarse de un panel lateral real cuando usen spans parciales.
 
 ## Success Criteria
 
@@ -112,6 +117,9 @@ verificar que los spans responden correctamente en desktop y mobile.
   rail en desktop y mobile.
 - **SC-005**: Verificacion pasa con `pnpm --filter web lint`, `pnpm format:check` y
   `pnpm build:web`.
+- **SC-006**: `/settings/profile` y `/settings/workspace` no presentan un hueco
+  derecho vacio en desktop; la composicion se ve cerrada como el resto de paginas
+  principales.
 
 ## Assumptions
 

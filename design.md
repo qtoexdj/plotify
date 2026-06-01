@@ -306,3 +306,28 @@ El layout de la aplicación sigue una disposición de dos paneles responsivos:
 - **NO mezcles librerías de iconos**: No importes iconos de `lucide-react`, `heroicons` o `font-awesome` a menos que sea estrictamente necesario y no exista un equivalente en Hugeicons.
 - **NO hardcodees radios de esquina**: No uses clases como `rounded-[30px]` o `rounded-none` de manera aleatoria. Toda la web debe respirar consistencia formal.
 - **NO sobrepases la densidad visual**: Mantén el espaciado y márgenes consistentes (`p-4` o `p-6` para contenedores interactivos) para dar "aire" al diseño y facilitar la lectura en dispositivos móviles.
+
+---
+
+## 6. Layout Bento y Políticas de Encabezados (Layout Bento & Headers)
+
+A partir de la unificación del diseño visual en junio de 2026 (SDD 5), se establecen las siguientes políticas estructurales obligatorias para todas las pantallas del dashboard:
+
+### Layout de Página y Contenedor Principal (`PageShell`)
+
+- Toda página autenticada del dashboard debe renderizarse dentro del componente común `PageShell`.
+- Se prohíben layouts de página aislados con paddings o anchos personalizados a nivel de ruta (como `p-6 max-w-4xl mx-auto`).
+- `PageShell` centraliza el padding responsivo (mínimo en mobile, holgado en desktop), el ancho máximo del área de trabajo (`max-w-[1600px]`) y aplica una animación de entrada estándar (`animate-fade-in-up`).
+
+### Encabezados de Página Estandarizados (`PageHeader`)
+
+- Toda página debe utilizar `PageHeader` para renderizar su título principal y descripción.
+- **Títulos sin iconos por defecto**: Los `h1` principales del encabezado son estrictamente textuales y no deben incluir iconos decorativos. Esto asegura una transición limpia y sin saltos visuales al navegar por el menú.
+- La iconografía queda estrictamente reservada para botones de acción (ej. en el slot `action`), estados vacíos (`EmptyState`), elementos de navegación interna, insignias (`Badge`) y estados de tarjetas.
+
+### Sistema Bento Grid (`BentoGrid` y `BentoPanel`)
+
+- Las vistas complejas que agrupen tablas, formularios, métricas o mapas deben utilizar el sistema de rejilla `BentoGrid` (de 12 columnas en desktop y 1 columna en mobile).
+- Para agrupar secciones lógicas (paneles de datos, resúmenes, listados de configuración) se debe utilizar el contenedor `BentoPanel`.
+- **BentoPanel** encapsula el borde, fondo y sombras consistentes (`rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden`), evitando la anidación innecesaria de múltiples tarjetas visualmente pesadas.
+- Los formularios de configuración y edición en páginas de settings deben alinearse a este carril Bento ocupando una extensión óptima para lectura (usualmente `xl:col-span-8`), evitando la sensación de "isla" aislada.

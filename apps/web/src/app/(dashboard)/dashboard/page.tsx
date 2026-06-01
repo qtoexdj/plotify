@@ -7,6 +7,9 @@ import { createClient } from '@/lib/supabase/server'
 import { PendingApprovalsPanel } from '@/components/dashboard/approvals/pending-approvals-panel'
 import { VendorRequestsPanel } from '@/components/dashboard/approvals/vendor-requests-panel'
 import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { BentoGrid } from '@/components/dashboard/bento-grid'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,48 +42,50 @@ export default async function DashboardPage() {
   const hasNoCommercialHistory = kpis.totalProjects === 0
 
   return (
-    <div className="p-6 space-y-8 animate-fade-in-up">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Hola, {userGreetingName}
-        </h1>
-        <p className="text-muted-foreground">
-          Revisa el rendimiento global de tus proyectos y equipo de ventas.
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        title={`Hola, ${userGreetingName}`}
+        description="Revisa el rendimiento global de tus proyectos y equipo de ventas."
+      />
 
-      {member?.role === 'admin' && (
-        <PendingApprovalsPanel organizationId={member.organization_id} />
-      )}
-
-      {member?.role === 'vendor' && (
-        <VendorRequestsPanel userId={userId} organizationId={member.organization_id} />
-      )}
-
-      {hasNoCommercialHistory ? (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">Primeros Pasos</h2>
-          <OnboardingChecklist
-            hasProjects={kpis.totalProjects > 0}
-            hasVendors={vendors.length > 0}
-            hasClients={false}
-          />
-        </div>
-      ) : (
-        <>
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight">Resumen Global</h2>
-            <DashboardKPIs kpis={kpis} />
+      <BentoGrid>
+        {member?.role === 'admin' && (
+          <div className="xl:col-span-12">
+            <PendingApprovalsPanel organizationId={member.organization_id} />
           </div>
+        )}
 
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold tracking-tight">Equipo de Ventas</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2">
-              <VendorsList vendors={vendors} />
+        {member?.role === 'vendor' && (
+          <div className="xl:col-span-12">
+            <VendorRequestsPanel userId={userId} organizationId={member.organization_id} />
+          </div>
+        )}
+
+        {hasNoCommercialHistory ? (
+          <div className="xl:col-span-12 space-y-4">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">Primeros Pasos</h2>
+            <OnboardingChecklist
+              hasProjects={kpis.totalProjects > 0}
+              hasVendors={vendors.length > 0}
+              hasClients={false}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="xl:col-span-12 space-y-4">
+              <h2 className="text-xl font-semibold tracking-tight">Resumen Global</h2>
+              <DashboardKPIs kpis={kpis} />
             </div>
-          </div>
-        </>
-      )}
-    </div>
+
+            <div className="xl:col-span-12 space-y-4">
+              <h2 className="text-xl font-semibold tracking-tight">Equipo de Ventas</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <VendorsList vendors={vendors} />
+              </div>
+            </div>
+          </>
+        )}
+      </BentoGrid>
+    </PageShell>
   )
 }

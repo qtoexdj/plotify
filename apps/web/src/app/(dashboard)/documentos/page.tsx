@@ -6,7 +6,10 @@ import {
   File02Icon,
   PlusSignIcon,
 } from '@hugeicons/core-free-icons'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { BentoGrid, BentoPanel } from '@/components/dashboard/bento-grid'
 
 const ACCESOS = [
   {
@@ -37,19 +40,17 @@ const ACCESOS = [
 
 export default function DocumentosPage() {
   return (
-    <div className="p-6 space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Documentos Legales</h1>
-        <p className="text-muted-foreground mt-1">
-          Orquestador de escrituras y contratos para tus lotes.
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Documentos Legales"
+        description="Orquestador de escrituras y contratos para tus lotes."
+      />
 
       {/* ── Acceso rápido ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <BentoGrid>
         {ACCESOS.map((item) => (
-          <Link key={item.href} href={item.href} className="group">
-            <Card className="h-full transition-shadow hover:shadow-md">
+          <Link key={item.href} href={item.href} className="group md:col-span-6 xl:col-span-4">
+            <BentoPanel className="h-full transition-shadow hover:shadow-md cursor-pointer">
               <CardHeader className="gap-3">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.bg}`}>
                   <HugeiconsIcon icon={item.icon} className={`w-5 h-5 ${item.color}`} />
@@ -59,27 +60,27 @@ export default function DocumentosPage() {
                   <CardDescription className="text-sm mt-0.5">{item.description}</CardDescription>
                 </div>
               </CardHeader>
-            </Card>
+            </BentoPanel>
           </Link>
         ))}
-      </div>
 
-      {/* ── Acción principal ─────────────────────────────────────────── */}
-      <div className="border rounded-xl p-6 bg-muted/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <p className="font-semibold">¿Necesitas generar una escritura?</p>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Selecciona un lote reservado desde el mapa para iniciar el asistente de generación.
-          </p>
+        {/* ── Acción principal ─────────────────────────────────────────── */}
+        <div className="xl:col-span-12 border border-border rounded-xl p-6 bg-card text-card-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
+          <div>
+            <p className="font-semibold text-foreground">¿Necesitas generar una escritura?</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Selecciona un lote reservado desde el mapa para iniciar el asistente de generación.
+            </p>
+          </div>
+          <Link
+            href="/projects"
+            className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline shrink-0"
+          >
+            <HugeiconsIcon icon={PlusSignIcon} className="w-4 h-4" />
+            Ir a Proyectos
+          </Link>
         </div>
-        <Link
-          href="/projects"
-          className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline shrink-0"
-        >
-          <HugeiconsIcon icon={PlusSignIcon} className="w-4 h-4" />
-          Ir a Proyectos
-        </Link>
-      </div>
-    </div>
+      </BentoGrid>
+    </PageShell>
   )
 }

@@ -1,6 +1,6 @@
 # Implementation Plan: Dashboard Bento Layout Unification
 
-**Branch**: `004-ui-ux-premium-upgrade` | **Date**: 2026-06-01 |
+**Branch**: `005-dashboard-bento-layout-unification` | **Date**: 2026-06-01 |
 **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from
@@ -91,8 +91,9 @@ design.md                          # [UPDATE] Canonical layout/icon decision
 </section>
 ```
 
-Settings pages should not center the whole page as a separate island. Instead,
-their forms can live inside a bento column such as `xl:col-span-8`.
+Settings pages should not center the whole page as a separate island or leave an
+unexplained empty gutter. Form-heavy settings pages should either occupy the full
+bento width or pair a partial-width form with a real companion panel.
 
 ### PageHeader
 
@@ -119,7 +120,7 @@ inside panels should be avoided unless they are repeated items such as projects.
 ```tsx
 <BentoGrid>
   <BentoPanel className="xl:col-span-12">...</BentoPanel>
-  <BentoPanel className="xl:col-span-8">...</BentoPanel>
+  <BentoPanel className="md:col-span-12">...</BentoPanel>
 </BentoGrid>
 ```
 
@@ -148,12 +149,12 @@ alignment.
 
 ## Risks & Mitigations
 
-| Risk                                      | Mitigation                                                                                          |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Nested cards make the UI feel heavy       | Use `BentoPanel` for page modules and reserve `Card` for repeated records or existing shadcn forms. |
-| Settings forms become too wide            | Use bento spans (`xl:col-span-8`) instead of page-level `max-w-4xl mx-auto`.                        |
-| Client/server component boundary breakage | Keep primitives free of hooks and client directives.                                                |
-| Too much scope in one pass                | Migrate routes in task order and stop after each verify command.                                    |
+| Risk                                       | Mitigation                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Nested cards make the UI feel heavy        | Use `BentoPanel` for page modules and reserve `Card` for repeated records or existing shadcn forms. |
+| Settings forms leave an empty right gutter | Use a full-width bento composition, or pair a partial-width form with a real help/context panel.    |
+| Client/server component boundary breakage  | Keep primitives free of hooks and client directives.                                                |
+| Too much scope in one pass                 | Migrate routes in task order and stop after each verify command.                                    |
 
 ## Verification Strategy
 
@@ -161,4 +162,5 @@ alignment.
 2. Build gates: run `pnpm --filter web lint`, `pnpm format:check`,
    `pnpm build:web`.
 3. Visual inspection: compare `/projects`, `/vendors`, `/settings/workspace` at
-   desktop and 390px mobile width.
+   desktop and 390px mobile width, and confirm `/settings/profile` plus
+   `/settings/workspace` do not leave an empty right-side column on desktop.

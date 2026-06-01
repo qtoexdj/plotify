@@ -2,6 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActiveWorkspace } from '@/lib/services/workspace.service'
 import { WorkspaceSettingsForm } from '@/components/dashboard/workspace-settings-form'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { BentoGrid } from '@/components/dashboard/bento-grid'
 
 export const metadata = {
   title: 'Configuración del Workspace | Plotify',
@@ -21,25 +24,32 @@ export default async function WorkspaceSettingsPage() {
   if (!workspace) {
     // Manejo de caso borde si el usuario no pertenece a ningún workspace aún.
     return (
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">Configuración</h1>
-        <div className="rounded-xl bg-amber-500/10 p-4 border border-amber-500/20">
+      <PageShell>
+        <PageHeader
+          title="Configuración"
+          description="Gestiona los ajustes de tu entorno de trabajo."
+        />
+        <div className="rounded-xl bg-amber-500/10 p-4 border border-amber-500/20 mt-6">
           <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
             No se encontró un Workspace activo para tu cuenta. Por favor, contacta a soporte.
           </p>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">Configuración</h1>
-        <p className="text-muted-foreground mt-1">Gestiona los ajustes de tu entorno de trabajo.</p>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Configuración"
+        description="Gestiona los ajustes de tu entorno de trabajo."
+      />
 
-      <WorkspaceSettingsForm workspace={workspace} />
-    </div>
+      <BentoGrid className="mt-6">
+        <div className="md:col-span-12">
+          <WorkspaceSettingsForm workspace={workspace} />
+        </div>
+      </BentoGrid>
+    </PageShell>
   )
 }

@@ -11,6 +11,9 @@ import { createClient } from '@/lib/supabase/client'
 import { SkeletonCard } from '@/components/dashboard/skeleton-card'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { ProjectCard } from '@/components/projects/ProjectCard'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { BentoGrid } from '@/components/dashboard/bento-grid'
 
 export default function ProjectsPage() {
   const router = useRouter()
@@ -70,7 +73,7 @@ export default function ProjectsPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <PageShell>
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <div className="h-9 w-40 bg-muted rounded animate-pulse" />
@@ -78,31 +81,37 @@ export default function ProjectsPage() {
           </div>
           <div className="h-10 w-36 bg-muted rounded animate-pulse" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-      </div>
+        <BentoGrid>
+          <div className="md:col-span-6 xl:col-span-4">
+            <SkeletonCard />
+          </div>
+          <div className="md:col-span-6 xl:col-span-4">
+            <SkeletonCard />
+          </div>
+          <div className="md:col-span-6 xl:col-span-4">
+            <SkeletonCard />
+          </div>
+        </BentoGrid>
+      </PageShell>
     )
   }
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Proyectos</h1>
-          <p className="text-muted-foreground mt-1">Gestiona tus proyectos de loteos</p>
-        </div>
-        {isAdmin && (
-          <Link href="/onboarding/new">
-            <Button size="lg">
-              <HugeiconsIcon icon={PlusSignIcon} className="w-5 h-5 mr-2" />
-              Nuevo Proyecto
-            </Button>
-          </Link>
-        )}
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Proyectos"
+        description="Gestiona tus proyectos de loteos"
+        action={
+          isAdmin && (
+            <Link href="/onboarding/new">
+              <Button size="lg">
+                <HugeiconsIcon icon={PlusSignIcon} className="w-5 h-5 mr-2" />
+                Nuevo Proyecto
+              </Button>
+            </Link>
+          )
+        }
+      />
 
       {projects.length === 0 ? (
         <EmptyState
@@ -113,21 +122,22 @@ export default function ProjectsPage() {
           actionHref="/onboarding/new"
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <BentoGrid>
           {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              isAdmin={isAdmin}
-              deletingId={deletingId}
-              onDelete={handleDelete}
-              onClick={() => router.push(`/projects/${project.id}`)}
-              getFullUrl={getFullUrl}
-              layout="grid"
-            />
+            <div key={project.id} className="md:col-span-6 xl:col-span-4">
+              <ProjectCard
+                project={project}
+                isAdmin={isAdmin}
+                deletingId={deletingId}
+                onDelete={handleDelete}
+                onClick={() => router.push(`/projects/${project.id}`)}
+                getFullUrl={getFullUrl}
+                layout="grid"
+              />
+            </div>
           ))}
-        </div>
+        </BentoGrid>
       )}
-    </div>
+    </PageShell>
   )
 }

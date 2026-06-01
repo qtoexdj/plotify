@@ -24,6 +24,9 @@ import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { getActiveWorkspace } from '@/lib/services/workspace.service'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/supabase'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { BentoGrid, BentoPanel } from '@/components/dashboard/bento-grid'
 
 type LeadRow = Database['public']['Tables']['leads']['Row']
 
@@ -82,7 +85,7 @@ export default async function ClientsPage() {
 
   if (!workspace) {
     return (
-      <div className="p-6">
+      <PageShell>
         <Card>
           <CardHeader>
             <CardTitle>No hay Workspace activo</CardTitle>
@@ -91,7 +94,7 @@ export default async function ClientsPage() {
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
@@ -109,13 +112,8 @@ export default async function ClientsPage() {
   const leads = data ?? []
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Leads</h1>
-          <p className="text-muted-foreground mt-1">Gestiona tus prospectos capturados.</p>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader title="Leads" description="Gestiona tus prospectos capturados." />
 
       {leads.length === 0 ? (
         <EmptyState
@@ -126,119 +124,125 @@ export default async function ClientsPage() {
           actionHref="/projects"
         />
       ) : (
-        <Card className="border-sidebar-border overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b border-sidebar-border">
-            <CardTitle>Cartera de Leads</CardTitle>
-            <CardDescription>Prospectos asociados a {workspace.organization.name}</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-sidebar-border">
-                    <TableHead className="w-16">Avatar</TableHead>
-                    <TableHead>Lead</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                    <TableHead>Origen</TableHead>
-                    <TableHead>Ingreso</TableHead>
-                    <TableHead className="text-right w-24">Acción</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((lead: LeadRow) => {
-                    const platform = getPlatformConfig(lead.platform)
-
-                    return (
-                      <TableRow key={lead.id} className="border-sidebar-border">
-                        <TableCell>
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-accent/10 text-accent font-semibold text-xs">
-                              {getInitials(lead.name, lead.phone)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell className="font-bold text-foreground">
-                          {lead.name || 'Lead sin nombre'}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={platform.className}>
-                            <HugeiconsIcon icon={platform.icon} className="w-3.5 h-3.5 mr-1" />
-                            {platform.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatLeadDate(lead.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`tel:${lead.phone}`}>Llamar</a>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+        <BentoGrid>
+          <BentoPanel className="xl:col-span-12">
+            <div className="bg-muted/30 border-b border-sidebar-border px-6 py-4 space-y-1.5">
+              <h3 className="font-semibold text-lg leading-none tracking-tight">
+                Cartera de Leads
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Prospectos asociados a {workspace.organization.name}
+              </p>
             </div>
+            <CardContent className="p-0">
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-sidebar-border">
+                      <TableHead className="w-16">Avatar</TableHead>
+                      <TableHead>Lead</TableHead>
+                      <TableHead>Teléfono</TableHead>
+                      <TableHead>Origen</TableHead>
+                      <TableHead>Ingreso</TableHead>
+                      <TableHead className="text-right w-24">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leads.map((lead: LeadRow) => {
+                      const platform = getPlatformConfig(lead.platform)
 
-            <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
-              {leads.map((lead: LeadRow) => {
-                const platform = getPlatformConfig(lead.platform)
+                      return (
+                        <TableRow key={lead.id} className="border-sidebar-border">
+                          <TableCell>
+                            <Avatar className="w-8 h-8">
+                              <AvatarFallback className="bg-accent/10 text-accent font-semibold text-xs">
+                                {getInitials(lead.name, lead.phone)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TableCell>
+                          <TableCell className="font-bold text-foreground">
+                            {lead.name || 'Lead sin nombre'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={platform.className}>
+                              <HugeiconsIcon icon={platform.icon} className="w-3.5 h-3.5 mr-1" />
+                              {platform.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatLeadDate(lead.created_at)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={`tel:${lead.phone}`}>Llamar</a>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
 
-                return (
-                  <div
-                    key={lead.id}
-                    className="flex flex-col p-5 rounded-2xl border border-sidebar-border bg-background/50 hover:bg-muted/10 transition-colors shadow-sm space-y-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10 border border-sidebar-border shadow-sm shrink-0">
-                        <AvatarFallback className="bg-accent/10 text-accent font-bold text-xs">
-                          {getInitials(lead.name, lead.phone)}
-                        </AvatarFallback>
-                      </Avatar>
+              <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
+                {leads.map((lead: LeadRow) => {
+                  const platform = getPlatformConfig(lead.platform)
 
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <h4 className="font-bold text-base text-foreground leading-snug truncate">
-                          {lead.name || 'Lead sin nombre'}
-                        </h4>
-                        <p className="text-xs text-muted-foreground truncate">{lead.phone}</p>
+                  return (
+                    <div
+                      key={lead.id}
+                      className="flex flex-col p-5 rounded-2xl border border-sidebar-border bg-background/50 hover:bg-muted/10 transition-colors shadow-sm space-y-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-10 h-10 border border-sidebar-border shadow-sm shrink-0">
+                          <AvatarFallback className="bg-accent/10 text-accent font-bold text-xs">
+                            {getInitials(lead.name, lead.phone)}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <h4 className="font-bold text-base text-foreground leading-snug truncate">
+                            {lead.name || 'Lead sin nombre'}
+                          </h4>
+                          <p className="text-xs text-muted-foreground truncate">{lead.phone}</p>
+                        </div>
+
+                        <Badge variant="outline" className={platform.className}>
+                          <HugeiconsIcon icon={platform.icon} className="w-3.5 h-3.5" />
+                          <span className="sr-only">{platform.label}</span>
+                        </Badge>
                       </div>
 
-                      <Badge variant="outline" className={platform.className}>
-                        <HugeiconsIcon icon={platform.icon} className="w-3.5 h-3.5" />
-                        <span className="sr-only">{platform.label}</span>
-                      </Badge>
+                      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-sidebar-border text-xs leading-relaxed">
+                        <div className="space-y-0.5 min-w-0">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                            Origen
+                          </span>
+                          <p className="text-foreground truncate font-medium">{platform.label}</p>
+                        </div>
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                            Ingreso
+                          </span>
+                          <p className="text-foreground font-medium flex items-center gap-1">
+                            <HugeiconsIcon icon={Calendar03Icon} className="w-3.5 h-3.5" />
+                            {formatLeadDate(lead.created_at)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <Button asChild variant="outline" size="sm" className="h-11 font-semibold">
+                        <a href={`tel:${lead.phone}`}>Llamar</a>
+                      </Button>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-sidebar-border text-xs leading-relaxed">
-                      <div className="space-y-0.5 min-w-0">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                          Origen
-                        </span>
-                        <p className="text-foreground truncate font-medium">{platform.label}</p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                          Ingreso
-                        </span>
-                        <p className="text-foreground font-medium flex items-center gap-1">
-                          <HugeiconsIcon icon={Calendar03Icon} className="w-3.5 h-3.5" />
-                          {formatLeadDate(lead.created_at)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button asChild variant="outline" size="sm" className="h-11 font-semibold">
-                      <a href={`tel:${lead.phone}`}>Llamar</a>
-                    </Button>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </BentoPanel>
+        </BentoGrid>
       )}
-    </div>
+    </PageShell>
   )
 }
