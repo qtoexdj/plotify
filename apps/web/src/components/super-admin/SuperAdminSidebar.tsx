@@ -57,14 +57,31 @@ export const NAV_ITEMS = [
   },
 ]
 
+export const ESCRITURAS_LAB_NAV_ITEM = {
+  href: '/super-admin/labs/escrituras',
+  label: 'Labs Escrituras',
+  icon: FileSearchIcon,
+}
+
+const getNavItems = (showEscriturasLab: boolean) => [
+  ...NAV_ITEMS,
+  ...(showEscriturasLab ? [ESCRITURAS_LAB_NAV_ITEM] : []),
+]
+
 interface SuperAdminSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user?: {
     email?: string | null
   }
+  showEscriturasLab?: boolean
 }
 
-export function SuperAdminSidebar({ user, ...props }: SuperAdminSidebarProps) {
+export function SuperAdminSidebar({
+  user,
+  showEscriturasLab = false,
+  ...props
+}: SuperAdminSidebarProps) {
   const pathname = usePathname()
+  const navItems = getNavItems(showEscriturasLab)
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -114,7 +131,7 @@ export function SuperAdminSidebar({ user, ...props }: SuperAdminSidebarProps) {
 
       <SidebarContent className="p-2">
         <SidebarMenu>
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
             return (
               <SidebarMenuItem key={item.href}>

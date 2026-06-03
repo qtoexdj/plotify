@@ -1,0 +1,15 @@
+.env
+input/**
+output/**
+*.pdf
+*.PDF
+*.mdump
+*.dump
+*.sqlite
+*.sqlite3
+*.embeddings.json
+__pycache__/
+.pytest_cache/
+.venv/
+dist/
+build/
