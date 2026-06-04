@@ -545,18 +545,99 @@ async def run_document_ingestion_job(
     ingestion_job_id: str | None = None,
     supabase: Any | None = None,
 ) -> LegalDocumentIngestionRunResult:
-    """Worker boundary for legal ingestion jobs.
+    """Worker boundary for legal ingestion jobs."""
+    from services.legal_text_extraction import (
+        LegalTextExtractionService,
+        SupabaseLegalTextExtractionRepository,
+    )
+    from services.legal_variable_resolution import (
+        LegalVariableResolutionService,
+        resolve_document_variables,
+    )
 
-    Full text extraction is implemented in later SDD tasks. This foundation
-    step must still be executable by ARQ and move the persisted job/document
-    into a consistent processing state instead of crashing at runtime.
-    """
     client = supabase or _get_supabase_client()
+    document = await get_legal_document_for_ingestion(
+        supabase=client,
+        legal_document_id=legal_document_id,
+        organization_id=organization_id,
+        project_id=project_id,
+    )
+    text_service = LegalTextExtractionService(
+        repository=SupabaseLegalTextExtractionRepository(client)
+    )
+    persisted_extraction = await text_service.extract_and_persist_document(
+        organization_id=organization_id,
+        project_id=project_id,
+        legal_document_id=legal_document_id,
+        ingestion_job_id=ingestion_job_id,
+    )
+    variable_service = LegalVariableResolutionService()
+    proposals = resolve_document_variables(
+        variable_service,
+        organization_id=organization_id,
+        project_id=project_id,
+        legal_document_id=legal_document_id,
+        document_type=document.document_type,
+        pages=persisted_extraction.stored_pages,
+    )
+    await variable_service.persist_proposals(proposals, supabase=client)
+    final_status = "needs_review" if any(item.blocks_readiness for item in proposals) else "variables_proposed"
+    await mark_variables_resolved(
+        supabase=client,
+        legal_document_id=legal_document_id,
+        organization_id=organization_id,
+        project_id=project_id,
+        ingestion_job_id=ingestion_job_id,
+        status=final_status,
+    )
+    return LegalDocumentIngestionRunResult(
+        legal_document_id=legal_document_id,
+        organization_id=organization_id,
+        project_id=project_id,
+        ingestion_job_id=ingestion_job_id,
+        status=final_status,
+    )
 
-    def _mark_processing() -> None:
+
+async def get_legal_document_for_ingestion(
+    *,
+    supabase: Any,
+    legal_document_id: str,
+    organization_id: str,
+    project_id: str,
+) -> LegalDocumentResponse:
+    result = await _run_supabase(
+        lambda: (
+            supabase.table("legal_documents")
+            .select("*")
+            .eq("id", legal_document_id)
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .single()
+            .execute()
+        )
+    )
+    row = _first_row(result)
+    if not row:
+        raise LegalDocumentNotFoundError("Legal document not found.")
+    return LegalDocumentResponse.model_validate(row)
+
+
+async def mark_variables_resolved(
+    *,
+    supabase: Any,
+    legal_document_id: str,
+    organization_id: str,
+    project_id: str,
+    ingestion_job_id: str | None,
+    status: str,
+) -> None:
+    job_status = "variables_proposed" if status in {"variables_proposed", "needs_review"} else status
+
+    def _mark() -> None:
         (
-            client.table("legal_documents")
-            .update({"extraction_status": "processing"})
+            supabase.table("legal_documents")
+            .update({"extraction_status": status})
             .eq("id", legal_document_id)
             .eq("organization_id", organization_id)
             .eq("project_id", project_id)
@@ -564,8 +645,8 @@ async def run_document_ingestion_job(
         )
         if ingestion_job_id:
             (
-                client.table("document_ingestion_jobs")
-                .update({"status": "processing"})
+                supabase.table("document_ingestion_jobs")
+                .update({"status": job_status})
                 .eq("id", ingestion_job_id)
                 .eq("organization_id", organization_id)
                 .eq("project_id", project_id)
@@ -573,11 +654,4 @@ async def run_document_ingestion_job(
                 .execute()
             )
 
-    await _run_supabase(_mark_processing)
-    return LegalDocumentIngestionRunResult(
-        legal_document_id=legal_document_id,
-        organization_id=organization_id,
-        project_id=project_id,
-        ingestion_job_id=ingestion_job_id,
-        status="processing",
-    )
+    await _run_supabase(_mark)

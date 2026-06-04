@@ -8,13 +8,21 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from schemas.legal_variables import (
+    DocumentEvidenceResponse,
+    VariableInventoryResponse,
+    VariableResolutionResponse,
+)
 from services.legal_variable_catalog import (
+    READINESS_REQUIRED_VARIABLES_BY_GATE,
+    VARIABLE_STATES,
+    is_variable_group,
     VARIABLE_BLOCKING_STATES,
     is_source_type,
-    is_variable_group,
     is_variable_key,
     is_variable_state,
     variable_group_for_key,
@@ -24,6 +32,154 @@ from services.legal_variable_catalog import (
 MANUAL_REVIEW_CONFIDENCE_THRESHOLD = 0.75
 DEFAULT_PROPOSAL_STATE = "proposed"
 DEFAULT_SOURCE_TYPE = "document"
+DOMINIO_VIGENTE_EXTRACTOR_NAME = "dominio_vigente_rules_v1"
+SII_ROLES_EXTRACTOR_NAME = "sii_roles_rules_v1"
+SAG_PLANO_EXTRACTOR_NAME = "sag_plano_rules_v1"
+DOMINIO_VIGENTE_REQUIRED_VARIABLES = (
+    "matriz.nombre_predio",
+    "matriz.ubicacion",
+    "matriz.superficie_total",
+    "matriz.inscripcion_fojas",
+    "matriz.inscripcion_numero",
+    "matriz.inscripcion_anio",
+    "matriz.inscripcion_cbr",
+    "matriz.rol_avaluo",
+)
+SII_ROLES_REQUIRED_VARIABLES = (
+    "sii.certificado_asignacion_roles_numero",
+    "sii.certificado_fecha_emision",
+    "sii.solicitud_numero",
+    "sii.rol_matriz",
+    "sii.unidad_nombre",
+    "sii.pre_rol_lote",
+    "sii.rol_avaluo_en_tramite_texto",
+)
+SAG_PLANO_REQUIRED_VARIABLES = (
+    "sag.certificado_numero",
+    "sag.certificado_fecha",
+    "sag.oficina_sectorial",
+    "sag.plano_cbr_numero",
+    "sag.plano_cbr_anio",
+    "sag.plano_cbr_registro",
+)
+CRITICAL_VARIABLE_KEYS = frozenset(
+    key
+    for keys in READINESS_REQUIRED_VARIABLES_BY_GATE.values()
+    for key in keys
+) | frozenset(
+    (
+        "matriz.superficie_total",
+        "matriz.rol_avaluo",
+        "sag.certificado_numero",
+        "sag.certificado_fecha",
+        "sag.oficina_sectorial",
+        "sag.plano_cbr_numero",
+        "sag.plano_cbr_anio",
+        "sag.plano_cbr_registro",
+        "sii.certificado_asignacion_roles_numero",
+        "sii.certificado_fecha_emision",
+        "sii.solicitud_numero",
+    )
+)
+
+_INSCRIPTION_RE = re.compile(
+    r"(?:inscrit[ao]?\s+)?(?:a\s+)?fojas\s+(?P<fojas>[\w.-]+).*?"
+    r"(?:n[uú]mero|n[°ºro.]*|num\.?)\s+(?P<numero>[\w.-]+).*?"
+    r"(?:a(?:n|ñ)o|del\s+a(?:n|ñ)o)\s+(?P<anio>\d{4})",
+    re.IGNORECASE | re.DOTALL,
+)
+_CBR_RE = re.compile(
+    r"(?:conservador(?:a)?(?:\s+de\s+bienes\s+ra[ií]ces)?\s+(?:de\s+)?)"
+    r"(?P<cbr>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]{2,80}?)(?=\.|,|;|$)",
+    re.IGNORECASE,
+)
+_ROL_RE = re.compile(
+    r"(?:rol(?:\s+de\s+aval[uú]o)?|rol\s+matriz)\s*(?:n[°ºro.]*|numero)?\s*"
+    r"(?P<rol>\d{1,7}\s*[-/]\s*\d{1,7})",
+    re.IGNORECASE,
+)
+_PREDIO_RE = re.compile(
+    r"(?:(?:predio|inmueble|propiedad|fundo)\s+(?:denominad[ao]\s+)?|parcela\s+)"
+    r"(?P<predio>[A-ZÁÉÍÓÚÑ0-9][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .'-]{2,80}?)"
+    r"(?=\s+se\s+encuentra|\s+ubicad[ao]|\.|,|;|$)",
+    re.IGNORECASE,
+)
+_UBICACION_RE = re.compile(
+    r"(?:ubicad[ao]\s+en|situad[ao]\s+en)\s+"
+    r"(?P<ubicacion>[^.;\n]{5,140})",
+    re.IGNORECASE,
+)
+_SUPERFICIE_RE = re.compile(
+    r"(?:superficie(?:\s+aproximada)?(?:\s+de)?|cabida(?:\s+de)?)\s+"
+    r"(?P<superficie>\d[\d.,]*\s*(?:m2|m²|metros\s+cuadrados|hect[aá]reas|has?\.?))",
+    re.IGNORECASE,
+)
+_ADQUISICION_RE = re.compile(
+    r"(?:adquiri[oó]\s+(?:el\s+inmueble\s+)?(?:por|a\s+t[ií]tulo\s+de)\s+)"
+    r"(?P<modo>compraventa|donaci[oó]n|herencia|adjudicaci[oó]n|permuta)",
+    re.IGNORECASE,
+)
+_SII_CERTIFICATE_NUMBER_RE = re.compile(
+    r"(?:certificado(?:\s+de\s+asignaci[oó]n\s+de\s+roles)?\s*(?:n[uú]mero|n[°ºro.]*)?\s*)"
+    r"(?P<number>[A-Z0-9][A-Z0-9.-]{2,40})",
+    re.IGNORECASE,
+)
+_SII_CERTIFICATE_DATE_RE = re.compile(
+    r"(?:fecha\s+(?:de\s+)?(?:emisi[oó]n|certificado)|emitido\s+con\s+fecha)\s*"
+    r"(?P<date>\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})",
+    re.IGNORECASE,
+)
+_SII_REQUEST_RE = re.compile(
+    r"(?:(?:solicitud|formulario)\s*(?:F?2118)?\s*(?:n[°ºro.]*|numero)?\s*|F2118\s*)"
+    r"(?P<number>[A-Z0-9][A-Z0-9.-]{2,40})",
+    re.IGNORECASE,
+)
+_SII_MATRIX_ROLE_RE = re.compile(
+    r"(?:rol\s+matriz|rol\s+de\s+origen|predio\s+matriz)\s*(?:n[°ºro.]*|numero)?\s*"
+    r"(?P<role>\d{1,7}\s*[-/]\s*\d{1,7})",
+    re.IGNORECASE,
+)
+_SII_ROLE_IN_PROCESS_RE = re.compile(
+    r"(?P<text>rol\s+de\s+aval[uú]o\s+en\s+tr[aá]mite)",
+    re.IGNORECASE,
+)
+_SII_UNIT_BLOCK_RE = re.compile(
+    r"(?P<unit>(?:unidad\s+)?(?:lote|parcela|unidad)\s*[A-Z0-9.-]+).*?"
+    r"(?:(?:pre[- ]?rol|rol\s+en\s+tr[aá]mite|rol\s+de\s+aval[uú]o\s+en\s+tr[aá]mite)"
+    r"\s*(?:n[°ºro.]*|numero)?\s*)(?P<pre_role>\d{1,7}\s*[-/]\s*\d{1,7})",
+    re.IGNORECASE | re.DOTALL,
+)
+_SAG_CERTIFICATE_NUMBER_RE = re.compile(
+    r"(?:certificado|resoluci[oó]n)\s*(?:SAG)?\s*(?:exenta)?\s*"
+    r"(?:n[uú]mero|n[°ºro.]*)?\s*(?P<number>[A-Z0-9][A-Z0-9.-]{2,40})",
+    re.IGNORECASE,
+)
+_SAG_CERTIFICATE_DATE_RE = re.compile(
+    r"(?:fecha(?:\s+de\s+certificado|\s+de\s+emisi[oó]n)?|de\s+fecha)\s*"
+    r"(?P<date>\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})",
+    re.IGNORECASE,
+)
+_SAG_OFFICE_RE = re.compile(
+    r"(?:oficina\s+(?:sectorial\s+)?SAG|SAG\s+oficina\s+sectorial)\s+"
+    r"(?P<office>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{2,80}?)(?=\.|,|;|$)",
+    re.IGNORECASE,
+)
+_PLANO_CBR_RE = re.compile(
+    r"(?:plano(?:\s+archivad[ao])?(?:\s+CBR)?|archivo\s+de\s+plano)\s*"
+    r"(?:n[uú]mero|n[°ºro.]*)?\s*(?:posiblemente|probablemente|dudoso)?\s*"
+    r"(?P<number>[A-Z0-9.-]*\d[A-Z0-9.-]{0,30}).{0,80}?"
+    r"(?:a(?:n|ñ)o|del\s+a(?:n|ñ)o)\s*(?P<year>\d{4})",
+    re.IGNORECASE | re.DOTALL,
+)
+_PLANO_REGISTRY_RE = re.compile(
+    r"(?:registro|archivo|conservador(?:a)?(?:\s+de\s+bienes\s+ra[ií]ces)?(?:\s+de)?)\s+"
+    r"(?P<registry>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{2,80}?)(?=\.|,|;|$)",
+    re.IGNORECASE,
+)
+_LOW_CONFIDENCE_MARKERS_RE = re.compile(
+    r"\b(?:borroso|ilegible|posiblemente|probablemente|dudoso|no\s+se\s+lee|OCR)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -85,12 +241,114 @@ class VariablePersistenceResult:
     evidence_rows: tuple[dict[str, Any], ...]
 
 
+@dataclass(frozen=True)
+class LegalDocumentPageInput:
+    """Extracted page text used by document-specific variable rules."""
+
+    id: str | None
+    legal_document_id: str
+    page_number: int
+    text_content: str
+
+
 class LegalVariableResolutionError(ValueError):
     """Raised when a variable proposal violates the canonical catalog."""
 
 
+class LegalVariableInventoryScopeError(PermissionError):
+    """Raised when inventory access violates project tenant scope."""
+
+
+class LegalVariableInventoryNotFoundError(LookupError):
+    """Raised when the inventory project cannot be found."""
+
+
 class LegalVariableResolutionService:
     """Service boundary for future extraction rules and variable review flows."""
+
+    def extract_dominio_vigente_variables(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        legal_document_id: str,
+        pages: tuple[LegalDocumentPageInput | dict[str, Any], ...]
+        | list[LegalDocumentPageInput | dict[str, Any]],
+        required_variable_keys: tuple[str, ...] = DOMINIO_VIGENTE_REQUIRED_VARIABLES,
+    ) -> tuple[ClassifiedVariableProposal, ...]:
+        normalized_pages = tuple(
+            normalize_document_page(page, legal_document_id=legal_document_id)
+            for page in pages
+        )
+        proposals: list[VariableProposalInput] = []
+        for page in normalized_pages:
+            proposals.extend(
+                self._extract_dominio_vigente_page_variables(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    page=page,
+                )
+            )
+        return self.classify_proposals(
+            proposals,
+            required_variable_keys=required_variable_keys,
+        )
+
+    def extract_sii_roles_variables(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        legal_document_id: str,
+        pages: tuple[LegalDocumentPageInput | dict[str, Any], ...]
+        | list[LegalDocumentPageInput | dict[str, Any]],
+        required_variable_keys: tuple[str, ...] = SII_ROLES_REQUIRED_VARIABLES,
+    ) -> tuple[ClassifiedVariableProposal, ...]:
+        normalized_pages = tuple(
+            normalize_document_page(page, legal_document_id=legal_document_id)
+            for page in pages
+        )
+        proposals: list[VariableProposalInput] = []
+        for page in normalized_pages:
+            proposals.extend(
+                self._extract_sii_roles_page_variables(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    page=page,
+                )
+            )
+        return self.classify_proposals(
+            proposals,
+            required_variable_keys=required_variable_keys,
+        )
+
+    def extract_sag_plano_variables(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        legal_document_id: str,
+        pages: tuple[LegalDocumentPageInput | dict[str, Any], ...]
+        | list[LegalDocumentPageInput | dict[str, Any]],
+        required_variable_keys: tuple[str, ...] = SAG_PLANO_REQUIRED_VARIABLES,
+    ) -> tuple[ClassifiedVariableProposal, ...]:
+        normalized_pages = tuple(
+            normalize_document_page(page, legal_document_id=legal_document_id)
+            for page in pages
+        )
+        proposals: list[VariableProposalInput] = []
+        for page in normalized_pages:
+            proposals.extend(
+                self._extract_sag_plano_page_variables(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    page=page,
+                )
+            )
+        return self.classify_proposals(
+            proposals,
+            required_variable_keys=required_variable_keys,
+        )
 
     def validate_proposal(self, proposal: VariableProposalInput) -> VariableProposalInput:
         group = proposal.variable_group or variable_group_for_key(proposal.variable_key)
@@ -138,6 +396,285 @@ class LegalVariableResolutionService:
         )
         return self.classify_proposals((proposal,))[0]
 
+    def _extract_dominio_vigente_page_variables(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        page: LegalDocumentPageInput,
+    ) -> list[VariableProposalInput]:
+        text = normalize_whitespace(page.text_content)
+        if not text:
+            return []
+
+        proposals: list[VariableProposalInput] = []
+        common_ref = {
+            "document_type": "dominio_vigente",
+            "page_number": page.page_number,
+        }
+
+        inscription = _INSCRIPTION_RE.search(text)
+        if inscription:
+            snippet = _snippet_for_match(text, inscription)
+            proposals.extend(
+                [
+                    build_document_proposal(
+                        organization_id=organization_id,
+                        project_id=project_id,
+                        legal_document_id=page.legal_document_id,
+                        legal_document_page_id=page.id,
+                        variable_key="matriz.inscripcion_fojas",
+                        value_text=clean_legal_value(inscription.group("fojas")),
+                        source_ref=common_ref,
+                        snippet=snippet,
+                        confidence=0.92,
+                    ),
+                    build_document_proposal(
+                        organization_id=organization_id,
+                        project_id=project_id,
+                        legal_document_id=page.legal_document_id,
+                        legal_document_page_id=page.id,
+                        variable_key="matriz.inscripcion_numero",
+                        value_text=clean_legal_value(inscription.group("numero")),
+                        source_ref=common_ref,
+                        snippet=snippet,
+                        confidence=0.92,
+                    ),
+                    build_document_proposal(
+                        organization_id=organization_id,
+                        project_id=project_id,
+                        legal_document_id=page.legal_document_id,
+                        legal_document_page_id=page.id,
+                        variable_key="matriz.inscripcion_anio",
+                        value_text=clean_legal_value(inscription.group("anio")),
+                        source_ref=common_ref,
+                        snippet=snippet,
+                        confidence=0.92,
+                    ),
+                ]
+            )
+
+        pattern_specs = (
+            ("matriz.inscripcion_cbr", _CBR_RE, "cbr", 0.84),
+            ("matriz.rol_avaluo", _ROL_RE, "rol", 0.88),
+            ("matriz.nombre_predio", _PREDIO_RE, "predio", 0.78),
+            ("matriz.ubicacion", _UBICACION_RE, "ubicacion", 0.78),
+            ("matriz.superficie_total", _SUPERFICIE_RE, "superficie", 0.82),
+            ("matriz.adquisicion_modo", _ADQUISICION_RE, "modo", 0.8),
+        )
+        for variable_key, pattern, group_name, confidence in pattern_specs:
+            match = pattern.search(text)
+            if not match:
+                continue
+            proposals.append(
+                build_document_proposal(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=page.legal_document_id,
+                    legal_document_page_id=page.id,
+                    variable_key=variable_key,
+                    value_text=clean_legal_value(match.group(group_name)),
+                    source_ref=common_ref,
+                    snippet=_snippet_for_match(text, match),
+                    confidence=confidence,
+                )
+            )
+
+        return proposals
+
+    def _extract_sii_roles_page_variables(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        page: LegalDocumentPageInput,
+    ) -> list[VariableProposalInput]:
+        text = normalize_whitespace(page.text_content)
+        if not text:
+            return []
+
+        proposals: list[VariableProposalInput] = []
+        common_ref = {
+            "document_type": "certificado_roles_sii",
+            "page_number": page.page_number,
+        }
+        pattern_specs = (
+            (
+                "sii.certificado_asignacion_roles_numero",
+                _SII_CERTIFICATE_NUMBER_RE,
+                "number",
+                0.86,
+            ),
+            ("sii.certificado_fecha_emision", _SII_CERTIFICATE_DATE_RE, "date", 0.86),
+            ("sii.solicitud_numero", _SII_REQUEST_RE, "number", 0.84),
+            ("sii.rol_matriz", _SII_MATRIX_ROLE_RE, "role", 0.88),
+        )
+        for variable_key, pattern, group_name, confidence in pattern_specs:
+            match = pattern.search(text)
+            if not match:
+                continue
+            proposals.append(
+                build_document_proposal(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=page.legal_document_id,
+                    legal_document_page_id=page.id,
+                    variable_key=variable_key,
+                    value_text=clean_legal_value(match.group(group_name)),
+                    source_ref=common_ref,
+                    snippet=_snippet_for_match(text, match),
+                    confidence=confidence,
+                    extractor_name=SII_ROLES_EXTRACTOR_NAME,
+                )
+            )
+
+        unit_matches = list(_SII_UNIT_BLOCK_RE.finditer(text))
+        for index, match in enumerate(unit_matches, start=1):
+            source_ref = {**common_ref, "unit_index": index}
+            snippet = _snippet_for_match(text, match)
+            unit_name = clean_legal_value(match.group("unit"))
+            pre_role = normalize_role_number(match.group("pre_role"))
+            proposals.append(
+                build_document_proposal(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=page.legal_document_id,
+                    legal_document_page_id=page.id,
+                    variable_key="sii.unidad_nombre",
+                    value_text=unit_name,
+                    source_ref=source_ref,
+                    snippet=snippet,
+                    confidence=0.88,
+                    extractor_name=SII_ROLES_EXTRACTOR_NAME,
+                )
+            )
+            proposals.append(
+                build_document_proposal(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=page.legal_document_id,
+                    legal_document_page_id=page.id,
+                    variable_key="sii.pre_rol_lote",
+                    value_text=pre_role,
+                    source_ref=source_ref,
+                    snippet=snippet,
+                    confidence=0.88,
+                    extractor_name=SII_ROLES_EXTRACTOR_NAME,
+                )
+            )
+
+        role_in_process = _SII_ROLE_IN_PROCESS_RE.search(text)
+        if role_in_process:
+            proposals.append(
+                build_document_proposal(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=page.legal_document_id,
+                    legal_document_page_id=page.id,
+                    variable_key="sii.rol_avaluo_en_tramite_texto",
+                    value_text=sentence_case(clean_legal_value(role_in_process.group("text"))),
+                    source_ref=common_ref,
+                    snippet=_snippet_for_match(text, role_in_process),
+                    confidence=0.9,
+                    extractor_name=SII_ROLES_EXTRACTOR_NAME,
+                )
+            )
+
+        return proposals
+
+    def _extract_sag_plano_page_variables(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        page: LegalDocumentPageInput,
+    ) -> list[VariableProposalInput]:
+        text = normalize_whitespace(page.text_content)
+        if not text:
+            return []
+
+        proposals: list[VariableProposalInput] = []
+        common_ref = {
+            "document_type": "certificado_sag_plano",
+            "page_number": page.page_number,
+        }
+        confidence = 0.58 if _LOW_CONFIDENCE_MARKERS_RE.search(text) else 0.84
+        pattern_specs = (
+            ("sag.certificado_numero", _SAG_CERTIFICATE_NUMBER_RE, "number", confidence),
+            ("sag.certificado_fecha", _SAG_CERTIFICATE_DATE_RE, "date", confidence),
+            ("sag.oficina_sectorial", _SAG_OFFICE_RE, "office", confidence),
+        )
+        for variable_key, pattern, group_name, pattern_confidence in pattern_specs:
+            match = pattern.search(text)
+            if not match:
+                continue
+            proposals.append(
+                build_document_proposal(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=page.legal_document_id,
+                    legal_document_page_id=page.id,
+                    variable_key=variable_key,
+                    value_text=clean_legal_value(match.group(group_name)),
+                    source_ref=common_ref,
+                    snippet=_snippet_for_match(text, match),
+                    confidence=pattern_confidence,
+                    extractor_name=SAG_PLANO_EXTRACTOR_NAME,
+                )
+            )
+
+        plano = _PLANO_CBR_RE.search(text)
+        if plano:
+            snippet = _snippet_for_match(text, plano)
+            plano_confidence = 0.55 if _LOW_CONFIDENCE_MARKERS_RE.search(snippet) else confidence
+            proposals.extend(
+                [
+                    build_document_proposal(
+                        organization_id=organization_id,
+                        project_id=project_id,
+                        legal_document_id=page.legal_document_id,
+                        legal_document_page_id=page.id,
+                        variable_key="sag.plano_cbr_numero",
+                        value_text=clean_legal_value(plano.group("number")),
+                        source_ref=common_ref,
+                        snippet=snippet,
+                        confidence=plano_confidence,
+                        extractor_name=SAG_PLANO_EXTRACTOR_NAME,
+                    ),
+                    build_document_proposal(
+                        organization_id=organization_id,
+                        project_id=project_id,
+                        legal_document_id=page.legal_document_id,
+                        legal_document_page_id=page.id,
+                        variable_key="sag.plano_cbr_anio",
+                        value_text=clean_legal_value(plano.group("year")),
+                        source_ref=common_ref,
+                        snippet=snippet,
+                        confidence=plano_confidence,
+                        extractor_name=SAG_PLANO_EXTRACTOR_NAME,
+                    ),
+                ]
+            )
+
+        registry = _PLANO_REGISTRY_RE.search(text)
+        if registry:
+            proposals.append(
+                build_document_proposal(
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=page.legal_document_id,
+                    legal_document_page_id=page.id,
+                    variable_key="sag.plano_cbr_registro",
+                    value_text=clean_legal_value(registry.group("registry")),
+                    source_ref=common_ref,
+                    snippet=_snippet_for_match(text, registry),
+                    confidence=confidence,
+                    extractor_name=SAG_PLANO_EXTRACTOR_NAME,
+                )
+            )
+
+        return proposals
+
     def classify_proposals(
         self,
         proposals: tuple[VariableProposalInput, ...] | list[VariableProposalInput],
@@ -152,16 +689,21 @@ class LegalVariableResolutionService:
             reasons: list[str] = []
             classification = proposal.state
             has_value = proposal.value_text not in (None, "") or proposal.value_json is not None
+            is_critical = proposal.variable_key in CRITICAL_VARIABLE_KEYS
 
             if proposal.variable_key in conflicts:
                 classification = "conflict"
-                reasons.append("multiple_values_for_same_scope")
+                reasons.append(
+                    "critical_multiple_values_for_same_scope"
+                    if is_critical
+                    else "multiple_values_for_same_scope"
+                )
             elif not has_value and proposal.state not in {"not_applicable", "superseded"}:
                 classification = "missing"
-                reasons.append("empty_value")
+                reasons.append("critical_value_missing" if is_critical else "empty_value")
             elif self._needs_manual_review(proposal):
                 classification = "manual_review"
-                reasons.append("manual_review_required")
+                reasons.append(self._manual_review_reason(proposal))
 
             output.append(
                 ClassifiedVariableProposal(
@@ -189,7 +731,11 @@ class LegalVariableResolutionService:
                 ClassifiedVariableProposal(
                     proposal=missing,
                     classification="missing",
-                    reasons=("required_variable_absent",),
+                    reasons=(
+                        "critical_required_variable_absent"
+                        if variable_key in CRITICAL_VARIABLE_KEYS
+                        else "required_variable_absent",
+                    ),
                 )
             )
 
@@ -235,12 +781,25 @@ class LegalVariableResolutionService:
             and proposal.confidence < MANUAL_REVIEW_CONFIDENCE_THRESHOLD
         )
 
+    def _manual_review_reason(self, proposal: VariableProposalInput) -> str:
+        is_critical = proposal.variable_key in CRITICAL_VARIABLE_KEYS
+        if proposal.state == "manual_review":
+            return "manual_review_required"
+        if proposal.source_type == "document" and not proposal.evidence:
+            return "critical_evidence_missing" if is_critical else "evidence_missing"
+        if (
+            proposal.confidence is not None
+            and proposal.confidence < MANUAL_REVIEW_CONFIDENCE_THRESHOLD
+        ):
+            return "critical_low_confidence" if is_critical else "low_confidence"
+        return "manual_review_required"
+
     def _conflicting_keys(self, proposals: list[VariableProposalInput]) -> set[str]:
         seen: dict[tuple[str | None, str | None, str], Any] = {}
         conflicts: set[str] = set()
         for proposal in proposals:
             scope = (proposal.lot_id, proposal.escritura_case_id, proposal.variable_key)
-            value = proposal.value_json if proposal.value_json is not None else proposal.value_text
+            value = normalized_conflict_value(proposal)
             if scope in seen and seen[scope] != value:
                 conflicts.add(proposal.variable_key)
             seen[scope] = value
@@ -296,3 +855,295 @@ class LegalVariableResolutionService:
         from core.database import get_supabase_client
 
         return get_supabase_client()
+
+
+def resolve_document_variables(
+    service: LegalVariableResolutionService,
+    *,
+    organization_id: str,
+    project_id: str,
+    legal_document_id: str,
+    document_type: str,
+    pages: tuple[LegalDocumentPageInput | dict[str, Any], ...]
+    | list[LegalDocumentPageInput | dict[str, Any]],
+) -> tuple[ClassifiedVariableProposal, ...]:
+    if document_type == "dominio_vigente":
+        return service.extract_dominio_vigente_variables(
+            organization_id=organization_id,
+            project_id=project_id,
+            legal_document_id=legal_document_id,
+            pages=pages,
+        )
+    if document_type == "certificado_roles_sii":
+        return service.extract_sii_roles_variables(
+            organization_id=organization_id,
+            project_id=project_id,
+            legal_document_id=legal_document_id,
+            pages=pages,
+        )
+    if document_type in {"certificado_sag", "plano_oficial"}:
+        return service.extract_sag_plano_variables(
+            organization_id=organization_id,
+            project_id=project_id,
+            legal_document_id=legal_document_id,
+            pages=pages,
+        )
+    return ()
+
+
+async def get_project_variable_inventory(
+    *,
+    project_id: str,
+    organization_id: str,
+    lot_id: str | None = None,
+    state: str | None = None,
+    group: str | None = None,
+    include_evidence: bool = True,
+    supabase: Any | None = None,
+) -> VariableInventoryResponse:
+    if state and not is_variable_state(state):
+        raise LegalVariableResolutionError(f"Unknown variable state: {state}")
+    if group and not is_variable_group(group):
+        raise LegalVariableResolutionError(f"Unknown variable group: {group}")
+
+    client = supabase or _get_supabase_client()
+    await _ensure_inventory_project_scope(
+        supabase=client,
+        organization_id=organization_id,
+        project_id=project_id,
+        lot_id=lot_id,
+    )
+    variable_rows = await _fetch_variable_resolution_rows(
+        supabase=client,
+        organization_id=organization_id,
+        project_id=project_id,
+        lot_id=lot_id,
+        state=state,
+        group=group,
+    )
+    evidence_by_variable: dict[str, list[DocumentEvidenceResponse]] = {}
+    if include_evidence and variable_rows:
+        evidence_by_variable = await _fetch_evidence_by_variable(
+            supabase=client,
+            organization_id=organization_id,
+            project_id=project_id,
+            variable_ids=[
+                str(row["id"]) for row in variable_rows if row.get("id") is not None
+            ],
+        )
+
+    grouped: dict[str, list[VariableResolutionResponse]] = {}
+    summary = {"total": 0, **{state_name: 0 for state_name in VARIABLE_STATES}}
+    for row in variable_rows:
+        variable_id = str(row.get("id"))
+        payload = {**row, "evidence": evidence_by_variable.get(variable_id, [])}
+        variable = VariableResolutionResponse.model_validate(payload)
+        grouped.setdefault(variable.variable_group, []).append(variable)
+        summary["total"] += 1
+        if variable.state in summary:
+            summary[variable.state] += 1
+
+    return VariableInventoryResponse(
+        project_id=project_id,
+        lot_id=lot_id,
+        groups=grouped,
+        summary=summary,
+    )
+
+
+async def _ensure_inventory_project_scope(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+    lot_id: str | None = None,
+) -> None:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("projects")
+            .select("id, organization_id")
+            .eq("id", project_id)
+            .single()
+            .execute()
+        )
+    )
+    project = _first_row(result)
+    if not project:
+        raise LegalVariableInventoryNotFoundError("Project not found.")
+    if project.get("organization_id") != organization_id:
+        raise LegalVariableInventoryScopeError(
+            "project_id does not belong to organization_id."
+        )
+    if lot_id:
+        lot_result = await asyncio.to_thread(
+            lambda: (
+                supabase.table("lots")
+                .select("id, project_id")
+                .eq("id", lot_id)
+                .eq("project_id", project_id)
+                .single()
+                .execute()
+            )
+        )
+        if not _first_row(lot_result):
+            raise LegalVariableInventoryNotFoundError("Lot not found in project.")
+
+
+async def _fetch_variable_resolution_rows(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+    lot_id: str | None,
+    state: str | None,
+    group: str | None,
+) -> list[dict[str, Any]]:
+    def _fetch() -> list[dict[str, Any]]:
+        query = (
+            supabase.table("variable_resolutions")
+            .select("*")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .order("variable_group")
+            .order("variable_key")
+        )
+        if lot_id:
+            query = query.eq("lot_id", lot_id)
+        if state:
+            query = query.eq("state", state)
+        if group:
+            query = query.eq("variable_group", group)
+        result = query.execute()
+        return _rows(result)
+
+    return await asyncio.to_thread(_fetch)
+
+
+async def _fetch_evidence_by_variable(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+    variable_ids: list[str],
+) -> dict[str, list[DocumentEvidenceResponse]]:
+    if not variable_ids:
+        return {}
+
+    def _fetch() -> dict[str, list[DocumentEvidenceResponse]]:
+        result = (
+            supabase.table("document_evidence")
+            .select("*")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .in_("variable_resolution_id", variable_ids)
+            .execute()
+        )
+        grouped: dict[str, list[DocumentEvidenceResponse]] = {}
+        for row in _rows(result):
+            evidence = DocumentEvidenceResponse.model_validate(row)
+            grouped.setdefault(evidence.variable_resolution_id, []).append(evidence)
+        return grouped
+
+    return await asyncio.to_thread(_fetch)
+
+
+def normalize_document_page(
+    page: LegalDocumentPageInput | dict[str, Any],
+    *,
+    legal_document_id: str,
+) -> LegalDocumentPageInput:
+    if isinstance(page, LegalDocumentPageInput):
+        return page
+    return LegalDocumentPageInput(
+        id=page.get("id") or page.get("legal_document_page_id"),
+        legal_document_id=str(page.get("legal_document_id") or legal_document_id),
+        page_number=int(page.get("page_number") or 1),
+        text_content=str(page.get("text_content") or ""),
+    )
+
+
+def normalize_whitespace(text: str) -> str:
+    return re.sub(r"\s+", " ", text.replace("\r", "\n")).strip()
+
+
+def clean_legal_value(value: str | None) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip(" .,:;")).strip()
+
+
+def build_document_proposal(
+    *,
+    organization_id: str,
+    project_id: str,
+    legal_document_id: str,
+    legal_document_page_id: str | None,
+    variable_key: str,
+    value_text: str,
+    source_ref: dict[str, Any],
+    snippet: str,
+    confidence: float,
+    extractor_name: str = DOMINIO_VIGENTE_EXTRACTOR_NAME,
+) -> VariableProposalInput:
+    return VariableProposalInput(
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_key=variable_key,
+        value_text=value_text,
+        source_ref=source_ref,
+        confidence=confidence,
+        extractor_name=extractor_name,
+        evidence=(
+            VariableEvidenceInput(
+                legal_document_id=legal_document_id,
+                legal_document_page_id=legal_document_page_id,
+                chunk_index=0,
+                snippet=snippet,
+                confidence=confidence,
+            ),
+        ),
+    )
+
+
+def _snippet_for_match(text: str, match: re.Match[str], *, radius: int = 90) -> str:
+    start = max(match.start() - radius, 0)
+    end = min(match.end() + radius, len(text))
+    return clean_legal_value(text[start:end])
+
+
+def normalize_role_number(value: str | None) -> str:
+    return re.sub(r"\s+", "", clean_legal_value(value))
+
+
+def sentence_case(value: str) -> str:
+    if not value:
+        return value
+    return value[:1].upper() + value[1:].lower()
+
+
+def normalized_conflict_value(proposal: VariableProposalInput) -> Any:
+    if proposal.value_json is not None:
+        return proposal.value_json
+    return normalize_whitespace(str(proposal.value_text or "")).lower()
+
+
+def _get_supabase_client() -> Any:
+    from core.database import get_supabase_client
+
+    return get_supabase_client()
+
+
+def _first_row(result: Any) -> dict[str, Any] | None:
+    data = getattr(result, "data", None)
+    if isinstance(data, list):
+        return data[0] if data else None
+    if isinstance(data, dict):
+        return data
+    return None
+
+
+def _rows(result: Any) -> list[dict[str, Any]]:
+    data = getattr(result, "data", None)
+    if isinstance(data, list):
+        return [row for row in data if isinstance(row, dict)]
+    if isinstance(data, dict):
+        return [data]
+    return []

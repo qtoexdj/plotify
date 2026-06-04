@@ -79,19 +79,19 @@
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Add extraction and evidence tests for dominio vigente, SII roles and low-confidence plano samples in `apps/api/tests/test_escrituras_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T024 [P] [US2] Add contract tests for variable inventory response shape in `apps/api/tests/test_escrituras_variable_contracts.py`; Verify: `pnpm test:api`
+- [x] T023 [P] [US2] Add extraction and evidence tests for dominio vigente, SII roles and low-confidence plano samples in `apps/api/tests/test_escrituras_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T024 [P] [US2] Add contract tests for variable inventory response shape in `apps/api/tests/test_escrituras_variable_contracts.py`; Verify: `pnpm test:api`
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Implement text/page extraction persistence in `apps/api/services/legal_text_extraction.py`; Verify: `pnpm test:api`
-- [ ] T026 [US2] Implement dominio vigente extraction rules and schema-normalized outputs in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T027 [US2] Implement certificado roles SII extraction rules for certificate metadata, unit names, matriz role and pre-role/role-in-process values in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T028 [US2] Implement SAG/plano extraction with low-confidence manual-review fallback in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T029 [US2] Persist variable proposals and `document_evidence` rows from extraction jobs in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T030 [US2] Implement missing/conflict/manual-review classification for critical variables in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T031 [US2] Implement `GET /legal-variables/project/{project_id}` inventory endpoint in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T032 [US2] Add web proxy for project legal variables in `apps/web/src/app/api/projects/[id]/legal-variables/route.ts`; Verify: `pnpm test:web`
+- [x] T025 [US2] Implement text/page extraction persistence in `apps/api/services/legal_text_extraction.py`; Verify: `pnpm test:api`
+- [x] T026 [US2] Implement dominio vigente extraction rules and schema-normalized outputs in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T027 [US2] Implement certificado roles SII extraction rules for certificate metadata, unit names, matriz role and pre-role/role-in-process values in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T028 [US2] Implement SAG/plano extraction with low-confidence manual-review fallback in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T029 [US2] Persist variable proposals and `document_evidence` rows from extraction jobs in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T030 [US2] Implement missing/conflict/manual-review classification for critical variables in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T031 [US2] Implement `GET /legal-variables/project/{project_id}` inventory endpoint in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T032 [US2] Add web proxy for project legal variables in `apps/web/src/app/api/projects/[id]/legal-variables/route.ts`; Verify: `pnpm test:web`
 
 **Checkpoint**: User Story 2 is functional and testable independently.
 

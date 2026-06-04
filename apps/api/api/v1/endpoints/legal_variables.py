@@ -32,6 +32,12 @@ from services.legal_document_ingestion import (
     list_project_legal_documents as list_project_legal_documents_service,
     register_legal_document as register_legal_document_service,
 )
+from services.legal_variable_resolution import (
+    LegalVariableInventoryNotFoundError,
+    LegalVariableInventoryScopeError,
+    LegalVariableResolutionError,
+    get_project_variable_inventory as get_project_variable_inventory_service,
+)
 
 logger = get_logger(__name__)
 
@@ -151,11 +157,34 @@ async def get_project_legal_variables(
     project_id: str,
     organization_id: str = Query(...),
     lot_id: str | None = Query(default=None),
+    state: str | None = Query(default=None),
+    group: str | None = Query(default=None),
+    include_evidence: bool = Query(default=True),
 ) -> VariableInventoryResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Legal variable inventory is not implemented yet.",
-    )
+    try:
+        return await get_project_variable_inventory_service(
+            project_id=project_id,
+            organization_id=organization_id,
+            lot_id=lot_id,
+            state=state,
+            group=group,
+            include_evidence=include_evidence,
+        )
+    except LegalVariableResolutionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except LegalVariableInventoryScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except LegalVariableInventoryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 @router.patch(

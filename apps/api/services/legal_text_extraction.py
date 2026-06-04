@@ -88,7 +88,23 @@ class LegalTextExtractionResult:
     stats: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class PersistedLegalTextExtractionResult:
+    extraction: LegalTextExtractionResult
+    stored_pages: tuple[dict[str, Any], ...]
+
+
 class LegalTextExtractionRepository(Protocol):
+    async def load_document_source(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        legal_document_id: str,
+        ingestion_job_id: str | None = None,
+    ) -> LegalDocumentExtractionSource:
+        ...
+
     async def replace_document_pages(
         self,
         *,
@@ -252,6 +268,22 @@ def build_page_payloads(
 class LegalTextExtractionService:
     repository: LegalTextExtractionRepository
 
+    async def extract_and_persist_document(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        legal_document_id: str,
+        ingestion_job_id: str | None = None,
+    ) -> PersistedLegalTextExtractionResult:
+        source = await self.repository.load_document_source(
+            organization_id=organization_id,
+            project_id=project_id,
+            legal_document_id=legal_document_id,
+            ingestion_job_id=ingestion_job_id,
+        )
+        return await self.extract_and_persist_text(source)
+
     async def persist_extracted_pages(
         self,
         source: LegalDocumentExtractionSource,
@@ -271,12 +303,15 @@ class LegalTextExtractionService:
     async def extract_and_persist_text(
         self,
         source: LegalDocumentExtractionSource,
-    ) -> LegalTextExtractionResult:
+    ) -> PersistedLegalTextExtractionResult:
         await self.mark_processing(source)
         try:
             extraction = await extract_text_pages(source)
-            await self.persist_extracted_pages(source, extraction)
-            return extraction
+            stored_pages = await self.persist_extracted_pages(source, extraction)
+            return PersistedLegalTextExtractionResult(
+                extraction=extraction,
+                stored_pages=tuple(stored_pages),
+            )
         except LegalTextExtractionError as exc:
             await self.mark_failed(source, exc.error_code, str(exc))
             raise
@@ -359,6 +394,80 @@ class SupabaseLegalTextExtractionRepository:
     """Supabase adapter for workers/endpoints; tests should inject a fake repo."""
 
     supabase: Any
+
+    async def load_document_source(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        legal_document_id: str,
+        ingestion_job_id: str | None = None,
+    ) -> LegalDocumentExtractionSource:
+        def _load() -> LegalDocumentExtractionSource:
+            document_result = (
+                self.supabase.table("legal_documents")
+                .select("*")
+                .eq("id", legal_document_id)
+                .eq("organization_id", organization_id)
+                .eq("project_id", project_id)
+                .single()
+                .execute()
+            )
+            document = _first_row(document_result)
+            if not document:
+                raise LegalTextExtractionError("Legal document not found")
+
+            resolved_job_id = ingestion_job_id or self._latest_ingestion_job_id(
+                organization_id=organization_id,
+                project_id=project_id,
+                legal_document_id=legal_document_id,
+            )
+            if not resolved_job_id:
+                raise LegalTextExtractionError("Document ingestion job not found")
+
+            storage_bucket = str(document.get("storage_bucket") or "")
+            storage_path = str(document.get("storage_path") or "")
+            if not storage_bucket or not storage_path:
+                raise LegalTextExtractionError("Legal document storage reference is missing")
+
+            downloaded = (
+                self.supabase.storage.from_(storage_bucket).download(storage_path)
+            )
+            content = _storage_download_to_bytes(downloaded)
+
+            return LegalDocumentExtractionSource(
+                organization_id=organization_id,
+                project_id=project_id,
+                legal_document_id=legal_document_id,
+                ingestion_job_id=resolved_job_id,
+                content=content,
+                mime_type=str(document.get("mime_type") or ""),
+                original_filename=document.get("original_filename"),
+                storage_bucket=storage_bucket,
+                storage_path=storage_path,
+            )
+
+        return await asyncio.to_thread(_load)
+
+    def _latest_ingestion_job_id(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        legal_document_id: str,
+    ) -> str | None:
+        result = (
+            self.supabase.table("document_ingestion_jobs")
+            .select("id")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("legal_document_id", legal_document_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        row = _first_row(result)
+        return str(row["id"]) if row and row.get("id") else None
 
     async def replace_document_pages(
         self,
@@ -456,3 +565,33 @@ def create_default_legal_text_extraction_service() -> LegalTextExtractionService
     return LegalTextExtractionService(
         repository=SupabaseLegalTextExtractionRepository(get_supabase_client())
     )
+
+
+def _first_row(result: Any) -> dict[str, Any] | None:
+    data = getattr(result, "data", None)
+    if isinstance(data, list):
+        return data[0] if data else None
+    if isinstance(data, dict):
+        return data
+    return None
+
+
+def _storage_download_to_bytes(downloaded: Any) -> bytes:
+    if isinstance(downloaded, bytes):
+        return downloaded
+    if isinstance(downloaded, bytearray):
+        return bytes(downloaded)
+    if isinstance(downloaded, str):
+        return downloaded.encode("utf-8")
+    content = getattr(downloaded, "content", None)
+    if isinstance(content, bytes):
+        return content
+    data = getattr(downloaded, "data", None)
+    if isinstance(data, bytes):
+        return data
+    read = getattr(downloaded, "read", None)
+    if callable(read):
+        value = read()
+        if isinstance(value, bytes):
+            return value
+    raise LegalTextExtractionError("Unable to read legal document storage bytes")

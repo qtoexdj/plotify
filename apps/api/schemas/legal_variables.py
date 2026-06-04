@@ -172,10 +172,18 @@ class VariableResolutionResponse(LegalVariableResponseModel):
 
 class VariableInventoryResponse(LegalVariableResponseModel):
     project_id: str
-    variables: list[VariableResolutionResponse] = Field(default_factory=list)
-    missing: list[str] = Field(default_factory=list)
-    conflicts: list[str] = Field(default_factory=list)
-    manual_review: list[str] = Field(default_factory=list)
+    lot_id: str | None = None
+    groups: dict[str, list[VariableResolutionResponse]] = Field(default_factory=dict)
+    summary: dict[str, int] = Field(default_factory=dict)
+
+    @field_validator("summary", mode="before")
+    @classmethod
+    def normalize_summary(cls, value: Any) -> dict[str, int]:
+        source = value if isinstance(value, dict) else {}
+        summary = {"total": int(source.get("total") or 0)}
+        for state in catalog.VARIABLE_STATES:
+            summary[state] = int(source.get(state) or 0)
+        return summary
 
 
 class VariableUpdateRequest(LegalVariableBaseModel):
