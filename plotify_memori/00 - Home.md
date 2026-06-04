@@ -72,6 +72,11 @@ Schema, tablas, triggers, RLS, procedimientos, storage.
 Generación de documentos legales (escrituras, deslindes, servidumbres).
 
 - [[Generacion de Documentos]]
+- [[Generador de Escrituras de Compraventa]]
+- [[Plan Logica Productiva Generador Escrituras - Variables y Editor]]
+- [[Variables Escritura Compraventa - Fuentes de Obtencion]]
+- [[SDD 007 Escrituras Variable Resolution]]
+- [[SDD 008 Creador de Matriz - Handoff]]
 - [[Texto de Deslinde]]
 - [[Servidumbres Legal]]
 
@@ -106,6 +111,7 @@ Definicion de producto, decisiones arquitectonicas y criterios de cierre del pil
 - [[ADR-006 - Service Role con Validacion Tenant Explicita]]
 - [[ADR-007 - Baseline DB para Monorepo]]
 - [[ADR-008 - Mantener LangGraph en Python para V1]]
+- [[ADR-009 - Generador de Escrituras como Minuta DOCX con Evidencia y Revision Legal]]
 
 ### Revision y decisiones
 Analisis integral del repositorio para decidir arquitectura, ownership y prioridades.
@@ -115,6 +121,7 @@ Analisis integral del repositorio para decidir arquitectura, ownership y priorid
 - [[Mapa de Integracion Frontend Backend]]
 - [[Riesgos y Brechas Tecnicas]]
 - [[Matriz de Decisiones Pendientes]]
+- [[Rol de Avaluo en Tramite - Fuentes SII]]
 
 ### Implementaciones recientes
 Cambios ya aplicados que explican el estado operativo actual del monorepo.
@@ -125,6 +132,8 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[Implementacion Punto 4 - Consolidacion Operativa Monorepo]]
 - [[Implementacion SDD 001 Fase 1 - Setup MVP]]
 - [[Implementacion SDD 001 Fase 2 - Foundation MVP]]
+- [[SDD 006 Escrituras Lab - Minuta DOCX y Readiness]]
+- [[SDD 007 Escrituras Variable Resolution]]
 
 ---
 
@@ -137,12 +146,12 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 
 ## Conteo
 
-- **71 notas** documentadas
+- **79 notas** documentadas
 - **6 secciones** temáticas
 - **Wikilinks** entre notas relacionadas
 - **Tags** por dominio (#frontend, #backend, #db, #arquitectura, #legal, #guia, #referencia, #prd, #adr)
 
-*Última actualización: 25 de mayo de 2026*
+*Última actualización: 3 de junio de 2026*
 
 
 

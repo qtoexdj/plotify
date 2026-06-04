@@ -2,7 +2,7 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/006-escrituras-lab/plan.md`
+`specs/007-escrituras-variable-resolution/plan.md`
 
 <!-- SPECKIT END -->
 
@@ -18,9 +18,9 @@ shell commands, and other important information, read the current plan:
 
 This repository uses Spec Kit SDD as the implementation authority. The active feature is:
 
-- `specs/006-escrituras-lab/spec.md`
-- `specs/006-escrituras-lab/plan.md`
-- `specs/006-escrituras-lab/tasks.md`
+- `specs/007-escrituras-variable-resolution/spec.md`
+- `specs/007-escrituras-variable-resolution/plan.md`
+- `specs/007-escrituras-variable-resolution/tasks.md`
 - `.specify/memory/constitution.md`
 
 Before implementation:
@@ -44,7 +44,7 @@ Canonical implementation prompt:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/006-escrituras-lab/tasks.md.
+Implementa solo TXXX de specs/007-escrituras-variable-resolution/tasks.md.
 No avances a otra tarea.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.

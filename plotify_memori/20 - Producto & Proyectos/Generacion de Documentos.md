@@ -9,6 +9,12 @@
 
 Sistema de generacion de documentos legales (escrituras, deslindes) basado en bloques reutilizables con plantillas Jinja2.
 
+> [!important] Actualizacion 2026-06-03
+> Para escrituras de compraventa de lotes/parcelas, el formato productivo
+> objetivo pasa a ser una **minuta DOCX editable** con evidencia y revision
+> legal, no un PDF final certificado. Ver [[Generador de Escrituras de Compraventa]]
+> y [[ADR-009 - Generador de Escrituras como Minuta DOCX con Evidencia y Revision Legal]].
+
 ## Arquitectura
 
 ### 1. Bloques (document_blocks)
@@ -74,6 +80,10 @@ Secciones de datos que se inyectan:
 9-18. Articulos adicionales (declaraciones, condiciones, cierre, etc.)
 
 ## Relacionado
+- [[Generador de Escrituras de Compraventa]] — Gestor productivo de minutas DOCX de compraventa.
+- [[SDD 007 Escrituras Variable Resolution]] — Plan productivo para variables, evidencia, roles SII y readiness antes de construir la minuta.
+- [[SDD 006 Escrituras Lab - Minuta DOCX y Readiness]] — Respaldo completo del analisis del laboratorio de escrituras.
+- [[ADR-009 - Generador de Escrituras como Minuta DOCX con Evidencia y Revision Legal]] — Decision propuesta para el generador productivo.
 - [[Texto de Deslinde]] — Generacion de boundary descriptions
 - [[Servidumbres Legal]] — Analisis geometrico que alimenta el documento
 - [[Tablas Documentos BD]] — Schema de las tablas
