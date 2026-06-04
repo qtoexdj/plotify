@@ -26,6 +26,7 @@ import { saveProjectLegalDataAction } from '@/actions/documents.action'
 import { toast } from 'sonner'
 
 import { LegalVariable, filterPendingLegalVariables } from '@/lib/legal/variables'
+import { LegalControlCenter } from './legal-control-center'
 
 interface LegalTabProps {
   lots: LotWithRecord[]
@@ -212,6 +213,8 @@ export function LegalTab({ lots, projectId, project }: LegalTabProps) {
 
   return (
     <div className="space-y-6">
+      <LegalControlCenter projectId={projectId} projectName={project.name} />
+
       {/* Panel de Revisión de Variables de Escritura (T066) */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-2">

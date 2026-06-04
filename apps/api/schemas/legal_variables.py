@@ -187,12 +187,35 @@ class VariableInventoryResponse(LegalVariableResponseModel):
 
 
 class VariableUpdateRequest(LegalVariableBaseModel):
+    action: str
     value_text: str | None = None
     value_json: dict[str, Any] | list[Any] | None = None
     state: str | None = None
     correction_reason: str | None = None
     reviewed_by: str | None = None
+    evidence_policy: str = "keep_existing"
     evidence_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("action")
+    @classmethod
+    def validate_action(cls, value: str) -> str:
+        if value not in {"edit", "approve", "mark_not_applicable"}:
+            raise ValueError(f"Unsupported legal variable review action: {value}")
+        return value
+
+    @field_validator("state")
+    @classmethod
+    def validate_state(cls, value: str | None) -> str | None:
+        if value is not None and not catalog.is_variable_state(value):
+            raise ValueError(f"Unsupported legal variable state: {value}")
+        return value
+
+    @field_validator("evidence_policy")
+    @classmethod
+    def validate_evidence_policy(cls, value: str) -> str:
+        if value not in {"keep_existing"}:
+            raise ValueError(f"Unsupported evidence policy: {value}")
+        return value
 
 
 class VariableReviewResponse(LegalVariableResponseModel):
@@ -200,7 +223,7 @@ class VariableReviewResponse(LegalVariableResponseModel):
     state: str
     reviewed_by: str | None = None
     reviewed_at: datetime | None = None
-    audit_event_id: str | None = None
+    audit_event_id: str
 
 
 class RoleMatchingRequest(LegalVariableBaseModel):

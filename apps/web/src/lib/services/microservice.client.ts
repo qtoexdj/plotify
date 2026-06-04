@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger'
 const BASE_URL = process.env.PLOTIFY_CHAT_BASE_URL || 'http://127.0.0.1:8005'
 const SECRET = process.env.INTERNAL_API_SECRET
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 interface MicroserviceOptions {
   method?: HttpMethod

@@ -10,12 +10,15 @@ import asyncio
 import hashlib
 import re
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from schemas.legal_variables import (
     DocumentEvidenceResponse,
     VariableInventoryResponse,
     VariableResolutionResponse,
+    VariableReviewResponse,
+    VariableUpdateRequest,
 )
 from services.legal_variable_catalog import (
     READINESS_REQUIRED_VARIABLES_BY_GATE,
@@ -80,6 +83,11 @@ CRITICAL_VARIABLE_KEYS = frozenset(
         "sii.certificado_fecha_emision",
         "sii.solicitud_numero",
     )
+)
+EDIT_TARGET_STATES = frozenset(("resolved", "manual_review"))
+APPROVABLE_STATES = frozenset(("proposed", "resolved", "manual_review", "derived"))
+NOT_APPLICABLE_SOURCE_STATES = frozenset(
+    ("missing", "proposed", "resolved", "manual_review", "conflict", "derived")
 )
 
 _INSCRIPTION_RE = re.compile(
@@ -261,6 +269,21 @@ class LegalVariableInventoryScopeError(PermissionError):
 
 class LegalVariableInventoryNotFoundError(LookupError):
     """Raised when the inventory project cannot be found."""
+
+
+class LegalVariableAuditError(RuntimeError):
+    """Raised when review audit persistence fails after a validated mutation."""
+
+
+@dataclass(frozen=True)
+class VariableReviewMutation:
+    """Validated review mutation and immutable decision payload."""
+
+    update_payload: dict[str, Any]
+    decision_payload: dict[str, Any]
+    response_state: str
+    reviewed_by: str
+    reviewed_at: datetime
 
 
 class LegalVariableResolutionService:
@@ -949,6 +972,343 @@ async def get_project_variable_inventory(
         groups=grouped,
         summary=summary,
     )
+
+
+async def update_legal_variable(
+    *,
+    variable_resolution_id: str,
+    organization_id: str,
+    payload: VariableUpdateRequest,
+    project_id: str,
+    supabase: Any | None = None,
+) -> VariableReviewResponse:
+    client = supabase or _get_supabase_client()
+    variable = await _fetch_variable_for_review(
+        supabase=client,
+        variable_resolution_id=variable_resolution_id,
+    )
+    if variable.get("organization_id") != organization_id:
+        raise LegalVariableInventoryScopeError(
+            "variable_resolution_id does not belong to organization_id."
+        )
+    if variable.get("project_id") != project_id:
+        raise LegalVariableInventoryScopeError(
+            "variable_resolution_id does not belong to project_id."
+        )
+
+    mutation = _build_variable_review_mutation(
+        variable=variable,
+        payload=payload,
+    )
+    updated = await _update_variable_resolution_row(
+        supabase=client,
+        variable_resolution_id=variable_resolution_id,
+        update_payload=mutation.update_payload,
+    )
+    try:
+        audit_row = await _insert_legal_review_decision(
+            supabase=client,
+            decision_payload=mutation.decision_payload,
+        )
+    except Exception as exc:
+        await _rollback_variable_review_mutation(
+            supabase=client,
+            variable_resolution_id=variable_resolution_id,
+            previous_variable=variable,
+        )
+        raise LegalVariableAuditError("Legal variable review audit could not be persisted.") from exc
+
+    return VariableReviewResponse(
+        variable_resolution_id=str(updated.get("id") or variable_resolution_id),
+        state=str(updated.get("state") or mutation.response_state),
+        reviewed_by=str(updated.get("reviewed_by") or mutation.reviewed_by),
+        reviewed_at=updated.get("reviewed_at") or mutation.reviewed_at,
+        audit_event_id=str(audit_row["id"]),
+    )
+
+
+async def _fetch_variable_for_review(
+    *,
+    supabase: Any,
+    variable_resolution_id: str,
+) -> dict[str, Any]:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .select("*")
+            .eq("id", variable_resolution_id)
+            .single()
+            .execute()
+        )
+    )
+    variable = _first_row(result)
+    if not variable:
+        raise LegalVariableInventoryNotFoundError("Variable resolution not found.")
+    return variable
+
+
+async def _update_variable_resolution_row(
+    *,
+    supabase: Any,
+    variable_resolution_id: str,
+    update_payload: dict[str, Any],
+) -> dict[str, Any]:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .update(update_payload)
+            .eq("id", variable_resolution_id)
+            .select("*")
+            .single()
+            .execute()
+        )
+    )
+    updated = _first_row(result)
+    if not updated:
+        raise LegalVariableInventoryNotFoundError("Variable resolution not found.")
+    return updated
+
+
+async def _insert_legal_review_decision(
+    *,
+    supabase: Any,
+    decision_payload: dict[str, Any],
+) -> dict[str, Any]:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("legal_review_decisions")
+            .insert(decision_payload)
+            .select("*")
+            .single()
+            .execute()
+        )
+    )
+    audit_row = _first_row(result)
+    if not audit_row or not audit_row.get("id"):
+        raise LegalVariableAuditError("Legal review decision insert did not return an audit id.")
+    return audit_row
+
+
+async def _rollback_variable_review_mutation(
+    *,
+    supabase: Any,
+    variable_resolution_id: str,
+    previous_variable: dict[str, Any],
+) -> None:
+    rollback_payload = {
+        key: previous_variable.get(key)
+        for key in (
+            "value_text",
+            "value_json",
+            "state",
+            "source_type",
+            "reviewed_by",
+            "reviewed_at",
+            "correction_reason",
+        )
+    }
+    await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .update(rollback_payload)
+            .eq("id", variable_resolution_id)
+            .execute()
+        )
+    )
+
+
+def _build_variable_review_mutation(
+    *,
+    variable: dict[str, Any],
+    payload: VariableUpdateRequest,
+) -> VariableReviewMutation:
+    current_state = str(variable.get("state") or "")
+    if current_state == "superseded":
+        raise LegalVariableResolutionError("Superseded variables cannot be reviewed.")
+    if not payload.reviewed_by:
+        raise LegalVariableResolutionError("reviewed_by is required for legal variable review.")
+
+    reviewed_at = datetime.now(UTC)
+    action = payload.action
+    if action == "edit":
+        return _build_edit_mutation(variable, payload, reviewed_at)
+    if action == "approve":
+        return _build_approve_mutation(variable, payload, reviewed_at)
+    if action == "mark_not_applicable":
+        return _build_not_applicable_mutation(variable, payload, reviewed_at)
+    raise LegalVariableResolutionError(f"Unsupported legal variable review action: {action}")
+
+
+def _build_edit_mutation(
+    variable: dict[str, Any],
+    payload: VariableUpdateRequest,
+    reviewed_at: datetime,
+) -> VariableReviewMutation:
+    target_state = payload.state or "resolved"
+    current_state = str(variable.get("state") or "")
+    if target_state not in EDIT_TARGET_STATES:
+        raise LegalVariableResolutionError(
+            f"Edit action cannot transition variable to {target_state}."
+        )
+    if current_state in {"approved", "not_applicable"}:
+        raise LegalVariableResolutionError(
+            f"Cannot edit variable from terminal state {current_state}."
+        )
+    next_value_text = _normalized_payload_text(payload.value_text)
+    if not _has_review_value(next_value_text, payload.value_json):
+        raise LegalVariableResolutionError("Manual variable edits require a value.")
+    reason = _required_reason(payload)
+    update_payload = {
+        "value_text": next_value_text,
+        "value_json": payload.value_json,
+        "state": target_state,
+        "source_type": "manual",
+        "reviewed_by": payload.reviewed_by,
+        "reviewed_at": reviewed_at.isoformat(),
+        "correction_reason": reason,
+    }
+    return _mutation(
+        variable=variable,
+        payload=payload,
+        reviewed_at=reviewed_at,
+        update_payload=update_payload,
+        response_state=target_state,
+        decision_type="manual_override",
+        decision_status="approved",
+        reason=reason,
+    )
+
+
+def _build_approve_mutation(
+    variable: dict[str, Any],
+    payload: VariableUpdateRequest,
+    reviewed_at: datetime,
+) -> VariableReviewMutation:
+    current_state = str(variable.get("state") or "")
+    if payload.state is not None and payload.state != "approved":
+        raise LegalVariableResolutionError("Approve action must target approved state.")
+    if current_state not in APPROVABLE_STATES:
+        raise LegalVariableResolutionError(
+            f"Cannot approve variable from state {current_state}."
+        )
+    next_value_text = (
+        _normalized_payload_text(payload.value_text)
+        if payload.value_text is not None
+        else _normalized_payload_text(variable.get("value_text"))
+    )
+    next_value_json = (
+        payload.value_json if payload.value_json is not None else variable.get("value_json")
+    )
+    if not _has_review_value(next_value_text, next_value_json):
+        raise LegalVariableResolutionError("Approved variables require a value.")
+    reason = payload.correction_reason
+    update_payload = {
+        "value_text": next_value_text,
+        "value_json": next_value_json,
+        "state": "approved",
+        "reviewed_by": payload.reviewed_by,
+        "reviewed_at": reviewed_at.isoformat(),
+    }
+    if reason:
+        update_payload["correction_reason"] = reason
+    return _mutation(
+        variable=variable,
+        payload=payload,
+        reviewed_at=reviewed_at,
+        update_payload=update_payload,
+        response_state="approved",
+        decision_type="approve_variable",
+        decision_status="approved",
+        reason=reason,
+    )
+
+
+def _build_not_applicable_mutation(
+    variable: dict[str, Any],
+    payload: VariableUpdateRequest,
+    reviewed_at: datetime,
+) -> VariableReviewMutation:
+    current_state = str(variable.get("state") or "")
+    if payload.state is not None and payload.state != "not_applicable":
+        raise LegalVariableResolutionError(
+            "mark_not_applicable action must target not_applicable state."
+        )
+    if current_state not in NOT_APPLICABLE_SOURCE_STATES:
+        raise LegalVariableResolutionError(
+            f"Cannot mark variable from state {current_state} as not_applicable."
+        )
+    reason = _required_reason(payload)
+    update_payload = {
+        "value_text": None,
+        "value_json": None,
+        "state": "not_applicable",
+        "source_type": "legal_review",
+        "reviewed_by": payload.reviewed_by,
+        "reviewed_at": reviewed_at.isoformat(),
+        "correction_reason": reason,
+    }
+    return _mutation(
+        variable=variable,
+        payload=payload,
+        reviewed_at=reviewed_at,
+        update_payload=update_payload,
+        response_state="not_applicable",
+        decision_type="mark_not_applicable",
+        decision_status="approved",
+        reason=reason,
+    )
+
+
+def _mutation(
+    *,
+    variable: dict[str, Any],
+    payload: VariableUpdateRequest,
+    reviewed_at: datetime,
+    update_payload: dict[str, Any],
+    response_state: str,
+    decision_type: str,
+    decision_status: str,
+    reason: str | None,
+) -> VariableReviewMutation:
+    decision_payload = {
+        "organization_id": variable["organization_id"],
+        "project_id": variable["project_id"],
+        "lot_id": variable.get("lot_id"),
+        "escritura_case_id": variable.get("escritura_case_id"),
+        "variable_resolution_id": variable["id"],
+        "decision_type": decision_type,
+        "decision_status": decision_status,
+        "reason": reason,
+        "decided_by": payload.reviewed_by,
+        "decided_at": reviewed_at.isoformat(),
+    }
+    return VariableReviewMutation(
+        update_payload=update_payload,
+        decision_payload=decision_payload,
+        response_state=response_state,
+        reviewed_by=str(payload.reviewed_by),
+        reviewed_at=reviewed_at,
+    )
+
+
+def _required_reason(payload: VariableUpdateRequest) -> str:
+    reason = (payload.correction_reason or "").strip()
+    if not reason:
+        raise LegalVariableResolutionError(
+            "correction_reason is required for this legal variable review action."
+        )
+    return reason
+
+
+def _normalized_payload_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _has_review_value(value_text: str | None, value_json: Any) -> bool:
+    return value_text is not None or value_json is not None
 
 
 async def _ensure_inventory_project_scope(

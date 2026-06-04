@@ -397,6 +397,114 @@
         "title": "DecisionResponse",
         "type": "object"
       },
+      "DocumentEvidenceResponse": {
+        "properties": {
+          "bbox": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bbox"
+          },
+          "chunk_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Index"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_document_id": {
+            "title": "Legal Document Id",
+            "type": "string"
+          },
+          "legal_document_page_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Document Page Id"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet"
+          },
+          "snippet_hash": {
+            "title": "Snippet Hash",
+            "type": "string"
+          },
+          "variable_resolution_id": {
+            "title": "Variable Resolution Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "project_id",
+          "variable_resolution_id",
+          "legal_document_id",
+          "snippet_hash"
+        ],
+        "title": "DocumentEvidenceResponse",
+        "type": "object"
+      },
       "DocumentVariablesGroup": {
         "properties": {
           "comprador": {
@@ -446,6 +554,111 @@
           }
         },
         "title": "DocumentVariablesGroup",
+        "type": "object"
+      },
+      "EscrituraCaseCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "warning_acknowledged": {
+            "default": false,
+            "title": "Warning Acknowledged",
+            "type": "boolean"
+          }
+        },
+        "required": ["organization_id", "project_id"],
+        "title": "EscrituraCaseCreateRequest",
+        "type": "object"
+      },
+      "EscrituraCaseSnapshotResponse": {
+        "properties": {
+          "case_status": {
+            "title": "Case Status",
+            "type": "string"
+          },
+          "escritura_case_id": {
+            "title": "Escritura Case Id",
+            "type": "string"
+          },
+          "evidence_snapshot_count": {
+            "title": "Evidence Snapshot Count",
+            "type": "integer"
+          },
+          "readiness_status": {
+            "title": "Readiness Status",
+            "type": "string"
+          },
+          "variable_snapshot_count": {
+            "title": "Variable Snapshot Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "escritura_case_id",
+          "case_status",
+          "readiness_status",
+          "variable_snapshot_count",
+          "evidence_snapshot_count"
+        ],
+        "title": "EscrituraCaseSnapshotResponse",
+        "type": "object"
+      },
+      "EscrituraReadinessResponse": {
+        "properties": {
+          "evidence_snapshot": {
+            "additionalProperties": true,
+            "title": "Evidence Snapshot",
+            "type": "object"
+          },
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessGateResponse"
+            },
+            "title": "Gates",
+            "type": "array"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "readiness_status": {
+            "title": "Readiness Status",
+            "type": "string"
+          },
+          "variable_snapshot": {
+            "additionalProperties": true,
+            "title": "Variable Snapshot",
+            "type": "object"
+          }
+        },
+        "required": ["organization_id", "project_id", "lot_id", "readiness_status"],
+        "title": "EscrituraReadinessResponse",
         "type": "object"
       },
       "GenerateRequest": {
@@ -580,6 +793,492 @@
         },
         "required": ["organization_id"],
         "title": "InvalidateCacheRequest",
+        "type": "object"
+      },
+      "LegalDocumentListResponse": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/LegalDocumentResponse"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          }
+        },
+        "title": "LegalDocumentListResponse",
+        "type": "object"
+      },
+      "LegalDocumentRegisterRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "document_type": {
+            "title": "Document Type",
+            "type": "string"
+          },
+          "file_size_bytes": {
+            "minimum": 1.0,
+            "title": "File Size Bytes",
+            "type": "integer"
+          },
+          "lot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Id"
+          },
+          "mime_type": {
+            "title": "Mime Type",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "original_filename": {
+            "title": "Original Filename",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "sha256_hash": {
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Sha256 Hash",
+            "type": "string"
+          },
+          "source_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Field"
+          },
+          "storage_bucket": {
+            "default": "project-files",
+            "title": "Storage Bucket",
+            "type": "string"
+          },
+          "storage_path": {
+            "title": "Storage Path",
+            "type": "string"
+          },
+          "upload_source": {
+            "default": "api",
+            "title": "Upload Source",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded By"
+          }
+        },
+        "required": [
+          "organization_id",
+          "project_id",
+          "document_type",
+          "storage_path",
+          "original_filename",
+          "mime_type",
+          "file_size_bytes",
+          "sha256_hash"
+        ],
+        "title": "LegalDocumentRegisterRequest",
+        "type": "object"
+      },
+      "LegalDocumentRegistrationQueuedResponse": {
+        "properties": {
+          "extraction_status": {
+            "title": "Extraction Status",
+            "type": "string"
+          },
+          "ingestion_job_id": {
+            "title": "Ingestion Job Id",
+            "type": "string"
+          },
+          "legal_document_id": {
+            "title": "Legal Document Id",
+            "type": "string"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "legal_document_id",
+          "ingestion_job_id",
+          "extraction_status",
+          "version_number"
+        ],
+        "title": "LegalDocumentRegistrationQueuedResponse",
+        "type": "object"
+      },
+      "LegalDocumentResponse": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "document_type": {
+            "title": "Document Type",
+            "type": "string"
+          },
+          "extraction_status": {
+            "title": "Extraction Status",
+            "type": "string"
+          },
+          "file_size_bytes": {
+            "title": "File Size Bytes",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Id"
+          },
+          "mime_type": {
+            "title": "Mime Type",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "original_filename": {
+            "title": "Original Filename",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "sha256_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256 Hash"
+          },
+          "source_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Field"
+          },
+          "storage_bucket": {
+            "title": "Storage Bucket",
+            "type": "string"
+          },
+          "storage_path": {
+            "title": "Storage Path",
+            "type": "string"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "upload_source": {
+            "title": "Upload Source",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded By"
+          },
+          "version_number": {
+            "default": 1,
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "project_id",
+          "document_type",
+          "storage_bucket",
+          "storage_path",
+          "original_filename",
+          "mime_type",
+          "file_size_bytes",
+          "upload_source",
+          "extraction_status"
+        ],
+        "title": "LegalDocumentResponse",
+        "type": "object"
+      },
+      "LegalDocumentRetryResponse": {
+        "properties": {
+          "attempt_number": {
+            "title": "Attempt Number",
+            "type": "integer"
+          },
+          "extraction_status": {
+            "title": "Extraction Status",
+            "type": "string"
+          },
+          "ingestion_job_id": {
+            "title": "Ingestion Job Id",
+            "type": "string"
+          },
+          "legal_document_id": {
+            "title": "Legal Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "legal_document_id",
+          "ingestion_job_id",
+          "extraction_status",
+          "attempt_number"
+        ],
+        "title": "LegalDocumentRetryResponse",
+        "type": "object"
+      },
+      "LotLegalDataResponse": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "string"
+          },
+          "matching_score": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matching Score"
+          },
+          "matching_status": {
+            "title": "Matching Status",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "role_status": {
+            "title": "Role Status",
+            "type": "string"
+          },
+          "sii_definitive_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Definitive Role"
+          },
+          "sii_pre_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Pre Role"
+          },
+          "sii_role_in_process_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Role In Process Text"
+          },
+          "sii_role_matrix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Role Matrix"
+          },
+          "sii_unit_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Unit Name"
+          },
+          "source_legal_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Legal Document Id"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "project_id",
+          "lot_id",
+          "role_status",
+          "matching_status"
+        ],
+        "title": "LotLegalDataResponse",
         "type": "object"
       },
       "MarkReadResponse": {
@@ -979,6 +1678,35 @@
         "title": "PreviewResponse",
         "type": "object"
       },
+      "ReadinessGateResponse": {
+        "properties": {
+          "blocking_variables": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocking Variables",
+            "type": "array"
+          },
+          "gate": {
+            "title": "Gate",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": ["gate", "status"],
+        "title": "ReadinessGateResponse",
+        "type": "object"
+      },
       "RegisterBotRequest": {
         "properties": {
           "bot_token": {
@@ -1104,6 +1832,129 @@
         },
         "required": ["approval_id"],
         "title": "ReservationResponse",
+        "type": "object"
+      },
+      "RoleManualOverrideRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "matching_status": {
+            "default": "manual_override",
+            "title": "Matching Status",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "role_status": {
+            "title": "Role Status",
+            "type": "string"
+          },
+          "sii_definitive_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Definitive Role"
+          },
+          "sii_pre_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Pre Role"
+          },
+          "sii_role_in_process_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Role In Process Text"
+          },
+          "sii_role_matrix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Role Matrix"
+          },
+          "sii_unit_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sii Unit Name"
+          },
+          "source_legal_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Legal Document Id"
+          }
+        },
+        "required": ["role_status", "reason"],
+        "title": "RoleManualOverrideRequest",
+        "type": "object"
+      },
+      "RoleMatchingInventoryResponse": {
+        "properties": {
+          "lots": {
+            "items": {
+              "$ref": "#/components/schemas/LotLegalDataResponse"
+            },
+            "title": "Lots",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "required": ["project_id"],
+        "title": "RoleMatchingInventoryResponse",
         "type": "object"
       },
       "SalePayload": {
@@ -1394,6 +2245,289 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VariableInventoryResponse": {
+        "properties": {
+          "groups": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/VariableResolutionResponse"
+              },
+              "type": "array"
+            },
+            "title": "Groups",
+            "type": "object"
+          },
+          "lot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Id"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "required": ["project_id"],
+        "title": "VariableInventoryResponse",
+        "type": "object"
+      },
+      "VariableResolutionResponse": {
+        "properties": {
+          "approval_required": {
+            "default": false,
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "correction_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correction Reason"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "escritura_case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escritura Case Id"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentEvidenceResponse"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "extractor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extractor Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Id"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "source_ref": {
+            "additionalProperties": true,
+            "title": "Source Ref",
+            "type": "object"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "value_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Json"
+          },
+          "value_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Text"
+          },
+          "variable_group": {
+            "title": "Variable Group",
+            "type": "string"
+          },
+          "variable_key": {
+            "title": "Variable Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "project_id",
+          "variable_key",
+          "variable_group",
+          "state",
+          "source_type"
+        ],
+        "title": "VariableResolutionResponse",
+        "type": "object"
+      },
+      "VariableReviewResponse": {
+        "properties": {
+          "audit_event_id": {
+            "title": "Audit Event Id",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "variable_resolution_id": {
+            "title": "Variable Resolution Id",
+            "type": "string"
+          }
+        },
+        "required": ["variable_resolution_id", "state", "audit_event_id"],
+        "title": "VariableReviewResponse",
+        "type": "object"
+      },
       "VariableStatusResponse": {
         "properties": {
           "available": {
@@ -1423,6 +2557,90 @@
         },
         "required": ["variables"],
         "title": "VariableStatusResponse",
+        "type": "object"
+      },
+      "VariableUpdateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "correction_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correction Reason"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "evidence_policy": {
+            "default": "keep_existing",
+            "title": "Evidence Policy",
+            "type": "string"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "value_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Json"
+          },
+          "value_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Text"
+          }
+        },
+        "required": ["action"],
+        "title": "VariableUpdateRequest",
         "type": "object"
       }
     },
@@ -2423,6 +3641,124 @@
         "tags": ["documents"]
       }
     },
+    "/api/v1/escritura-cases/lots/{lot_id}": {
+      "post": {
+        "operationId": "create_escritura_case_api_v1_escritura_cases_lots__lot_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lot_id",
+            "required": true,
+            "schema": {
+              "title": "Lot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscrituraCaseCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraCaseSnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Create Escritura Case",
+        "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/escritura-cases/lots/{lot_id}/readiness": {
+      "get": {
+        "operationId": "get_escritura_readiness_api_v1_escritura_cases_lots__lot_id__readiness_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lot_id",
+            "required": true,
+            "schema": {
+              "title": "Lot Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Escritura Readiness",
+        "tags": ["legal-variables"]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Endpoint base para comprobar que el servicio está vivo.",
@@ -2629,6 +3965,470 @@
         ],
         "summary": "Test Integration",
         "tags": ["integrations"]
+      }
+    },
+    "/api/v1/legal-documents/project/{project_id}": {
+      "get": {
+        "operationId": "list_project_legal_documents_api_v1_legal_documents_project__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalDocumentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "List Project Legal Documents",
+        "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/legal-documents/register": {
+      "post": {
+        "operationId": "register_legal_document_api_v1_legal_documents_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalDocumentRegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalDocumentRegistrationQueuedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Register Legal Document",
+        "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/legal-documents/{legal_document_id}/retry": {
+      "post": {
+        "operationId": "retry_legal_document_ingestion_api_v1_legal_documents__legal_document_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "legal_document_id",
+            "required": true,
+            "schema": {
+              "title": "Legal Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalDocumentRetryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Retry Legal Document Ingestion",
+        "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/legal-roles/lots/{lot_id}": {
+      "patch": {
+        "operationId": "update_lot_legal_role_api_v1_legal_roles_lots__lot_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lot_id",
+            "required": true,
+            "schema": {
+              "title": "Lot Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleManualOverrideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotLegalDataResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Update Lot Legal Role",
+        "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/legal-roles/project/{project_id}/matches": {
+      "get": {
+        "operationId": "get_project_legal_roles_api_v1_legal_roles_project__project_id__matches_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleMatchingInventoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Project Legal Roles",
+        "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/legal-variables/project/{project_id}": {
+      "get": {
+        "operationId": "get_project_legal_variables_api_v1_legal_variables_project__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lot_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lot Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_evidence",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Evidence",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariableInventoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Project Legal Variables",
+        "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/legal-variables/{variable_resolution_id}": {
+      "patch": {
+        "operationId": "update_legal_variable_api_v1_legal_variables__variable_resolution_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "variable_resolution_id",
+            "required": true,
+            "schema": {
+              "title": "Variable Resolution Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariableReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Update Legal Variable",
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/notifications/": {

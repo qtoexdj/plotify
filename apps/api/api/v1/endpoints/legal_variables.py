@@ -33,10 +33,12 @@ from services.legal_document_ingestion import (
     register_legal_document as register_legal_document_service,
 )
 from services.legal_variable_resolution import (
+    LegalVariableAuditError,
     LegalVariableInventoryNotFoundError,
     LegalVariableInventoryScopeError,
     LegalVariableResolutionError,
     get_project_variable_inventory as get_project_variable_inventory_service,
+    update_legal_variable as update_legal_variable_service,
 )
 
 logger = get_logger(__name__)
@@ -185,6 +187,11 @@ async def get_project_legal_variables(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    except LegalVariableAuditError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
 
 
 @router.patch(
@@ -195,11 +202,30 @@ async def update_legal_variable(
     variable_resolution_id: str,
     payload: VariableUpdateRequest,
     organization_id: str = Query(...),
+    project_id: str = Query(...),
 ) -> VariableReviewResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Legal variable review is not implemented yet.",
-    )
+    try:
+        return await update_legal_variable_service(
+            variable_resolution_id=variable_resolution_id,
+            organization_id=organization_id,
+            project_id=project_id,
+            payload=payload,
+        )
+    except LegalVariableResolutionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except LegalVariableInventoryScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except LegalVariableInventoryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(

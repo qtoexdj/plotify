@@ -105,19 +105,19 @@
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] Add API tests for variable edit, approve, mark-not-applicable and audit decisions in `apps/api/tests/test_escrituras_variable_review.py`; Verify: `pnpm test:api`
-- [ ] T034 [P] [US3] Add frontend tests for variable table filters, edit drawer and evidence viewer in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
+- [x] T033 [P] [US3] Add API tests for variable edit, approve, mark-not-applicable and audit decisions in `apps/api/tests/test_escrituras_variable_review.py`; Verify: `pnpm test:api`
+- [x] T034 [P] [US3] Add frontend tests for variable table filters, edit drawer and evidence viewer in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement `PATCH /legal-variables/{variable_resolution_id}` with state transition validation in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T036 [US3] Implement review/audit persistence in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T037 [US3] Add web proxy for variable edits in `apps/web/src/app/api/projects/[id]/legal-variables/[variableId]/route.ts`; Verify: `pnpm test:web`
-- [ ] T038 [P] [US3] Build `LegalDocumentStatusPanel` in `apps/web/src/components/projects/legal/legal-document-status-panel.tsx`; Verify: `pnpm test:web`
-- [ ] T039 [P] [US3] Build `LegalVariableTable` in `apps/web/src/components/projects/legal/legal-variable-table.tsx`; Verify: `pnpm test:web`
-- [ ] T040 [P] [US3] Build `LegalVariableEditor` in `apps/web/src/components/projects/legal/legal-variable-editor.tsx`; Verify: `pnpm test:web`
-- [ ] T041 [P] [US3] Build `LegalEvidenceViewer` in `apps/web/src/components/projects/legal/legal-evidence-viewer.tsx`; Verify: `pnpm test:web`
-- [ ] T042 [US3] Compose Centro de Control Legal in `apps/web/src/components/projects/detail/legal-control-center.tsx` and mount it from `apps/web/src/components/projects/detail/legal-tab.tsx`; Verify: `pnpm test:web`
+- [x] T035 [US3] Implement `PATCH /legal-variables/{variable_resolution_id}` with state transition validation in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T036 [US3] Implement review/audit persistence in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T037 [US3] Add web proxy for variable edits in `apps/web/src/app/api/projects/[id]/legal-variables/[variableId]/route.ts`; Verify: `pnpm test:web`
+- [x] T038 [P] [US3] Build `LegalDocumentStatusPanel` in `apps/web/src/components/projects/legal/legal-document-status-panel.tsx`; Verify: `pnpm test:web`
+- [x] T039 [P] [US3] Build `LegalVariableTable` in `apps/web/src/components/projects/legal/legal-variable-table.tsx`; Verify: `pnpm test:web`
+- [x] T040 [P] [US3] Build `LegalVariableEditor` in `apps/web/src/components/projects/legal/legal-variable-editor.tsx`; Verify: `pnpm test:web`
+- [x] T041 [P] [US3] Build `LegalEvidenceViewer` in `apps/web/src/components/projects/legal/legal-evidence-viewer.tsx`; Verify: `pnpm test:web`
+- [x] T042 [US3] Compose Centro de Control Legal in `apps/web/src/components/projects/detail/legal-control-center.tsx` and mount it from `apps/web/src/components/projects/detail/legal-tab.tsx`; Verify: `pnpm test:web`
 
 **Checkpoint**: User Story 3 is functional and testable independently.
 
