@@ -131,17 +131,17 @@
 
 ### Tests for User Story 4
 
-- [ ] T043 [P] [US4] Add SII role matching tests for exact match, ambiguous match, missing match and manual override in `apps/api/tests/test_escrituras_role_matching.py`; Verify: `pnpm test:api`
-- [ ] T044 [P] [US4] Add frontend tests for lot role matching status and manual override reason in `apps/web/tests/legal-role-matching.test.ts`; Verify: `pnpm test:web`
+- [x] T043 [P] [US4] Add SII role matching tests for exact match, ambiguous match, missing match and manual override in `apps/api/tests/test_escrituras_role_matching.py`; Verify: `pnpm test:api`
+- [x] T044 [P] [US4] Add frontend tests for lot role matching status and manual override reason in `apps/web/tests/legal-role-matching.test.ts`; Verify: `pnpm test:web`
 
 ### Implementation for User Story 4
 
-- [ ] T045 [US4] Implement lot/unit normalization and matching score logic in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
-- [ ] T046 [US4] Persist `lot_legal_data` matches and role-in-process state from SII extraction in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
-- [ ] T047 [US4] Implement role matching endpoints in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T048 [US4] Add web proxy routes for role matching in `apps/web/src/app/api/projects/[id]/legal-roles/route.ts` and `apps/web/src/app/api/projects/[id]/legal-roles/[lotId]/route.ts`; Verify: `pnpm test:web`
-- [ ] T049 [US4] Add role matching UI section to `apps/web/src/components/projects/detail/legal-control-center.tsx`; Verify: `pnpm test:web`
-- [ ] T050 [US4] Extend `apps/api/services/document_engine.py` so approved lot legal role variables can feed `sii.*` and `lote.rol_tramite`; Verify: `pnpm test:api`
+- [x] T045 [US4] Implement lot/unit normalization and matching score logic in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
+- [x] T046 [US4] Persist `lot_legal_data` matches and role-in-process state from SII extraction in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
+- [x] T047 [US4] Implement role matching endpoints in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T048 [US4] Add web proxy routes for role matching in `apps/web/src/app/api/projects/[id]/legal-roles/route.ts` and `apps/web/src/app/api/projects/[id]/legal-roles/[lotId]/route.ts`; Verify: `pnpm test:web`
+- [x] T049 [US4] Add role matching UI section to `apps/web/src/components/projects/detail/legal-control-center.tsx`; Verify: `pnpm test:web`
+- [x] T050 [US4] Extend `apps/api/services/document_engine.py` so approved lot legal role variables can feed `sii.*` and `lote.rol_tramite`; Verify: `pnpm test:api`
 
 **Checkpoint**: User Story 4 is functional and testable independently.
 

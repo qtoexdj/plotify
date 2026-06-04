@@ -246,12 +246,34 @@ class RoleManualOverrideRequest(LegalVariableBaseModel):
     reviewed_by: str | None = None
     source_legal_document_id: str | None = None
 
+    @field_validator("role_status")
+    @classmethod
+    def validate_role_status(cls, value: str) -> str:
+        if value not in catalog.ROLE_STATUS_SET:
+            raise ValueError(f"Unsupported SII role status: {value}")
+        return value
+
+    @field_validator("matching_status")
+    @classmethod
+    def validate_matching_status(cls, value: str) -> str:
+        if value != "manual_override":
+            raise ValueError("Manual role updates must use matching_status=manual_override")
+        return value
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Manual SII role override requires a reason")
+        return value.strip()
+
 
 class LotLegalDataResponse(LegalVariableResponseModel):
     id: str
     organization_id: str
     project_id: str
     lot_id: str
+    lot_number: str | None = None
     sii_unit_name: str | None = None
     sii_role_matrix: str | None = None
     sii_pre_role: str | None = None

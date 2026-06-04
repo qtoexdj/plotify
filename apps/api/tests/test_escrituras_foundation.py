@@ -87,13 +87,30 @@ def test_legal_variables_router_exposes_contract_paths():
             ).status_code
             == 200
         )
-    assert (
-        client.get(
-            "/api/v1/legal-roles/project/project-1/matches",
-            params={"organization_id": "org-1"},
-        ).status_code
-        == 501
-    )
+    with patch.object(
+        legal_variables_endpoint,
+        "get_project_role_matching_inventory",
+        new=AsyncMock(
+            return_value={
+                "project_id": "project-1",
+                "lots": [],
+                "summary": {
+                    "total": 0,
+                    "ambiguous": 0,
+                    "manual_override": 0,
+                    "matched": 0,
+                    "missing": 0,
+                },
+            }
+        ),
+    ):
+        assert (
+            client.get(
+                "/api/v1/legal-roles/project/project-1/matches",
+                params={"organization_id": "org-1"},
+            ).status_code
+            == 200
+        )
     assert client.post("/api/v1/legal-roles/match", json={}).status_code == 404
     assert (
         client.get(

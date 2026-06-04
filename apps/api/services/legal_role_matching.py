@@ -18,6 +18,26 @@ from services.legal_variable_catalog import ROLE_MATCHING_STATUS_SET, ROLE_STATU
 
 MATCH_SCORE_THRESHOLD = 0.70
 AMBIGUOUS_SCORE_DELTA = 0.03
+SII_UNIT_VARIABLE_KEYS = frozenset(
+    {
+        "sii.unidad_nombre",
+        "sii.rol_matriz",
+        "sii.pre_rol_lote",
+        "sii.rol_avaluo_en_tramite_texto",
+    }
+)
+
+
+class LegalRoleMatchingError(ValueError):
+    """Base error for SII lot role matching."""
+
+
+class LegalRoleMatchingScopeError(LegalRoleMatchingError):
+    """Raised when a lot or project is outside the requested organization scope."""
+
+
+class LegalRoleMatchingNotFoundError(LegalRoleMatchingError):
+    """Raised when a role matching resource cannot be found."""
 
 _LOT_WORDS = frozenset(
     {
@@ -273,6 +293,172 @@ async def persist_lot_role_matches(
     return list(result.data or [])
 
 
+async def fetch_sii_role_units_from_variables(
+    project_id: str,
+    organization_id: str,
+    *,
+    legal_document_id: str | None = None,
+    supabase: Any | None = None,
+) -> list[SiiRoleUnit]:
+    client = supabase or _get_supabase_client()
+
+    def _query():
+        query = (
+            client.table("variable_resolutions")
+            .select("id, variable_key, value_text, value_json, source_ref")
+            .eq("project_id", project_id)
+            .eq("organization_id", organization_id)
+        )
+        if hasattr(query, "in_"):
+            query = query.in_("variable_key", sorted(SII_UNIT_VARIABLE_KEYS))
+        return query.execute()
+
+    result = await asyncio.to_thread(_query)
+    rows = [
+        row
+        for row in (result.data or [])
+        if row.get("variable_key") in SII_UNIT_VARIABLE_KEYS
+    ]
+    if legal_document_id:
+        rows = [
+            row
+            for row in rows
+            if _source_legal_document_id(row) == legal_document_id
+        ]
+
+    grouped: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        source_ref = row.get("source_ref") or {}
+        unit_key = str(source_ref.get("unit_index") or row.get("id"))
+        grouped.setdefault(
+            unit_key,
+            {
+                "source_ref": source_ref,
+                "source_legal_document_id": _source_legal_document_id(row),
+            },
+        )
+        grouped[unit_key][str(row.get("variable_key"))] = row.get("value_text")
+
+    units: list[SiiRoleUnit] = []
+    role_in_process_text = next(
+        (
+            str(row.get("value_text") or "")
+            for row in rows
+            if row.get("variable_key") == "sii.rol_avaluo_en_tramite_texto"
+            and _has_text(str(row.get("value_text") or ""))
+        ),
+        None,
+    )
+    role_matrix = next(
+        (
+            str(row.get("value_text") or "")
+            for row in rows
+            if row.get("variable_key") == "sii.rol_matriz"
+            and _has_text(str(row.get("value_text") or ""))
+        ),
+        None,
+    )
+
+    for data in grouped.values():
+        unit_name = data.get("sii.unidad_nombre")
+        if not _has_text(unit_name):
+            continue
+        units.append(
+            SiiRoleUnit(
+                unit_name=str(unit_name),
+                role_matrix=str(data.get("sii.rol_matriz") or role_matrix or "")
+                or None,
+                pre_role=str(data.get("sii.pre_rol_lote") or "") or None,
+                role_in_process_text=str(
+                    data.get("sii.rol_avaluo_en_tramite_texto")
+                    or role_in_process_text
+                    or ""
+                )
+                or None,
+                source_legal_document_id=data.get("source_legal_document_id"),
+                raw={"source_ref": data.get("source_ref") or {}},
+            )
+        )
+    return units
+
+
+async def list_lot_role_inventory(
+    *,
+    project_id: str,
+    organization_id: str,
+    supabase: Any | None = None,
+) -> list[dict[str, Any]]:
+    client = supabase or _get_supabase_client()
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("lot_legal_data")
+            .select("*")
+            .eq("project_id", project_id)
+            .eq("organization_id", organization_id)
+            .execute()
+        )
+    )
+    return list(result.data or [])
+
+
+async def get_project_role_matching_inventory(
+    *,
+    project_id: str,
+    organization_id: str,
+    legal_document_id: str | None = None,
+    force_recompute: bool = False,
+    supabase: Any | None = None,
+) -> dict[str, Any]:
+    lots = await fetch_project_lots(
+        project_id,
+        organization_id,
+        supabase=supabase,
+    )
+    if not lots:
+        raise LegalRoleMatchingNotFoundError("Project has no lots in this organization")
+
+    existing_rows = await list_lot_role_inventory(
+        project_id=project_id,
+        organization_id=organization_id,
+        supabase=supabase,
+    )
+    existing_by_lot = {str(row.get("lot_id")): row for row in existing_rows}
+    manual_lot_ids = {
+        lot_id
+        for lot_id, row in existing_by_lot.items()
+        if row.get("matching_status") == "manual_override" and not force_recompute
+    }
+
+    units = await fetch_sii_role_units_from_variables(
+        project_id,
+        organization_id,
+        legal_document_id=legal_document_id,
+        supabase=supabase,
+    )
+    auto_lots = [lot for lot in lots if lot.id not in manual_lot_ids]
+    auto_matches = match_sii_roles_to_lots(auto_lots, units)
+    persisted_rows = await persist_lot_role_matches(auto_matches, supabase=supabase)
+    persisted_by_lot = {str(row.get("lot_id")): row for row in persisted_rows}
+
+    lot_number_by_id = {lot.id: lot.lot_number for lot in lots}
+    rows: list[dict[str, Any]] = []
+    for lot in lots:
+        row = (
+            existing_by_lot.get(lot.id)
+            if lot.id in manual_lot_ids
+            else persisted_by_lot.get(lot.id)
+            or existing_by_lot.get(lot.id)
+            or _missing_result(lot).to_lot_legal_data_record()
+        )
+        rows.append(_response_row(row, lot_number_by_id))
+
+    return {
+        "project_id": project_id,
+        "lots": rows,
+        "summary": summarize_role_inventory(rows),
+    }
+
+
 async def build_and_persist_role_matches(
     *,
     project_id: str,
@@ -307,10 +493,19 @@ async def apply_manual_role_override(
     supabase: Any | None = None,
 ) -> dict[str, Any]:
     validate_role_status(role_status)
+    validate_matching_status("manual_override")
     if not reason.strip():
         raise ValueError("Manual SII role override requires a reason")
+    if not _has_text(reviewed_by):
+        raise LegalRoleMatchingError("Manual SII role override requires reviewed_by")
 
     client = supabase or _get_supabase_client()
+    await _assert_lot_scope(
+        client=client,
+        organization_id=organization_id,
+        project_id=project_id,
+        lot_id=lot_id,
+    )
     record: dict[str, Any] = {
         "organization_id": organization_id,
         "project_id": project_id,
@@ -336,7 +531,17 @@ async def apply_manual_role_override(
             .execute()
         )
     )
-    return (result.data or [record])[0]
+    row = (result.data or [record])[0]
+    if reviewed_by:
+        await _insert_manual_override_decision(
+            client=client,
+            organization_id=organization_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            reason=reason.strip(),
+            reviewed_by=reviewed_by,
+        )
+    return row
 
 
 def summarize_role_matches(matches: list[LotRoleMatchResult]) -> dict[str, int]:
@@ -344,6 +549,16 @@ def summarize_role_matches(matches: list[LotRoleMatchResult]) -> dict[str, int]:
     for match in matches:
         validate_matching_status(match.matching_status)
         summary[match.matching_status] += 1
+    return summary
+
+
+def summarize_role_inventory(rows: list[dict[str, Any]]) -> dict[str, int]:
+    summary = {status: 0 for status in sorted(ROLE_MATCHING_STATUS_SET)}
+    summary["total"] = len(rows)
+    for row in rows:
+        status = str(row.get("matching_status") or "missing")
+        validate_matching_status(status)
+        summary[status] += 1
     return summary
 
 
@@ -397,6 +612,71 @@ def _has_text(value: str | None) -> bool:
     return bool(value and value.strip())
 
 
+def _source_legal_document_id(row: dict[str, Any]) -> str | None:
+    source_ref = row.get("source_ref") or {}
+    value = source_ref.get("legal_document_id") or source_ref.get("document_id")
+    return str(value) if value else None
+
+
+def _response_row(
+    row: dict[str, Any],
+    lot_number_by_id: dict[str, str],
+) -> dict[str, Any]:
+    lot_id = str(row.get("lot_id") or "")
+    return {
+        **row,
+        "id": str(row.get("id") or lot_id),
+        "lot_id": lot_id,
+        "lot_number": lot_number_by_id.get(lot_id),
+    }
+
+
+async def _assert_lot_scope(
+    *,
+    client: Any,
+    organization_id: str,
+    project_id: str,
+    lot_id: str,
+) -> None:
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("lots")
+            .select("id, project_id, projects!inner(organization_id)")
+            .eq("id", lot_id)
+            .eq("project_id", project_id)
+            .eq("projects.organization_id", organization_id)
+            .maybe_single()
+            .execute()
+        )
+    )
+    if not result.data:
+        raise LegalRoleMatchingScopeError("Lot is outside the requested organization/project")
+
+
+async def _insert_manual_override_decision(
+    *,
+    client: Any,
+    organization_id: str,
+    project_id: str,
+    lot_id: str,
+    reason: str,
+    reviewed_by: str,
+) -> None:
+    payload = {
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "lot_id": lot_id,
+        "decision_type": "manual_override",
+        "decision_status": "approved",
+        "reason": reason,
+        "decided_by": reviewed_by,
+        "decided_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await asyncio.to_thread(
+        lambda: client.table("legal_review_decisions").insert(payload).execute()
+    )
+
+
 def _get_supabase_client() -> Any:
     from core.database import get_supabase_client
 
@@ -411,13 +691,20 @@ __all__ = [
     "apply_manual_role_override",
     "build_and_persist_role_matches",
     "fetch_project_lots",
+    "fetch_sii_role_units_from_variables",
+    "get_project_role_matching_inventory",
     "infer_role_status",
+    "LegalRoleMatchingError",
+    "LegalRoleMatchingNotFoundError",
+    "LegalRoleMatchingScopeError",
+    "list_lot_role_inventory",
     "lot_identity_tokens",
     "match_sii_roles_to_lots",
     "normalize_lot_name",
     "persist_lot_role_matches",
     "score_lot_unit_match",
     "summarize_role_matches",
+    "summarize_role_inventory",
     "validate_matching_status",
     "validate_role_status",
 ]

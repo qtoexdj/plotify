@@ -558,6 +558,7 @@ export interface LegalRoleMatchesResponse {
 
 export interface LegalRoleMatchUpdatePayload {
   sii_unit_name?: string | null
+  sii_role_matrix?: string | null
   sii_pre_role?: string | null
   sii_definitive_role?: string | null
   sii_role_in_process_text?: string | null

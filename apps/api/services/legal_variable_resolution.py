@@ -1443,12 +1443,17 @@ def build_document_proposal(
     confidence: float,
     extractor_name: str = DOMINIO_VIGENTE_EXTRACTOR_NAME,
 ) -> VariableProposalInput:
+    normalized_source_ref = {
+        **source_ref,
+        "legal_document_id": legal_document_id,
+        "legal_document_page_id": legal_document_page_id,
+    }
     return VariableProposalInput(
         organization_id=organization_id,
         project_id=project_id,
         variable_key=variable_key,
         value_text=value_text,
-        source_ref=source_ref,
+        source_ref=normalized_source_ref,
         confidence=confidence,
         extractor_name=extractor_name,
         evidence=(

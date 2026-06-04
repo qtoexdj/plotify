@@ -40,6 +40,13 @@ from services.legal_variable_resolution import (
     get_project_variable_inventory as get_project_variable_inventory_service,
     update_legal_variable as update_legal_variable_service,
 )
+from services.legal_role_matching import (
+    LegalRoleMatchingError,
+    LegalRoleMatchingNotFoundError,
+    LegalRoleMatchingScopeError,
+    apply_manual_role_override,
+    get_project_role_matching_inventory,
+)
 
 logger = get_logger(__name__)
 
@@ -236,10 +243,28 @@ async def get_project_legal_roles(
     project_id: str,
     organization_id: str = Query(...),
 ) -> RoleMatchingInventoryResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Legal role matching inventory is not implemented yet.",
-    )
+    try:
+        return RoleMatchingInventoryResponse.model_validate(
+            await get_project_role_matching_inventory(
+                project_id=project_id,
+                organization_id=organization_id,
+            )
+        )
+    except LegalRoleMatchingScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except LegalRoleMatchingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except LegalRoleMatchingError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
 
 
 @router.patch(
@@ -252,10 +277,42 @@ async def update_lot_legal_role(
     organization_id: str = Query(...),
     project_id: str = Query(...),
 ) -> LotLegalDataResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Legal role manual override is not implemented yet.",
-    )
+    try:
+        row = await apply_manual_role_override(
+            organization_id=organization_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            sii_unit_name=payload.sii_unit_name,
+            sii_role_matrix=payload.sii_role_matrix,
+            sii_pre_role=payload.sii_pre_role,
+            sii_role_in_process_text=payload.sii_role_in_process_text,
+            sii_definitive_role=payload.sii_definitive_role,
+            role_status=payload.role_status,
+            reason=payload.reason,
+            source_legal_document_id=payload.source_legal_document_id,
+            reviewed_by=payload.reviewed_by,
+        )
+        return LotLegalDataResponse.model_validate(
+            {
+                "id": lot_id,
+                **row,
+            }
+        )
+    except LegalRoleMatchingScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except LegalRoleMatchingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except (LegalRoleMatchingError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(

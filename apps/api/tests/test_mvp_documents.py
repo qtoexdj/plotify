@@ -432,12 +432,26 @@ async def test_resolve_variables_returns_flat_nested_and_geometry_legal_fields()
         }
     )
     payment_result = MagicMock(data={})
+    lot_legal_result = MagicMock(
+        data={
+            "sii_unit_name": "Lote 24",
+            "sii_role_matrix": "08179-00000",
+            "sii_pre_role": "08179-00024",
+            "sii_role_in_process_text": "Rol de avaluo en tramite 08179-00024",
+            "sii_definitive_role": None,
+            "role_status": "rol_en_tramite",
+            "matching_status": "matched",
+            "matching_score": 1.0,
+        }
+    )
     supabase = MagicMock()
 
     def table_side_effect(table_name):
         table = MagicMock()
         if table_name == "lots":
             table.select.return_value.eq.return_value.single.return_value.execute.return_value = lot_result
+        elif table_name == "lot_legal_data":
+            table.select.return_value.eq.return_value.eq.return_value.maybe_single.return_value.execute.return_value = lot_legal_result
         elif table_name == "organization_payment_info":
             table.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = payment_result
         return table
@@ -456,6 +470,59 @@ async def test_resolve_variables_returns_flat_nested_and_geometry_legal_fields()
     assert variables["lote"]["lote_deslindes"] == "Norte: Camino."
     assert variables["lote"]["perimetro_m"] == 302
     assert variables["lote"]["superficie_hectareas"] == 0.51
+    assert variables["sii"]["pre_rol_lote"] == "08179-00024"
+    assert variables["lote"]["rol_tramite"] == "08179-00024"
+
+
+async def test_resolve_variables_does_not_feed_ambiguous_sii_roles_to_templates():
+    from services.document_engine import resolve_variables
+
+    lot_result = MagicMock(
+        data={
+            "id": LOT_ID,
+            "numero_lote": "24",
+            "projects": {
+                "id": "project-1",
+                "name": "Proyecto Piloto",
+                "organizations": {"id": ORG_ID, "name": "Org Piloto"},
+            },
+        }
+    )
+    project_legal_result = MagicMock(data={})
+    lot_legal_result = MagicMock(
+        data={
+            "sii_unit_name": "Unidad 24 / Lote 42",
+            "sii_pre_role": "08179-00024",
+            "role_status": "rol_en_tramite",
+            "matching_status": "ambiguous",
+        }
+    )
+    payment_result = MagicMock(data={})
+    supabase = MagicMock()
+
+    def table_side_effect(table_name):
+        table = MagicMock()
+        if table_name == "lots":
+            table.select.return_value.eq.return_value.single.return_value.execute.return_value = lot_result
+        elif table_name == "project_legal_data":
+            table.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = project_legal_result
+        elif table_name == "lot_legal_data":
+            table.select.return_value.eq.return_value.eq.return_value.maybe_single.return_value.execute.return_value = lot_legal_result
+        elif table_name == "organization_payment_info":
+            table.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = payment_result
+        return table
+
+    supabase.table.side_effect = table_side_effect
+
+    with (
+        patch("services.document_engine.get_supabase_client", return_value=supabase),
+        patch("asyncio.to_thread", new=AsyncMock(side_effect=lambda fn, *a, **kw: fn())),
+    ):
+        variables = await resolve_variables(LOT_ID, ORG_ID)
+
+    assert variables["sii_pre_rol_lote"] == ""
+    assert variables["sii"]["pre_rol_lote"] == ""
+    assert variables["lote"]["rol_tramite"] == ""
 
 
 async def test_document_delivery_failure_records_status_without_regeneration():
