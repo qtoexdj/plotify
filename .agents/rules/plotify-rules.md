@@ -9,7 +9,7 @@ trigger: always_on
 
 ## Fuentes de Verdad
 - **Constitución SDD:** `.specify/memory/constitution.md` manda sobre decisiones de ingeniería del MVP.
-- **Artefactos SDD activos:** usa `specs/001-stabilize-plotify-mvp/spec.md`, `plan.md`, `tasks.md`, `research.md`, `data-model.md`, `contracts/` y `quickstart.md`.
+- **Artefactos SDD activos:** usa `specs/007-escrituras-variable-resolution/spec.md`, `plan.md`, `agent-execution.md`, `tasks.md`, `research.md`, `data-model.md`, `contracts/` y `quickstart.md`.
 - **Memoria curada:** usa `plotify_memori/` como memoria oficial de producto y arquitectura.
 - **No usar como fuente:** ignora `plotify_memori/.obsidian/` para decisiones de producto.
 - **Código real:** contrasta siempre contra el repo real antes de implementar; usa CodeGraph para estructura, símbolos, impacto y flujos.
@@ -17,8 +17,9 @@ trigger: always_on
 ## Flujo SDD de Implementación
 - Antes de implementar, ejecuta o solicita `$speckit-analyze` si cambiaron constitution, spec, plan o tasks.
 - No implementes si quedan hallazgos `CRITICAL` sin resolver.
+- Antes de implementar una tarea del SDD 007, lee `specs/007-escrituras-variable-resolution/agent-execution.md`.
 - Antes de cada tarea: revisa `git status --short` y sincroniza CodeGraph con `codegraph sync .`.
-- Implementa **una sola tarea pendiente** de `specs/001-stabilize-plotify-mvp/tasks.md` por ciclo.
+- Implementa **una sola tarea pendiente** de `specs/007-escrituras-variable-resolution/tasks.md` por ciclo.
 - No avances a otra tarea salvo instrucción explícita del usuario.
 - Ejecuta el comando `Verify` indicado por la tarea.
 - Marca la tarea como completada (`[x]`) solo si cumple Acceptance y Verify pasa, o si el usuario acepta explícitamente dejarla sin verificación.
@@ -30,8 +31,9 @@ Prompt recomendado en Codex:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/001-stabilize-plotify-mvp/tasks.md.
+Implementa solo TXXX de specs/007-escrituras-variable-resolution/tasks.md.
 No avances a otra tarea.
+Lee specs/007-escrituras-variable-resolution/agent-execution.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.

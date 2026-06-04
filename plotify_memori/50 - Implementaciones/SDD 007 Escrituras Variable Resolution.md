@@ -42,6 +42,7 @@ El foco inicial no es el constructor visual de minuta. El foco es:
 
 - `specs/007-escrituras-variable-resolution/spec.md`
 - `specs/007-escrituras-variable-resolution/plan.md`
+- `specs/007-escrituras-variable-resolution/agent-execution.md`
 - `specs/007-escrituras-variable-resolution/research.md`
 - `specs/007-escrituras-variable-resolution/data-model.md`
 - `specs/007-escrituras-variable-resolution/contracts/api-contracts.md`
@@ -98,6 +99,26 @@ Si una variable esta mal, el usuario vuelve al Centro de Control Legal del SDD
 
 La visualizacion, correccion y aprobacion de variables extraidas queda en SDD
 007. SDD 008 solo muestra/inserta variables desde snapshots aprobados.
+
+## Protocolo de agentes
+
+El SDD 007 queda alineado con GitHub Spec Kit como flujo base:
+`specify -> plan -> tasks -> implement`.
+
+Ademas se agrega `agent-execution.md` como capa operativa propia de Plotify para
+agentes y subagentes. Ese documento define:
+
+- contexto obligatorio antes de tocar codigo;
+- roles por tipo de trabajo;
+- limites de archivos y lineas por tarea;
+- reglas de paralelizacion;
+- gates de revision;
+- formato de handoff;
+- condiciones de detencion.
+
+Las reglas globales `.agents/rules/sdd-implementation.md`,
+`.agents/rules/plotify-rules.md` y `.agents/rules/plotify-chat.md` deben apuntar
+a SDD 007 mientras esta feature este activa.
 
 ## Proxima tarea recomendada
 

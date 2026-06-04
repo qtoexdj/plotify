@@ -2,7 +2,7 @@
 
 **Input**: Design documents from `/specs/007-escrituras-variable-resolution/`
 
-**Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
+**Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [agent-execution.md](./agent-execution.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
 
 **Tests**: Tests are required because this feature touches Supabase migrations, document extraction, API contracts, tenant isolation, legal document generation readiness and frontend workflows.
 
@@ -23,6 +23,7 @@
 - [ ] T003 [P] Add canonical variable catalog constants and states in `apps/api/services/legal_variable_catalog.py`; Verify: `pnpm test:api`
 - [ ] T004 [P] Add frontend variable/readiness TypeScript types in `apps/web/src/lib/legal/variable-resolution-types.ts`; Verify: `pnpm typecheck:web`
 - [x] T005 [P] Add implementation note linking SDD 007 to Obsidian memory in `plotify_memori/50 - Implementaciones/SDD 007 Escrituras Variable Resolution.md`; Verify: `pnpm format:check`
+- [x] T071 [P] Add SDD 007 agent/subagent execution protocol and update active agent rules in `specs/007-escrituras-variable-resolution/agent-execution.md`, `AGENTS.md`, `.agents/rules/sdd-implementation.md`, `.agents/rules/plotify-rules.md`, `.agents/rules/plotify-chat.md` and `plotify_memori/50 - Implementaciones/SDD 007 Escrituras Variable Resolution.md`; Verify: `pnpm format:check`
 
 ---
 
