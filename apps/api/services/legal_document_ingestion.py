@@ -173,9 +173,9 @@ def _validate_storage_path(project_id: str, storage_path: str) -> str:
         raise LegalDocumentValidationError(
             "storage_path must be a relative object path."
         )
-    if project_id not in normalized:
+    if not normalized.startswith(f"{project_id}/"):
         raise LegalDocumentValidationError(
-            "storage_path must include the project_id namespace."
+            "storage_path must start with the project_id namespace."
         )
     return normalized
 
@@ -433,6 +433,10 @@ async def register_legal_document(
         raise LegalDocumentIngestionError("Failed to register legal document.")
 
     legal_document = LegalDocumentResponse.model_validate(document_row)
+    await supersede_previous_document_versions(
+        supabase=client,
+        legal_document=legal_document,
+    )
     ingestion_job = await create_ingestion_job(
         supabase=client,
         legal_document=legal_document,
@@ -440,6 +444,30 @@ async def register_legal_document(
     return LegalDocumentRegistrationResult(
         legal_document=legal_document,
         ingestion_job=ingestion_job,
+    )
+
+
+async def supersede_previous_document_versions(
+    *,
+    supabase: Any,
+    legal_document: LegalDocumentResponse,
+) -> None:
+    await _run_supabase(
+        lambda: (
+            supabase.table("legal_documents")
+            .update(
+                {
+                    "extraction_status": "superseded",
+                    "superseded_by": legal_document.id,
+                }
+            )
+            .eq("organization_id", legal_document.organization_id)
+            .eq("project_id", legal_document.project_id)
+            .eq("document_type", legal_document.document_type)
+            .neq("id", legal_document.id)
+            .in_("extraction_status", ACTIVE_DOCUMENT_STATUSES)
+            .execute()
+        )
     )
 
 

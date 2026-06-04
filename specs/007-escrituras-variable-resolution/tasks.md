@@ -55,17 +55,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Add API tests for registering uploaded legal documents and queueing jobs in `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api`
-- [ ] T016 [P] [US1] Add web tests for project-file upload legal document registration behavior in `apps/web/tests/escrituras-ingestion.test.ts`; Verify: `pnpm test:web`
+- [x] T015 [P] [US1] Add API tests for registering uploaded legal documents and queueing jobs in `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api`
+- [x] T016 [P] [US1] Add web tests for project-file upload legal document registration behavior in `apps/web/tests/escrituras-ingestion.test.ts`; Verify: `pnpm test:web`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement `POST /legal-documents/register` and `GET /legal-documents/project/{project_id}` in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T018 [US1] Implement legal document registration and superseding logic in `apps/api/services/legal_document_ingestion.py`; Verify: `pnpm test:api`
-- [ ] T019 [US1] Extend `apps/web/src/app/api/projects/route.ts` and `apps/web/src/lib/services/projects.service.ts` so onboarding document paths register as legal documents after project creation; Verify: `pnpm test:web`
-- [ ] T020 [US1] Extend `apps/web/src/app/api/uploads/project-files/route.ts` so project document replacements register a legal document version and queue extraction; Verify: `pnpm test:web`
-- [ ] T021 [US1] Update accepted document metadata in `apps/web/src/components/projects/onboarding/ProjectMediaStep.tsx` without adding variable review UI; Verify: `pnpm test:web`
-- [ ] T022 [US1] Add legal document status display to `apps/web/src/components/projects/detail/documents-tab.tsx`; Verify: `pnpm test:web`
+- [x] T017 [US1] Implement `POST /legal-documents/register` and `GET /legal-documents/project/{project_id}` in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T018 [US1] Implement legal document registration and superseding logic in `apps/api/services/legal_document_ingestion.py`; Verify: `pnpm test:api`
+- [x] T019 [US1] Extend `apps/web/src/app/api/projects/route.ts` and `apps/web/src/lib/services/projects.service.ts` so onboarding document paths register as legal documents after project creation; Verify: `pnpm test:web`
+- [x] T020 [US1] Extend `apps/web/src/app/api/uploads/project-files/route.ts` so project document replacements register a legal document version and queue extraction; Verify: `pnpm test:web`
+- [x] T021 [US1] Update accepted document metadata in `apps/web/src/components/projects/onboarding/ProjectMediaStep.tsx` without adding variable review UI; Verify: `pnpm test:web`
+- [x] T022 [US1] Add legal document status display to `apps/web/src/components/projects/detail/documents-tab.tsx`; Verify: `pnpm test:web`
 
 **Checkpoint**: User Story 1 is functional and testable independently.
 

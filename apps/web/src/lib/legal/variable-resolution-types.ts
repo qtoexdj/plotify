@@ -331,6 +331,7 @@ export interface LegalDocumentsResponse {
 }
 
 export interface RegisterLegalDocumentPayload {
+  organization_id: UUID
   project_id: UUID
   lot_id?: UUID | null
   document_type: LegalDocumentType
@@ -340,7 +341,9 @@ export interface RegisterLegalDocumentPayload {
   original_filename: string
   mime_type: string
   file_size_bytes: number
+  sha256_hash: string
   upload_source: LegalUploadSource
+  uploaded_by?: UUID | null
 }
 
 export interface RegisterLegalDocumentResponse {

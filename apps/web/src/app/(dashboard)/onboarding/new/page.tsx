@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch'
 import { GeometryUploadPanel } from '@/components/projects/GeometryUploadPanel'
 import { ProjectMediaStep } from '@/components/projects/onboarding/ProjectMediaStep'
 import { GeometryAssignmentPanel } from '@/components/projects/geometry-assignment'
+import type { ProjectLegalDocumentUploadMetadata } from '@/lib/services/projects.service'
 import type { ParsedFeature } from '@/types/onboarding.types'
 import type { Project } from '@/types/database.types'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -120,7 +121,9 @@ export default function OnboardingWizardPage() {
     }
   }
 
-  const handleUpdateMedia = async (media: Record<string, string | string[] | null>) => {
+  const handleUpdateMedia = async (
+    media: Record<string, string | string[] | ProjectLegalDocumentUploadMetadata[] | null>
+  ) => {
     if (!project) return
     setIsSavingProject(true)
     try {
@@ -415,6 +418,7 @@ export default function OnboardingWizardPage() {
       {currentStep === 2 && project && (
         <div className="space-y-4">
           <ProjectMediaStep
+            projectId={project.id}
             onMediaChange={(media) => {
               handleUpdateMedia(media)
             }}

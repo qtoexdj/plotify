@@ -1,4 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import type {
+  LegalDocumentType,
+  LegalUploadSource,
+  RegisterLegalDocumentPayload,
+} from '@/lib/legal/variable-resolution-types'
+import { microserviceFetch } from '@/lib/services/microservice.client'
+import { logger } from '@/lib/logger'
 import type { Project, ProjectWithMetrics, Lot } from '@/types/database.types'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
@@ -6,6 +13,92 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 type OrganizationMembership = {
   organization_id: string
   role: 'admin' | 'user'
+}
+
+export const PROJECT_LEGAL_DOCUMENT_FIELDS = {
+  doc_dominio_vigente: 'dominio_vigente',
+  doc_hipoteca_gravamen: 'hipoteca_gravamen',
+  doc_roles: 'certificado_roles_sii',
+  doc_subdivision: 'certificado_sag',
+  doc_plano_oficial: 'plano_oficial',
+  doc_otros: 'otro',
+} as const satisfies Record<string, LegalDocumentType>
+
+export type ProjectLegalDocumentField = keyof typeof PROJECT_LEGAL_DOCUMENT_FIELDS
+
+export interface ProjectLegalDocumentUploadMetadata {
+  source_field: ProjectLegalDocumentField
+  storage_path: string
+  original_filename: string
+  mime_type: string
+  file_size_bytes: number
+  sha256_hash: string
+}
+
+export async function registerProjectLegalDocuments({
+  project,
+  documents,
+  uploadSource,
+  uploadedBy,
+}: {
+  project: Pick<Project, 'id' | 'organization_id'>
+  documents?: ProjectLegalDocumentUploadMetadata[]
+  uploadSource: LegalUploadSource
+  uploadedBy: string
+}): Promise<void> {
+  if (!documents || documents.length === 0) return
+  if (!project.organization_id) {
+    logger.warn({ projectId: project.id }, 'legal_document_registration_missing_organization')
+    return
+  }
+  const organizationId = project.organization_id
+
+  const results = await Promise.allSettled(
+    documents.map((document) => {
+      const payload: RegisterLegalDocumentPayload = {
+        organization_id: organizationId,
+        project_id: project.id,
+        lot_id: null,
+        document_type: PROJECT_LEGAL_DOCUMENT_FIELDS[document.source_field],
+        source_field: document.source_field,
+        storage_bucket: 'project-files',
+        storage_path: document.storage_path,
+        original_filename: document.original_filename,
+        mime_type: document.mime_type,
+        file_size_bytes: document.file_size_bytes,
+        sha256_hash: document.sha256_hash,
+        upload_source: uploadSource,
+        uploaded_by: uploadedBy,
+      }
+
+      return microserviceFetch('/api/v1/legal-documents/register', {
+        method: 'POST',
+        body: payload,
+      })
+    })
+  )
+
+  results.forEach((result, index) => {
+    const sourceField = documents[index]?.source_field
+    if (result.status === 'rejected') {
+      logger.error(
+        { projectId: project.id, sourceField, error: result.reason },
+        'legal_document_registration_failed'
+      )
+      return
+    }
+    if (result.value.error) {
+      logger.error(
+        {
+          projectId: project.id,
+          sourceField,
+          status: result.value.status,
+          error: result.value.error,
+        },
+        'legal_document_registration_rejected'
+      )
+    }
+  })
 }
 
 async function getOrganizationMembership(
@@ -175,6 +268,7 @@ interface CreateProjectPayload {
   doc_subdivision?: string
   doc_plano_oficial?: string
   doc_otros?: string | null
+  legal_documents?: ProjectLegalDocumentUploadMetadata[]
 }
 
 export async function createProject(

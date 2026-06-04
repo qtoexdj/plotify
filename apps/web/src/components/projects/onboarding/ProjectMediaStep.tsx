@@ -17,8 +17,10 @@ import {
 } from '@hugeicons/core-free-icons'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import type { ProjectLegalDocumentUploadMetadata } from '@/lib/services/projects.service'
 
 interface ProjectMediaStepProps {
+  projectId: string
   onMediaChange: (media: {
     images: string[]
     doc_dominio_vigente?: string
@@ -27,6 +29,7 @@ interface ProjectMediaStepProps {
     doc_subdivision?: string
     doc_plano_oficial?: string
     doc_otros?: string
+    legal_documents?: ProjectLegalDocumentUploadMetadata[]
   }) => void
 }
 
@@ -39,7 +42,14 @@ const DOCUMENT_TYPES = [
   { id: 'doc_otros', label: 'Otros Documentos', accept: '.pdf' },
 ]
 
-export function ProjectMediaStep({ onMediaChange }: ProjectMediaStepProps) {
+async function sha256Hex(file: File) {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepProps) {
   const [images, setImages] = useState<{ file: File; preview: string; path?: string }[]>([])
   const [docs, setDocs] = useState<Record<string, { file: File; path?: string }>>({})
   const [isUploading, setIsUploading] = useState(false)
@@ -85,13 +95,14 @@ export function ProjectMediaStep({ onMediaChange }: ProjectMediaStepProps) {
     setIsUploading(true)
     const newUploadedImages: string[] = []
     const newUploadedDocs: Record<string, string> = {}
+    const legalDocuments: ProjectLegalDocumentUploadMetadata[] = []
 
     try {
       // Upload Images
       for (const img of images) {
         const fileExt = img.file.name.split('.').pop()
         const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `temp/images/${fileName}`
+        const filePath = `${projectId}/images/${fileName}`
 
         const { data, error } = await supabase.storage
           .from('project-files')
@@ -105,7 +116,7 @@ export function ProjectMediaStep({ onMediaChange }: ProjectMediaStepProps) {
       for (const [id, doc] of Object.entries(docs)) {
         const fileExt = doc.file.name.split('.').pop()
         const fileName = `${id}-${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `temp/docs/${fileName}`
+        const filePath = `${projectId}/docs/${fileName}`
 
         const { data, error } = await supabase.storage
           .from('project-files')
@@ -113,6 +124,14 @@ export function ProjectMediaStep({ onMediaChange }: ProjectMediaStepProps) {
 
         if (error) throw error
         newUploadedDocs[id] = data.path
+        legalDocuments.push({
+          source_field: id as ProjectLegalDocumentUploadMetadata['source_field'],
+          storage_path: data.path,
+          original_filename: doc.file.name,
+          mime_type: doc.file.type || 'application/pdf',
+          file_size_bytes: doc.file.size,
+          sha256_hash: await sha256Hex(doc.file),
+        })
       }
 
       setUploadedPaths({ images: newUploadedImages, docs: newUploadedDocs })
@@ -125,6 +144,7 @@ export function ProjectMediaStep({ onMediaChange }: ProjectMediaStepProps) {
         doc_subdivision: newUploadedDocs['doc_subdivision'],
         doc_plano_oficial: newUploadedDocs['doc_plano_oficial'],
         doc_otros: newUploadedDocs['doc_otros'] || undefined,
+        legal_documents: legalDocuments,
       })
 
       toast.success('Archivos preparados con éxito')

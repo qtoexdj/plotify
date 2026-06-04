@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.deps import verify_internal_secret
+from core.logger import get_logger
+from core.redis import get_arq_pool
 from schemas.legal_variables import (
     EscrituraCaseCreateRequest,
     EscrituraCaseResponse,
@@ -21,11 +25,28 @@ from schemas.legal_variables import (
     VariableReviewResponse,
     VariableUpdateRequest,
 )
+from services.legal_document_ingestion import (
+    LegalDocumentNotFoundError,
+    LegalDocumentScopeError,
+    LegalDocumentValidationError,
+    list_project_legal_documents as list_project_legal_documents_service,
+    register_legal_document as register_legal_document_service,
+)
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     tags=["legal-variables"],
     dependencies=[Depends(verify_internal_secret)],
 )
+
+
+async def get_optional_arq_pool() -> Any | None:
+    try:
+        return await get_arq_pool()
+    except Exception as exc:
+        logger.error("legal_document_ingestion_redis_unavailable", error=str(exc))
+        return None
 
 
 @router.post(
@@ -35,10 +56,48 @@ router = APIRouter(
 )
 async def register_legal_document(
     payload: LegalDocumentRegisterRequest,
+    redis: Any | None = Depends(get_optional_arq_pool),
 ) -> LegalDocumentRegistrationQueuedResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Legal document registration is not implemented yet.",
+    try:
+        result = await register_legal_document_service(payload)
+    except LegalDocumentValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except LegalDocumentScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except LegalDocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    job_payload = {
+        "legal_document_id": result.legal_document.id,
+        "organization_id": result.legal_document.organization_id,
+        "project_id": result.legal_document.project_id,
+        "ingestion_job_id": result.ingestion_job.id,
+    }
+    if redis is not None:
+        try:
+            await redis.enqueue_job("process_legal_document_ingestion", job_payload)
+        except Exception as exc:
+            logger.error(
+                "legal_document_ingestion_enqueue_failed",
+                legal_document_id=result.legal_document.id,
+                ingestion_job_id=result.ingestion_job.id,
+                error=str(exc),
+            )
+
+    return LegalDocumentRegistrationQueuedResponse(
+        legal_document_id=result.legal_document.id,
+        ingestion_job_id=result.ingestion_job.id,
+        extraction_status=result.legal_document.extraction_status,
+        version_number=result.legal_document.version_number,
     )
 
 
@@ -50,10 +109,23 @@ async def list_project_legal_documents(
     project_id: str,
     organization_id: str = Query(...),
 ) -> LegalDocumentListResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Legal document listing is not implemented yet.",
-    )
+    try:
+        documents = await list_project_legal_documents_service(
+            project_id=project_id,
+            organization_id=organization_id,
+        )
+    except LegalDocumentScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except LegalDocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    return LegalDocumentListResponse(project_id=project_id, documents=documents)
 
 
 @router.post(

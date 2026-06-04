@@ -58,6 +58,7 @@ def test_legal_document_request_rejects_unknown_fields():
 
 def test_legal_variables_router_exposes_contract_paths():
     from api.deps import verify_internal_secret
+    import api.v1.endpoints.legal_variables as legal_variables_endpoint
     from api.v1.router import api_router
 
     app = FastAPI()
@@ -74,13 +75,18 @@ def test_legal_variables_router_exposes_contract_paths():
         client.post("/api/v1/legal/legal-documents/register", json={}).status_code
         == 404
     )
-    assert (
-        client.get(
-            "/api/v1/legal-documents/project/project-1",
-            params={"organization_id": "org-1"},
-        ).status_code
-        == 501
-    )
+    with patch.object(
+        legal_variables_endpoint,
+        "list_project_legal_documents_service",
+        new=AsyncMock(return_value=[]),
+    ):
+        assert (
+            client.get(
+                "/api/v1/legal-documents/project/project-1",
+                params={"organization_id": "org-1"},
+            ).status_code
+            == 200
+        )
     assert (
         client.get(
             "/api/v1/legal-roles/project/project-1/matches",

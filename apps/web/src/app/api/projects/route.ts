@@ -1,5 +1,9 @@
 import { createRouteHandlerClient } from '@/lib/supabase/server'
-import { getProjectsWithMetrics, createProject } from '@/lib/services/projects.service'
+import {
+  getProjectsWithMetrics,
+  createProject,
+  registerProjectLegalDocuments,
+} from '@/lib/services/projects.service'
 import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -63,6 +67,7 @@ export async function POST(request: NextRequest) {
       doc_subdivision,
       doc_plano_oficial,
       doc_otros,
+      legal_documents,
     } = body
 
     if (!name || !region || !comuna || !total_lotes) {
@@ -90,9 +95,17 @@ export async function POST(request: NextRequest) {
         doc_subdivision,
         doc_plano_oficial,
         doc_otros,
+        legal_documents,
       },
       user.id
     )
+
+    await registerProjectLegalDocuments({
+      project: result.project,
+      documents: legal_documents,
+      uploadSource: 'onboarding',
+      uploadedBy: user.id,
+    })
 
     return Response.json({
       project: result.project,

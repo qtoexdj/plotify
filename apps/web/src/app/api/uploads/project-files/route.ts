@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { fileTypeFromBuffer } from 'file-type'
 import { logger } from '@/lib/logger'
+import {
+  PROJECT_LEGAL_DOCUMENT_FIELDS,
+  registerProjectLegalDocuments,
+  type ProjectLegalDocumentField,
+} from '@/lib/services/projects.service'
 
 export const runtime = 'nodejs'
 
@@ -16,6 +21,13 @@ const ALLOWED_PROJECT_DOC_FIELDS = [
   'doc_otros',
 ]
 const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15MB
+
+async function sha256Hex(file: File) {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,12 +94,39 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { data: membership, error: membershipError } = await supabase
+      .from('organization_members')
+      .select('organization_id, role')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (membershipError || !membership) {
+      logger.warn({ userId: user.id, membershipError }, 'upload_membership_not_found')
+      return NextResponse.json({ error: 'No tienes una organización activa' }, { status: 403 })
+    }
+
+    if (membership.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'No tienes permisos para subir documentos del proyecto' },
+        { status: 403 }
+      )
+    }
 
     // 1. Validar la existencia del proyecto ANTES de subir el archivo al Storage
     const { data: project, error: fetchError } = await supabase
       .from('projects')
       .select('*')
       .eq('id', projectId)
+      .eq('organization_id', membership.organization_id)
       .single()
 
     if (fetchError || !project) {
@@ -114,6 +153,7 @@ export async function POST(request: NextRequest) {
       .from('projects')
       .update(updates)
       .eq('id', projectId)
+      .eq('organization_id', membership.organization_id)
       .select()
       .single()
 
@@ -122,6 +162,27 @@ export async function POST(request: NextRequest) {
       // Intentar remover el archivo subido en caso de error en base de datos para no dejarlo huérfano
       await supabase.storage.from('project-files').remove([filePath])
       throw dbError
+    }
+
+    if (type !== 'images') {
+      const sourceField = type as ProjectLegalDocumentField
+      if (sourceField in PROJECT_LEGAL_DOCUMENT_FIELDS) {
+        await registerProjectLegalDocuments({
+          project: updatedProject,
+          documents: [
+            {
+              source_field: sourceField,
+              storage_path: data.path,
+              original_filename: file.name,
+              mime_type: typeInfo.mime,
+              file_size_bytes: file.size,
+              sha256_hash: await sha256Hex(file),
+            },
+          ],
+          uploadSource: 'project_documents',
+          uploadedBy: user.id,
+        })
+      }
     }
 
     return NextResponse.json({
