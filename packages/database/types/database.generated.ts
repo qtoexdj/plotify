@@ -41,7 +41,6 @@ export type Database = {
           {
             foreignKeyName: "agent_custom_instructions_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -100,15 +99,15 @@ export type Database = {
           lot_id: string
           organization_id: string
           payload: Json
+          previous_lot_state: string | null
+          request_type: string
           resolved_at: string | null
+          sale_mode: string | null
           status: string
           vendor_id: string
           vendor_name: string
           vendor_phone: string
           vendor_platform: string
-          request_type: string
-          sale_mode: string | null
-          previous_lot_state: string | null
         }
         Insert: {
           admin_phone?: string | null
@@ -117,15 +116,15 @@ export type Database = {
           lot_id: string
           organization_id: string
           payload?: Json
+          previous_lot_state?: string | null
+          request_type?: string
           resolved_at?: string | null
+          sale_mode?: string | null
           status?: string
           vendor_id: string
           vendor_name: string
           vendor_phone: string
           vendor_platform: string
-          request_type?: string
-          sale_mode?: string | null
-          previous_lot_state?: string | null
         }
         Update: {
           admin_phone?: string | null
@@ -134,35 +133,32 @@ export type Database = {
           lot_id?: string
           organization_id?: string
           payload?: Json
+          previous_lot_state?: string | null
+          request_type?: string
           resolved_at?: string | null
+          sale_mode?: string | null
           status?: string
           vendor_id?: string
           vendor_name?: string
           vendor_phone?: string
           vendor_platform?: string
-          request_type?: string
-          sale_mode?: string | null
-          previous_lot_state?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "approval_requests_lot_id_fkey"
             columns: ["lot_id"]
-            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "approval_requests_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "approval_requests_vendor_id_fkey"
             columns: ["vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -203,7 +199,6 @@ export type Database = {
           {
             foreignKeyName: "audit_logs_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -391,8 +386,156 @@ export type Database = {
           {
             foreignKeyName: "document_blocks_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_evidence: {
+        Row: {
+          bbox: Json | null
+          chunk_index: number | null
+          confidence: number | null
+          created_at: string
+          id: string
+          legal_document_id: string
+          legal_document_page_id: string | null
+          organization_id: string
+          project_id: string
+          snippet: string | null
+          snippet_hash: string
+          variable_resolution_id: string
+        }
+        Insert: {
+          bbox?: Json | null
+          chunk_index?: number | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          legal_document_id: string
+          legal_document_page_id?: string | null
+          organization_id: string
+          project_id: string
+          snippet?: string | null
+          snippet_hash: string
+          variable_resolution_id: string
+        }
+        Update: {
+          bbox?: Json | null
+          chunk_index?: number | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          legal_document_id?: string
+          legal_document_page_id?: string | null
+          organization_id?: string
+          project_id?: string
+          snippet?: string | null
+          snippet_hash?: string
+          variable_resolution_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_evidence_legal_document_id_fkey"
+            columns: ["legal_document_id"]
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_evidence_legal_document_page_id_fkey"
+            columns: ["legal_document_page_id"]
+            referencedRelation: "legal_document_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_evidence_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_evidence_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_evidence_variable_resolution_id_fkey"
+            columns: ["variable_resolution_id"]
+            referencedRelation: "variable_resolutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_ingestion_jobs: {
+        Row: {
+          attempt_number: number
+          completed_at: string | null
+          converter: string | null
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          id: string
+          legal_document_id: string
+          organization_id: string
+          pipeline_version: string
+          project_id: string
+          started_at: string | null
+          stats: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_number?: number
+          completed_at?: string | null
+          converter?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          legal_document_id: string
+          organization_id: string
+          pipeline_version?: string
+          project_id: string
+          started_at?: string | null
+          stats?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_number?: number
+          completed_at?: string | null
+          converter?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          legal_document_id?: string
+          organization_id?: string
+          pipeline_version?: string
+          project_id?: string
+          started_at?: string | null
+          stats?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_ingestion_jobs_legal_document_id_fkey"
+            columns: ["legal_document_id"]
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_ingestion_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_ingestion_jobs_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -444,8 +587,89 @@ export type Database = {
           {
             foreignKeyName: "document_templates_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritura_cases: {
+        Row: {
+          case_status: string
+          created_at: string
+          created_by: string | null
+          evidence_snapshot: Json
+          generated_document_id: string | null
+          id: string
+          lot_id: string
+          organization_id: string
+          project_id: string
+          readiness_gates: Json
+          readiness_status: string
+          template_id: string | null
+          updated_at: string
+          variable_snapshot: Json
+        }
+        Insert: {
+          case_status?: string
+          created_at?: string
+          created_by?: string | null
+          evidence_snapshot?: Json
+          generated_document_id?: string | null
+          id?: string
+          lot_id: string
+          organization_id: string
+          project_id: string
+          readiness_gates?: Json
+          readiness_status?: string
+          template_id?: string | null
+          updated_at?: string
+          variable_snapshot?: Json
+        }
+        Update: {
+          case_status?: string
+          created_at?: string
+          created_by?: string | null
+          evidence_snapshot?: Json
+          generated_document_id?: string | null
+          id?: string
+          lot_id?: string
+          organization_id?: string
+          project_id?: string
+          readiness_gates?: Json
+          readiness_status?: string
+          template_id?: string | null
+          updated_at?: string
+          variable_snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_cases_generated_document_id_fkey"
+            columns: ["generated_document_id"]
+            referencedRelation: "generated_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_cases_lot_id_fkey"
+            columns: ["lot_id"]
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_cases_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_cases_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_cases_template_id_fkey"
+            columns: ["template_id"]
+            referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -453,6 +677,10 @@ export type Database = {
       generated_documents: {
         Row: {
           created_at: string | null
+          delivery_error_message: string | null
+          delivery_failed_attempts: number
+          delivery_metadata: Json
+          delivery_status: string
           document_type: string
           file_format: string
           file_url: string
@@ -460,20 +688,20 @@ export type Database = {
           id: string
           lot_id: string | null
           lot_record_id: string | null
+          missing_variables: Json
+          missing_variables_accepted: boolean
           organization_id: string
+          selected_recipients: string[]
           template_id: string
           variables_snapshot: Json
           version_number: number
-          missing_variables_accepted: boolean
-          missing_variables: Json
-          selected_recipients: string[]
-          delivery_status: string
-          delivery_failed_attempts: number
-          delivery_error_message: string | null
-          delivery_metadata: Json
         }
         Insert: {
           created_at?: string | null
+          delivery_error_message?: string | null
+          delivery_failed_attempts?: number
+          delivery_metadata?: Json
+          delivery_status?: string
           document_type: string
           file_format?: string
           file_url: string
@@ -481,20 +709,20 @@ export type Database = {
           id?: string
           lot_id?: string | null
           lot_record_id?: string | null
+          missing_variables?: Json
+          missing_variables_accepted?: boolean
           organization_id: string
+          selected_recipients?: string[]
           template_id: string
           variables_snapshot: Json
           version_number?: number
-          missing_variables_accepted?: boolean
-          missing_variables?: Json
-          selected_recipients?: string[]
-          delivery_status?: string
-          delivery_failed_attempts?: number
-          delivery_error_message?: string | null
-          delivery_metadata?: Json
         }
         Update: {
           created_at?: string | null
+          delivery_error_message?: string | null
+          delivery_failed_attempts?: number
+          delivery_metadata?: Json
+          delivery_status?: string
           document_type?: string
           file_format?: string
           file_url?: string
@@ -502,44 +730,36 @@ export type Database = {
           id?: string
           lot_id?: string | null
           lot_record_id?: string | null
+          missing_variables?: Json
+          missing_variables_accepted?: boolean
           organization_id?: string
+          selected_recipients?: string[]
           template_id?: string
           variables_snapshot?: Json
           version_number?: number
-          missing_variables_accepted?: boolean
-          missing_variables?: Json
-          selected_recipients?: string[]
-          delivery_status?: string
-          delivery_failed_attempts?: number
-          delivery_error_message?: string | null
-          delivery_metadata?: Json
         }
         Relationships: [
           {
             foreignKeyName: "generated_documents_lot_id_fkey"
             columns: ["lot_id"]
-            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "generated_documents_lot_record_id_fkey"
             columns: ["lot_record_id"]
-            isOneToOne: false
             referencedRelation: "lot_records"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "generated_documents_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "generated_documents_template_id_fkey"
             columns: ["template_id"]
-            isOneToOne: false
             referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
@@ -589,14 +809,12 @@ export type Database = {
           {
             foreignKeyName: "geometries_lot_id_fkey"
             columns: ["lot_id"]
-            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "geometries_project_id_fkey"
             columns: ["project_id"]
-            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -634,8 +852,335 @@ export type Database = {
           {
             foreignKeyName: "leads_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_document_pages: {
+        Row: {
+          char_count: number
+          checksum: string
+          created_at: string
+          id: string
+          ingestion_job_id: string
+          legal_document_id: string
+          markdown_content: string | null
+          organization_id: string
+          page_kind: string
+          page_number: number
+          project_id: string
+          text_content: string
+        }
+        Insert: {
+          char_count?: number
+          checksum: string
+          created_at?: string
+          id?: string
+          ingestion_job_id: string
+          legal_document_id: string
+          markdown_content?: string | null
+          organization_id: string
+          page_kind?: string
+          page_number: number
+          project_id: string
+          text_content?: string
+        }
+        Update: {
+          char_count?: number
+          checksum?: string
+          created_at?: string
+          id?: string
+          ingestion_job_id?: string
+          legal_document_id?: string
+          markdown_content?: string | null
+          organization_id?: string
+          page_kind?: string
+          page_number?: number
+          project_id?: string
+          text_content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_document_pages_ingestion_job_id_fkey"
+            columns: ["ingestion_job_id"]
+            referencedRelation: "document_ingestion_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_document_pages_legal_document_id_fkey"
+            columns: ["legal_document_id"]
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_document_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_document_pages_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          extraction_status: string
+          file_size_bytes: number
+          id: string
+          lot_id: string | null
+          mime_type: string
+          organization_id: string
+          original_filename: string
+          project_id: string
+          sha256_hash: string
+          source_field: string | null
+          storage_bucket: string
+          storage_path: string
+          superseded_by: string | null
+          updated_at: string
+          upload_source: string
+          uploaded_by: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          extraction_status?: string
+          file_size_bytes: number
+          id?: string
+          lot_id?: string | null
+          mime_type: string
+          organization_id: string
+          original_filename: string
+          project_id: string
+          sha256_hash: string
+          source_field?: string | null
+          storage_bucket?: string
+          storage_path: string
+          superseded_by?: string | null
+          updated_at?: string
+          upload_source: string
+          uploaded_by?: string | null
+          version_number?: number
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          extraction_status?: string
+          file_size_bytes?: number
+          id?: string
+          lot_id?: string | null
+          mime_type?: string
+          organization_id?: string
+          original_filename?: string
+          project_id?: string
+          sha256_hash?: string
+          source_field?: string | null
+          storage_bucket?: string
+          storage_path?: string
+          superseded_by?: string | null
+          updated_at?: string
+          upload_source?: string
+          uploaded_by?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_documents_lot_id_fkey"
+            columns: ["lot_id"]
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_documents_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_documents_superseded_by_fkey"
+            columns: ["superseded_by"]
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_review_decisions: {
+        Row: {
+          decided_at: string
+          decided_by: string
+          decision_status: string
+          decision_type: string
+          escritura_case_id: string | null
+          id: string
+          lawyer_email: string | null
+          lawyer_name: string | null
+          lawyer_rut: string | null
+          lot_id: string | null
+          organization_id: string
+          project_id: string
+          reason: string | null
+          variable_resolution_id: string | null
+        }
+        Insert: {
+          decided_at?: string
+          decided_by: string
+          decision_status: string
+          decision_type: string
+          escritura_case_id?: string | null
+          id?: string
+          lawyer_email?: string | null
+          lawyer_name?: string | null
+          lawyer_rut?: string | null
+          lot_id?: string | null
+          organization_id: string
+          project_id: string
+          reason?: string | null
+          variable_resolution_id?: string | null
+        }
+        Update: {
+          decided_at?: string
+          decided_by?: string
+          decision_status?: string
+          decision_type?: string
+          escritura_case_id?: string | null
+          id?: string
+          lawyer_email?: string | null
+          lawyer_name?: string | null
+          lawyer_rut?: string | null
+          lot_id?: string | null
+          organization_id?: string
+          project_id?: string
+          reason?: string | null
+          variable_resolution_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_review_decisions_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_review_decisions_lot_id_fkey"
+            columns: ["lot_id"]
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_review_decisions_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_review_decisions_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_review_decisions_variable_resolution_id_fkey"
+            columns: ["variable_resolution_id"]
+            referencedRelation: "variable_resolutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lot_legal_data: {
+        Row: {
+          created_at: string
+          id: string
+          lot_id: string
+          matching_score: number | null
+          matching_status: string
+          organization_id: string
+          project_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role_status: string
+          sii_definitive_role: string | null
+          sii_pre_role: string | null
+          sii_role_in_process_text: string | null
+          sii_role_matrix: string | null
+          sii_unit_name: string | null
+          source_legal_document_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lot_id: string
+          matching_score?: number | null
+          matching_status?: string
+          organization_id: string
+          project_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role_status?: string
+          sii_definitive_role?: string | null
+          sii_pre_role?: string | null
+          sii_role_in_process_text?: string | null
+          sii_role_matrix?: string | null
+          sii_unit_name?: string | null
+          source_legal_document_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lot_id?: string
+          matching_score?: number | null
+          matching_status?: string
+          organization_id?: string
+          project_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role_status?: string
+          sii_definitive_role?: string | null
+          sii_pre_role?: string | null
+          sii_role_in_process_text?: string | null
+          sii_role_matrix?: string | null
+          sii_unit_name?: string | null
+          source_legal_document_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot_legal_data_lot_id_fkey"
+            columns: ["lot_id"]
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lot_legal_data_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lot_legal_data_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lot_legal_data_source_legal_document_id_fkey"
+            columns: ["source_legal_document_id"]
+            referencedRelation: "legal_documents"
             referencedColumns: ["id"]
           },
         ]
@@ -738,7 +1283,6 @@ export type Database = {
           {
             foreignKeyName: "lot_records_lot_id_fkey"
             columns: ["lot_id"]
-            isOneToOne: true
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
@@ -824,28 +1368,24 @@ export type Database = {
           {
             foreignKeyName: "lots_geometry_fk"
             columns: ["geometry_id"]
-            isOneToOne: false
             referencedRelation: "geometries"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lots_project_id_fkey"
             columns: ["project_id"]
-            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lots_vendedor_id_fkey"
             columns: ["vendedor_id"]
-            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lots_vendor_project_fkey"
             columns: ["vendedor_id", "project_id"]
-            isOneToOne: false
             referencedRelation: "vendor_projects"
             referencedColumns: ["vendor_id", "project_id"]
           },
@@ -901,7 +1441,6 @@ export type Database = {
           {
             foreignKeyName: "mcp_connections_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -954,21 +1493,18 @@ export type Database = {
           {
             foreignKeyName: "notification_events_approval_id_fkey"
             columns: ["approval_id"]
-            isOneToOne: false
             referencedRelation: "approval_requests"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notification_events_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notification_events_recipient_id_fkey"
             columns: ["recipient_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1009,14 +1545,12 @@ export type Database = {
           {
             foreignKeyName: "org_skill_configs_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "org_skill_configs_skill_id_fkey"
             columns: ["skill_id"]
-            isOneToOne: false
             referencedRelation: "agent_skills"
             referencedColumns: ["id"]
           },
@@ -1048,14 +1582,12 @@ export type Database = {
           {
             foreignKeyName: "organization_members_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "organization_members_user_id_profiles_fkey"
             columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1102,7 +1634,6 @@ export type Database = {
           {
             foreignKeyName: "organization_payment_info_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1179,137 +1710,133 @@ export type Database = {
       }
       project_active_templates: {
         Row: {
-          project_id: string
-          document_type: string
-          template_id: string
           created_at: string
+          document_type: string
+          project_id: string
+          template_id: string
           updated_at: string
         }
         Insert: {
-          project_id: string
-          document_type: string
-          template_id: string
           created_at?: string
+          document_type: string
+          project_id: string
+          template_id: string
           updated_at?: string
         }
         Update: {
-          project_id?: string
-          document_type?: string
-          template_id?: string
           created_at?: string
+          document_type?: string
+          project_id?: string
+          template_id?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "project_active_templates_project_id_fkey"
             columns: ["project_id"]
-            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "project_active_templates_template_id_fkey"
             columns: ["template_id"]
-            isOneToOne: false
             referencedRelation: "document_templates"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       project_legal_data: {
         Row: {
-          id: string
-          project_id: string
-          organization_id: string
+          created_at: string
+          dominio_cbr_ano: string | null
           dominio_cbr_fojas: string | null
           dominio_cbr_numero: string | null
-          dominio_cbr_ano: string | null
           dominio_fojas_vigente: string | null
-          roles: Json
-          sag_resolucion_numero: string | null
-          sag_resolucion_ano: string | null
-          sag_subdivision_aprobada: boolean
-          plano_archivo_numero: string | null
+          id: string
+          matriz_cbr_ano: string | null
           matriz_cbr_fojas: string | null
           matriz_cbr_numero: string | null
-          matriz_cbr_ano: string | null
+          organization_id: string
           personeria_notario: string | null
           personeria_repre_nombre: string | null
           personeria_repre_rut: string | null
-          source_document: string | null
+          plano_archivo_numero: string | null
+          project_id: string
           review_status: string
-          reviewer_id: string | null
           reviewed_at: string | null
-          created_at: string
+          reviewer_id: string | null
+          roles: Json | null
+          sag_resolucion_ano: string | null
+          sag_resolucion_numero: string | null
+          sag_subdivision_aprobada: boolean | null
+          source_document: string | null
           updated_at: string
         }
         Insert: {
-          id?: string
-          project_id: string
-          organization_id: string
+          created_at?: string
+          dominio_cbr_ano?: string | null
           dominio_cbr_fojas?: string | null
           dominio_cbr_numero?: string | null
-          dominio_cbr_ano?: string | null
           dominio_fojas_vigente?: string | null
-          roles?: Json
-          sag_resolucion_numero?: string | null
-          sag_resolucion_ano?: string | null
-          sag_subdivision_aprobada?: boolean
-          plano_archivo_numero?: string | null
+          id?: string
+          matriz_cbr_ano?: string | null
           matriz_cbr_fojas?: string | null
           matriz_cbr_numero?: string | null
-          matriz_cbr_ano?: string | null
+          organization_id: string
           personeria_notario?: string | null
           personeria_repre_nombre?: string | null
           personeria_repre_rut?: string | null
-          source_document?: string | null
+          plano_archivo_numero?: string | null
+          project_id: string
           review_status?: string
-          reviewer_id?: string | null
           reviewed_at?: string | null
-          created_at?: string
+          reviewer_id?: string | null
+          roles?: Json | null
+          sag_resolucion_ano?: string | null
+          sag_resolucion_numero?: string | null
+          sag_subdivision_aprobada?: boolean | null
+          source_document?: string | null
           updated_at?: string
         }
         Update: {
-          id?: string
-          project_id?: string
-          organization_id?: string
+          created_at?: string
+          dominio_cbr_ano?: string | null
           dominio_cbr_fojas?: string | null
           dominio_cbr_numero?: string | null
-          dominio_cbr_ano?: string | null
           dominio_fojas_vigente?: string | null
-          roles?: Json
-          sag_resolucion_numero?: string | null
-          sag_resolucion_ano?: string | null
-          sag_subdivision_aprobada?: boolean
-          plano_archivo_numero?: string | null
+          id?: string
+          matriz_cbr_ano?: string | null
           matriz_cbr_fojas?: string | null
           matriz_cbr_numero?: string | null
-          matriz_cbr_ano?: string | null
+          organization_id?: string
           personeria_notario?: string | null
           personeria_repre_nombre?: string | null
           personeria_repre_rut?: string | null
-          source_document?: string | null
+          plano_archivo_numero?: string | null
+          project_id?: string
           review_status?: string
-          reviewer_id?: string | null
           reviewed_at?: string | null
-          created_at?: string
+          reviewer_id?: string | null
+          roles?: Json | null
+          sag_resolucion_ano?: string | null
+          sag_resolucion_numero?: string | null
+          sag_subdivision_aprobada?: boolean | null
+          source_document?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "project_legal_data_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
+            foreignKeyName: "project_legal_data_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_legal_data_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
+            foreignKeyName: "project_legal_data_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       projects: {
@@ -1380,7 +1907,6 @@ export type Database = {
           {
             foreignKeyName: "projects_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1424,7 +1950,6 @@ export type Database = {
           {
             foreignKeyName: "prompt_versions_prompt_id_fkey"
             columns: ["prompt_id"]
-            isOneToOne: false
             referencedRelation: "system_prompts"
             referencedColumns: ["id"]
           },
@@ -1498,7 +2023,6 @@ export type Database = {
           {
             foreignKeyName: "telegram_bots_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1536,15 +2060,116 @@ export type Database = {
           {
             foreignKeyName: "template_block_items_block_id_fkey"
             columns: ["block_id"]
-            isOneToOne: false
             referencedRelation: "document_blocks"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "template_block_items_template_id_fkey"
             columns: ["template_id"]
-            isOneToOne: false
             referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      variable_resolutions: {
+        Row: {
+          approval_required: boolean
+          confidence: number | null
+          correction_reason: string | null
+          created_at: string
+          escritura_case_id: string | null
+          extractor_name: string | null
+          id: string
+          lot_id: string | null
+          organization_id: string
+          project_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_ref: Json
+          source_type: string
+          state: string
+          superseded_by: string | null
+          updated_at: string
+          value_json: Json | null
+          value_text: string | null
+          variable_group: string
+          variable_key: string
+        }
+        Insert: {
+          approval_required?: boolean
+          confidence?: number | null
+          correction_reason?: string | null
+          created_at?: string
+          escritura_case_id?: string | null
+          extractor_name?: string | null
+          id?: string
+          lot_id?: string | null
+          organization_id: string
+          project_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_ref?: Json
+          source_type?: string
+          state?: string
+          superseded_by?: string | null
+          updated_at?: string
+          value_json?: Json | null
+          value_text?: string | null
+          variable_group: string
+          variable_key: string
+        }
+        Update: {
+          approval_required?: boolean
+          confidence?: number | null
+          correction_reason?: string | null
+          created_at?: string
+          escritura_case_id?: string | null
+          extractor_name?: string | null
+          id?: string
+          lot_id?: string | null
+          organization_id?: string
+          project_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_ref?: Json
+          source_type?: string
+          state?: string
+          superseded_by?: string | null
+          updated_at?: string
+          value_json?: Json | null
+          value_text?: string | null
+          variable_group?: string
+          variable_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "variable_resolutions_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variable_resolutions_lot_id_fkey"
+            columns: ["lot_id"]
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variable_resolutions_organization_id_fkey"
+            columns: ["organization_id"]
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variable_resolutions_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variable_resolutions_superseded_by_fkey"
+            columns: ["superseded_by"]
+            referencedRelation: "variable_resolutions"
             referencedColumns: ["id"]
           },
         ]
@@ -1572,14 +2197,12 @@ export type Database = {
           {
             foreignKeyName: "vendor_projects_project_id_fkey"
             columns: ["project_id"]
-            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "vendor_projects_vendor_id_fkey"
             columns: ["vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -1629,14 +2252,12 @@ export type Database = {
           {
             foreignKeyName: "vendors_org_user_fkey"
             columns: ["organization_id", "user_id"]
-            isOneToOne: false
             referencedRelation: "organization_members"
             referencedColumns: ["organization_id", "user_id"]
           },
           {
             foreignKeyName: "vendors_organization_id_fkey"
             columns: ["organization_id"]
-            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1666,6 +2287,15 @@ export type Database = {
       approve_sale: {
         Args: { p_admin_phone: string; p_approval_id: string }
         Returns: Json
+      }
+      assert_sdd_007_project_lot_scope: {
+        Args: {
+          table_name: string
+          target_lot_id: string
+          target_organization_id: string
+          target_project_id: string
+        }
+        Returns: undefined
       }
       can_manage_project_files: {
         Args: { project_id_text: string }
@@ -1860,4 +2490,3 @@ export const Constants = {
     },
   },
 } as const
-

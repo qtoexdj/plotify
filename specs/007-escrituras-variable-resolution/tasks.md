@@ -18,10 +18,10 @@
 
 **Purpose**: Create the production schema, generated type foundations and shared catalogs needed by all stories.
 
-- [ ] T001 Create Supabase migration for `legal_documents`, `document_ingestion_jobs`, `legal_document_pages`, `variable_resolutions`, `document_evidence`, `lot_legal_data`, `escritura_cases` and `legal_review_decisions` in `packages/database/supabase/migrations/20260603000100_escrituras_variable_resolution.sql`; Verify: `pnpm verify:migrations`
-- [ ] T002 Regenerate database types after the migration in `packages/database/types/database.generated.ts` and update web database type mirrors if used in `apps/web/src/types/database.types.ts`; Verify: `pnpm typecheck:web`
-- [ ] T003 [P] Add canonical variable catalog constants and states in `apps/api/services/legal_variable_catalog.py`; Verify: `pnpm test:api`
-- [ ] T004 [P] Add frontend variable/readiness TypeScript types in `apps/web/src/lib/legal/variable-resolution-types.ts`; Verify: `pnpm typecheck:web`
+- [x] T001 Create Supabase migration for `legal_documents`, `document_ingestion_jobs`, `legal_document_pages`, `variable_resolutions`, `document_evidence`, `lot_legal_data`, `escritura_cases` and `legal_review_decisions` in `packages/database/supabase/migrations/20260603000100_escrituras_variable_resolution.sql`; Verify: `pnpm verify:migrations`
+- [x] T002 Regenerate database types after the migration in `packages/database/types/database.generated.ts` and update web database type mirrors if used in `apps/web/src/types/database.types.ts`; Verify: `pnpm typecheck:web`
+- [x] T003 [P] Add canonical variable catalog constants and states in `apps/api/services/legal_variable_catalog.py`; Verify: `pnpm test:api`
+- [x] T004 [P] Add frontend variable/readiness TypeScript types in `apps/web/src/lib/legal/variable-resolution-types.ts`; Verify: `pnpm typecheck:web`
 - [x] T005 [P] Add implementation note linking SDD 007 to Obsidian memory in `plotify_memori/50 - Implementaciones/SDD 007 Escrituras Variable Resolution.md`; Verify: `pnpm format:check`
 - [x] T071 [P] Add SDD 007 agent/subagent execution protocol and update active agent rules in `specs/007-escrituras-variable-resolution/agent-execution.md`, `AGENTS.md`, `.agents/rules/sdd-implementation.md`, `.agents/rules/plotify-rules.md`, `.agents/rules/plotify-chat.md` and `plotify_memori/50 - Implementaciones/SDD 007 Escrituras Variable Resolution.md`; Verify: `pnpm format:check`
 
