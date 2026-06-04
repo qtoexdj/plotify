@@ -378,9 +378,10 @@ class TestWorkerSettingsRegistration:
         from workers.main_worker import WorkerSettings
     
         function_names = {fn.__name__ for fn in WorkerSettings.functions}
-        assert len(WorkerSettings.functions) == 8
+        assert len(WorkerSettings.functions) == 9
         assert "send_generated_document" in function_names
         assert "retry_generated_document_delivery" in function_names
+        assert "process_legal_document_ingestion" in function_names
 
 
 # ---------------------------------------------------------------------------
@@ -752,4 +753,3 @@ async def test_telegram_callback_authorization_denied():
     # Debería responder 200 OK para evitar reintentos de Telegram, pero no encolar el job y notificar falta de autorización
     assert response.status_code == 200
     mock_redis.enqueue_job.assert_not_awaited()
-

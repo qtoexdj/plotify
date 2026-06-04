@@ -33,15 +33,15 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T006 Add Pydantic schemas for legal documents, variables, role matching and readiness in `apps/api/schemas/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T007 Add FastAPI router skeleton and register it in `apps/api/api/v1/endpoints/legal_variables.py` and `apps/api/api/v1/router.py`; Verify: `pnpm test:api`
-- [ ] T008 [P] Add legal document registration service skeleton in `apps/api/services/legal_document_ingestion.py`; Verify: `pnpm test:api`
-- [ ] T009 [P] Add legal text extraction service skeleton in `apps/api/services/legal_text_extraction.py`; Verify: `pnpm test:api`
-- [ ] T010 [P] Add legal variable resolution service skeleton in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T011 [P] Add SII role matching service skeleton in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
-- [ ] T012 [P] Add escritura readiness service skeleton in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
-- [ ] T013 Add arq worker task registration for legal document ingestion in `apps/api/workers/tasks/legal_document_ingestion.py` and `apps/api/workers/main_worker.py`; Verify: `pnpm test:api`
-- [ ] T014 Add shared audit event constants for legal document, variable and escritura case mutations in `apps/api/utils/audit.py`; Verify: `pnpm test:api`
+- [x] T006 Add Pydantic schemas for legal documents, variables, role matching and readiness in `apps/api/schemas/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T007 Add FastAPI router skeleton and register it in `apps/api/api/v1/endpoints/legal_variables.py` and `apps/api/api/v1/router.py`; Verify: `pnpm test:api`
+- [x] T008 [P] Add legal document registration service skeleton in `apps/api/services/legal_document_ingestion.py`; Verify: `pnpm test:api`
+- [x] T009 [P] Add legal text extraction service skeleton in `apps/api/services/legal_text_extraction.py`; Verify: `pnpm test:api`
+- [x] T010 [P] Add legal variable resolution service skeleton in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T011 [P] Add SII role matching service skeleton in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
+- [x] T012 [P] Add escritura readiness service skeleton in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
+- [x] T013 Add arq worker task registration for legal document ingestion in `apps/api/workers/tasks/legal_document_ingestion.py` and `apps/api/workers/main_worker.py`; Verify: `pnpm test:api`
+- [x] T014 Add shared audit event constants for legal document, variable and escritura case mutations in `apps/api/utils/audit.py`; Verify: `pnpm test:api`
 
 **Checkpoint**: Foundation ready. Story implementation can start.
 
