@@ -34,6 +34,7 @@ import {
   type LegalDocument,
   type LegalExtractionStatus,
 } from '@/lib/legal/variable-resolution-types'
+import { EscrituraReadinessPanel } from '@/components/projects/legal/escritura-readiness-panel'
 
 interface DocumentsTabProps {
   project: ProjectWithMetrics
@@ -57,6 +58,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
   const supabase = createClient()
 
   const reservedLots = lots.filter((l) => l.estado === 'reservado')
+  const soldLots = lots.filter((l) => l.estado === 'vendido')
   const legalDocumentByField = useMemo(() => {
     const latest = new Map<string, LegalDocument>()
     for (const document of legalDocuments) {
@@ -282,45 +284,45 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
               Documentos de Escritura
             </CardTitle>
             <CardDescription>
-              Genera la escritura definitiva de compraventa (PDF/DOCX) para los lotes reservados
-              tras completar la revisión de sus variables legales.
+              Genera la escritura definitiva de compraventa (PDF/DOCX) para los lotes vendidos tras
+              completar la revisión de sus variables legales.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {reservedLots.length === 0 ? (
+            {soldLots.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg text-sm">
-                No hay lotes en estado <strong>reservado</strong> disponibles para escritura en este
+                No hay lotes en estado <strong>vendido</strong> disponibles para escritura en este
                 proyecto.
               </div>
             ) : (
               <div className="divide-y rounded-lg border overflow-hidden">
-                {reservedLots.map((lot) => (
-                  <div
-                    key={lot.id}
-                    className="flex items-center justify-between px-4 py-3 bg-card hover:bg-accent/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className="text-green-700 bg-green-50 border-green-200 text-xs"
+                {soldLots.map((lot) => (
+                  <div key={lot.id} className="space-y-3 px-4 py-3 bg-card">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className="text-green-700 bg-green-50 border-green-200 text-xs"
+                        >
+                          Escritura Pendiente
+                        </Badge>
+                        <span className="text-sm font-medium">{lot.numero_lote}</span>
+                      </div>
+                      <Link
+                        href={`/documentos/generar/${lot.id}?type=escritura`}
+                        id={`generate-escritura-${lot.id}`}
                       >
-                        Escritura Pendiente
-                      </Badge>
-                      <span className="text-sm font-medium">{lot.numero_lote}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 border-green-200 hover:bg-green-50"
+                        >
+                          <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
+                          Revisar y Generar
+                        </Button>
+                      </Link>
                     </div>
-                    <Link
-                      href={`/documentos/generar/${lot.id}?type=escritura`}
-                      id={`generate-escritura-${lot.id}`}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-green-600 border-green-200 hover:bg-green-50"
-                      >
-                        <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
-                        Revisar y Generar
-                      </Button>
-                    </Link>
+                    <EscrituraReadinessPanel projectId={project.id} lotId={lot.id} compact />
                   </div>
                 ))}
               </div>

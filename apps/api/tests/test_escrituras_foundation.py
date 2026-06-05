@@ -112,13 +112,30 @@ def test_legal_variables_router_exposes_contract_paths():
             == 200
         )
     assert client.post("/api/v1/legal-roles/match", json={}).status_code == 404
-    assert (
-        client.get(
-            "/api/v1/escritura-cases/lots/lot-1/readiness",
-            params={"organization_id": "org-1", "project_id": "project-1"},
-        ).status_code
-        == 501
-    )
+    with patch.object(
+        legal_variables_endpoint,
+        "get_escritura_readiness_service",
+        new=AsyncMock(
+            return_value=SimpleNamespace(
+                to_dict=lambda: {
+                    "organization_id": "org-1",
+                    "project_id": "project-1",
+                    "lot_id": "lot-1",
+                    "readiness_status": "blocked",
+                    "gates": [],
+                    "variable_snapshot": {},
+                    "evidence_snapshot": {},
+                }
+            )
+        ),
+    ):
+        assert (
+            client.get(
+                "/api/v1/escritura-cases/lots/lot-1/readiness",
+                params={"organization_id": "org-1", "project_id": "project-1"},
+            ).status_code
+            == 200
+        )
 
 
 async def test_worker_process_legal_document_ingestion_calls_service_boundary():

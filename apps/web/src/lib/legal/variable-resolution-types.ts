@@ -568,21 +568,20 @@ export interface LegalRoleMatchUpdatePayload {
 }
 
 export interface EscrituraReadinessGate {
-  key: EscrituraReadinessGateKey
+  gate: EscrituraReadinessGateKey
   status: ReadinessGateStatus
-  message: string
   blocking_variables?: string[]
-  evidence?: DocumentEvidence[]
+  warnings?: string[]
 }
 
 export interface EscrituraReadinessResponse {
+  organization_id: UUID
   lot_id: UUID
   project_id: UUID
-  escritura_case_id?: UUID | null
   readiness_status: EscrituraReadinessStatus
-  case_status: EscrituraCaseStatus
   gates: EscrituraReadinessGate[]
-  warning: string
+  variable_snapshot: Record<string, unknown>
+  evidence_snapshot: Record<string, unknown>
 }
 
 export interface VariableSnapshotValue {
@@ -622,7 +621,10 @@ export interface EscrituraCase {
 }
 
 export interface CreateEscrituraCasePayload {
-  acknowledge_legal_review_required: boolean
+  organization_id?: UUID
+  project_id?: UUID
+  created_by?: UUID | null
+  warning_acknowledged: boolean
 }
 
 export interface CreateEscrituraCaseResponse {

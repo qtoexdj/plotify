@@ -1139,6 +1139,17 @@
             "title": "Lot Id",
             "type": "string"
           },
+          "lot_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lot Number"
+          },
           "matching_score": {
             "anyOf": [
               {

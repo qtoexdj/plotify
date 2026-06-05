@@ -200,6 +200,7 @@ export interface components {
       "created_at"?: string | null
       "id": string
       "lot_id": string
+      "lot_number"?: string | null
       "matching_score"?: number | null
       "matching_status": string
       "organization_id": string

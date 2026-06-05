@@ -155,17 +155,17 @@
 
 ### Tests for User Story 5
 
-- [ ] T051 [P] [US5] Add API tests for escritura readiness gates and case snapshot creation in `apps/api/tests/test_escrituras_readiness.py`; Verify: `pnpm test:api`
-- [ ] T052 [P] [US5] Add frontend tests for readiness panel, legal warning and blocked generation actions in `apps/web/tests/escritura-readiness.test.ts`; Verify: `pnpm test:web`
+- [x] T051 [P] [US5] Add API tests for escritura readiness gates and case snapshot creation in `apps/api/tests/test_escrituras_readiness.py`; Verify: `pnpm test:api`
+- [x] T052 [P] [US5] Add frontend tests for readiness panel, legal warning and blocked generation actions in `apps/web/tests/escritura-readiness.test.ts`; Verify: `pnpm test:web`
 
 ### Implementation for User Story 5
 
-- [ ] T053 [US5] Implement escritura readiness gate calculation in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
-- [ ] T054 [US5] Implement escritura case creation and variable/evidence snapshot persistence in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
-- [ ] T055 [US5] Implement readiness and case endpoints in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T056 [US5] Add web proxy routes for readiness and case creation in `apps/web/src/app/api/projects/[id]/escritura-readiness/route.ts` and `apps/web/src/app/api/projects/[id]/escritura-cases/route.ts`; Verify: `pnpm test:web`
-- [ ] T057 [US5] Build `EscrituraReadinessPanel` with mandatory lawyer-review warning in `apps/web/src/components/projects/legal/escritura-readiness-panel.tsx`; Verify: `pnpm test:web`
-- [ ] T058 [US5] Integrate readiness gating into escritura generation entry points in `apps/web/src/components/projects/detail/documents-tab.tsx` and `apps/web/src/components/dashboard/documents/generation-wizard.tsx`; Verify: `pnpm test:web`
+- [x] T053 [US5] Implement escritura readiness gate calculation in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
+- [x] T054 [US5] Implement escritura case creation and variable/evidence snapshot persistence in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
+- [x] T055 [US5] Implement readiness and case endpoints in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T056 [US5] Add web proxy routes for readiness and case creation in `apps/web/src/app/api/projects/[id]/escritura-readiness/route.ts` and `apps/web/src/app/api/projects/[id]/escritura-cases/route.ts`; Verify: `pnpm test:web`
+- [x] T057 [US5] Build `EscrituraReadinessPanel` with mandatory lawyer-review warning in `apps/web/src/components/projects/legal/escritura-readiness-panel.tsx`; Verify: `pnpm test:web`
+- [x] T058 [US5] Integrate readiness gating into escritura generation entry points in `apps/web/src/components/projects/detail/documents-tab.tsx` and `apps/web/src/components/dashboard/documents/generation-wizard.tsx`; Verify: `pnpm test:web`
 
 **Checkpoint**: User Story 5 is functional and testable independently.
 
@@ -175,7 +175,7 @@
 
 **Purpose**: Contracts, documentation, SDD 008 handoff, quality gates and production guardrails.
 
-- [ ] T059 Regenerate OpenAPI and client contracts after API changes using `pnpm contracts:generate`; Verify: `pnpm contracts:generate`
+- [x] T059 Regenerate OpenAPI and client contracts after API changes using `pnpm contracts:generate`; Verify: `pnpm contracts:generate`
 - [ ] T060 [P] Add end-to-end quickstart coverage notes and update product memory in `plotify_memori/20 - Producto & Proyectos/Generador de Escrituras de Compraventa.md`; Verify: `pnpm format:check`
 - [ ] T061 [P] Add security/tenant regression coverage for legal variable endpoints in `apps/api/tests/test_tenant_validation.py`; Verify: `pnpm test:api`
 - [x] T062 [P] Add SDD 008 handoff contract in `specs/007-escrituras-variable-resolution/handoff-sdd-008.md`; Verify: `pnpm format:check`
@@ -184,8 +184,8 @@
 - [ ] T065 [P] Add structured observability for extraction jobs, variable proposals, review decisions and readiness gates in `apps/api/services/legal_document_ingestion.py`, `apps/api/services/legal_variable_resolution.py` and `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
 - [ ] T066 [P] Add storage access and signed/public URL regression coverage for legal evidence documents in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
 - [ ] T067 [P] Document production operations for failed extraction retry, document superseding, rollback and evidence inspection in `plotify_memori/40 - Guias & Convenciones/Operacion Escrituras Variables.md`; Verify: `pnpm format:check`
-- [ ] T068 Run full web quality gates after UI work: `pnpm --filter web lint`, `pnpm format:check`, `pnpm typecheck:web`, `pnpm build:web`; Verify: commands listed
-- [ ] T069 Run full backend/database quality gates after API and migration work: `pnpm verify:migrations`, `pnpm test:api`, `pnpm contracts:generate`; Verify: commands listed
+- [x] T068 Run full web quality gates after UI work: `pnpm --filter web lint`, `pnpm format:check`, `pnpm typecheck:web`, `pnpm build:web`; Verify: commands listed
+- [x] T069 Run full backend/database quality gates after API and migration work: `pnpm verify:migrations`, `pnpm test:api`, `pnpm contracts:generate`; Verify: commands listed
 - [ ] T070 Run SDD analyze for `specs/007-escrituras-variable-resolution` and resolve any critical finding before implementation continues; Verify: `$speckit-analyze`
 
 ---

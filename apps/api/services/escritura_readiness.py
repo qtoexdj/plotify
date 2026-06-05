@@ -27,6 +27,14 @@ LEGAL_REVIEW_WARNING = (
 )
 
 
+class EscrituraReadinessError(Exception):
+    """Base error for escritura readiness service failures."""
+
+
+class EscrituraReadinessScopeError(EscrituraReadinessError):
+    """Raised when a lot/project/organization scope cannot be proven."""
+
+
 @dataclass(frozen=True)
 class ReadinessGate:
     gate: str
@@ -69,6 +77,30 @@ def _first_row(data: Any) -> dict[str, Any] | None:
     if isinstance(data, list):
         return data[0] if data else None
     return data if isinstance(data, dict) else None
+
+
+async def _assert_lot_scope(
+    *,
+    client: Any,
+    organization_id: str,
+    project_id: str,
+    lot_id: str,
+) -> None:
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("lots")
+            .select("id, project_id, projects!inner(organization_id)")
+            .eq("id", lot_id)
+            .eq("project_id", project_id)
+            .eq("projects.organization_id", organization_id)
+            .maybe_single()
+            .execute()
+        )
+    )
+    if not result.data:
+        raise EscrituraReadinessScopeError(
+            "lot_id does not belong to the requested organization/project."
+        )
 
 
 def _has_value(variable: dict[str, Any]) -> bool:
@@ -266,6 +298,13 @@ async def fetch_readiness_inputs(
 
         supabase = get_supabase_client()
 
+    await _assert_lot_scope(
+        client=supabase,
+        organization_id=organization_id,
+        project_id=project_id,
+        lot_id=lot_id,
+    )
+
     variables_result, lot_legal_result = await asyncio.gather(
         asyncio.to_thread(
             lambda: (
@@ -292,6 +331,36 @@ async def fetch_readiness_inputs(
         ),
     )
     variables = variables_result.data if isinstance(variables_result.data, list) else []
+    variable_ids = [
+        variable["id"]
+        for variable in variables
+        if isinstance(variable.get("id"), str) and variable.get("id")
+    ]
+    evidence_by_variable: dict[str, list[dict[str, Any]]] = {}
+    if variable_ids:
+        evidence_result = await asyncio.to_thread(
+            lambda: (
+                supabase.table("document_evidence")
+                .select("*")
+                .eq("organization_id", organization_id)
+                .eq("project_id", project_id)
+                .in_("variable_resolution_id", variable_ids)
+                .execute()
+            )
+        )
+        if isinstance(evidence_result.data, list):
+            for evidence in evidence_result.data:
+                variable_id = evidence.get("variable_resolution_id")
+                if isinstance(variable_id, str):
+                    evidence_by_variable.setdefault(variable_id, []).append(evidence)
+
+    for variable in variables:
+        variable_id = variable.get("id")
+        if isinstance(variable_id, str):
+            variable["evidence"] = evidence_by_variable.get(
+                variable_id,
+                variable.get("evidence") if isinstance(variable.get("evidence"), list) else [],
+            )
     return variables, _first_row(lot_legal_result.data)
 
 
@@ -358,10 +427,34 @@ async def create_escritura_case_snapshot(
         "created_by": created_by,
     }
 
-    result = await asyncio.to_thread(
-        lambda: supabase.table("escritura_cases").insert(payload).execute()
+    existing_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("escritura_cases")
+            .select("*")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("lot_id", lot_id)
+            .neq("case_status", "cancelled")
+            .maybe_single()
+            .execute()
+        )
     )
+    existing_row = _first_row(existing_result.data)
+    if existing_row:
+        result = await asyncio.to_thread(
+            lambda: (
+                supabase.table("escritura_cases")
+                .update(payload)
+                .eq("id", existing_row["id"])
+                .execute()
+            )
+        )
+    else:
+        result = await asyncio.to_thread(
+            lambda: supabase.table("escritura_cases").insert(payload).execute()
+        )
+
     row = _first_row(result.data)
     if not row:
-        return payload
+        return {**existing_row, **payload} if existing_row else payload
     return row

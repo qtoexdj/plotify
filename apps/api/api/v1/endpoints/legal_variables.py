@@ -47,6 +47,11 @@ from services.legal_role_matching import (
     apply_manual_role_override,
     get_project_role_matching_inventory,
 )
+from services.escritura_readiness import (
+    EscrituraReadinessScopeError,
+    create_escritura_case_snapshot as create_escritura_case_snapshot_service,
+    get_escritura_readiness as get_escritura_readiness_service,
+)
 
 logger = get_logger(__name__)
 
@@ -324,10 +329,18 @@ async def get_escritura_readiness(
     organization_id: str = Query(...),
     project_id: str = Query(...),
 ) -> EscrituraReadinessResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Escritura readiness is not implemented yet.",
-    )
+    try:
+        readiness = await get_escritura_readiness_service(
+            organization_id=organization_id,
+            project_id=project_id,
+            lot_id=lot_id,
+        )
+    except EscrituraReadinessScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    return EscrituraReadinessResponse.model_validate(readiness.to_dict())
 
 
 @router.post(
@@ -339,7 +352,26 @@ async def create_escritura_case(
     lot_id: str,
     payload: EscrituraCaseCreateRequest,
 ) -> EscrituraCaseSnapshotResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Escritura case creation is not implemented yet.",
+    try:
+        row = await create_escritura_case_snapshot_service(
+            organization_id=payload.organization_id,
+            project_id=payload.project_id,
+            lot_id=lot_id,
+            created_by=payload.created_by,
+            warning_acknowledged=payload.warning_acknowledged,
+        )
+    except EscrituraReadinessScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    escritura_case_id = row.get("id") or row.get("escritura_case_id")
+    return EscrituraCaseSnapshotResponse.model_validate(
+        {
+            "escritura_case_id": escritura_case_id,
+            "case_status": row["case_status"],
+            "readiness_status": row["readiness_status"],
+            "variable_snapshot_count": len(row.get("variable_snapshot") or {}),
+            "evidence_snapshot_count": len(row.get("evidence_snapshot") or {}),
+        }
     )
