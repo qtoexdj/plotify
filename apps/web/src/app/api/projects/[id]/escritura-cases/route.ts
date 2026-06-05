@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@/lib/supabase/server'
 import { getProjectById } from '@/lib/services/projects.service'
 import { microserviceFetch } from '@/lib/services/microservice.client'
+import { isLegalDocumentsFeatureEnabled } from '@/lib/features/legal-documents'
 import type {
   CreateEscrituraCaseResponse,
   CreateEscrituraCasePayload,
@@ -35,6 +36,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     if (!project.organization_id) {
       return Response.json({ error: 'Proyecto sin organización asociada' }, { status: 422 })
+    }
+    if (
+      !isLegalDocumentsFeatureEnabled({
+        organizationId: project.organization_id,
+        projectId: id,
+      })
+    ) {
+      return Response.json(
+        { error: 'Los casos de escritura no están habilitados para este proyecto' },
+        { status: 403 }
+      )
     }
 
     const payload: CreateEscrituraCasePayload = {

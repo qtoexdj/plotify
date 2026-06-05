@@ -97,4 +97,28 @@ describe('T034 - Centro de Control Legal frontend structure', () => {
     expect(centerSource).toContain("method: 'PATCH'")
     expect(centerSource).toContain('LegalEvidenceViewer')
   })
+
+  it('keeps legal evidence access behind signed or public source URLs only', () => {
+    const evidenceSource = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/projects/legal/legal-evidence-viewer.tsx'),
+      'utf8'
+    )
+    const centerSource = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/projects/detail/legal-control-center.tsx'),
+      'utf8'
+    )
+
+    expect(evidenceSource).toContain('item.source_url')
+    expect(evidenceSource).toContain('safeEvidenceUrl')
+    expect(evidenceSource).toContain('href={sourceUrl}')
+    expect(evidenceSource).toContain('rel="noreferrer"')
+    expect(evidenceSource).toContain("parsed.protocol !== 'https:'")
+    expect(evidenceSource).toContain("parsed.protocol !== 'http:'")
+    expect(evidenceSource).not.toContain('getPublicUrl')
+    expect(evidenceSource).not.toContain('createSignedUrl')
+    expect(evidenceSource).not.toContain('storage_path')
+    expect(centerSource).toContain('include_evidence=true')
+    expect(centerSource).not.toContain('project-files')
+    expect(centerSource).not.toContain('getPublicUrl')
+  })
 })

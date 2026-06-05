@@ -8,15 +8,15 @@
   },
   "scripts": {
     "dev:web": "pnpm --filter web dev",
-    "dev:api": "cd apps/api && ./venv/bin/python main.py",
-    "dev:worker": "cd apps/api && ./venv/bin/python -c \"from arq.cli import cli; raise SystemExit(cli())\" workers.main_worker.WorkerSettings",
+    "dev:api": "cd apps/api && ./.venv/bin/python main.py",
+    "dev:worker": "cd apps/api && ./.venv/bin/python -c \"from arq.cli import cli; raise SystemExit(cli())\" workers.main_worker.WorkerSettings",
     "build:web": "pnpm --filter web build",
     "test:web": "pnpm --filter web test",
     "typecheck:web": "pnpm --filter web typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:api": "cd apps/api && venv/bin/python -m pytest -q",
-    "contracts:generate": "cd apps/api && ./venv/bin/python scripts/export_openapi_contract.py",
+    "test:api": "cd apps/api && .venv/bin/python -m pytest -q",
+    "contracts:generate": "cd apps/api && ./.venv/bin/python scripts/export_openapi_contract.py",
     "verify:migrations": "pnpm --filter @plotify/database verify:migrations"
   },
   "devDependencies": {

@@ -7,6 +7,7 @@ import {
   registerProjectLegalDocuments,
   type ProjectLegalDocumentField,
 } from '@/lib/services/projects.service'
+import { isLegalDocumentsFeatureEnabled } from '@/lib/features/legal-documents'
 
 export const runtime = 'nodejs'
 
@@ -164,7 +165,13 @@ export async function POST(request: NextRequest) {
       throw dbError
     }
 
-    if (type !== 'images') {
+    if (
+      type !== 'images' &&
+      isLegalDocumentsFeatureEnabled({
+        organizationId: membership.organization_id,
+        projectId,
+      })
+    ) {
       const sourceField = type as ProjectLegalDocumentField
       if (sourceField in PROJECT_LEGAL_DOCUMENT_FIELDS) {
         await registerProjectLegalDocuments({

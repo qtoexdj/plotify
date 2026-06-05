@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@/lib/supabase/server'
 import { getProjectById } from '@/lib/services/projects.service'
 import { microserviceFetch } from '@/lib/services/microservice.client'
+import { isLegalDocumentsFeatureEnabled } from '@/lib/features/legal-documents'
 import type {
   LegalVariableEditPayload,
   LegalVariableEditResponse,
@@ -30,6 +31,17 @@ export async function PATCH(
     }
     if (!project.organization_id) {
       return Response.json({ error: 'Proyecto sin organización asociada' }, { status: 422 })
+    }
+    if (
+      !isLegalDocumentsFeatureEnabled({
+        organizationId: project.organization_id,
+        projectId: id,
+      })
+    ) {
+      return Response.json(
+        { error: 'La resolución de variables legales no está habilitada para este proyecto' },
+        { status: 403 }
+      )
     }
 
     const body = (await request.json()) as LegalVariableEditPayload

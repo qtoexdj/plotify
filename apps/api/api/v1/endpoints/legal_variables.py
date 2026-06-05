@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from api.deps import verify_internal_secret
 from core.logger import get_logger
 from core.redis import get_arq_pool
+from core.config import get_settings
 from schemas.legal_variables import (
     EscrituraCaseCreateRequest,
     EscrituraCaseResponse,
@@ -69,6 +70,35 @@ async def get_optional_arq_pool() -> Any | None:
         return None
 
 
+def _csv_contains(value: str, candidate: str) -> bool:
+    return candidate in {item.strip() for item in value.split(",") if item.strip()}
+
+
+def ensure_legal_documents_feature_enabled(
+    *, organization_id: str, project_id: str | None = None
+) -> None:
+    settings = get_settings()
+    if not settings.ENABLE_LEGAL_DOCUMENTS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Legal document extraction/readiness is disabled.",
+        )
+    if settings.LEGAL_DOCUMENTS_ORG_ALLOWLIST and not _csv_contains(
+        settings.LEGAL_DOCUMENTS_ORG_ALLOWLIST, organization_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Legal document extraction/readiness is not enabled for this organization.",
+        )
+    if project_id and settings.LEGAL_DOCUMENTS_PROJECT_ALLOWLIST and not _csv_contains(
+        settings.LEGAL_DOCUMENTS_PROJECT_ALLOWLIST, project_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Legal document extraction/readiness is not enabled for this project.",
+        )
+
+
 @router.post(
     "/legal-documents/register",
     response_model=LegalDocumentRegistrationQueuedResponse,
@@ -78,6 +108,10 @@ async def register_legal_document(
     payload: LegalDocumentRegisterRequest,
     redis: Any | None = Depends(get_optional_arq_pool),
 ) -> LegalDocumentRegistrationQueuedResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=payload.organization_id,
+        project_id=payload.project_id,
+    )
     try:
         result = await register_legal_document_service(payload)
     except LegalDocumentValidationError as exc:
@@ -129,6 +163,10 @@ async def list_project_legal_documents(
     project_id: str,
     organization_id: str = Query(...),
 ) -> LegalDocumentListResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
     try:
         documents = await list_project_legal_documents_service(
             project_id=project_id,
@@ -157,6 +195,9 @@ async def retry_legal_document_ingestion(
     legal_document_id: str,
     organization_id: str = Query(...),
 ) -> LegalDocumentRetryResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+    )
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Legal document retry is not implemented yet.",
@@ -175,6 +216,10 @@ async def get_project_legal_variables(
     group: str | None = Query(default=None),
     include_evidence: bool = Query(default=True),
 ) -> VariableInventoryResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
     try:
         return await get_project_variable_inventory_service(
             project_id=project_id,
@@ -216,6 +261,10 @@ async def update_legal_variable(
     organization_id: str = Query(...),
     project_id: str = Query(...),
 ) -> VariableReviewResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
     try:
         return await update_legal_variable_service(
             variable_resolution_id=variable_resolution_id,
@@ -248,6 +297,10 @@ async def get_project_legal_roles(
     project_id: str,
     organization_id: str = Query(...),
 ) -> RoleMatchingInventoryResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
     try:
         return RoleMatchingInventoryResponse.model_validate(
             await get_project_role_matching_inventory(
@@ -282,6 +335,10 @@ async def update_lot_legal_role(
     organization_id: str = Query(...),
     project_id: str = Query(...),
 ) -> LotLegalDataResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
     try:
         row = await apply_manual_role_override(
             organization_id=organization_id,
@@ -329,6 +386,10 @@ async def get_escritura_readiness(
     organization_id: str = Query(...),
     project_id: str = Query(...),
 ) -> EscrituraReadinessResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
     try:
         readiness = await get_escritura_readiness_service(
             organization_id=organization_id,
@@ -352,6 +413,10 @@ async def create_escritura_case(
     lot_id: str,
     payload: EscrituraCaseCreateRequest,
 ) -> EscrituraCaseSnapshotResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=payload.organization_id,
+        project_id=payload.project_id,
+    )
     try:
         row = await create_escritura_case_snapshot_service(
             organization_id=payload.organization_id,

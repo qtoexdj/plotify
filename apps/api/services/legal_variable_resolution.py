@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from core.logger import get_logger
 from schemas.legal_variables import (
     DocumentEvidenceResponse,
     VariableInventoryResponse,
@@ -31,6 +32,8 @@ from services.legal_variable_catalog import (
     variable_group_for_key,
 )
 
+
+logger = get_logger(__name__)
 
 MANUAL_REVIEW_CONFIDENCE_THRESHOLD = 0.75
 DEFAULT_PROPOSAL_STATE = "proposed"
@@ -776,6 +779,12 @@ class LegalVariableResolutionService:
         if not variable_payloads:
             return VariablePersistenceResult(variable_rows=(), evidence_rows=())
 
+        classification_counts: dict[str, int] = {}
+        for item in proposals:
+            classification_counts[item.classification] = (
+                classification_counts.get(item.classification, 0) + 1
+            )
+
         variable_result = await asyncio.to_thread(
             lambda: client.table("variable_resolutions").insert(variable_payloads).execute()
         )
@@ -789,6 +798,20 @@ class LegalVariableResolutionService:
             )
             evidence_rows = tuple(evidence_result.data or ())
 
+        first_proposal = proposals[0].proposal
+        logger.info(
+            "legal_variable_proposals_persisted",
+            organization_id=first_proposal.organization_id,
+            project_id=first_proposal.project_id,
+            legal_document_id=(
+                first_proposal.evidence[0].legal_document_id
+                if first_proposal.evidence
+                else first_proposal.source_ref.get("legal_document_id")
+            ),
+            proposal_count=len(variable_payloads),
+            evidence_count=len(evidence_payloads),
+            classification_counts=classification_counts,
+        )
         return VariablePersistenceResult(
             variable_rows=variable_rows,
             evidence_rows=evidence_rows,
@@ -1018,6 +1041,16 @@ async def update_legal_variable(
         )
         raise LegalVariableAuditError("Legal variable review audit could not be persisted.") from exc
 
+    logger.info(
+        "legal_variable_review_decision_persisted",
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_resolution_id=variable_resolution_id,
+        variable_key=variable.get("variable_key"),
+        action=payload.action,
+        state=str(updated.get("state") or mutation.response_state),
+        audit_event_id=str(audit_row["id"]),
+    )
     return VariableReviewResponse(
         variable_resolution_id=str(updated.get("id") or variable_resolution_id),
         state=str(updated.get("state") or mutation.response_state),

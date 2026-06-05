@@ -11,6 +11,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from core.logger import get_logger
 from schemas.legal_variables import (
     DocumentIngestionJobResponse,
     LegalDocumentRegisterRequest,
@@ -18,6 +19,8 @@ from schemas.legal_variables import (
 )
 from services import legal_variable_catalog as catalog
 
+
+logger = get_logger(__name__)
 
 PIPELINE_VERSION = "sdd_007_v1"
 DEFAULT_STORAGE_BUCKET = "project-files"
@@ -441,6 +444,15 @@ async def register_legal_document(
         supabase=client,
         legal_document=legal_document,
     )
+    logger.info(
+        "legal_document_registered",
+        organization_id=legal_document.organization_id,
+        project_id=legal_document.project_id,
+        legal_document_id=legal_document.id,
+        document_type=legal_document.document_type,
+        version_number=legal_document.version_number,
+        ingestion_job_id=ingestion_job.id,
+    )
     return LegalDocumentRegistrationResult(
         legal_document=legal_document,
         ingestion_job=ingestion_job,
@@ -468,6 +480,14 @@ async def supersede_previous_document_versions(
             .in_("extraction_status", ACTIVE_DOCUMENT_STATUSES)
             .execute()
         )
+    )
+    logger.info(
+        "legal_document_previous_versions_superseded",
+        organization_id=legal_document.organization_id,
+        project_id=legal_document.project_id,
+        legal_document_id=legal_document.id,
+        document_type=legal_document.document_type,
+        version_number=legal_document.version_number,
     )
 
 
@@ -531,6 +551,14 @@ async def queue_retry_for_legal_document(
         legal_document=queued_document,
         attempt_number=attempt_number,
     )
+    logger.info(
+        "legal_document_retry_queued",
+        organization_id=organization_id,
+        project_id=legal_document.project_id,
+        legal_document_id=legal_document.id,
+        ingestion_job_id=ingestion_job.id,
+        attempt_number=attempt_number,
+    )
     return LegalDocumentRegistrationResult(
         legal_document=queued_document,
         ingestion_job=ingestion_job,
@@ -562,6 +590,14 @@ async def run_document_ingestion_job(
         organization_id=organization_id,
         project_id=project_id,
     )
+    logger.info(
+        "legal_document_ingestion_started",
+        organization_id=organization_id,
+        project_id=project_id,
+        legal_document_id=legal_document_id,
+        ingestion_job_id=ingestion_job_id,
+        document_type=document.document_type,
+    )
     text_service = LegalTextExtractionService(
         repository=SupabaseLegalTextExtractionRepository(client)
     )
@@ -589,6 +625,17 @@ async def run_document_ingestion_job(
         project_id=project_id,
         ingestion_job_id=ingestion_job_id,
         status=final_status,
+    )
+    logger.info(
+        "legal_document_ingestion_completed",
+        organization_id=organization_id,
+        project_id=project_id,
+        legal_document_id=legal_document_id,
+        ingestion_job_id=ingestion_job_id,
+        status=final_status,
+        page_count=len(persisted_extraction.stored_pages),
+        proposal_count=len(proposals),
+        blocking_proposal_count=sum(1 for item in proposals if item.blocks_readiness),
     )
     return LegalDocumentIngestionRunResult(
         legal_document_id=legal_document_id,

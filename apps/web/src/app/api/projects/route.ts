@@ -4,6 +4,7 @@ import {
   createProject,
   registerProjectLegalDocuments,
 } from '@/lib/services/projects.service'
+import { isLegalDocumentsFeatureEnabled } from '@/lib/features/legal-documents'
 import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -100,12 +101,19 @@ export async function POST(request: NextRequest) {
       user.id
     )
 
-    await registerProjectLegalDocuments({
-      project: result.project,
-      documents: legal_documents,
-      uploadSource: 'onboarding',
-      uploadedBy: user.id,
-    })
+    if (
+      isLegalDocumentsFeatureEnabled({
+        organizationId: result.project.organization_id,
+        projectId: result.project.id,
+      })
+    ) {
+      await registerProjectLegalDocuments({
+        project: result.project,
+        documents: legal_documents,
+        uploadSource: 'onboarding',
+        uploadedBy: user.id,
+      })
+    }
 
     return Response.json({
       project: result.project,

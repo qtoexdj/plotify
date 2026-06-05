@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@/lib/supabase/server'
 import { getProjectById } from '@/lib/services/projects.service'
 import { microserviceFetch } from '@/lib/services/microservice.client'
+import { isLegalDocumentsFeatureEnabled } from '@/lib/features/legal-documents'
 import type { EscrituraReadinessResponse } from '@/lib/legal/variable-resolution-types'
 import { NextRequest } from 'next/server'
 
@@ -29,6 +30,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
     if (!project.organization_id) {
       return Response.json({ error: 'Proyecto sin organización asociada' }, { status: 422 })
+    }
+    if (
+      !isLegalDocumentsFeatureEnabled({
+        organizationId: project.organization_id,
+        projectId: id,
+      })
+    ) {
+      return Response.json(
+        { error: 'El readiness de escritura no está habilitado para este proyecto' },
+        { status: 403 }
+      )
     }
 
     const upstreamParams = new URLSearchParams({

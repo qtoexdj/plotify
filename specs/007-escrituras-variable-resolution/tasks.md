@@ -176,17 +176,17 @@
 **Purpose**: Contracts, documentation, SDD 008 handoff, quality gates and production guardrails.
 
 - [x] T059 Regenerate OpenAPI and client contracts after API changes using `pnpm contracts:generate`; Verify: `pnpm contracts:generate`
-- [ ] T060 [P] Add end-to-end quickstart coverage notes and update product memory in `plotify_memori/20 - Producto & Proyectos/Generador de Escrituras de Compraventa.md`; Verify: `pnpm format:check`
-- [ ] T061 [P] Add security/tenant regression coverage for legal variable endpoints in `apps/api/tests/test_tenant_validation.py`; Verify: `pnpm test:api`
+- [x] T060 [P] Add end-to-end quickstart coverage notes and update product memory in `plotify_memori/20 - Producto & Proyectos/Generador de Escrituras de Compraventa.md`; Verify: `pnpm format:check`
+- [x] T061 [P] Add security/tenant regression coverage for legal variable endpoints in `apps/api/tests/test_tenant_validation.py`; Verify: `pnpm test:api`
 - [x] T062 [P] Add SDD 008 handoff contract in `specs/007-escrituras-variable-resolution/handoff-sdd-008.md`; Verify: `pnpm format:check`
-- [ ] T063 [P] Add feature flag and rollout controls for legal extraction/readiness in `apps/web/src/lib/features/legal-documents.ts` and `apps/api/core/config.py`; Verify: `pnpm test:web && pnpm test:api`
-- [ ] T064 [P] Add extraction retry/idempotency tests for duplicate job dispatch and superseded document versions in `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api`
-- [ ] T065 [P] Add structured observability for extraction jobs, variable proposals, review decisions and readiness gates in `apps/api/services/legal_document_ingestion.py`, `apps/api/services/legal_variable_resolution.py` and `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
-- [ ] T066 [P] Add storage access and signed/public URL regression coverage for legal evidence documents in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
-- [ ] T067 [P] Document production operations for failed extraction retry, document superseding, rollback and evidence inspection in `plotify_memori/40 - Guias & Convenciones/Operacion Escrituras Variables.md`; Verify: `pnpm format:check`
+- [x] T063 [P] Add feature flag and rollout controls for legal extraction/readiness in `apps/web/src/lib/features/legal-documents.ts` and `apps/api/core/config.py`; Verify: `pnpm test:web && pnpm test:api`
+- [x] T064 [P] Add extraction retry/idempotency tests for duplicate job dispatch and superseded document versions in `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api`
+- [x] T065 [P] Add structured observability for extraction jobs, variable proposals, review decisions and readiness gates in `apps/api/services/legal_document_ingestion.py`, `apps/api/services/legal_variable_resolution.py` and `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
+- [x] T066 [P] Add storage access and signed/public URL regression coverage for legal evidence documents in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
+- [x] T067 [P] Document production operations for failed extraction retry, document superseding, rollback and evidence inspection in `plotify_memori/40 - Guias & Convenciones/Operacion Escrituras Variables.md`; Verify: `pnpm format:check`
 - [x] T068 Run full web quality gates after UI work: `pnpm --filter web lint`, `pnpm format:check`, `pnpm typecheck:web`, `pnpm build:web`; Verify: commands listed
 - [x] T069 Run full backend/database quality gates after API and migration work: `pnpm verify:migrations`, `pnpm test:api`, `pnpm contracts:generate`; Verify: commands listed
-- [ ] T070 Run SDD analyze for `specs/007-escrituras-variable-resolution` and resolve any critical finding before implementation continues; Verify: `$speckit-analyze`
+- [x] T070 Run SDD analyze for `specs/007-escrituras-variable-resolution` and resolve any critical finding before implementation continues; Verify: `$speckit-analyze`
 
 ---
 

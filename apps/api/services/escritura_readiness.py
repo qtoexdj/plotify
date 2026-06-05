@@ -11,8 +11,11 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from core.logger import get_logger
 from services import legal_variable_catalog as catalog
 
+
+logger = get_logger(__name__)
 
 ReadinessStatus = Literal["blocked", "needs_review", "ready"]
 
@@ -378,7 +381,7 @@ async def get_escritura_readiness(
         lot_id=lot_id,
         supabase=supabase,
     )
-    return calculate_escritura_readiness(
+    readiness = calculate_escritura_readiness(
         organization_id=organization_id,
         project_id=project_id,
         lot_id=lot_id,
@@ -386,6 +389,18 @@ async def get_escritura_readiness(
         lot_legal_data=lot_legal_data,
         warning_acknowledged=warning_acknowledged,
     )
+    logger.info(
+        "escritura_readiness_calculated",
+        organization_id=organization_id,
+        project_id=project_id,
+        lot_id=lot_id,
+        readiness_status=readiness.readiness_status,
+        gate_statuses={gate.gate: gate.status for gate in readiness.gates},
+        blocking_gate_count=sum(1 for gate in readiness.gates if gate.status == "blocked"),
+        variable_snapshot_count=len(readiness.variable_snapshot),
+        evidence_snapshot_count=len(readiness.evidence_snapshot),
+    )
+    return readiness
 
 
 async def create_escritura_case_snapshot(
@@ -455,6 +470,18 @@ async def create_escritura_case_snapshot(
         )
 
     row = _first_row(result.data)
+    logger.info(
+        "escritura_case_snapshot_persisted",
+        organization_id=organization_id,
+        project_id=project_id,
+        lot_id=lot_id,
+        escritura_case_id=(row or existing_row or {}).get("id"),
+        case_status=payload["case_status"],
+        readiness_status=payload["readiness_status"],
+        variable_snapshot_count=len(readiness.variable_snapshot),
+        evidence_snapshot_count=len(readiness.evidence_snapshot),
+        operation="update" if existing_row else "insert",
+    )
     if not row:
         return {**existing_row, **payload} if existing_row else payload
     return row

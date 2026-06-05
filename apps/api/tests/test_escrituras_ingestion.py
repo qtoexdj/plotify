@@ -356,3 +356,269 @@ def test_replacing_project_document_registers_new_version_and_job(
     replacement_payload = register_document.await_args_list[1].args[0]
     assert replacement_payload.upload_source == "project_documents"
     assert replacement_payload.sha256_hash == "b" * 64
+
+
+class FakeIngestionTable:
+    def __init__(self, supabase: "FakeIngestionSupabase", name: str) -> None:
+        self.supabase = supabase
+        self.name = name
+        self.filters: dict[str, object] = {}
+        self.insert_payload: dict[str, object] | None = None
+        self.update_payload: dict[str, object] | None = None
+        self.order_column: str | None = None
+        self.desc = False
+        self.limit_count: int | None = None
+        self.negated_filters: dict[str, object] = {}
+        self.in_filters: dict[str, tuple[object, ...]] = {}
+
+    def select(self, *_args):
+        return self
+
+    def eq(self, column: str, value: object):
+        self.filters[column] = value
+        return self
+
+    def neq(self, column: str, value: object):
+        self.negated_filters[column] = value
+        return self
+
+    def in_(self, column: str, values: tuple[object, ...]):
+        self.in_filters[column] = tuple(values)
+        return self
+
+    def order(self, column: str, desc: bool = False):
+        self.order_column = column
+        self.desc = desc
+        return self
+
+    def limit(self, count: int):
+        self.limit_count = count
+        return self
+
+    def single(self):
+        return self
+
+    def insert(self, payload: dict[str, object]):
+        self.insert_payload = payload
+        return self
+
+    def update(self, payload: dict[str, object]):
+        self.update_payload = payload
+        return self
+
+    def execute(self):
+        return self.supabase.execute(self)
+
+
+class FakeIngestionSupabase:
+    def __init__(self) -> None:
+        self.now = datetime(2026, 6, 4, 12, 0, tzinfo=UTC)
+        self.documents: list[dict[str, object]] = [
+            self.document_row(
+                legal_document_id="00000000-0000-4000-8000-000000000006",
+                version_number=1,
+                extraction_status="failed",
+                sha256_hash="b" * 64,
+            )
+        ]
+        self.jobs: list[dict[str, object]] = [
+            self.job_row(
+                job_id="00000000-0000-4000-8000-000000000007",
+                legal_document_id="00000000-0000-4000-8000-000000000006",
+                attempt_number=1,
+                status="failed",
+            )
+        ]
+        self.supersede_updates: list[dict[str, object]] = []
+
+    def table(self, name: str) -> FakeIngestionTable:
+        return FakeIngestionTable(self, name)
+
+    def document_row(
+        self,
+        *,
+        legal_document_id: str,
+        version_number: int,
+        extraction_status: str,
+        sha256_hash: str,
+    ) -> dict[str, object]:
+        return {
+            "id": legal_document_id,
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+            "lot_id": None,
+            "document_type": "dominio_vigente",
+            "source_field": "doc_dominio_vigente",
+            "storage_bucket": "project-files",
+            "storage_path": f"{PROJECT_ID}/legal/{legal_document_id}.pdf",
+            "original_filename": "Dominio vigente.pdf",
+            "mime_type": "application/pdf",
+            "file_size_bytes": 123456,
+            "sha256_hash": sha256_hash,
+            "version_number": version_number,
+            "upload_source": "project_documents",
+            "uploaded_by": USER_ID,
+            "extraction_status": extraction_status,
+            "superseded_by": None,
+            "created_at": self.now,
+            "updated_at": self.now,
+        }
+
+    def job_row(
+        self,
+        *,
+        job_id: str,
+        legal_document_id: str,
+        attempt_number: int,
+        status: str,
+    ) -> dict[str, object]:
+        return {
+            "id": job_id,
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+            "legal_document_id": legal_document_id,
+            "status": status,
+            "pipeline_version": "sdd_007_v1",
+            "attempt_number": attempt_number,
+            "stats": {},
+            "created_at": self.now,
+            "updated_at": self.now,
+        }
+
+    def execute(self, table: FakeIngestionTable):
+        if table.name == "projects":
+            return SimpleNamespace(data={"id": PROJECT_ID, "organization_id": ORG_ID})
+        if table.name == "legal_documents":
+            if table.insert_payload is not None:
+                new_document = {
+                    **table.insert_payload,
+                    "id": LEGAL_DOCUMENT_ID,
+                    "superseded_by": None,
+                    "created_at": self.now,
+                    "updated_at": self.now,
+                }
+                self.documents.append(new_document)
+                return SimpleNamespace(data=new_document)
+            if table.update_payload is not None:
+                self.supersede_updates.append(table.update_payload)
+                for document in self.documents:
+                    if (
+                        all(document.get(key) == value for key, value in table.filters.items())
+                        and all(
+                            document.get(key) != value
+                            for key, value in table.negated_filters.items()
+                        )
+                        and all(
+                            document.get(key) in values
+                            for key, values in table.in_filters.items()
+                        )
+                    ):
+                        document.update(table.update_payload)
+                return SimpleNamespace(data=[])
+            rows = [
+                document
+                for document in self.documents
+                if all(document.get(key) == value for key, value in table.filters.items())
+            ]
+            if table.order_column:
+                rows.sort(
+                    key=lambda row: row.get(table.order_column) or 0,
+                    reverse=table.desc,
+                )
+            if table.limit_count is not None:
+                rows = rows[: table.limit_count]
+            return SimpleNamespace(data=rows)
+        if table.name == "document_ingestion_jobs":
+            if table.insert_payload is not None:
+                job_id = f"00000000-0000-4000-8000-0000000000{len(self.jobs) + 8:02d}"
+                job = {
+                    **table.insert_payload,
+                    "id": job_id,
+                    "created_at": self.now,
+                    "updated_at": self.now,
+                }
+                self.jobs.append(job)
+                return SimpleNamespace(data=job)
+            rows = [
+                job
+                for job in self.jobs
+                if all(job.get(key) == value for key, value in table.filters.items())
+            ]
+            if table.order_column:
+                rows.sort(
+                    key=lambda row: row.get(table.order_column) or 0,
+                    reverse=table.desc,
+                )
+            if table.limit_count is not None:
+                rows = rows[: table.limit_count]
+            return SimpleNamespace(data=rows)
+        return SimpleNamespace(data=[])
+
+
+async def test_retry_queues_next_attempt_and_blocks_duplicate_dispatch():
+    from services.legal_document_ingestion import (
+        LegalDocumentValidationError,
+        queue_retry_for_legal_document,
+    )
+
+    supabase = FakeIngestionSupabase()
+    result = await queue_retry_for_legal_document(
+        legal_document_id="00000000-0000-4000-8000-000000000006",
+        organization_id=ORG_ID,
+        supabase=supabase,
+    )
+
+    assert result.legal_document.extraction_status == "queued"
+    assert result.ingestion_job.attempt_number == 2
+    assert supabase.documents[0]["extraction_status"] == "queued"
+    assert supabase.jobs[-1]["attempt_number"] == 2
+
+    with pytest.raises(LegalDocumentValidationError):
+        await queue_retry_for_legal_document(
+            legal_document_id="00000000-0000-4000-8000-000000000006",
+            organization_id=ORG_ID,
+            supabase=supabase,
+        )
+
+    assert [job["attempt_number"] for job in supabase.jobs] == [1, 2]
+
+
+async def test_registering_replacement_supersedes_previous_active_versions():
+    from schemas.legal_variables import LegalDocumentRegisterRequest
+    from services.legal_document_ingestion import register_legal_document
+
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "variables_proposed"
+
+    result = await register_legal_document(
+        LegalDocumentRegisterRequest.model_validate(
+            {
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "lot_id": None,
+                "document_type": "dominio_vigente",
+                "source_field": "doc_dominio_vigente",
+                "storage_bucket": "project-files",
+                "storage_path": f"{PROJECT_ID}/legal/dominio-vigente-v2.pdf",
+                "original_filename": "Dominio vigente actualizado.pdf",
+                "mime_type": "application/pdf",
+                "file_size_bytes": 223456,
+                "sha256_hash": "c" * 64,
+                "upload_source": "project_documents",
+                "uploaded_by": USER_ID,
+            }
+        ),
+        supabase=supabase,
+    )
+
+    assert result.legal_document.version_number == 2
+    assert result.ingestion_job.attempt_number == 1
+    assert supabase.documents[0]["extraction_status"] == "superseded"
+    assert supabase.documents[0]["superseded_by"] == LEGAL_DOCUMENT_ID
+    assert supabase.documents[-1]["extraction_status"] == "queued"
+    assert supabase.supersede_updates == [
+        {
+            "extraction_status": "superseded",
+            "superseded_by": LEGAL_DOCUMENT_ID,
+        }
+    ]
