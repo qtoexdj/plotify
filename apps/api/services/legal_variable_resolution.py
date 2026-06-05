@@ -92,6 +92,12 @@ APPROVABLE_STATES = frozenset(("proposed", "resolved", "manual_review", "derived
 NOT_APPLICABLE_SOURCE_STATES = frozenset(
     ("missing", "proposed", "resolved", "manual_review", "conflict", "derived")
 )
+REPEATABLE_SOURCE_REF_VARIABLE_KEYS = frozenset(
+    {
+        "sii.unidad_nombre",
+        "sii.pre_rol_lote",
+    }
+)
 
 _INSCRIPTION_RE = re.compile(
     r"(?:inscrit[ao]?\s+)?(?:a\s+)?fojas\s+(?P<fojas>[\w.-]+).*?"
@@ -154,11 +160,21 @@ _SII_ROLE_IN_PROCESS_RE = re.compile(
     r"(?P<text>rol\s+de\s+aval[uú]o\s+en\s+tr[aá]mite)",
     re.IGNORECASE,
 )
+_SII_DECLARED_UNIT_COUNT_RE = re.compile(
+    r"cantidad\s+de\s+unidades\s*(?P<count>\d{1,5})",
+    re.IGNORECASE,
+)
 _SII_UNIT_BLOCK_RE = re.compile(
     r"(?P<unit>(?:unidad\s+)?(?:lote|parcela|unidad)\s*[A-Z0-9.-]+).*?"
     r"(?:(?:pre[- ]?rol|rol\s+en\s+tr[aá]mite|rol\s+de\s+aval[uú]o\s+en\s+tr[aá]mite)"
     r"\s*(?:n[°ºro.]*|numero)?\s*)(?P<pre_role>\d{1,7}\s*[-/]\s*\d{1,7})",
     re.IGNORECASE | re.DOTALL,
+)
+_SII_ASSIGNED_ROLE_ROW_RE = re.compile(
+    r"(?P<unit>(?:lote|parcela|unidad)\s+[A-Z0-9.-]+(?:\s+[A-ZÁÉÍÓÚÜÑ0-9 '-]+?)?)"
+    r"\s+(?P<pre_role>\d{1,7}\s*[-/]\s*\d{1,7})"
+    r"(?:\s+[A-Z])?$",
+    re.IGNORECASE,
 )
 _SAG_CERTIFICATE_NUMBER_RE = re.compile(
     r"(?:certificado|resoluci[oó]n)\s*(?:SAG)?\s*(?:exenta)?\s*"
@@ -208,6 +224,14 @@ class VariableEvidenceInput:
     def snippet_hash(self) -> str:
         payload = (self.snippet or "").encode("utf-8")
         return hashlib.sha256(payload).hexdigest()
+
+
+@dataclass(frozen=True)
+class SiiUnitTextMatch:
+    match: re.Match[str]
+    full_text: str
+    unit_name: str
+    pre_role: str
 
 
 @dataclass(frozen=True)
@@ -335,14 +359,45 @@ class LegalVariableResolutionService:
             for page in pages
         )
         proposals: list[VariableProposalInput] = []
+        next_unit_index = 1
+        declared_unit_count = _declared_sii_unit_count(
+            "\n".join(page.text_content for page in normalized_pages)
+        )
         for page in normalized_pages:
-            proposals.extend(
-                self._extract_sii_roles_page_variables(
-                    organization_id=organization_id,
-                    project_id=project_id,
-                    page=page,
-                )
+            page_proposals = self._extract_sii_roles_page_variables(
+                organization_id=organization_id,
+                project_id=project_id,
+                page=page,
+                unit_index_start=next_unit_index,
             )
+            proposals.extend(page_proposals)
+            next_unit_index += sum(
+                1
+                for proposal in page_proposals
+                if proposal.variable_key == "sii.unidad_nombre"
+            )
+        if declared_unit_count is not None:
+            extracted_unit_count = next_unit_index - 1
+            unit_count_matches = declared_unit_count == extracted_unit_count
+            for index, proposal in enumerate(proposals):
+                if proposal.variable_key not in {"sii.unidad_nombre", "sii.pre_rol_lote"}:
+                    continue
+                proposals[index] = VariableProposalInput(
+                    **{
+                        **proposal.__dict__,
+                        "confidence": (
+                            proposal.confidence
+                            if unit_count_matches
+                            else min(proposal.confidence or 0.7, 0.7)
+                        ),
+                        "source_ref": {
+                            **proposal.source_ref,
+                            "declared_unit_count": declared_unit_count,
+                            "extracted_unit_count": extracted_unit_count,
+                            "unit_count_matches": unit_count_matches,
+                        },
+                    }
+                )
         return self.classify_proposals(
             proposals,
             required_variable_keys=required_variable_keys,
@@ -514,8 +569,10 @@ class LegalVariableResolutionService:
         organization_id: str,
         project_id: str,
         page: LegalDocumentPageInput,
+        unit_index_start: int = 1,
     ) -> list[VariableProposalInput]:
-        text = normalize_whitespace(page.text_content)
+        raw_text = page.text_content
+        text = normalize_whitespace(raw_text)
         if not text:
             return []
 
@@ -554,12 +611,12 @@ class LegalVariableResolutionService:
                 )
             )
 
-        unit_matches = list(_SII_UNIT_BLOCK_RE.finditer(text))
-        for index, match in enumerate(unit_matches, start=1):
+        unit_matches = list(_iter_sii_unit_matches(raw_text, text))
+        for index, match in enumerate(unit_matches, start=unit_index_start):
             source_ref = {**common_ref, "unit_index": index}
-            snippet = _snippet_for_match(text, match)
-            unit_name = clean_legal_value(match.group("unit"))
-            pre_role = normalize_role_number(match.group("pre_role"))
+            snippet = _snippet_for_match(match.full_text, match.match)
+            unit_name = clean_sii_unit_name(match.unit_name)
+            pre_role = normalize_role_number(match.pre_role)
             proposals.append(
                 build_document_proposal(
                     organization_id=organization_id,
@@ -708,7 +765,7 @@ class LegalVariableResolutionService:
         required_variable_keys: tuple[str, ...] = (),
     ) -> tuple[ClassifiedVariableProposal, ...]:
         validated = [self.validate_proposal(proposal) for proposal in proposals]
-        conflicts = self._conflicting_keys(validated)
+        conflicts = self._conflicting_scopes(validated)
         output: list[ClassifiedVariableProposal] = []
 
         for proposal in validated:
@@ -717,7 +774,7 @@ class LegalVariableResolutionService:
             has_value = proposal.value_text not in (None, "") or proposal.value_json is not None
             is_critical = proposal.variable_key in CRITICAL_VARIABLE_KEYS
 
-            if proposal.variable_key in conflicts:
+            if self._conflict_scope(proposal) in conflicts:
                 classification = "conflict"
                 reasons.append(
                     "critical_multiple_values_for_same_scope"
@@ -840,14 +897,32 @@ class LegalVariableResolutionService:
             return "critical_low_confidence" if is_critical else "low_confidence"
         return "manual_review_required"
 
-    def _conflicting_keys(self, proposals: list[VariableProposalInput]) -> set[str]:
-        seen: dict[tuple[str | None, str | None, str], Any] = {}
-        conflicts: set[str] = set()
+    def _conflict_scope(
+        self,
+        proposal: VariableProposalInput,
+    ) -> tuple[str | None, str | None, str, str | None]:
+        repeatable_ref = None
+        if proposal.variable_key in REPEATABLE_SOURCE_REF_VARIABLE_KEYS:
+            unit_index = proposal.source_ref.get("unit_index")
+            repeatable_ref = str(unit_index) if unit_index is not None else None
+        return (
+            proposal.lot_id,
+            proposal.escritura_case_id,
+            proposal.variable_key,
+            repeatable_ref,
+        )
+
+    def _conflicting_scopes(
+        self,
+        proposals: list[VariableProposalInput],
+    ) -> set[tuple[str | None, str | None, str, str | None]]:
+        seen: dict[tuple[str | None, str | None, str, str | None], Any] = {}
+        conflicts: set[tuple[str | None, str | None, str, str | None]] = set()
         for proposal in proposals:
-            scope = (proposal.lot_id, proposal.escritura_case_id, proposal.variable_key)
+            scope = self._conflict_scope(proposal)
             value = normalized_conflict_value(proposal)
             if scope in seen and seen[scope] != value:
-                conflicts.add(proposal.variable_key)
+                conflicts.add(scope)
             seen[scope] = value
         return conflicts
 
@@ -1461,6 +1536,60 @@ def normalize_whitespace(text: str) -> str:
 
 def clean_legal_value(value: str | None) -> str:
     return re.sub(r"\s+", " ", (value or "").strip(" .,:;")).strip()
+
+
+def clean_sii_unit_name(value: str | None) -> str:
+    cleaned = clean_legal_value(value)
+    return clean_legal_value(
+        re.split(
+            r"\b(?:pre[- ]?rol|rol\s+(?:de\s+aval[uú]o\s+)?en\s+tr[aá]mite|rol\s+de\s+aval[uú]o)\b",
+            cleaned,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+    )
+
+
+def _declared_sii_unit_count(text: str) -> int | None:
+    match = _SII_DECLARED_UNIT_COUNT_RE.search(normalize_whitespace(text))
+    if not match:
+        return None
+    return int(match.group("count"))
+
+
+def _iter_sii_unit_matches(
+    raw_text: str,
+    normalized_text: str,
+) -> tuple[SiiUnitTextMatch, ...]:
+    line_matches: list[SiiUnitTextMatch] = []
+    for line in raw_text.splitlines():
+        clean_line = clean_legal_value(line)
+        if not clean_line:
+            continue
+        match = _SII_ASSIGNED_ROLE_ROW_RE.search(clean_line)
+        if not match:
+            continue
+        line_matches.append(
+            SiiUnitTextMatch(
+                match=match,
+                full_text=clean_line,
+                unit_name=match.group("unit"),
+                pre_role=match.group("pre_role"),
+            )
+        )
+
+    if line_matches:
+        return tuple(line_matches)
+
+    return tuple(
+        SiiUnitTextMatch(
+            match=match,
+            full_text=normalized_text,
+            unit_name=match.group("unit"),
+            pre_role=match.group("pre_role"),
+        )
+        for match in _SII_UNIT_BLOCK_RE.finditer(normalized_text)
+    )
 
 
 def build_document_proposal(

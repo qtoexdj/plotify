@@ -31,6 +31,7 @@ from services.legal_document_ingestion import (
     LegalDocumentScopeError,
     LegalDocumentValidationError,
     list_project_legal_documents as list_project_legal_documents_service,
+    queue_retry_for_legal_document as queue_retry_for_legal_document_service,
     register_legal_document as register_legal_document_service,
 )
 from services.legal_variable_resolution import (
@@ -194,13 +195,52 @@ async def list_project_legal_documents(
 async def retry_legal_document_ingestion(
     legal_document_id: str,
     organization_id: str = Query(...),
+    project_id: str = Query(...),
+    redis: Any | None = Depends(get_optional_arq_pool),
 ) -> LegalDocumentRetryResponse:
     ensure_legal_documents_feature_enabled(
         organization_id=organization_id,
+        project_id=project_id,
     )
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Legal document retry is not implemented yet.",
+    try:
+        result = await queue_retry_for_legal_document_service(
+            legal_document_id=legal_document_id,
+            organization_id=organization_id,
+            project_id=project_id,
+        )
+    except LegalDocumentValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except LegalDocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    job_payload = {
+        "legal_document_id": result.legal_document.id,
+        "organization_id": result.legal_document.organization_id,
+        "project_id": result.legal_document.project_id,
+        "ingestion_job_id": result.ingestion_job.id,
+    }
+    if redis is not None:
+        try:
+            await redis.enqueue_job("process_legal_document_ingestion", job_payload)
+        except Exception as exc:
+            logger.error(
+                "legal_document_retry_enqueue_failed",
+                legal_document_id=result.legal_document.id,
+                ingestion_job_id=result.ingestion_job.id,
+                error=str(exc),
+            )
+
+    return LegalDocumentRetryResponse(
+        legal_document_id=result.legal_document.id,
+        ingestion_job_id=result.ingestion_job.id,
+        extraction_status=result.legal_document.extraction_status,
+        attempt_number=result.ingestion_job.attempt_number,
     )
 
 

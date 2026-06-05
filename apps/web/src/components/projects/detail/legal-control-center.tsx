@@ -148,6 +148,24 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
     }
   }, [projectId])
 
+  const loadDocuments = useCallback(async () => {
+    setIsLoadingDocuments(true)
+    setDocumentsError(null)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/legal-documents`)
+      const payload = (await response.json()) as LegalDocumentsPayload & { error?: string }
+      if (!response.ok) {
+        throw new Error(payload.error || 'Error al cargar documentos legales')
+      }
+      setDocuments(payload.documents ?? [])
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al cargar documentos legales'
+      setDocumentsError(message)
+    } finally {
+      setIsLoadingDocuments(false)
+    }
+  }, [projectId])
+
   useEffect(() => {
     let cancelled = false
 
@@ -319,6 +337,26 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
     }
   }
 
+  const retryDocumentExtraction = async (document: { id: string }) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/legal-documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ legal_document_id: document.id }),
+      })
+      const result = (await response.json()) as { error?: string }
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al reintentar extracción legal')
+      }
+      toast.success('Extracción legal reencolada')
+      await Promise.all([loadDocuments(), loadVariables()])
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Error al reintentar extracción legal'
+      toast.error(message)
+    }
+  }
+
   return (
     <section className="space-y-6" aria-label="Centro de Control Legal">
       <Card>
@@ -354,6 +392,7 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
         documents={documents}
         isLoading={isLoadingDocuments}
         error={documentsError}
+        onRetryDocument={retryDocumentExtraction}
       />
 
       <Card>

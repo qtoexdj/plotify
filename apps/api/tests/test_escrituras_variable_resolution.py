@@ -297,6 +297,109 @@ def test_sii_roles_rules_extract_certificate_metadata_and_unit_pre_role_values()
     )
 
 
+def test_sii_roles_rules_extract_sii_assigned_role_rows_across_pages():
+    service = LegalVariableResolutionService()
+    pages = (
+        LegalDocumentPageInput(
+            id=SII_PAGE_ID,
+            legal_document_id=SII_DOCUMENT_ID,
+            page_number=1,
+            text_content=(
+                "CANTIDAD DE\n"
+                "UNIDADES\n"
+                "4\n"
+                "Rol Matriz 00067-00023\n"
+                "DIRECCION O NOMBRE DE LA UNIDAD N ROL DE AVALUO ASIGNADO\n"
+                "LOTE 1 SECTOR EL CONDOR 08179-00001\n"
+                "LOTE 2 SECTOR EL CONDOR 08179-00002\n"
+            ),
+        ),
+        LegalDocumentPageInput(
+            id="00000000-0000-4000-8000-000000000022",
+            legal_document_id=SII_DOCUMENT_ID,
+            page_number=2,
+            text_content=(
+                "LOTE 3 SECTOR EL CONDOR 08179-00003\n"
+                "LOTE 4 SECTOR EL CONDOR 08179-00004\n"
+            ),
+        ),
+    )
+
+    classified = service.extract_sii_roles_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=SII_DOCUMENT_ID,
+        pages=pages,
+        required_variable_keys=("sii.unidad_nombre", "sii.pre_rol_lote"),
+    )
+
+    unit_proposals = [
+        item.proposal
+        for item in classified
+        if item.proposal.variable_key == "sii.unidad_nombre"
+    ]
+    pre_role_proposals = [
+        item.proposal
+        for item in classified
+        if item.proposal.variable_key == "sii.pre_rol_lote"
+    ]
+
+    assert [proposal.value_text for proposal in unit_proposals] == [
+        "LOTE 1 SECTOR EL CONDOR",
+        "LOTE 2 SECTOR EL CONDOR",
+        "LOTE 3 SECTOR EL CONDOR",
+        "LOTE 4 SECTOR EL CONDOR",
+    ]
+    assert [proposal.value_text for proposal in pre_role_proposals] == [
+        "08179-00001",
+        "08179-00002",
+        "08179-00003",
+        "08179-00004",
+    ]
+    assert [proposal.source_ref["unit_index"] for proposal in unit_proposals] == [1, 2, 3, 4]
+    assert all(proposal.source_ref["declared_unit_count"] == 4 for proposal in unit_proposals)
+    assert all(proposal.source_ref["extracted_unit_count"] == 4 for proposal in unit_proposals)
+    assert all(proposal.source_ref["unit_count_matches"] is True for proposal in unit_proposals)
+    assert all(
+        item.classification == "proposed"
+        for item in classified
+        if item.proposal.variable_key in {"sii.unidad_nombre", "sii.pre_rol_lote"}
+    )
+
+
+def test_sii_roles_rules_lower_confidence_when_declared_unit_count_mismatches():
+    service = LegalVariableResolutionService()
+    page = LegalDocumentPageInput(
+        id=SII_PAGE_ID,
+        legal_document_id=SII_DOCUMENT_ID,
+        page_number=1,
+        text_content=(
+            "CANTIDAD DE UNIDADES 3\n"
+            "LOTE 1 SECTOR EL CONDOR 08179-00001\n"
+            "LOTE 2 SECTOR EL CONDOR 08179-00002\n"
+        ),
+    )
+
+    classified = service.extract_sii_roles_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=SII_DOCUMENT_ID,
+        pages=(page,),
+        required_variable_keys=("sii.unidad_nombre", "sii.pre_rol_lote"),
+    )
+    unit_items = [
+        item
+        for item in classified
+        if item.proposal.variable_key == "sii.unidad_nombre"
+    ]
+
+    assert [item.classification for item in unit_items] == ["manual_review", "manual_review"]
+    assert all(item.proposal.confidence == 0.7 for item in unit_items)
+    assert all(item.proposal.source_ref["declared_unit_count"] == 3 for item in unit_items)
+    assert all(item.proposal.source_ref["extracted_unit_count"] == 2 for item in unit_items)
+    assert all(item.proposal.source_ref["unit_count_matches"] is False for item in unit_items)
+
+
 def test_low_confidence_plano_sample_falls_back_to_manual_review_with_evidence():
     service = LegalVariableResolutionService()
     evidence = _evidence(

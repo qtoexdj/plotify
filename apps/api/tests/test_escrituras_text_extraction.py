@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from io import BytesIO
 from unittest.mock import AsyncMock
 
 import pytest
 
 from services.legal_text_extraction import (
+    EmptyLegalTextExtractionError,
     LegalDocumentExtractionSource,
     LegalTextExtractionService,
     UnsupportedLegalTextConverterError,
@@ -41,6 +43,36 @@ def _source(*, content: bytes, mime_type: str = "text/plain") -> LegalDocumentEx
         storage_bucket="project-files",
         storage_path=f"{PROJECT_ID}/legal/dominio-vigente.txt",
     )
+
+
+def _text_pdf_bytes(*page_texts: str) -> bytes:
+    from pypdf import PdfWriter
+    from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+
+    writer = PdfWriter()
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    resources = DictionaryObject(
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})}
+    )
+
+    for page_text in page_texts:
+        page = writer.add_blank_page(width=612, height=792)
+        page[NameObject("/Resources")] = resources
+        if page_text:
+            stream = DecodedStreamObject()
+            escaped = page_text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+            stream.set_data(f"BT /F1 12 Tf 72 720 Td ({escaped}) Tj ET".encode("utf-8"))
+            page[NameObject("/Contents")] = stream
+
+    buffer = BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
 
 
 async def test_extract_and_persist_document_replaces_pages_and_marks_text_extracted():
@@ -91,8 +123,71 @@ async def test_extract_and_persist_document_replaces_pages_and_marks_text_extrac
     }
 
 
-async def test_extract_and_persist_document_marks_failed_for_unwired_pdf_converter():
-    source = _source(content=b"%PDF-1.7", mime_type="application/pdf")
+async def test_extract_and_persist_document_extracts_textual_pdf_and_marks_ocr_candidates():
+    source = _source(
+        content=_text_pdf_bytes(
+            (
+                "Certificado SII LOTE 1 SECTOR EL CONDOR 08179-00001. "
+                "Texto suficiente para superar el umbral de baja señal y "
+                "mantener esta página como evidencia textual confiable."
+            ),
+            "",
+        ),
+        mime_type="application/pdf",
+    )
+    repository = FakeTextExtractionRepository(source)
+    service = LegalTextExtractionService(repository=repository)
+
+    result = await service.extract_and_persist_document(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=LEGAL_DOCUMENT_ID,
+        ingestion_job_id=INGESTION_JOB_ID,
+    )
+
+    persisted_pages = repository.replace_document_pages.await_args.kwargs["pages"]
+    assert persisted_pages[0]["page_kind"] == "physical"
+    assert persisted_pages[0]["page_number"] == 1
+    assert "08179-00001" in persisted_pages[0]["text_content"]
+    assert result.extraction.converter == "pdf_text"
+    assert result.extraction.stats["page_count"] == 2
+    assert result.extraction.stats["text_page_count"] == 1
+    assert result.extraction.stats["empty_page_count"] == 1
+    assert result.extraction.stats["pages_needing_ocr"] == [2]
+    assert result.extraction.stats["ocr_required"] is True
+    assert repository.update_job_status.await_args_list[-1].kwargs["status"] == "text_extracted"
+
+
+async def test_extract_and_persist_document_marks_failed_when_pdf_has_no_text():
+    source = _source(content=_text_pdf_bytes(""), mime_type="application/pdf")
+    repository = FakeTextExtractionRepository(source)
+    service = LegalTextExtractionService(repository=repository)
+
+    with pytest.raises(EmptyLegalTextExtractionError):
+        await service.extract_and_persist_document(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            legal_document_id=LEGAL_DOCUMENT_ID,
+            ingestion_job_id=INGESTION_JOB_ID,
+        )
+
+    repository.replace_document_pages.assert_not_awaited()
+    assert repository.update_job_status.await_args_list[-1].kwargs["status"] == "failed"
+    assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == (
+        "empty_text_extraction"
+    )
+    assert repository.update_document_status.await_args_list[-1].kwargs == {
+        "organization_id": ORG_ID,
+        "project_id": PROJECT_ID,
+        "extraction_status": "failed",
+    }
+
+
+async def test_extract_and_persist_document_marks_failed_for_unwired_docx_converter():
+    source = _source(
+        content=b"PK\x03\x04",
+        mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
     repository = FakeTextExtractionRepository(source)
     service = LegalTextExtractionService(repository=repository)
 
@@ -105,15 +200,9 @@ async def test_extract_and_persist_document_marks_failed_for_unwired_pdf_convert
         )
 
     repository.replace_document_pages.assert_not_awaited()
-    assert repository.update_job_status.await_args_list[-1].kwargs["status"] == "failed"
     assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == (
         "unsupported_converter"
     )
-    assert repository.update_document_status.await_args_list[-1].kwargs == {
-        "organization_id": ORG_ID,
-        "project_id": PROJECT_ID,
-        "extraction_status": "failed",
-    }
 
 
 class FakeStorageBucket:

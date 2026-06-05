@@ -66,7 +66,11 @@ def test_legal_variables_router_exposes_contract_paths():
     async def bypass_secret():
         return "test"
 
+    async def no_redis():
+        return None
+
     app.dependency_overrides[verify_internal_secret] = bypass_secret
+    app.dependency_overrides[legal_variables_endpoint.get_optional_arq_pool] = no_redis
     app.include_router(api_router, prefix="/api/v1")
     client = TestClient(app, headers={"X-Internal-Secret": "test"})
 
@@ -87,6 +91,32 @@ def test_legal_variables_router_exposes_contract_paths():
             ).status_code
             == 200
         )
+    with patch.object(
+        legal_variables_endpoint,
+        "queue_retry_for_legal_document_service",
+        new=AsyncMock(
+            return_value=SimpleNamespace(
+                legal_document=SimpleNamespace(
+                    id="doc-1",
+                    organization_id="org-1",
+                    project_id="project-1",
+                    extraction_status="queued",
+                ),
+                ingestion_job=SimpleNamespace(id="job-2", attempt_number=2),
+            )
+        ),
+    ):
+        retry_response = client.post(
+            "/api/v1/legal-documents/doc-1/retry",
+            params={"organization_id": "org-1", "project_id": "project-1"},
+        )
+        assert retry_response.status_code == 202
+        assert retry_response.json() == {
+            "legal_document_id": "doc-1",
+            "ingestion_job_id": "job-2",
+            "extraction_status": "queued",
+            "attempt_number": 2,
+        }
     with patch.object(
         legal_variables_endpoint,
         "get_project_role_matching_inventory",

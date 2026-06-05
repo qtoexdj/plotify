@@ -4097,6 +4097,15 @@
               "title": "Organization Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
           }
         ],
         "responses": {

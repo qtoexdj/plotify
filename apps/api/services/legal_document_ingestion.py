@@ -495,19 +495,22 @@ async def queue_retry_for_legal_document(
     *,
     legal_document_id: str,
     organization_id: str,
+    project_id: str | None = None,
     supabase: Any | None = None,
 ) -> LegalDocumentRegistrationResult:
     client = supabase or _get_supabase_client()
-    document_result = await _run_supabase(
-        lambda: (
+    def _load_document() -> Any:
+        query = (
             client.table("legal_documents")
             .select("*")
             .eq("id", legal_document_id)
             .eq("organization_id", organization_id)
-            .single()
-            .execute()
         )
-    )
+        if project_id is not None:
+            query = query.eq("project_id", project_id)
+        return query.single().execute()
+
+    document_result = await _run_supabase(_load_document)
     document_row = _first_row(document_result)
     if not document_row:
         raise LegalDocumentNotFoundError("Legal document not found.")
@@ -540,6 +543,8 @@ async def queue_retry_for_legal_document(
             client.table("legal_documents")
             .update({"extraction_status": QUEUED_STATUS})
             .eq("id", legal_document_id)
+            .eq("organization_id", organization_id)
+            .eq("project_id", legal_document.project_id)
             .execute()
         )
     )

@@ -171,7 +171,16 @@ CREATE TABLE IF NOT EXISTS public.legal_review_decisions (
 
 CREATE UNIQUE INDEX IF NOT EXISTS document_ingestion_jobs_one_active_idx ON public.document_ingestion_jobs (legal_document_id) WHERE status = ANY (ARRAY['queued'::text, 'processing'::text]);
 CREATE UNIQUE INDEX IF NOT EXISTS legal_document_pages_document_job_page_idx ON public.legal_document_pages (legal_document_id, ingestion_job_id, page_number);
-CREATE UNIQUE INDEX IF NOT EXISTS variable_resolutions_active_scope_idx ON public.variable_resolutions (project_id, COALESCE(lot_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(escritura_case_id, '00000000-0000-0000-0000-000000000000'::uuid), variable_key) WHERE state <> 'superseded'::text;
+CREATE UNIQUE INDEX IF NOT EXISTS variable_resolutions_active_scope_idx ON public.variable_resolutions (
+    project_id,
+    COALESCE(lot_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    COALESCE(escritura_case_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    variable_key,
+    (CASE
+        WHEN variable_key = ANY (ARRAY['sii.unidad_nombre'::text, 'sii.pre_rol_lote'::text]) THEN COALESCE(source_ref ->> 'unit_index', '')
+        ELSE ''
+    END)
+) WHERE state <> 'superseded'::text;
 CREATE UNIQUE INDEX IF NOT EXISTS escritura_cases_one_active_lot_idx ON public.escritura_cases (lot_id) WHERE case_status <> 'cancelled'::text;
 CREATE INDEX IF NOT EXISTS legal_documents_project_type_version_idx ON public.legal_documents (project_id, document_type, version_number DESC);
 CREATE INDEX IF NOT EXISTS legal_documents_org_status_idx ON public.legal_documents (organization_id, extraction_status);

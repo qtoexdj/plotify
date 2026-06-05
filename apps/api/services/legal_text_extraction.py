@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from io import BytesIO
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Protocol
@@ -18,6 +19,7 @@ from services.legal_variable_catalog import (
 )
 
 PIPELINE_VERSION = "sdd_007_text_extraction_v1"
+PDF_LOW_TEXT_CHAR_THRESHOLD = 100
 SUPPORTED_TEXT_MIME_TYPES = frozenset(
     {
         "text/plain",
@@ -29,11 +31,11 @@ SUPPORTED_TEXT_MIME_TYPES = frozenset(
 )
 FUTURE_CONVERTER_MIME_TYPES = frozenset(
     {
-        "application/pdf",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/msword",
     }
 )
+SUPPORTED_PDF_MIME_TYPES = frozenset({"application/pdf"})
 
 
 class LegalTextExtractionError(ValueError):
@@ -46,6 +48,18 @@ class UnsupportedLegalTextConverterError(LegalTextExtractionError):
     """Raised when a future OCR/converter-backed format is not wired yet."""
 
     error_code = "unsupported_converter"
+
+
+class EmptyLegalTextExtractionError(LegalTextExtractionError):
+    """Raised when a supported converter cannot recover usable text."""
+
+    error_code = "empty_text_extraction"
+
+
+class EncryptedLegalTextExtractionError(LegalTextExtractionError):
+    """Raised when a source PDF is encrypted and cannot be opened."""
+
+    error_code = "encrypted_pdf"
 
 
 @dataclass(frozen=True)
@@ -205,16 +219,73 @@ def split_text_into_logical_pages(
     )
 
 
+def _extract_pdf_text_pages(source: LegalDocumentExtractionSource) -> LegalTextExtractionResult:
+    try:
+        from pypdf import PdfReader
+    except ImportError as exc:
+        raise UnsupportedLegalTextConverterError(
+            "PDF converter dependency pypdf is not installed."
+        ) from exc
+
+    try:
+        reader = PdfReader(BytesIO(source.content))
+        if reader.is_encrypted:
+            decrypt_result = reader.decrypt("")
+            if not decrypt_result:
+                raise EncryptedLegalTextExtractionError(
+                    "Encrypted PDF cannot be extracted without a password."
+                )
+        pages = tuple(
+            ExtractedLegalTextPage(
+                page_number=index,
+                page_kind="physical",
+                text_content=(page.extract_text() or "").strip(),
+            )
+            for index, page in enumerate(reader.pages, start=1)
+        )
+    except LegalTextExtractionError:
+        raise
+    except Exception as exc:
+        raise LegalTextExtractionError(f"Unable to extract text from PDF: {exc}") from exc
+
+    non_empty_pages = tuple(page for page in pages if page.text_content)
+    pages_needing_ocr = tuple(
+        page.page_number
+        for page in pages
+        if page.char_count < PDF_LOW_TEXT_CHAR_THRESHOLD
+    )
+    if not non_empty_pages:
+        raise EmptyLegalTextExtractionError(
+            "PDF has no extractable text; OCR/manual review is required."
+        )
+
+    return LegalTextExtractionResult(
+        pages=non_empty_pages,
+        converter="pdf_text",
+        stats={
+            "page_count": len(pages),
+            "text_page_count": len(non_empty_pages),
+            "empty_page_count": len(pages) - len(non_empty_pages),
+            "low_text_page_count": len(pages_needing_ocr),
+            "pages_needing_ocr": list(pages_needing_ocr),
+            "ocr_required": bool(pages_needing_ocr),
+            "char_count": sum(page.char_count for page in non_empty_pages),
+            "raw_sha256_hash": checksum_bytes(source.content),
+            "mime_type": source.mime_type,
+            "storage_bucket": source.storage_bucket,
+            "storage_path": source.storage_path,
+        },
+    )
+
+
 async def extract_text_pages(
     source: LegalDocumentExtractionSource,
 ) -> LegalTextExtractionResult:
-    """Extract text pages from light-weight textual inputs.
-
-    PDF, DOCX and OCR-backed formats are represented explicitly for future
-    converters instead of silently pretending text extraction succeeded.
-    """
+    """Extract text pages from supported legal document inputs."""
 
     mime_type = source.mime_type.split(";")[0].strip().lower()
+    if mime_type in SUPPORTED_PDF_MIME_TYPES:
+        return _extract_pdf_text_pages(source)
     if mime_type in FUTURE_CONVERTER_MIME_TYPES:
         raise UnsupportedLegalTextConverterError(
             f"Converter for {mime_type} is not implemented yet"
