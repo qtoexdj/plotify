@@ -9,11 +9,12 @@ Esta regla aplica a Codex CLI, Codex en VSCode, Antigravity y cualquier agente q
 ## Artefactos Activos
 
 - Constitución: `.specify/memory/constitution.md`
-- Feature activa: `specs/001-stabilize-plotify-mvp/`
-- Spec: `specs/001-stabilize-plotify-mvp/spec.md`
-- Plan: `specs/001-stabilize-plotify-mvp/plan.md`
-- Tareas: `specs/001-stabilize-plotify-mvp/tasks.md`
-- Contratos de diseño: `specs/001-stabilize-plotify-mvp/contracts/`
+- Feature activa: `specs/007-escrituras-variable-resolution/`
+- Spec: `specs/007-escrituras-variable-resolution/spec.md`
+- Plan: `specs/007-escrituras-variable-resolution/plan.md`
+- Protocolo agentes/subagentes: `specs/007-escrituras-variable-resolution/agent-execution.md`
+- Tareas: `specs/007-escrituras-variable-resolution/tasks.md`
+- Contratos de diseño: `specs/007-escrituras-variable-resolution/contracts/`
 
 ## Orden de Trabajo
 
@@ -30,11 +31,12 @@ No saltes directo a implementación si `analyze` reporta issues `CRITICAL`.
 ## Protocolo Antes de Implementar
 
 1. Lee la primera tarea pendiente en `tasks.md`.
-2. Confirma dependencias previas y fase.
-3. Ejecuta `git status --short`.
-4. Ejecuta `codegraph sync .`.
-5. Usa CodeGraph para impacto y estructura real cuando la tarea toque código.
-6. Usa Context7/ctx7 solo si la tarea toca documentación actual de librerías, frameworks, SDKs, APIs, CLIs o cloud.
+2. Lee `specs/007-escrituras-variable-resolution/agent-execution.md`.
+3. Confirma dependencias previas y fase.
+4. Ejecuta `git status --short`.
+5. Ejecuta `codegraph sync .`.
+6. Usa CodeGraph para impacto y estructura real cuando la tarea toque código.
+7. Usa Context7/ctx7 solo si la tarea toca documentación actual de librerías, frameworks, SDKs, APIs, CLIs o cloud.
 
 ## Regla de Una Tarea
 
@@ -52,13 +54,21 @@ No saltes directo a implementación si `analyze` reporta issues `CRITICAL`.
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/001-stabilize-plotify-mvp/tasks.md.
+Implementa solo TXXX de specs/007-escrituras-variable-resolution/tasks.md.
 No avances a otra tarea.
+Lee specs/007-escrituras-variable-resolution/agent-execution.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.
 Marca la tarea como completada solo si pasa.
 ```
+
+## Protocolo Multi-Agente
+
+- Usa `agent-execution.md` como regla operativa para roles, subagentes, limites de lineas, paralelizacion y handoff.
+- Solo tareas marcadas `[P]` pueden paralelizarse y nunca sobre el mismo archivo, migracion, endpoint, tipo generado o tabla.
+- Si una tarea supera 5 archivos, 250 LOC modificadas o mezcla DB/API/Web sin ser tarea de integracion, detente y divide o deja justificacion para revision.
+- Todo cierre de tarea debe reportar tarea, rol activo, archivos, Verify, estado `[x]`, riesgos y siguiente tarea.
 
 ## Contratos y Generación
 

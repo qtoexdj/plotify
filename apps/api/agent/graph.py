@@ -7,7 +7,7 @@ from langchain_anthropic import ChatAnthropic
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from core.checkpointer import pool
+from core.checkpointer import get_checkpointer_pool
 from core.config import get_settings
 from core.database import get_supabase_client
 from core.logger import get_logger
@@ -70,8 +70,9 @@ def get_llm_with_tools():
 
 async def _get_checkpointer():
     """Retorna el checkpointer disponible. Prioriza AsyncPostgresSaver."""
-    if pool:
-        return AsyncPostgresSaver(pool)
+    postgres_pool = get_checkpointer_pool()
+    if postgres_pool:
+        return AsyncPostgresSaver(postgres_pool)
     logger.warning(
         "checkpointer_fallback_to_memory",
         impact="Las conversaciones NO persistirán entre reinicios del servicio. "

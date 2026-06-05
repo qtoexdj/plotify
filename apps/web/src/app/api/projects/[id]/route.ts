@@ -1,5 +1,10 @@
 import { createRouteHandlerClient } from '@/lib/supabase/server'
-import { getProjectById, deleteProject } from '@/lib/services/projects.service'
+import {
+  getProjectById,
+  deleteProject,
+  updateProject,
+  registerProjectLegalDocuments,
+} from '@/lib/services/projects.service'
 import { getProjectVendors } from '@/lib/services/vendors.service'
 import { NextRequest } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -59,5 +64,36 @@ export async function DELETE(
   } catch (error) {
     console.error('Error in DELETE /api/projects/[id]:', error)
     return Response.json({ error: 'Error al eliminar proyecto' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const supabase = createRouteHandlerClient(request)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { legal_documents, ...updates } = body
+    const project = await updateProject(id, user.id, updates)
+
+    await registerProjectLegalDocuments({
+      project,
+      documents: legal_documents,
+      uploadSource: 'onboarding',
+      uploadedBy: user.id,
+    })
+
+    revalidatePath(`/projects/${id}`)
+    return Response.json({ project })
+  } catch (error) {
+    console.error('Error in PATCH /api/projects/[id]:', error)
+    return Response.json({ error: 'Error al actualizar proyecto' }, { status: 500 })
   }
 }

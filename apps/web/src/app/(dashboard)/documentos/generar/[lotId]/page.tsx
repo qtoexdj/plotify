@@ -34,6 +34,7 @@ export default async function GenerarDocumentoPage({
     .select(
       `
       id,
+      project_id,
       numero_lote,
       m2,
       area_official_m2,
@@ -50,6 +51,7 @@ export default async function GenerarDocumentoPage({
         cliente_ocupacion
       ),
       projects (
+        id,
         name,
         commune,
         region,

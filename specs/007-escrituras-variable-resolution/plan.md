@@ -47,6 +47,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 specs/007-escrituras-variable-resolution/
 ├── spec.md
 ├── plan.md
+├── agent-execution.md
 ├── research.md
 ├── data-model.md
 ├── quickstart.md
@@ -113,6 +114,10 @@ packages/database/supabase/migrations/
 **Structure Decision**: Keep production extraction/readiness under existing `apps/api`, `apps/web` and canonical database packages. Reuse the lab only as a reference for converters/extractors; do not depend on lab paths at runtime.
 
 ## Phase Plan
+
+### Agent Execution Protocol
+
+SDD 007 uses GitHub Spec Kit as the artifact workflow (`specify -> plan -> tasks -> implement`) and adds a Plotify-specific execution protocol for agents/subagents in [agent-execution.md](./agent-execution.md). That protocol defines required context, roles, task-size limits, parallelization constraints, handoff format, review gates and stop conditions before implementation starts.
 
 ### Phase 0 - Research and Source Alignment
 

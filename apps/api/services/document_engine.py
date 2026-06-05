@@ -113,6 +113,18 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
         )
         legal_data = legal_result.data or {}
 
+    lot_legal_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("lot_legal_data")
+            .select("*")
+            .eq("lot_id", lot_id)
+            .eq("organization_id", organization_id)
+            .maybe_single()
+            .execute()
+        )
+    )
+    lot_legal_data = lot_legal_result.data or {}
+
     payment_result = await asyncio.to_thread(
         lambda: (
             supabase.table("organization_payment_info")
@@ -186,6 +198,48 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
         "org_email": payment_data.get("email_transferencia", ""),
     }
 
+    has_usable_role_match = lot_legal_data.get("matching_status") in {
+        "matched",
+        "manual_override",
+    } and lot_legal_data.get("role_status") in {"definitive", "rol_en_tramite"}
+    role_value = ""
+    if has_usable_role_match:
+        role_value = (
+            lot_legal_data.get("sii_definitive_role")
+            or lot_legal_data.get("sii_pre_role")
+            or lot_legal_data.get("sii_role_in_process_text")
+            or ""
+        )
+    flat_vars.update(
+        {
+            "sii_unidad_nombre": lot_legal_data.get("sii_unit_name", "")
+            if has_usable_role_match
+            else "",
+            "sii_rol_matriz": lot_legal_data.get("sii_role_matrix", "")
+            if has_usable_role_match
+            else "",
+            "sii_pre_rol_lote": lot_legal_data.get("sii_pre_role", "")
+            if has_usable_role_match
+            else "",
+            "sii_rol_definitivo": lot_legal_data.get("sii_definitive_role", "")
+            if has_usable_role_match
+            else "",
+            "sii_rol_avaluo_en_tramite_texto": lot_legal_data.get(
+                "sii_role_in_process_text",
+                "",
+            )
+            if has_usable_role_match
+            else "",
+            "sii_estado_rol": lot_legal_data.get("role_status", ""),
+            "sii_estado_matching": lot_legal_data.get("matching_status", ""),
+            "sii_score_matching": lot_legal_data.get("matching_score", ""),
+            "lote_rol_tramite": role_value
+            if lot_legal_data.get("role_status") == "rol_en_tramite"
+            else "",
+            "lote_rol_avaluo": role_value,
+        }
+    )
+
     boundaries = lot.get("boundaries_official") or lot.get("boundary_groups") or []
     if boundaries:
         flat_vars["deslindes"] = boundaries
@@ -224,6 +278,27 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
 
     for key, value in flat_vars.items():
         nested_groups[_canonical_group_for_flat_key(key)][key] = value
+
+    nested_groups["sii"] = {
+        **nested_groups.get("sii", {}),
+        "unidad_nombre": flat_vars["sii_unidad_nombre"],
+        "rol_matriz": flat_vars["sii_rol_matriz"],
+        "pre_rol_lote": flat_vars["sii_pre_rol_lote"],
+        "rol_definitivo": flat_vars["sii_rol_definitivo"],
+        "rol_avaluo_en_tramite_texto": lot_legal_data.get(
+            "sii_role_in_process_text",
+            "",
+        )
+        if has_usable_role_match
+        else "",
+        "estado_rol": lot_legal_data.get("role_status", ""),
+        "estado_matching": lot_legal_data.get("matching_status", ""),
+    }
+    nested_groups["lote"] = {
+        **nested_groups.get("lote", {}),
+        "rol_tramite": flat_vars["lote_rol_tramite"],
+        "rol_avaluo": flat_vars["lote_rol_avaluo"],
+    }
 
     return {**flat_vars, **nested_groups}
 

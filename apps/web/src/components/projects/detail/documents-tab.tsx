@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +29,12 @@ import { DocumentViewer } from './document-viewer'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { LotWithRecord } from './types'
+import {
+  LEGAL_EXTRACTION_STATUS_LABELS,
+  type LegalDocument,
+  type LegalExtractionStatus,
+} from '@/lib/legal/variable-resolution-types'
+import { EscrituraReadinessPanel } from '@/components/projects/legal/escritura-readiness-panel'
 
 interface DocumentsTabProps {
   project: ProjectWithMetrics
@@ -48,9 +54,43 @@ const DOCUMENT_TYPES = [
 export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: DocumentsTabProps) {
   const [project, setProject] = useState(initialProject)
   const [isUploading, setIsUploading] = useState<string | null>(null)
+  const [legalDocuments, setLegalDocuments] = useState<LegalDocument[]>([])
   const supabase = createClient()
 
   const reservedLots = lots.filter((l) => l.estado === 'reservado')
+  const soldLots = lots.filter((l) => l.estado === 'vendido')
+  const legalDocumentByField = useMemo(() => {
+    const latest = new Map<string, LegalDocument>()
+    for (const document of legalDocuments) {
+      if (!document.source_field || document.extraction_status === 'superseded') continue
+      const current = latest.get(document.source_field)
+      if (!current || document.version_number > current.version_number) {
+        latest.set(document.source_field, document)
+      }
+    }
+    return latest
+  }, [legalDocuments])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadLegalDocuments() {
+      try {
+        const response = await fetch(`/api/projects/${project.id}/legal-documents`)
+        if (!response.ok) return
+        const result = (await response.json()) as { documents?: LegalDocument[] }
+        if (isMounted) setLegalDocuments(result.documents ?? [])
+      } catch (error) {
+        console.error('Error loading legal document statuses:', error)
+      }
+    }
+
+    loadLegalDocuments()
+
+    return () => {
+      isMounted = false
+    }
+  }, [project.id])
 
   const getFullUrl = (path: string | null | undefined) => {
     if (!path || path === '[]') return ''
@@ -133,6 +173,11 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
       }
 
       setProject(result.project)
+      const legalResponse = await fetch(`/api/projects/${project.id}/legal-documents`)
+      if (legalResponse.ok) {
+        const legalResult = (await legalResponse.json()) as { documents?: LegalDocument[] }
+        setLegalDocuments(legalResult.documents ?? [])
+      }
       toast.success('Archivo validado y subido con éxito')
     } catch (error: unknown) {
       console.error('Error uploading:', error)
@@ -239,45 +284,45 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
               Documentos de Escritura
             </CardTitle>
             <CardDescription>
-              Genera la escritura definitiva de compraventa (PDF/DOCX) para los lotes reservados
-              tras completar la revisión de sus variables legales.
+              Genera la escritura definitiva de compraventa (PDF/DOCX) para los lotes vendidos tras
+              completar la revisión de sus variables legales.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {reservedLots.length === 0 ? (
+            {soldLots.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg text-sm">
-                No hay lotes en estado <strong>reservado</strong> disponibles para escritura en este
+                No hay lotes en estado <strong>vendido</strong> disponibles para escritura en este
                 proyecto.
               </div>
             ) : (
               <div className="divide-y rounded-lg border overflow-hidden">
-                {reservedLots.map((lot) => (
-                  <div
-                    key={lot.id}
-                    className="flex items-center justify-between px-4 py-3 bg-card hover:bg-accent/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className="text-green-700 bg-green-50 border-green-200 text-xs"
+                {soldLots.map((lot) => (
+                  <div key={lot.id} className="space-y-3 px-4 py-3 bg-card">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className="text-green-700 bg-green-50 border-green-200 text-xs"
+                        >
+                          Escritura Pendiente
+                        </Badge>
+                        <span className="text-sm font-medium">{lot.numero_lote}</span>
+                      </div>
+                      <Link
+                        href={`/documentos/generar/${lot.id}?type=escritura`}
+                        id={`generate-escritura-${lot.id}`}
                       >
-                        Escritura Pendiente
-                      </Badge>
-                      <span className="text-sm font-medium">{lot.numero_lote}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 border-green-200 hover:bg-green-50"
+                        >
+                          <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
+                          Revisar y Generar
+                        </Button>
+                      </Link>
                     </div>
-                    <Link
-                      href={`/documentos/generar/${lot.id}?type=escritura`}
-                      id={`generate-escritura-${lot.id}`}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-green-600 border-green-200 hover:bg-green-50"
-                      >
-                        <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
-                        Revisar y Generar
-                      </Button>
-                    </Link>
+                    <EscrituraReadinessPanel projectId={project.id} lotId={lot.id} compact />
                   </div>
                 ))}
               </div>
@@ -407,6 +452,10 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
               const path = (project as ProjectWithMetrics)[doc.id as keyof ProjectWithMetrics] as
                 | string
                 | null
+              const legalDocument = legalDocumentByField.get(doc.id)
+              const extractionStatus = legalDocument?.extraction_status as
+                | LegalExtractionStatus
+                | undefined
               return (
                 <div
                   key={doc.id}
@@ -419,12 +468,22 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                     <div>
                       <p className="font-medium">{doc.label}</p>
                       {path ? (
-                        <Badge
-                          variant="outline"
-                          className="text-green-600 bg-green-50 border-green-200"
-                        >
-                          Cargado
-                        </Badge>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge
+                            variant="outline"
+                            className="text-green-600 bg-green-50 border-green-200"
+                          >
+                            Cargado
+                          </Badge>
+                          {extractionStatus && (
+                            <Badge
+                              variant="outline"
+                              className="text-blue-600 bg-blue-50 border-blue-200"
+                            >
+                              {LEGAL_EXTRACTION_STATUS_LABELS[extractionStatus]}
+                            </Badge>
+                          )}
+                        </div>
                       ) : (
                         <Badge variant="outline" className="text-slate-400 bg-slate-50">
                           Pendiente

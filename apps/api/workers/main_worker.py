@@ -13,6 +13,7 @@ from workers.tasks.notification_worker import (
     send_generated_document,
     send_notification,
 )
+from workers.tasks.legal_document_ingestion import process_legal_document_ingestion
 
 from core.checkpointer import setup_checkpointer, close_checkpointer
 
@@ -124,6 +125,7 @@ class WorkerSettings:
         send_notification,  # Fase 7 — Notificaciones proactivas
         send_generated_document,
         retry_generated_document_delivery,
+        process_legal_document_ingestion,
     ]
 
     # Eventos de ciclo de vida

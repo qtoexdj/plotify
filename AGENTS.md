@@ -20,15 +20,17 @@ This repository uses Spec Kit SDD as the implementation authority. The active fe
 
 - `specs/007-escrituras-variable-resolution/spec.md`
 - `specs/007-escrituras-variable-resolution/plan.md`
+- `specs/007-escrituras-variable-resolution/agent-execution.md`
 - `specs/007-escrituras-variable-resolution/tasks.md`
 - `.specify/memory/constitution.md`
 
 Before implementation:
 
-1. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
-2. Do not start implementation while critical analyze findings remain unresolved.
-3. Run `git status --short` and `codegraph sync .`.
-4. Implement exactly one unchecked task from `tasks.md` unless the user explicitly asks for a different scope.
+1. Read `specs/007-escrituras-variable-resolution/agent-execution.md`.
+2. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
+3. Do not start implementation while critical analyze findings remain unresolved.
+4. Run `git status --short` and `codegraph sync .`.
+5. Implement exactly one unchecked task from `tasks.md` unless the user explicitly asks for a different scope.
 
 During implementation:
 
@@ -46,6 +48,7 @@ $speckit-implement
 
 Implementa solo TXXX de specs/007-escrituras-variable-resolution/tasks.md.
 No avances a otra tarea.
+Lee specs/007-escrituras-variable-resolution/agent-execution.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.

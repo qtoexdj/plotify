@@ -15,11 +15,12 @@ Este componente es el motor FastAPI/LangGraph de Plotify para mensajería, aprob
 # Protocolo SDD de Inicio del Agente
 Antes de escribir o modificar código en `apps/api`, confirma:
 
-1. La tarea exacta de `specs/001-stabilize-plotify-mvp/tasks.md`.
-2. Que no quedan hallazgos `CRITICAL` pendientes de `$speckit-analyze`.
-3. `git status --short`.
-4. `codegraph sync .`.
-5. Si la tarea toca FastAPI, LangGraph, Supabase, Redis/arq o Telegram y necesitas documentación actual, usa Context7/ctx7. No uses Context7 para lógica local o decisiones de producto.
+1. La tarea exacta de `specs/007-escrituras-variable-resolution/tasks.md`.
+2. El protocolo de `specs/007-escrituras-variable-resolution/agent-execution.md`.
+3. Que no quedan hallazgos `CRITICAL` pendientes de `$speckit-analyze`.
+4. `git status --short`.
+5. `codegraph sync .`.
+6. Si la tarea toca FastAPI, LangGraph, Supabase, Redis/arq o Telegram y necesitas documentación actual, usa Context7/ctx7. No uses Context7 para lógica local o decisiones de producto.
 
 # Reglas de Interacción con Datos
 1. **Fuente DB canónica:** Las migraciones viven en `packages/database/supabase/migrations` y los tipos generados en `packages/database/types/database.generated.ts`.

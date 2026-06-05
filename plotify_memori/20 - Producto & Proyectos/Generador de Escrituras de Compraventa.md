@@ -4,7 +4,7 @@ aliases:
   - Gestor de Escrituras Productivo
   - Minuta DOCX de Compraventa
 date: 2026-06-03
-status: planificado
+status: en validacion SDD 007
 tags:
   - producto
   - documentos
@@ -94,6 +94,40 @@ intake -> collecting_sources -> resolving_variables -> needs_review
 -> ready_for_draft -> draft_generated -> legal_review
 -> minuta_approved -> sent_to_seller/notary
 ```
+
+## Cobertura end-to-end SDD 007
+
+El quickstart de `specs/007-escrituras-variable-resolution/quickstart.md`
+define la cobertura funcional que debe validar el generador antes de iniciar el
+SDD 008. La ruta de producto queda cubierta por estos escenarios:
+
+1. Onboarding sube documentos legales y dispara extraccion sin bloquear la
+   creacion del proyecto.
+2. Centro de Control Legal muestra variables propuestas, faltantes o en
+   conflicto con evidencia documental.
+3. Una variable puede corregirse, aprobarse y auditarse con valor anterior,
+   nuevo valor, usuario y razon.
+4. Certificados SII asignan roles o roles en tramite a lotes sin asignaciones
+   silenciosas.
+5. Un lote vendido expone readiness de escritura con gates de titulo, SII,
+   SAG/plano, geometria, partes, precio y revision legal.
+6. El caso de escritura persiste `variable_snapshot`, `evidence_snapshot` y
+   `readiness_gates` para que SDD 008 no dependa de OCR bruto ni propuestas
+   vivas.
+7. La operacion productiva contempla falla de extraccion, reintento,
+   superseding documental, idempotencia y preservacion de evidencia historica.
+
+La validacion esperada combina pruebas automaticas y recorrido manual guiado:
+`pnpm verify:migrations`, `pnpm contracts:generate`, `pnpm test:api`,
+`pnpm test:web`, `pnpm typecheck:web`, `pnpm format:check` y
+`pnpm build:web`.
+
+## Pendientes de produccion fase 8
+
+La fase 8 aun debe cerrar regresiones multi-tenant, feature flags, reintentos
+idempotentes, observabilidad, acceso seguro a evidencia y guia operacional de
+fallas/superseding. Esos pendientes pertenecen a SDD 007 porque protegen la
+confiabilidad de los snapshots que consumira el creador de matriz.
 
 ## Conexiones
 

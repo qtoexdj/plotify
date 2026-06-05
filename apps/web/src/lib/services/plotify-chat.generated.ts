@@ -70,6 +70,20 @@ export interface components {
       "error"?: string | null
       "success": boolean
     }
+    "DocumentEvidenceResponse": {
+      "bbox"?: Record<string, unknown> | null
+      "chunk_index"?: number | null
+      "confidence"?: number | null
+      "created_at"?: string | null
+      "id": string
+      "legal_document_id": string
+      "legal_document_page_id"?: string | null
+      "organization_id": string
+      "project_id": string
+      "snippet"?: string | null
+      "snippet_hash": string
+      "variable_resolution_id": string
+    }
     "DocumentVariablesGroup": {
       "comprador"?: Record<string, unknown>
       "lote"?: Record<string, unknown>
@@ -80,6 +94,28 @@ export interface components {
       "servidumbre"?: Record<string, unknown>
       "transaccion"?: Record<string, unknown>
       "vendedor"?: Record<string, unknown>
+    }
+    "EscrituraCaseCreateRequest": {
+      "created_by"?: string | null
+      "organization_id": string
+      "project_id": string
+      "warning_acknowledged"?: boolean
+    }
+    "EscrituraCaseSnapshotResponse": {
+      "case_status": string
+      "escritura_case_id": string
+      "evidence_snapshot_count": number
+      "readiness_status": string
+      "variable_snapshot_count": number
+    }
+    "EscrituraReadinessResponse": {
+      "evidence_snapshot"?: Record<string, unknown>
+      "gates"?: Array<components["schemas"]["ReadinessGateResponse"]>
+      "lot_id": string
+      "organization_id": string
+      "project_id": string
+      "readiness_status": string
+      "variable_snapshot"?: Record<string, unknown>
     }
     "GenerateRequest": {
       "document_type"?: string
@@ -107,6 +143,78 @@ export interface components {
     }
     "InvalidateCacheRequest": {
       "organization_id": string
+    }
+    "LegalDocumentListResponse": {
+      "documents"?: Array<components["schemas"]["LegalDocumentResponse"]>
+      "project_id"?: string | null
+    }
+    "LegalDocumentRegisterRequest": {
+      "document_type": string
+      "file_size_bytes": number
+      "lot_id"?: string | null
+      "mime_type": string
+      "organization_id": string
+      "original_filename": string
+      "project_id": string
+      "sha256_hash": string
+      "source_field"?: string | null
+      "storage_bucket"?: string
+      "storage_path": string
+      "upload_source"?: string
+      "uploaded_by"?: string | null
+    }
+    "LegalDocumentRegistrationQueuedResponse": {
+      "extraction_status": string
+      "ingestion_job_id": string
+      "legal_document_id": string
+      "version_number": number
+    }
+    "LegalDocumentResponse": {
+      "created_at"?: string | null
+      "document_type": string
+      "extraction_status": string
+      "file_size_bytes": number
+      "id": string
+      "lot_id"?: string | null
+      "mime_type": string
+      "organization_id": string
+      "original_filename": string
+      "project_id": string
+      "sha256_hash"?: string | null
+      "source_field"?: string | null
+      "storage_bucket": string
+      "storage_path": string
+      "superseded_by"?: string | null
+      "updated_at"?: string | null
+      "upload_source": string
+      "uploaded_by"?: string | null
+      "version_number"?: number
+    }
+    "LegalDocumentRetryResponse": {
+      "attempt_number": number
+      "extraction_status": string
+      "ingestion_job_id": string
+      "legal_document_id": string
+    }
+    "LotLegalDataResponse": {
+      "created_at"?: string | null
+      "id": string
+      "lot_id": string
+      "lot_number"?: string | null
+      "matching_score"?: number | null
+      "matching_status": string
+      "organization_id": string
+      "project_id": string
+      "reviewed_at"?: string | null
+      "reviewed_by"?: string | null
+      "role_status": string
+      "sii_definitive_role"?: string | null
+      "sii_pre_role"?: string | null
+      "sii_role_in_process_text"?: string | null
+      "sii_role_matrix"?: string | null
+      "sii_unit_name"?: string | null
+      "source_legal_document_id"?: string | null
+      "updated_at"?: string | null
     }
     "MarkReadResponse": {
       "read_at": string
@@ -187,6 +295,12 @@ export interface components {
     "PreviewResponse": {
       "html": string
     }
+    "ReadinessGateResponse": {
+      "blocking_variables"?: Array<string>
+      "gate": string
+      "status": string
+      "warnings"?: Array<string>
+    }
     "RegisterBotRequest": {
       "bot_token": string
       "organization_id": string
@@ -211,6 +325,23 @@ export interface components {
       "approval_id": string
       "message"?: string
       "status"?: string
+    }
+    "RoleManualOverrideRequest": {
+      "matching_status"?: string
+      "reason": string
+      "reviewed_by"?: string | null
+      "role_status": string
+      "sii_definitive_role"?: string | null
+      "sii_pre_role"?: string | null
+      "sii_role_in_process_text"?: string | null
+      "sii_role_matrix"?: string | null
+      "sii_unit_name"?: string | null
+      "source_legal_document_id"?: string | null
+    }
+    "RoleMatchingInventoryResponse": {
+      "lots"?: Array<components["schemas"]["LotLegalDataResponse"]>
+      "project_id": string
+      "summary"?: Record<string, number>
     }
     "SalePayload": {
       "cliente_nombre": string
@@ -259,11 +390,58 @@ export interface components {
       "msg": string
       "type": string
     }
+    "VariableInventoryResponse": {
+      "groups"?: Record<string, Array<components["schemas"]["VariableResolutionResponse"]>>
+      "lot_id"?: string | null
+      "project_id": string
+      "summary"?: Record<string, number>
+    }
+    "VariableResolutionResponse": {
+      "approval_required"?: boolean
+      "confidence"?: number | null
+      "correction_reason"?: string | null
+      "created_at"?: string | null
+      "escritura_case_id"?: string | null
+      "evidence"?: Array<components["schemas"]["DocumentEvidenceResponse"]>
+      "extractor_name"?: string | null
+      "id": string
+      "lot_id"?: string | null
+      "organization_id": string
+      "project_id": string
+      "reviewed_at"?: string | null
+      "reviewed_by"?: string | null
+      "source_ref"?: Record<string, unknown>
+      "source_type": string
+      "state": string
+      "superseded_by"?: string | null
+      "updated_at"?: string | null
+      "value_json"?: Record<string, unknown> | Array<unknown> | null
+      "value_text"?: string | null
+      "variable_group": string
+      "variable_key": string
+    }
+    "VariableReviewResponse": {
+      "audit_event_id": string
+      "reviewed_at"?: string | null
+      "reviewed_by"?: string | null
+      "state": string
+      "variable_resolution_id": string
+    }
     "VariableStatusResponse": {
       "available"?: Array<string>
       "missing"?: Array<string>
       "sources"?: Record<string, string>
       "variables": components["schemas"]["DocumentVariablesGroup"]
+    }
+    "VariableUpdateRequest": {
+      "action": string
+      "correction_reason"?: string | null
+      "evidence_ids"?: Array<string>
+      "evidence_policy"?: string
+      "reviewed_by"?: string | null
+      "state"?: string | null
+      "value_json"?: Record<string, unknown> | Array<unknown> | null
+      "value_text"?: string | null
     }
   }
 }
@@ -383,6 +561,18 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["VariableStatusResponse"]
   }
+  "create_escritura_case_api_v1_escritura_cases_lots__lot_id__post": {
+    method: "POST"
+    path: "/api/v1/escritura-cases/lots/{lot_id}"
+    requestBody: components["schemas"]["EscrituraCaseCreateRequest"]
+    response: components["schemas"]["EscrituraCaseSnapshotResponse"]
+  }
+  "get_escritura_readiness_api_v1_escritura_cases_lots__lot_id__readiness_get": {
+    method: "GET"
+    path: "/api/v1/escritura-cases/lots/{lot_id}/readiness"
+    requestBody: never
+    response: components["schemas"]["EscrituraReadinessResponse"]
+  }
   "health_check_api_v1_health_get": {
     method: "GET"
     path: "/api/v1/health"
@@ -412,6 +602,48 @@ export interface operations {
     path: "/api/v1/integrations/{connection_id}/test"
     requestBody: never
     response: void
+  }
+  "list_project_legal_documents_api_v1_legal_documents_project__project_id__get": {
+    method: "GET"
+    path: "/api/v1/legal-documents/project/{project_id}"
+    requestBody: never
+    response: components["schemas"]["LegalDocumentListResponse"]
+  }
+  "register_legal_document_api_v1_legal_documents_register_post": {
+    method: "POST"
+    path: "/api/v1/legal-documents/register"
+    requestBody: components["schemas"]["LegalDocumentRegisterRequest"]
+    response: components["schemas"]["LegalDocumentRegistrationQueuedResponse"]
+  }
+  "retry_legal_document_ingestion_api_v1_legal_documents__legal_document_id__retry_post": {
+    method: "POST"
+    path: "/api/v1/legal-documents/{legal_document_id}/retry"
+    requestBody: never
+    response: components["schemas"]["LegalDocumentRetryResponse"]
+  }
+  "update_lot_legal_role_api_v1_legal_roles_lots__lot_id__patch": {
+    method: "PATCH"
+    path: "/api/v1/legal-roles/lots/{lot_id}"
+    requestBody: components["schemas"]["RoleManualOverrideRequest"]
+    response: components["schemas"]["LotLegalDataResponse"]
+  }
+  "get_project_legal_roles_api_v1_legal_roles_project__project_id__matches_get": {
+    method: "GET"
+    path: "/api/v1/legal-roles/project/{project_id}/matches"
+    requestBody: never
+    response: components["schemas"]["RoleMatchingInventoryResponse"]
+  }
+  "get_project_legal_variables_api_v1_legal_variables_project__project_id__get": {
+    method: "GET"
+    path: "/api/v1/legal-variables/project/{project_id}"
+    requestBody: never
+    response: components["schemas"]["VariableInventoryResponse"]
+  }
+  "update_legal_variable_api_v1_legal_variables__variable_resolution_id__patch": {
+    method: "PATCH"
+    path: "/api/v1/legal-variables/{variable_resolution_id}"
+    requestBody: components["schemas"]["VariableUpdateRequest"]
+    response: components["schemas"]["VariableReviewResponse"]
   }
   "listNotifications": {
     method: "GET"

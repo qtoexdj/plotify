@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_DB_URL: str = ""  # Direct connection to PostgreSQL for AsyncPostgresSaver
+    CHECKPOINTER_CONNECT_TIMEOUT_SECONDS: float = 5.0
+    CHECKPOINTER_REQUIRED: bool = False
+
+    # SDD 007 legal document extraction/readiness rollout controls
+    ENABLE_LEGAL_DOCUMENTS: bool = True
+    LEGAL_DOCUMENTS_ORG_ALLOWLIST: str = ""
+    LEGAL_DOCUMENTS_PROJECT_ALLOWLIST: str = ""
 
     # Meta / WhatsApp API
     META_VERIFY_TOKEN: str = ""  # Populated from .env

@@ -24,6 +24,19 @@ import type { GeometryAssignmentProps, Lot, FilterType, AssignAsType, ParsedFeat
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
 
+async function readJsonResponse(response: Response): Promise<{ error?: string }> {
+  const text = await response.text()
+  if (!text) return {}
+  try {
+    return JSON.parse(text) as { error?: string }
+  } catch {
+    if (!response.ok) {
+      return { error: text || `Error ${response.status}` }
+    }
+    throw new Error('Respuesta inválida del servidor')
+  }
+}
+
 /** Convert ParsedFeature[] → GeoJSON.FeatureCollection, filtering out hidden/assigned */
 function buildFeatureCollection(
   parsed: ParsedFeature[],
@@ -116,6 +129,13 @@ export function GeometryAssignmentPanel({
           fetch(`/api/onboarding/${projectId}/lots`),
           fetch(`/api/onboarding/${projectId}/geometries`),
         ])
+
+        if (!lotsRes.ok) {
+          throw new Error(`Error al cargar lotes (${lotsRes.status})`)
+        }
+        if (!geometriesRes.ok) {
+          throw new Error(`Error al cargar geometrías (${geometriesRes.status})`)
+        }
 
         const lotsData = await lotsRes.json()
         const geometriesData = await geometriesRes.json()
@@ -226,7 +246,7 @@ export function GeometryAssignmentPanel({
         }),
       })
 
-      const data = await response.json()
+      const data = await readJsonResponse(response)
       if (!response.ok) throw new Error(data.error || 'Error al asignar geometría')
 
       setSuccessMessage('Geometría asignada correctamente')
@@ -292,7 +312,7 @@ export function GeometryAssignmentPanel({
         }),
       })
 
-      const data = await response.json()
+      const data = await readJsonResponse(response)
       if (!response.ok) throw new Error(data.error || 'Error al guardar infraestructura')
 
       const typeLabel = geometryType === 'road' ? 'Camino' : 'Área común'

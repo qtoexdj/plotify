@@ -1,3 +1,5 @@
+import type { Database } from './supabase'
+
 // Enums
 export type GeometryType = 'lot' | 'road' | 'common_area'
 export type SourceType = 'kmz' | 'kml' | 'dxf' | 'dwg'
@@ -278,6 +280,45 @@ export interface OrganizationMember {
   created_at: string
   updated_at: string
 }
+
+// ─── SDD 007 Escrituras Variable Resolution Tables ──────────────────────────
+export type LegalDocument = Database['public']['Tables']['legal_documents']['Row']
+export type LegalDocumentInsert = Database['public']['Tables']['legal_documents']['Insert']
+export type LegalDocumentUpdate = Database['public']['Tables']['legal_documents']['Update']
+
+export type DocumentIngestionJob = Database['public']['Tables']['document_ingestion_jobs']['Row']
+export type DocumentIngestionJobInsert =
+  Database['public']['Tables']['document_ingestion_jobs']['Insert']
+export type DocumentIngestionJobUpdate =
+  Database['public']['Tables']['document_ingestion_jobs']['Update']
+
+export type LegalDocumentPage = Database['public']['Tables']['legal_document_pages']['Row']
+export type LegalDocumentPageInsert = Database['public']['Tables']['legal_document_pages']['Insert']
+export type LegalDocumentPageUpdate = Database['public']['Tables']['legal_document_pages']['Update']
+
+export type VariableResolution = Database['public']['Tables']['variable_resolutions']['Row']
+export type VariableResolutionInsert =
+  Database['public']['Tables']['variable_resolutions']['Insert']
+export type VariableResolutionUpdate =
+  Database['public']['Tables']['variable_resolutions']['Update']
+
+export type DocumentEvidence = Database['public']['Tables']['document_evidence']['Row']
+export type DocumentEvidenceInsert = Database['public']['Tables']['document_evidence']['Insert']
+export type DocumentEvidenceUpdate = Database['public']['Tables']['document_evidence']['Update']
+
+export type LotLegalData = Database['public']['Tables']['lot_legal_data']['Row']
+export type LotLegalDataInsert = Database['public']['Tables']['lot_legal_data']['Insert']
+export type LotLegalDataUpdate = Database['public']['Tables']['lot_legal_data']['Update']
+
+export type EscrituraCase = Database['public']['Tables']['escritura_cases']['Row']
+export type EscrituraCaseInsert = Database['public']['Tables']['escritura_cases']['Insert']
+export type EscrituraCaseUpdate = Database['public']['Tables']['escritura_cases']['Update']
+
+export type LegalReviewDecision = Database['public']['Tables']['legal_review_decisions']['Row']
+export type LegalReviewDecisionInsert =
+  Database['public']['Tables']['legal_review_decisions']['Insert']
+export type LegalReviewDecisionUpdate =
+  Database['public']['Tables']['legal_review_decisions']['Update']
 
 // Extended types with relations
 export interface ProjectWithMetrics extends Project {

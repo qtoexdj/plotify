@@ -2,7 +2,7 @@
 
 **Input**: Design documents from `/specs/007-escrituras-variable-resolution/`
 
-**Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
+**Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [agent-execution.md](./agent-execution.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
 
 **Tests**: Tests are required because this feature touches Supabase migrations, document extraction, API contracts, tenant isolation, legal document generation readiness and frontend workflows.
 
@@ -18,11 +18,12 @@
 
 **Purpose**: Create the production schema, generated type foundations and shared catalogs needed by all stories.
 
-- [ ] T001 Create Supabase migration for `legal_documents`, `document_ingestion_jobs`, `legal_document_pages`, `variable_resolutions`, `document_evidence`, `lot_legal_data`, `escritura_cases` and `legal_review_decisions` in `packages/database/supabase/migrations/20260603000100_escrituras_variable_resolution.sql`; Verify: `pnpm verify:migrations`
-- [ ] T002 Regenerate database types after the migration in `packages/database/types/database.generated.ts` and update web database type mirrors if used in `apps/web/src/types/database.types.ts`; Verify: `pnpm typecheck:web`
-- [ ] T003 [P] Add canonical variable catalog constants and states in `apps/api/services/legal_variable_catalog.py`; Verify: `pnpm test:api`
-- [ ] T004 [P] Add frontend variable/readiness TypeScript types in `apps/web/src/lib/legal/variable-resolution-types.ts`; Verify: `pnpm typecheck:web`
+- [x] T001 Create Supabase migration for `legal_documents`, `document_ingestion_jobs`, `legal_document_pages`, `variable_resolutions`, `document_evidence`, `lot_legal_data`, `escritura_cases` and `legal_review_decisions` in `packages/database/supabase/migrations/20260603000100_escrituras_variable_resolution.sql`; Verify: `pnpm verify:migrations`
+- [x] T002 Regenerate database types after the migration in `packages/database/types/database.generated.ts` and update web database type mirrors if used in `apps/web/src/types/database.types.ts`; Verify: `pnpm typecheck:web`
+- [x] T003 [P] Add canonical variable catalog constants and states in `apps/api/services/legal_variable_catalog.py`; Verify: `pnpm test:api`
+- [x] T004 [P] Add frontend variable/readiness TypeScript types in `apps/web/src/lib/legal/variable-resolution-types.ts`; Verify: `pnpm typecheck:web`
 - [x] T005 [P] Add implementation note linking SDD 007 to Obsidian memory in `plotify_memori/50 - Implementaciones/SDD 007 Escrituras Variable Resolution.md`; Verify: `pnpm format:check`
+- [x] T071 [P] Add SDD 007 agent/subagent execution protocol and update active agent rules in `specs/007-escrituras-variable-resolution/agent-execution.md`, `AGENTS.md`, `.agents/rules/sdd-implementation.md`, `.agents/rules/plotify-rules.md`, `.agents/rules/plotify-chat.md` and `plotify_memori/50 - Implementaciones/SDD 007 Escrituras Variable Resolution.md`; Verify: `pnpm format:check`
 
 ---
 
@@ -32,15 +33,15 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T006 Add Pydantic schemas for legal documents, variables, role matching and readiness in `apps/api/schemas/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T007 Add FastAPI router skeleton and register it in `apps/api/api/v1/endpoints/legal_variables.py` and `apps/api/api/v1/router.py`; Verify: `pnpm test:api`
-- [ ] T008 [P] Add legal document registration service skeleton in `apps/api/services/legal_document_ingestion.py`; Verify: `pnpm test:api`
-- [ ] T009 [P] Add legal text extraction service skeleton in `apps/api/services/legal_text_extraction.py`; Verify: `pnpm test:api`
-- [ ] T010 [P] Add legal variable resolution service skeleton in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T011 [P] Add SII role matching service skeleton in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
-- [ ] T012 [P] Add escritura readiness service skeleton in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
-- [ ] T013 Add arq worker task registration for legal document ingestion in `apps/api/workers/tasks/legal_document_ingestion.py` and `apps/api/workers/main_worker.py`; Verify: `pnpm test:api`
-- [ ] T014 Add shared audit event constants for legal document, variable and escritura case mutations in `apps/api/utils/audit.py`; Verify: `pnpm test:api`
+- [x] T006 Add Pydantic schemas for legal documents, variables, role matching and readiness in `apps/api/schemas/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T007 Add FastAPI router skeleton and register it in `apps/api/api/v1/endpoints/legal_variables.py` and `apps/api/api/v1/router.py`; Verify: `pnpm test:api`
+- [x] T008 [P] Add legal document registration service skeleton in `apps/api/services/legal_document_ingestion.py`; Verify: `pnpm test:api`
+- [x] T009 [P] Add legal text extraction service skeleton in `apps/api/services/legal_text_extraction.py`; Verify: `pnpm test:api`
+- [x] T010 [P] Add legal variable resolution service skeleton in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T011 [P] Add SII role matching service skeleton in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
+- [x] T012 [P] Add escritura readiness service skeleton in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
+- [x] T013 Add arq worker task registration for legal document ingestion in `apps/api/workers/tasks/legal_document_ingestion.py` and `apps/api/workers/main_worker.py`; Verify: `pnpm test:api`
+- [x] T014 Add shared audit event constants for legal document, variable and escritura case mutations in `apps/api/utils/audit.py`; Verify: `pnpm test:api`
 
 **Checkpoint**: Foundation ready. Story implementation can start.
 
@@ -54,17 +55,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Add API tests for registering uploaded legal documents and queueing jobs in `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api`
-- [ ] T016 [P] [US1] Add web tests for project-file upload legal document registration behavior in `apps/web/tests/escrituras-ingestion.test.ts`; Verify: `pnpm test:web`
+- [x] T015 [P] [US1] Add API tests for registering uploaded legal documents and queueing jobs in `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api`
+- [x] T016 [P] [US1] Add web tests for project-file upload legal document registration behavior in `apps/web/tests/escrituras-ingestion.test.ts`; Verify: `pnpm test:web`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement `POST /legal-documents/register` and `GET /legal-documents/project/{project_id}` in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T018 [US1] Implement legal document registration and superseding logic in `apps/api/services/legal_document_ingestion.py`; Verify: `pnpm test:api`
-- [ ] T019 [US1] Extend `apps/web/src/app/api/projects/route.ts` and `apps/web/src/lib/services/projects.service.ts` so onboarding document paths register as legal documents after project creation; Verify: `pnpm test:web`
-- [ ] T020 [US1] Extend `apps/web/src/app/api/uploads/project-files/route.ts` so project document replacements register a legal document version and queue extraction; Verify: `pnpm test:web`
-- [ ] T021 [US1] Update accepted document metadata in `apps/web/src/components/projects/onboarding/ProjectMediaStep.tsx` without adding variable review UI; Verify: `pnpm test:web`
-- [ ] T022 [US1] Add legal document status display to `apps/web/src/components/projects/detail/documents-tab.tsx`; Verify: `pnpm test:web`
+- [x] T017 [US1] Implement `POST /legal-documents/register` and `GET /legal-documents/project/{project_id}` in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T018 [US1] Implement legal document registration and superseding logic in `apps/api/services/legal_document_ingestion.py`; Verify: `pnpm test:api`
+- [x] T019 [US1] Extend `apps/web/src/app/api/projects/route.ts` and `apps/web/src/lib/services/projects.service.ts` so onboarding document paths register as legal documents after project creation; Verify: `pnpm test:web`
+- [x] T020 [US1] Extend `apps/web/src/app/api/uploads/project-files/route.ts` so project document replacements register a legal document version and queue extraction; Verify: `pnpm test:web`
+- [x] T021 [US1] Update accepted document metadata in `apps/web/src/components/projects/onboarding/ProjectMediaStep.tsx` without adding variable review UI; Verify: `pnpm test:web`
+- [x] T022 [US1] Add legal document status display to `apps/web/src/components/projects/detail/documents-tab.tsx`; Verify: `pnpm test:web`
 
 **Checkpoint**: User Story 1 is functional and testable independently.
 
@@ -78,19 +79,19 @@
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Add extraction and evidence tests for dominio vigente, SII roles and low-confidence plano samples in `apps/api/tests/test_escrituras_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T024 [P] [US2] Add contract tests for variable inventory response shape in `apps/api/tests/test_escrituras_variable_contracts.py`; Verify: `pnpm test:api`
+- [x] T023 [P] [US2] Add extraction and evidence tests for dominio vigente, SII roles and low-confidence plano samples in `apps/api/tests/test_escrituras_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T024 [P] [US2] Add contract tests for variable inventory response shape in `apps/api/tests/test_escrituras_variable_contracts.py`; Verify: `pnpm test:api`
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Implement text/page extraction persistence in `apps/api/services/legal_text_extraction.py`; Verify: `pnpm test:api`
-- [ ] T026 [US2] Implement dominio vigente extraction rules and schema-normalized outputs in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T027 [US2] Implement certificado roles SII extraction rules for certificate metadata, unit names, matriz role and pre-role/role-in-process values in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T028 [US2] Implement SAG/plano extraction with low-confidence manual-review fallback in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T029 [US2] Persist variable proposals and `document_evidence` rows from extraction jobs in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T030 [US2] Implement missing/conflict/manual-review classification for critical variables in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T031 [US2] Implement `GET /legal-variables/project/{project_id}` inventory endpoint in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T032 [US2] Add web proxy for project legal variables in `apps/web/src/app/api/projects/[id]/legal-variables/route.ts`; Verify: `pnpm test:web`
+- [x] T025 [US2] Implement text/page extraction persistence in `apps/api/services/legal_text_extraction.py`; Verify: `pnpm test:api`
+- [x] T026 [US2] Implement dominio vigente extraction rules and schema-normalized outputs in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T027 [US2] Implement certificado roles SII extraction rules for certificate metadata, unit names, matriz role and pre-role/role-in-process values in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T028 [US2] Implement SAG/plano extraction with low-confidence manual-review fallback in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T029 [US2] Persist variable proposals and `document_evidence` rows from extraction jobs in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T030 [US2] Implement missing/conflict/manual-review classification for critical variables in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T031 [US2] Implement `GET /legal-variables/project/{project_id}` inventory endpoint in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T032 [US2] Add web proxy for project legal variables in `apps/web/src/app/api/projects/[id]/legal-variables/route.ts`; Verify: `pnpm test:web`
 
 **Checkpoint**: User Story 2 is functional and testable independently.
 
@@ -104,19 +105,19 @@
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] Add API tests for variable edit, approve, mark-not-applicable and audit decisions in `apps/api/tests/test_escrituras_variable_review.py`; Verify: `pnpm test:api`
-- [ ] T034 [P] [US3] Add frontend tests for variable table filters, edit drawer and evidence viewer in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
+- [x] T033 [P] [US3] Add API tests for variable edit, approve, mark-not-applicable and audit decisions in `apps/api/tests/test_escrituras_variable_review.py`; Verify: `pnpm test:api`
+- [x] T034 [P] [US3] Add frontend tests for variable table filters, edit drawer and evidence viewer in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement `PATCH /legal-variables/{variable_resolution_id}` with state transition validation in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T036 [US3] Implement review/audit persistence in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
-- [ ] T037 [US3] Add web proxy for variable edits in `apps/web/src/app/api/projects/[id]/legal-variables/[variableId]/route.ts`; Verify: `pnpm test:web`
-- [ ] T038 [P] [US3] Build `LegalDocumentStatusPanel` in `apps/web/src/components/projects/legal/legal-document-status-panel.tsx`; Verify: `pnpm test:web`
-- [ ] T039 [P] [US3] Build `LegalVariableTable` in `apps/web/src/components/projects/legal/legal-variable-table.tsx`; Verify: `pnpm test:web`
-- [ ] T040 [P] [US3] Build `LegalVariableEditor` in `apps/web/src/components/projects/legal/legal-variable-editor.tsx`; Verify: `pnpm test:web`
-- [ ] T041 [P] [US3] Build `LegalEvidenceViewer` in `apps/web/src/components/projects/legal/legal-evidence-viewer.tsx`; Verify: `pnpm test:web`
-- [ ] T042 [US3] Compose Centro de Control Legal in `apps/web/src/components/projects/detail/legal-control-center.tsx` and mount it from `apps/web/src/components/projects/detail/legal-tab.tsx`; Verify: `pnpm test:web`
+- [x] T035 [US3] Implement `PATCH /legal-variables/{variable_resolution_id}` with state transition validation in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T036 [US3] Implement review/audit persistence in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T037 [US3] Add web proxy for variable edits in `apps/web/src/app/api/projects/[id]/legal-variables/[variableId]/route.ts`; Verify: `pnpm test:web`
+- [x] T038 [P] [US3] Build `LegalDocumentStatusPanel` in `apps/web/src/components/projects/legal/legal-document-status-panel.tsx`; Verify: `pnpm test:web`
+- [x] T039 [P] [US3] Build `LegalVariableTable` in `apps/web/src/components/projects/legal/legal-variable-table.tsx`; Verify: `pnpm test:web`
+- [x] T040 [P] [US3] Build `LegalVariableEditor` in `apps/web/src/components/projects/legal/legal-variable-editor.tsx`; Verify: `pnpm test:web`
+- [x] T041 [P] [US3] Build `LegalEvidenceViewer` in `apps/web/src/components/projects/legal/legal-evidence-viewer.tsx`; Verify: `pnpm test:web`
+- [x] T042 [US3] Compose Centro de Control Legal in `apps/web/src/components/projects/detail/legal-control-center.tsx` and mount it from `apps/web/src/components/projects/detail/legal-tab.tsx`; Verify: `pnpm test:web`
 
 **Checkpoint**: User Story 3 is functional and testable independently.
 
@@ -130,17 +131,17 @@
 
 ### Tests for User Story 4
 
-- [ ] T043 [P] [US4] Add SII role matching tests for exact match, ambiguous match, missing match and manual override in `apps/api/tests/test_escrituras_role_matching.py`; Verify: `pnpm test:api`
-- [ ] T044 [P] [US4] Add frontend tests for lot role matching status and manual override reason in `apps/web/tests/legal-role-matching.test.ts`; Verify: `pnpm test:web`
+- [x] T043 [P] [US4] Add SII role matching tests for exact match, ambiguous match, missing match and manual override in `apps/api/tests/test_escrituras_role_matching.py`; Verify: `pnpm test:api`
+- [x] T044 [P] [US4] Add frontend tests for lot role matching status and manual override reason in `apps/web/tests/legal-role-matching.test.ts`; Verify: `pnpm test:web`
 
 ### Implementation for User Story 4
 
-- [ ] T045 [US4] Implement lot/unit normalization and matching score logic in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
-- [ ] T046 [US4] Persist `lot_legal_data` matches and role-in-process state from SII extraction in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
-- [ ] T047 [US4] Implement role matching endpoints in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T048 [US4] Add web proxy routes for role matching in `apps/web/src/app/api/projects/[id]/legal-roles/route.ts` and `apps/web/src/app/api/projects/[id]/legal-roles/[lotId]/route.ts`; Verify: `pnpm test:web`
-- [ ] T049 [US4] Add role matching UI section to `apps/web/src/components/projects/detail/legal-control-center.tsx`; Verify: `pnpm test:web`
-- [ ] T050 [US4] Extend `apps/api/services/document_engine.py` so approved lot legal role variables can feed `sii.*` and `lote.rol_tramite`; Verify: `pnpm test:api`
+- [x] T045 [US4] Implement lot/unit normalization and matching score logic in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
+- [x] T046 [US4] Persist `lot_legal_data` matches and role-in-process state from SII extraction in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api`
+- [x] T047 [US4] Implement role matching endpoints in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T048 [US4] Add web proxy routes for role matching in `apps/web/src/app/api/projects/[id]/legal-roles/route.ts` and `apps/web/src/app/api/projects/[id]/legal-roles/[lotId]/route.ts`; Verify: `pnpm test:web`
+- [x] T049 [US4] Add role matching UI section to `apps/web/src/components/projects/detail/legal-control-center.tsx`; Verify: `pnpm test:web`
+- [x] T050 [US4] Extend `apps/api/services/document_engine.py` so approved lot legal role variables can feed `sii.*` and `lote.rol_tramite`; Verify: `pnpm test:api`
 
 **Checkpoint**: User Story 4 is functional and testable independently.
 
@@ -154,17 +155,17 @@
 
 ### Tests for User Story 5
 
-- [ ] T051 [P] [US5] Add API tests for escritura readiness gates and case snapshot creation in `apps/api/tests/test_escrituras_readiness.py`; Verify: `pnpm test:api`
-- [ ] T052 [P] [US5] Add frontend tests for readiness panel, legal warning and blocked generation actions in `apps/web/tests/escritura-readiness.test.ts`; Verify: `pnpm test:web`
+- [x] T051 [P] [US5] Add API tests for escritura readiness gates and case snapshot creation in `apps/api/tests/test_escrituras_readiness.py`; Verify: `pnpm test:api`
+- [x] T052 [P] [US5] Add frontend tests for readiness panel, legal warning and blocked generation actions in `apps/web/tests/escritura-readiness.test.ts`; Verify: `pnpm test:web`
 
 ### Implementation for User Story 5
 
-- [ ] T053 [US5] Implement escritura readiness gate calculation in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
-- [ ] T054 [US5] Implement escritura case creation and variable/evidence snapshot persistence in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
-- [ ] T055 [US5] Implement readiness and case endpoints in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
-- [ ] T056 [US5] Add web proxy routes for readiness and case creation in `apps/web/src/app/api/projects/[id]/escritura-readiness/route.ts` and `apps/web/src/app/api/projects/[id]/escritura-cases/route.ts`; Verify: `pnpm test:web`
-- [ ] T057 [US5] Build `EscrituraReadinessPanel` with mandatory lawyer-review warning in `apps/web/src/components/projects/legal/escritura-readiness-panel.tsx`; Verify: `pnpm test:web`
-- [ ] T058 [US5] Integrate readiness gating into escritura generation entry points in `apps/web/src/components/projects/detail/documents-tab.tsx` and `apps/web/src/components/dashboard/documents/generation-wizard.tsx`; Verify: `pnpm test:web`
+- [x] T053 [US5] Implement escritura readiness gate calculation in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
+- [x] T054 [US5] Implement escritura case creation and variable/evidence snapshot persistence in `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
+- [x] T055 [US5] Implement readiness and case endpoints in `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T056 [US5] Add web proxy routes for readiness and case creation in `apps/web/src/app/api/projects/[id]/escritura-readiness/route.ts` and `apps/web/src/app/api/projects/[id]/escritura-cases/route.ts`; Verify: `pnpm test:web`
+- [x] T057 [US5] Build `EscrituraReadinessPanel` with mandatory lawyer-review warning in `apps/web/src/components/projects/legal/escritura-readiness-panel.tsx`; Verify: `pnpm test:web`
+- [x] T058 [US5] Integrate readiness gating into escritura generation entry points in `apps/web/src/components/projects/detail/documents-tab.tsx` and `apps/web/src/components/dashboard/documents/generation-wizard.tsx`; Verify: `pnpm test:web`
 
 **Checkpoint**: User Story 5 is functional and testable independently.
 
@@ -174,18 +175,18 @@
 
 **Purpose**: Contracts, documentation, SDD 008 handoff, quality gates and production guardrails.
 
-- [ ] T059 Regenerate OpenAPI and client contracts after API changes using `pnpm contracts:generate`; Verify: `pnpm contracts:generate`
-- [ ] T060 [P] Add end-to-end quickstart coverage notes and update product memory in `plotify_memori/20 - Producto & Proyectos/Generador de Escrituras de Compraventa.md`; Verify: `pnpm format:check`
-- [ ] T061 [P] Add security/tenant regression coverage for legal variable endpoints in `apps/api/tests/test_tenant_validation.py`; Verify: `pnpm test:api`
+- [x] T059 Regenerate OpenAPI and client contracts after API changes using `pnpm contracts:generate`; Verify: `pnpm contracts:generate`
+- [x] T060 [P] Add end-to-end quickstart coverage notes and update product memory in `plotify_memori/20 - Producto & Proyectos/Generador de Escrituras de Compraventa.md`; Verify: `pnpm format:check`
+- [x] T061 [P] Add security/tenant regression coverage for legal variable endpoints in `apps/api/tests/test_tenant_validation.py`; Verify: `pnpm test:api`
 - [x] T062 [P] Add SDD 008 handoff contract in `specs/007-escrituras-variable-resolution/handoff-sdd-008.md`; Verify: `pnpm format:check`
-- [ ] T063 [P] Add feature flag and rollout controls for legal extraction/readiness in `apps/web/src/lib/features/legal-documents.ts` and `apps/api/core/config.py`; Verify: `pnpm test:web && pnpm test:api`
-- [ ] T064 [P] Add extraction retry/idempotency tests for duplicate job dispatch and superseded document versions in `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api`
-- [ ] T065 [P] Add structured observability for extraction jobs, variable proposals, review decisions and readiness gates in `apps/api/services/legal_document_ingestion.py`, `apps/api/services/legal_variable_resolution.py` and `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
-- [ ] T066 [P] Add storage access and signed/public URL regression coverage for legal evidence documents in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
-- [ ] T067 [P] Document production operations for failed extraction retry, document superseding, rollback and evidence inspection in `plotify_memori/40 - Guias & Convenciones/Operacion Escrituras Variables.md`; Verify: `pnpm format:check`
-- [ ] T068 Run full web quality gates after UI work: `pnpm --filter web lint`, `pnpm format:check`, `pnpm typecheck:web`, `pnpm build:web`; Verify: commands listed
-- [ ] T069 Run full backend/database quality gates after API and migration work: `pnpm verify:migrations`, `pnpm test:api`, `pnpm contracts:generate`; Verify: commands listed
-- [ ] T070 Run SDD analyze for `specs/007-escrituras-variable-resolution` and resolve any critical finding before implementation continues; Verify: `$speckit-analyze`
+- [x] T063 [P] Add feature flag and rollout controls for legal extraction/readiness in `apps/web/src/lib/features/legal-documents.ts` and `apps/api/core/config.py`; Verify: `pnpm test:web && pnpm test:api`
+- [x] T064 [P] Add extraction retry/idempotency tests for duplicate job dispatch and superseded document versions in `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api`
+- [x] T065 [P] Add structured observability for extraction jobs, variable proposals, review decisions and readiness gates in `apps/api/services/legal_document_ingestion.py`, `apps/api/services/legal_variable_resolution.py` and `apps/api/services/escritura_readiness.py`; Verify: `pnpm test:api`
+- [x] T066 [P] Add storage access and signed/public URL regression coverage for legal evidence documents in `apps/web/tests/legal-control-center.test.ts`; Verify: `pnpm test:web`
+- [x] T067 [P] Document production operations for failed extraction retry, document superseding, rollback and evidence inspection in `plotify_memori/40 - Guias & Convenciones/Operacion Escrituras Variables.md`; Verify: `pnpm format:check`
+- [x] T068 Run full web quality gates after UI work: `pnpm --filter web lint`, `pnpm format:check`, `pnpm typecheck:web`, `pnpm build:web`; Verify: commands listed
+- [x] T069 Run full backend/database quality gates after API and migration work: `pnpm verify:migrations`, `pnpm test:api`, `pnpm contracts:generate`; Verify: commands listed
+- [x] T070 Run SDD analyze for `specs/007-escrituras-variable-resolution` and resolve any critical finding before implementation continues; Verify: `$speckit-analyze`
 
 ---
 

@@ -1,6 +1,7 @@
 """Regression tests for service-role tenant validation."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
+from types import SimpleNamespace
 
 
 def _build_approvals_app():
@@ -23,6 +24,31 @@ def _build_approvals_app():
     app.dependency_overrides[verify_internal_secret] = _bypass_auth
     app.dependency_overrides[get_arq_pool] = _fake_arq_pool
     app.include_router(approvals_router, prefix="/api/v1/approvals")
+    return app
+
+
+def _build_legal_variables_app():
+    from fastapi import FastAPI
+
+    from api.deps import verify_internal_secret
+    from api.v1.endpoints.legal_variables import (
+        get_optional_arq_pool,
+        router as legal_variables_router,
+    )
+
+    app = FastAPI()
+
+    async def _bypass_auth():
+        return "test-secret"
+
+    async def _fake_arq_pool():
+        redis = AsyncMock()
+        redis.enqueue_job = AsyncMock()
+        return redis
+
+    app.dependency_overrides[verify_internal_secret] = _bypass_auth
+    app.dependency_overrides[get_optional_arq_pool] = _fake_arq_pool
+    app.include_router(legal_variables_router, prefix="/api/v1")
     return app
 
 
@@ -223,4 +249,191 @@ def test_decide_reject_approval_rejects_cross_tenant():
     assert "organization_id no corresponde" in response.json()["detail"]
 
 
+def test_list_legal_documents_rejects_cross_tenant_project_scope():
+    """Un tenant no puede listar documentos legales de un proyecto ajeno."""
+    from fastapi.testclient import TestClient
+
+    import api.v1.endpoints.legal_variables as legal_variables_endpoint
+    from services.legal_document_ingestion import LegalDocumentScopeError
+
+    client = TestClient(
+        _build_legal_variables_app(),
+        headers={"X-Internal-Secret": "test-secret"},
+    )
+
+    with patch.object(
+        legal_variables_endpoint,
+        "list_project_legal_documents_service",
+        new=AsyncMock(
+            side_effect=LegalDocumentScopeError(
+                "project_id does not belong to organization_id."
+            )
+        ),
+    ) as list_documents:
+        response = client.get(
+            "/api/v1/legal-documents/project/project-real",
+            params={"organization_id": "org-attacker"},
+        )
+
+    assert response.status_code == 403
+    assert "project_id does not belong" in response.json()["detail"]
+    list_documents.assert_awaited_once_with(
+        project_id="project-real",
+        organization_id="org-attacker",
+    )
+
+
+def test_get_legal_variables_rejects_cross_tenant_project_scope():
+    """Un tenant no puede consultar inventario de variables legales de otro tenant."""
+    from fastapi.testclient import TestClient
+
+    import api.v1.endpoints.legal_variables as legal_variables_endpoint
+    from services.legal_variable_resolution import LegalVariableInventoryScopeError
+
+    client = TestClient(
+        _build_legal_variables_app(),
+        headers={"X-Internal-Secret": "test-secret"},
+    )
+
+    with patch.object(
+        legal_variables_endpoint,
+        "get_project_variable_inventory_service",
+        new=AsyncMock(
+            side_effect=LegalVariableInventoryScopeError(
+                "project_id does not belong to organization_id."
+            )
+        ),
+    ) as get_inventory:
+        response = client.get(
+            "/api/v1/legal-variables/project/project-real",
+            params={"organization_id": "org-attacker"},
+        )
+
+    assert response.status_code == 403
+    assert "project_id does not belong" in response.json()["detail"]
+    get_inventory.assert_awaited_once_with(
+        project_id="project-real",
+        organization_id="org-attacker",
+        lot_id=None,
+        state=None,
+        group=None,
+        include_evidence=True,
+    )
+
+
+def test_patch_legal_variable_rejects_cross_tenant_mutation():
+    """Un tenant no puede corregir o aprobar variables legales de otro proyecto."""
+    from fastapi.testclient import TestClient
+
+    import api.v1.endpoints.legal_variables as legal_variables_endpoint
+    from services.legal_variable_resolution import LegalVariableInventoryScopeError
+
+    client = TestClient(
+        _build_legal_variables_app(),
+        headers={"X-Internal-Secret": "test-secret"},
+    )
+
+    with patch.object(
+        legal_variables_endpoint,
+        "update_legal_variable_service",
+        new=AsyncMock(
+            side_effect=LegalVariableInventoryScopeError(
+                "variable_resolution_id does not belong to project_id."
+            )
+        ),
+    ) as update_variable:
+        response = client.patch(
+            "/api/v1/legal-variables/variable-real",
+            params={
+                "organization_id": "org-attacker",
+                "project_id": "project-attacker",
+            },
+            json={
+                "action": "approve",
+                "state": "approved",
+                "reviewed_by": "admin-attacker",
+                "correction_reason": "Intento cruzado",
+            },
+        )
+
+    assert response.status_code == 403
+    assert "variable_resolution_id does not belong" in response.json()["detail"]
+    update_variable.assert_awaited_once()
+    assert update_variable.await_args.kwargs["variable_resolution_id"] == "variable-real"
+    assert update_variable.await_args.kwargs["organization_id"] == "org-attacker"
+    assert update_variable.await_args.kwargs["project_id"] == "project-attacker"
+
+
+def test_legal_variable_endpoint_respects_rollout_feature_flag():
+    """La API puede apagar el flujo legal completo sin llamar servicios internos."""
+    from fastapi.testclient import TestClient
+
+    import api.v1.endpoints.legal_variables as legal_variables_endpoint
+
+    client = TestClient(
+        _build_legal_variables_app(),
+        headers={"X-Internal-Secret": "test-secret"},
+    )
+
+    with (
+        patch.object(
+            legal_variables_endpoint,
+            "get_settings",
+            return_value=SimpleNamespace(
+                ENABLE_LEGAL_DOCUMENTS=False,
+                LEGAL_DOCUMENTS_ORG_ALLOWLIST="",
+                LEGAL_DOCUMENTS_PROJECT_ALLOWLIST="",
+            ),
+        ),
+        patch.object(
+            legal_variables_endpoint,
+            "get_project_variable_inventory_service",
+            new=AsyncMock(),
+        ) as get_inventory,
+    ):
+        response = client.get(
+            "/api/v1/legal-variables/project/project-real",
+            params={"organization_id": "org-real"},
+        )
+
+    assert response.status_code == 403
+    assert "disabled" in response.json()["detail"]
+    get_inventory.assert_not_awaited()
+
+
+def test_legal_variable_endpoint_respects_project_allowlist():
+    """Un proyecto fuera del allowlist no entra al flujo de readiness/extraccion."""
+    from fastapi.testclient import TestClient
+
+    import api.v1.endpoints.legal_variables as legal_variables_endpoint
+
+    client = TestClient(
+        _build_legal_variables_app(),
+        headers={"X-Internal-Secret": "test-secret"},
+    )
+
+    with (
+        patch.object(
+            legal_variables_endpoint,
+            "get_settings",
+            return_value=SimpleNamespace(
+                ENABLE_LEGAL_DOCUMENTS=True,
+                LEGAL_DOCUMENTS_ORG_ALLOWLIST="org-real",
+                LEGAL_DOCUMENTS_PROJECT_ALLOWLIST="project-enabled",
+            ),
+        ),
+        patch.object(
+            legal_variables_endpoint,
+            "list_project_legal_documents_service",
+            new=AsyncMock(),
+        ) as list_documents,
+    ):
+        response = client.get(
+            "/api/v1/legal-documents/project/project-disabled",
+            params={"organization_id": "org-real"},
+        )
+
+    assert response.status_code == 403
+    assert "project" in response.json()["detail"]
+    list_documents.assert_not_awaited()
 

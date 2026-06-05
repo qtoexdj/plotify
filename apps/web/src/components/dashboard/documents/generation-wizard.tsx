@@ -51,11 +51,13 @@ import {
 } from '@/lib/legal/servidumbre-generator'
 import type { DocumentTemplate } from '@/types/v2'
 import type { OfficialBoundary, ServidumbreAnalysis } from '@/types/database.types'
+import { EscrituraReadinessPanel } from '@/components/projects/legal/escritura-readiness-panel'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface LotWithRelations {
   id: string
+  project_id: string
   numero_lote: string
   m2: number | null
   area_official_m2: number | null
@@ -72,6 +74,7 @@ interface LotWithRelations {
     cliente_ocupacion: string | null
   }> | null
   projects: {
+    id?: string | null
     name: string
     commune: string | null
     region: string | null
@@ -242,6 +245,7 @@ export function GenerationWizard({
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null)
   const [generateError, setGenerateError] = useState<string | null>(null)
+  const [escrituraCaseReady, setEscrituraCaseReady] = useState(documentType !== 'escritura')
 
   // Variables disponibles y faltantes obtenidas del backend para el Step 4
   const [variableStatus, setVariableStatus] = useState<{
@@ -423,6 +427,10 @@ export function GenerationWizard({
 
   const handleGenerate = useCallback(async () => {
     if (!selectedTemplate) return
+    if (documentType === 'escritura' && !escrituraCaseReady) {
+      setGenerateError('Crea un snapshot de escritura listo antes de generar la minuta.')
+      return
+    }
     setIsGenerating(true)
     setGenerateError(null)
 
@@ -443,7 +451,15 @@ export function GenerationWizard({
     } finally {
       setIsGenerating(false)
     }
-  }, [selectedTemplate, lot.id, format, missingVariablesAccepted, selectedRecipients, documentType])
+  }, [
+    selectedTemplate,
+    documentType,
+    escrituraCaseReady,
+    lot.id,
+    format,
+    missingVariablesAccepted,
+    selectedRecipients,
+  ])
 
   const toggleRecipient = useCallback((recipient: 'vendedor' | 'comprador') => {
     setSelectedRecipients((current) => {
@@ -928,7 +944,8 @@ export function GenerationWizard({
       Boolean(variableStatusError) ||
       !variableStatus ||
       selectedRecipients.length === 0 ||
-      (hasMissing && !missingVariablesAccepted)
+      (hasMissing && !missingVariablesAccepted) ||
+      (documentType === 'escritura' && !escrituraCaseReady)
 
     return (
       <div className="space-y-6">
@@ -1025,6 +1042,17 @@ export function GenerationWizard({
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>No se pudo validar el estado de variables requeridas.</span>
           </div>
+        )}
+
+        {/* Destinatarios */}
+        {documentType === 'escritura' && (
+          <EscrituraReadinessPanel
+            projectId={lot.project_id || lot.projects?.id || ''}
+            lotId={lot.id}
+            onCaseCreated={(response) =>
+              setEscrituraCaseReady(response.readiness_status === 'ready')
+            }
+          />
         )}
 
         {/* Destinatarios */}
