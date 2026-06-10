@@ -23,14 +23,28 @@ related:
 
 ## Estado
 
-Futuro SDD. No es el feature activo. El feature activo sigue siendo
-`specs/007-escrituras-variable-resolution`.
+Futuro SDD. No es el feature activo. El feature activo es
+`specs/009-titulo-dominio-vigente` (agente de titulo de dominio vigente).
+SDD 008 parte cuando SDD 009 cierre, porque la matriz consume los tokens de
+titulo que SDD 009 define.
 
 ## Punto de partida
 
-SDD 008 debe partir desde el contrato:
+SDD 008 debe partir desde ambos contratos:
 
-- `specs/007-escrituras-variable-resolution/handoff-sdd-008.md`
+- `specs/007-escrituras-variable-resolution/handoff-sdd-008.md` (contrato base)
+- `specs/009-titulo-dominio-vigente/handoff-sdd-008-addendum.md` (tokens de
+  titulo, bloques narrativos, reglas de clausulas por alertas y lista de los 7
+  entregables para cerrar la generacion de documentos)
+
+Cambio de catalogo a tener presente: las claves `matriz.inscripcion_*` y
+`matriz.adquisicion_*` ya no existen; todo template debe usar
+`titulo.inscripciones[]` y los bloques `titulo.comparecencia_vendedor_texto` /
+`titulo.clausula_primero_texto` aprobados. La clausula SEXTO (servidumbre)
+renderiza sus referencias registrales desde `titulo.inscripciones[]`.
+
+Despues de SDD 008 queda la consolidacion UX legal en proyectos (redisenar el
+Centro de Control Legal conociendo el flujo proyecto -> matriz completo).
 
 ## Regla de arquitectura
 

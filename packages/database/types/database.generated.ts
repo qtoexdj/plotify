@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       agent_custom_instructions: {
@@ -41,6 +46,7 @@ export type Database = {
           {
             foreignKeyName: "agent_custom_instructions_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -147,18 +153,21 @@ export type Database = {
           {
             foreignKeyName: "approval_requests_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "approval_requests_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "approval_requests_vendor_id_fkey"
             columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -199,6 +208,7 @@ export type Database = {
           {
             foreignKeyName: "audit_logs_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -386,6 +396,7 @@ export type Database = {
           {
             foreignKeyName: "document_blocks_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -438,30 +449,35 @@ export type Database = {
           {
             foreignKeyName: "document_evidence_legal_document_id_fkey"
             columns: ["legal_document_id"]
+            isOneToOne: false
             referencedRelation: "legal_documents"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "document_evidence_legal_document_page_id_fkey"
             columns: ["legal_document_page_id"]
+            isOneToOne: false
             referencedRelation: "legal_document_pages"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "document_evidence_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "document_evidence_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "document_evidence_variable_resolution_id_fkey"
             columns: ["variable_resolution_id"]
+            isOneToOne: false
             referencedRelation: "variable_resolutions"
             referencedColumns: ["id"]
           },
@@ -523,18 +539,21 @@ export type Database = {
           {
             foreignKeyName: "document_ingestion_jobs_legal_document_id_fkey"
             columns: ["legal_document_id"]
+            isOneToOne: false
             referencedRelation: "legal_documents"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "document_ingestion_jobs_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "document_ingestion_jobs_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -587,6 +606,7 @@ export type Database = {
           {
             foreignKeyName: "document_templates_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -645,30 +665,35 @@ export type Database = {
           {
             foreignKeyName: "escritura_cases_generated_document_id_fkey"
             columns: ["generated_document_id"]
+            isOneToOne: false
             referencedRelation: "generated_documents"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "escritura_cases_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "escritura_cases_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "escritura_cases_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "escritura_cases_template_id_fkey"
             columns: ["template_id"]
+            isOneToOne: false
             referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
@@ -742,24 +767,28 @@ export type Database = {
           {
             foreignKeyName: "generated_documents_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "generated_documents_lot_record_id_fkey"
             columns: ["lot_record_id"]
+            isOneToOne: false
             referencedRelation: "lot_records"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "generated_documents_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "generated_documents_template_id_fkey"
             columns: ["template_id"]
+            isOneToOne: false
             referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
@@ -809,12 +838,14 @@ export type Database = {
           {
             foreignKeyName: "geometries_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "geometries_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -852,6 +883,7 @@ export type Database = {
           {
             foreignKeyName: "leads_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -904,24 +936,28 @@ export type Database = {
           {
             foreignKeyName: "legal_document_pages_ingestion_job_id_fkey"
             columns: ["ingestion_job_id"]
+            isOneToOne: false
             referencedRelation: "document_ingestion_jobs"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_document_pages_legal_document_id_fkey"
             columns: ["legal_document_id"]
+            isOneToOne: false
             referencedRelation: "legal_documents"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_document_pages_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_document_pages_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -995,24 +1031,28 @@ export type Database = {
           {
             foreignKeyName: "legal_documents_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_documents_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_documents_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_documents_superseded_by_fkey"
             columns: ["superseded_by"]
+            isOneToOne: false
             referencedRelation: "legal_documents"
             referencedColumns: ["id"]
           },
@@ -1071,30 +1111,35 @@ export type Database = {
           {
             foreignKeyName: "legal_review_decisions_escritura_case_id_fkey"
             columns: ["escritura_case_id"]
+            isOneToOne: false
             referencedRelation: "escritura_cases"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_review_decisions_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_review_decisions_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_review_decisions_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "legal_review_decisions_variable_resolution_id_fkey"
             columns: ["variable_resolution_id"]
+            isOneToOne: false
             referencedRelation: "variable_resolutions"
             referencedColumns: ["id"]
           },
@@ -1112,10 +1157,13 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           role_status: string
+          sii_comuna: string | null
           sii_definitive_role: string | null
+          sii_lot_number_normalized: string | null
           sii_pre_role: string | null
           sii_role_in_process_text: string | null
           sii_role_matrix: string | null
+          sii_role_record: Json | null
           sii_unit_name: string | null
           source_legal_document_id: string | null
           updated_at: string
@@ -1131,10 +1179,13 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           role_status?: string
+          sii_comuna?: string | null
           sii_definitive_role?: string | null
+          sii_lot_number_normalized?: string | null
           sii_pre_role?: string | null
           sii_role_in_process_text?: string | null
           sii_role_matrix?: string | null
+          sii_role_record?: Json | null
           sii_unit_name?: string | null
           source_legal_document_id?: string | null
           updated_at?: string
@@ -1150,10 +1201,13 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           role_status?: string
+          sii_comuna?: string | null
           sii_definitive_role?: string | null
+          sii_lot_number_normalized?: string | null
           sii_pre_role?: string | null
           sii_role_in_process_text?: string | null
           sii_role_matrix?: string | null
+          sii_role_record?: Json | null
           sii_unit_name?: string | null
           source_legal_document_id?: string | null
           updated_at?: string
@@ -1162,24 +1216,28 @@ export type Database = {
           {
             foreignKeyName: "lot_legal_data_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: true
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lot_legal_data_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lot_legal_data_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lot_legal_data_source_legal_document_id_fkey"
             columns: ["source_legal_document_id"]
+            isOneToOne: false
             referencedRelation: "legal_documents"
             referencedColumns: ["id"]
           },
@@ -1283,6 +1341,7 @@ export type Database = {
           {
             foreignKeyName: "lot_records_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: true
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
@@ -1368,24 +1427,28 @@ export type Database = {
           {
             foreignKeyName: "lots_geometry_fk"
             columns: ["geometry_id"]
+            isOneToOne: false
             referencedRelation: "geometries"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lots_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lots_vendedor_id_fkey"
             columns: ["vendedor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lots_vendor_project_fkey"
             columns: ["vendedor_id", "project_id"]
+            isOneToOne: false
             referencedRelation: "vendor_projects"
             referencedColumns: ["vendor_id", "project_id"]
           },
@@ -1441,6 +1504,7 @@ export type Database = {
           {
             foreignKeyName: "mcp_connections_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1493,18 +1557,21 @@ export type Database = {
           {
             foreignKeyName: "notification_events_approval_id_fkey"
             columns: ["approval_id"]
+            isOneToOne: false
             referencedRelation: "approval_requests"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notification_events_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notification_events_recipient_id_fkey"
             columns: ["recipient_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1545,12 +1612,14 @@ export type Database = {
           {
             foreignKeyName: "org_skill_configs_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "org_skill_configs_skill_id_fkey"
             columns: ["skill_id"]
+            isOneToOne: false
             referencedRelation: "agent_skills"
             referencedColumns: ["id"]
           },
@@ -1582,12 +1651,14 @@ export type Database = {
           {
             foreignKeyName: "organization_members_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "organization_members_user_id_profiles_fkey"
             columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1634,6 +1705,7 @@ export type Database = {
           {
             foreignKeyName: "organization_payment_info_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1734,12 +1806,14 @@ export type Database = {
           {
             foreignKeyName: "project_active_templates_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "project_active_templates_template_id_fkey"
             columns: ["template_id"]
+            isOneToOne: false
             referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
@@ -1840,18 +1914,21 @@ export type Database = {
           {
             foreignKeyName: "project_legal_data_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "project_legal_data_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: true
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "project_legal_data_sii_roles_source_legal_document_id_fkey"
             columns: ["sii_roles_source_legal_document_id"]
+            isOneToOne: false
             referencedRelation: "legal_documents"
             referencedColumns: ["id"]
           },
@@ -1925,6 +2002,7 @@ export type Database = {
           {
             foreignKeyName: "projects_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1968,6 +2046,7 @@ export type Database = {
           {
             foreignKeyName: "prompt_versions_prompt_id_fkey"
             columns: ["prompt_id"]
+            isOneToOne: false
             referencedRelation: "system_prompts"
             referencedColumns: ["id"]
           },
@@ -2041,6 +2120,7 @@ export type Database = {
           {
             foreignKeyName: "telegram_bots_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -2078,13 +2158,121 @@ export type Database = {
           {
             foreignKeyName: "template_block_items_block_id_fkey"
             columns: ["block_id"]
+            isOneToOne: false
             referencedRelation: "document_blocks"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "template_block_items_template_id_fkey"
             columns: ["template_id"]
+            isOneToOne: false
             referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      title_analyses: {
+        Row: {
+          alerts: Json
+          analysis_json: Json
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          duration_ms: number | null
+          extractor_name: string
+          failure_code: string | null
+          id: string
+          model_name: string
+          narrative_comparecencia_edited: string | null
+          narrative_comparecencia_generated: string | null
+          narrative_primero_edited: string | null
+          narrative_primero_generated: string | null
+          organization_id: string
+          project_id: string
+          prompt_version: string
+          source_content_hash: string
+          source_document_ids: string[]
+          status: string
+          structure_type: string | null
+          superseded_by_id: string | null
+          token_usage: Json | null
+          updated_at: string
+          verification_stats: Json
+        }
+        Insert: {
+          alerts?: Json
+          analysis_json?: Json
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          extractor_name: string
+          failure_code?: string | null
+          id?: string
+          model_name: string
+          narrative_comparecencia_edited?: string | null
+          narrative_comparecencia_generated?: string | null
+          narrative_primero_edited?: string | null
+          narrative_primero_generated?: string | null
+          organization_id: string
+          project_id: string
+          prompt_version: string
+          source_content_hash: string
+          source_document_ids: string[]
+          status: string
+          structure_type?: string | null
+          superseded_by_id?: string | null
+          token_usage?: Json | null
+          updated_at?: string
+          verification_stats?: Json
+        }
+        Update: {
+          alerts?: Json
+          analysis_json?: Json
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          extractor_name?: string
+          failure_code?: string | null
+          id?: string
+          model_name?: string
+          narrative_comparecencia_edited?: string | null
+          narrative_comparecencia_generated?: string | null
+          narrative_primero_edited?: string | null
+          narrative_primero_generated?: string | null
+          organization_id?: string
+          project_id?: string
+          prompt_version?: string
+          source_content_hash?: string
+          source_document_ids?: string[]
+          status?: string
+          structure_type?: string | null
+          superseded_by_id?: string | null
+          token_usage?: Json | null
+          updated_at?: string
+          verification_stats?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "title_analyses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "title_analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "title_analyses_superseded_by_id_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "title_analyses"
             referencedColumns: ["id"]
           },
         ]
@@ -2163,30 +2351,35 @@ export type Database = {
           {
             foreignKeyName: "variable_resolutions_escritura_case_id_fkey"
             columns: ["escritura_case_id"]
+            isOneToOne: false
             referencedRelation: "escritura_cases"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "variable_resolutions_lot_id_fkey"
             columns: ["lot_id"]
+            isOneToOne: false
             referencedRelation: "lots"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "variable_resolutions_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "variable_resolutions_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "variable_resolutions_superseded_by_fkey"
             columns: ["superseded_by"]
+            isOneToOne: false
             referencedRelation: "variable_resolutions"
             referencedColumns: ["id"]
           },
@@ -2215,12 +2408,14 @@ export type Database = {
           {
             foreignKeyName: "vendor_projects_project_id_fkey"
             columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "vendor_projects_vendor_id_fkey"
             columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -2270,12 +2465,14 @@ export type Database = {
           {
             foreignKeyName: "vendors_org_user_fkey"
             columns: ["organization_id", "user_id"]
+            isOneToOne: false
             referencedRelation: "organization_members"
             referencedColumns: ["organization_id", "user_id"]
           },
           {
             foreignKeyName: "vendors_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },

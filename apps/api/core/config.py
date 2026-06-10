@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     LEGAL_TEXT_OCR_DPI: int = 300
     LEGAL_TEXT_OCR_TIMEOUT: int = 30
 
+    # SDD 009 legal title agent settings
+    LEGAL_TITLE_AGENT_ENABLED: bool = False
+    LEGAL_TITLE_AGENT_PROVIDER: str = "openai"
+    LEGAL_TITLE_AGENT_MODEL: str = "gpt-4o"
+    LEGAL_TITLE_AGENT_TIMEOUT_SECONDS: int = 180
+    LEGAL_TITLE_AGENT_MAX_INPUT_CHARS: int = 240_000
+
     # Meta / WhatsApp API
     META_VERIFY_TOKEN: str = ""  # Populated from .env
     META_ACCESS_TOKEN: str = ""

@@ -107,6 +107,7 @@ VARIABLE_GROUPS: Final[tuple[str, ...]] = (
     "clausulas",
     "mandato",
     "evidencia",
+    "titulo",
 )
 VARIABLE_GROUP_SET: Final = frozenset(VARIABLE_GROUPS)
 
@@ -156,14 +157,6 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "matriz.region",
         "matriz.superficie_total",
         "matriz.deslindes.*",
-        "matriz.adquisicion_modo",
-        "matriz.adquisicion_notaria",
-        "matriz.adquisicion_fecha",
-        "matriz.adquisicion_repertorio",
-        "matriz.inscripcion_fojas",
-        "matriz.inscripcion_numero",
-        "matriz.inscripcion_anio",
-        "matriz.inscripcion_cbr",
         "matriz.rol_avaluo",
     ),
     "sag": (
@@ -233,6 +226,14 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "evidencia.documentos_fuente[]",
         "evidencia.estado",
     ),
+    "titulo": (
+        "titulo.estructura",
+        "titulo.inscripciones[]",
+        "titulo.propietarios[]",
+        "titulo.comparecencia_vendedor_texto",
+        "titulo.clausula_primero_texto",
+        "titulo.alertas[]",
+    ),
 }
 VARIABLE_KEYS: Final[tuple[str, ...]] = tuple(
     key for keys in VARIABLE_KEYS_BY_GROUP.values() for key in keys
@@ -289,12 +290,12 @@ READINESS_GATE_SET: Final = frozenset(READINESS_GATES)
 
 READINESS_REQUIRED_VARIABLES_BY_GATE: Final[dict[str, tuple[str, ...]]] = {
     "title_verified": (
+        "titulo.estructura",
+        "titulo.inscripciones[]",
+        "titulo.comparecencia_vendedor_texto",
+        "titulo.clausula_primero_texto",
         "matriz.nombre_predio",
         "matriz.ubicacion",
-        "matriz.inscripcion_fojas",
-        "matriz.inscripcion_numero",
-        "matriz.inscripcion_anio",
-        "matriz.inscripcion_cbr",
     ),
     "sii_verified": (
         "matriz.rol_avaluo",
@@ -364,8 +365,24 @@ def is_variable_group(value: str) -> bool:
     return value in VARIABLE_GROUP_SET
 
 
+# Transitional shim (SDD 009): the dominio_vigente_rules_v1 regex extractor
+# still proposes these removed keys until T020 deletes that dispatch path.
+# T020/T021 MUST remove this shim together with the extractor.
+LEGACY_DEPRECATED_KEYS: Final[tuple[str, ...]] = (
+    "matriz.inscripcion_fojas",
+    "matriz.inscripcion_numero",
+    "matriz.inscripcion_anio",
+    "matriz.inscripcion_cbr",
+    "matriz.adquisicion_modo",
+    "matriz.adquisicion_notaria",
+    "matriz.adquisicion_fecha",
+    "matriz.adquisicion_repertorio",
+)
+LEGACY_DEPRECATED_KEY_SET: Final = frozenset(LEGACY_DEPRECATED_KEYS)
+
+
 def is_variable_key(value: str) -> bool:
-    return value in VARIABLE_KEY_SET
+    return value in VARIABLE_KEY_SET or value in LEGACY_DEPRECATED_KEY_SET
 
 
 def is_role_status(value: str) -> bool:
@@ -393,4 +410,7 @@ def variable_keys_for_group(group: str) -> tuple[str, ...]:
 
 
 def variable_group_for_key(variable_key: str) -> str | None:
-    return VARIABLE_GROUP_BY_KEY.get(variable_key)
+    group = VARIABLE_GROUP_BY_KEY.get(variable_key)
+    if group is None and variable_key in LEGACY_DEPRECATED_KEY_SET:
+        return "matriz"
+    return group

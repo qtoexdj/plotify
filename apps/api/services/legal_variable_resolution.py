@@ -87,6 +87,12 @@ CRITICAL_VARIABLE_KEYS = frozenset(
         "sii.certificado_asignacion_roles_numero",
         "sii.certificado_fecha_emision",
         "sii.solicitud_numero",
+        # Transitional (SDD 009): keep regex-extracted inscription keys critical
+        # until T020 removes dominio_vigente_rules_v1 and this block with it.
+        "matriz.inscripcion_fojas",
+        "matriz.inscripcion_numero",
+        "matriz.inscripcion_anio",
+        "matriz.inscripcion_cbr",
     )
 )
 EDIT_TARGET_STATES = frozenset(("resolved", "manual_review"))

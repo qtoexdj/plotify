@@ -2,7 +2,7 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/007-escrituras-variable-resolution/plan.md`
+`specs/009-titulo-dominio-vigente/plan.md`
 
 <!-- SPECKIT END -->
 
@@ -18,15 +18,15 @@ shell commands, and other important information, read the current plan:
 
 This repository uses Spec Kit SDD as the implementation authority. The active feature is:
 
-- `specs/007-escrituras-variable-resolution/spec.md`
-- `specs/007-escrituras-variable-resolution/plan.md`
-- `specs/007-escrituras-variable-resolution/agent-execution.md`
-- `specs/007-escrituras-variable-resolution/tasks.md`
+- `specs/009-titulo-dominio-vigente/spec.md`
+- `specs/009-titulo-dominio-vigente/plan.md`
+- `specs/009-titulo-dominio-vigente/agent-execution.md`
+- `specs/009-titulo-dominio-vigente/tasks.md`
 - `.specify/memory/constitution.md`
 
 Before implementation:
 
-1. Read `specs/007-escrituras-variable-resolution/agent-execution.md`.
+1. Read `specs/009-titulo-dominio-vigente/agent-execution.md`.
 2. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
 3. Do not start implementation while critical analyze findings remain unresolved.
 4. Run `git status --short` and `codegraph sync .`.
@@ -46,9 +46,9 @@ Canonical implementation prompt:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/007-escrituras-variable-resolution/tasks.md.
+Implementa solo TXXX de specs/009-titulo-dominio-vigente/tasks.md.
 No avances a otra tarea.
-Lee specs/007-escrituras-variable-resolution/agent-execution.md.
+Lee specs/009-titulo-dominio-vigente/agent-execution.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.
