@@ -114,7 +114,7 @@ During staging the service compares:
 - `LEGAL_TITLE_AGENT_ENABLED: bool = False`
 - `LEGAL_TITLE_AGENT_PROVIDER: str = "openai"` # `openai` | `anthropic`
 - `LEGAL_TITLE_AGENT_MODEL: str = "gpt-4o"` # `claude-sonnet-4-6` when provider is `anthropic`
-- `LEGAL_TITLE_AGENT_TIMEOUT_SECONDS: int = 180`
+- `LEGAL_TITLE_AGENT_TIMEOUT_SECONDS: int = 10` # per external model call
 - `LEGAL_TITLE_AGENT_MAX_INPUT_CHARS: int = 240_000`
 - Reuses `OPENAI_API_KEY` (already present in `apps/api/.env`) or
   `ANTHROPIC_API_KEY` according to provider; missing key for the selected

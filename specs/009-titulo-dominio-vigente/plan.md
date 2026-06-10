@@ -34,14 +34,14 @@ calls plus deterministic verification, which is testable and replayable.
 
 **Model configuration**: New settings `LEGAL_TITLE_AGENT_ENABLED`,
 `LEGAL_TITLE_AGENT_PROVIDER` (default `openai`), `LEGAL_TITLE_AGENT_MODEL`
-(default `gpt-4o`), `LEGAL_TITLE_AGENT_TIMEOUT_SECONDS`,
-`LEGAL_TITLE_AGENT_MAX_INPUT_CHARS`. OpenAI is the initial provider because
-the pilot already has `OPENAI_API_KEY` configured in `apps/api/.env` and the
-pilot exercise validated GPT chain reconstruction; `anthropic` is the
-alternative provider (`claude-sonnet-4-6`) behind the same setting. The
-deterministic evidence verifier makes safety provider-agnostic. The sales chat
-agent model in `agent/graph.py` is not reused: title analysis requires a
-stronger model and independent rollout.
+(default `gpt-4o`), `LEGAL_TITLE_AGENT_TIMEOUT_SECONDS` (default `10`, per
+external model call), `LEGAL_TITLE_AGENT_MAX_INPUT_CHARS`. OpenAI is the
+initial provider because the pilot already has `OPENAI_API_KEY` configured in
+`apps/api/.env` and the pilot exercise validated GPT chain reconstruction;
+`anthropic` is the alternative provider (`claude-sonnet-4-6`) behind the same
+setting. The deterministic evidence verifier makes safety provider-agnostic.
+The sales chat agent model in `agent/graph.py` is not reused: title analysis
+requires a stronger model and independent rollout.
 
 **Storage**: New migration for `title_analyses` (tenant-scoped, RLS) plus
 catalog updates. Staging remains `variable_resolutions` + `document_evidence`;
@@ -58,10 +58,11 @@ worker/API service.
 **Project Type**: Web application with typed internal API, Supabase database
 and background processing.
 
-**Performance Goals**: Analysis runs in background (worker); a title case for a
-pilot project (2-4 title documents, <40 pages) completes in under 3 minutes
-including retries. The title panel loads under 2 seconds from persisted
-analysis. Cost per analysis is observable (token usage persisted).
+**Performance Goals**: Analysis runs in background (worker); each external
+model call is capped at 10 seconds, and a title case for a pilot project (2-4
+title documents, <40 pages) targets completion in under 3 minutes across
+segmented calls and retries. The title panel loads under 2 seconds from
+persisted analysis. Cost per analysis is observable (token usage persisted).
 
 **Constraints**: LLM output is proposal-only behind schema, confidence and
 evidence (SDD 007 research decision). No auto-approval. No invented evidence:

@@ -38,13 +38,13 @@ explicitly requests broader scope.
 
 **CRITICAL**: No user story work until this phase completes.
 
-- [ ] T008 Add Pydantic schemas (`TitleAnalysis`, `EvidencedValue`, `TitleInscription`, `TitleAlert`, request/response models) in `apps/api/schemas/legal_titles.py`; Verify: `pnpm test:api`
-- [ ] T009 Add FastAPI router skeleton and register it in `apps/api/api/v1/endpoints/legal_titles.py` and `apps/api/api/v1/router.py`; Verify: `pnpm test:api`
-- [ ] T010 [P] Add orchestrator service skeleton (gather sources, run states, idempotency hash) in `apps/api/services/legal_title_analysis.py`; Verify: `pnpm test:api`
-- [ ] T011 [P] Add LLM client skeleton with `titulo_agent_v1` prompt scaffold and structured-output wiring in `apps/api/services/legal_title_llm.py`; Verify: `pnpm test:api`
-- [ ] T012 [P] Add deterministic verifier skeleton (normalization + snippet matching API) in `apps/api/services/legal_title_verification.py`; Verify: `pnpm test:api`
-- [ ] T013 [P] Add narrative renderer skeleton with numbers-to-words utilities in `apps/api/services/legal_title_blocks.py`; Verify: `pnpm test:api`
-- [ ] T014 Add arq worker task `analyze_project_title` in `apps/api/workers/tasks/legal_title_analysis.py` and register in `apps/api/workers/main_worker.py`; Verify: `pnpm test:api`
+- [x] T008 Add Pydantic schemas (`TitleAnalysis`, `EvidencedValue`, `TitleInscription`, `TitleAlert`, request/response models) in `apps/api/schemas/legal_titles.py`; Verify: `pnpm test:api`
+- [x] T009 Add FastAPI router skeleton and register it in `apps/api/api/v1/endpoints/legal_titles.py` and `apps/api/api/v1/router.py`; Verify: `pnpm test:api`
+- [x] T010 [P] Add orchestrator service skeleton (gather sources, run states, idempotency hash) in `apps/api/services/legal_title_analysis.py`; Verify: `pnpm test:api`
+- [x] T011 [P] Add LLM client skeleton with `titulo_agent_v1` prompt scaffold and structured-output wiring in `apps/api/services/legal_title_llm.py`; Verify: `pnpm test:api`
+- [x] T012 [P] Add deterministic verifier skeleton (normalization + snippet matching API) in `apps/api/services/legal_title_verification.py`; Verify: `pnpm test:api`
+- [x] T013 [P] Add narrative renderer skeleton with numbers-to-words utilities in `apps/api/services/legal_title_blocks.py`; Verify: `pnpm test:api`
+- [x] T014 Add arq worker task `analyze_project_title` in `apps/api/workers/tasks/legal_title_analysis.py` and register in `apps/api/workers/main_worker.py`; Verify: `pnpm test:api`
 
 **Checkpoint**: Foundation ready. Story implementation can start.
 

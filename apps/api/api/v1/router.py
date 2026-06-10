@@ -9,6 +9,7 @@ from .endpoints import (
     skills,
     documents,
     legal_variables,
+    legal_titles,
     integrations,
     notifications,
 )
@@ -25,5 +26,6 @@ api_router.include_router(prompts.router)
 api_router.include_router(skills.router)
 api_router.include_router(documents.router)
 api_router.include_router(legal_variables.router)
+api_router.include_router(legal_titles.router)
 api_router.include_router(integrations.router)  # ← Fase 5
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])

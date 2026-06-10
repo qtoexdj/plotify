@@ -14,6 +14,7 @@ from workers.tasks.notification_worker import (
     send_notification,
 )
 from workers.tasks.legal_document_ingestion import process_legal_document_ingestion
+from workers.tasks.legal_title_analysis import analyze_project_title
 
 from core.checkpointer import setup_checkpointer, close_checkpointer
 
@@ -126,6 +127,7 @@ class WorkerSettings:
         send_generated_document,
         retry_generated_document_delivery,
         process_legal_document_ingestion,
+        analyze_project_title,
     ]
 
     # Eventos de ciclo de vida

@@ -16,7 +16,7 @@
    LEGAL_TITLE_AGENT_ENABLED=true
    LEGAL_TITLE_AGENT_PROVIDER=openai          # openai | anthropic
    LEGAL_TITLE_AGENT_MODEL=gpt-4o             # claude-sonnet-4-6 for anthropic
-   LEGAL_TITLE_AGENT_TIMEOUT_SECONDS=180
+   LEGAL_TITLE_AGENT_TIMEOUT_SECONDS=10
    LEGAL_TITLE_AGENT_MAX_INPUT_CHARS=240000
    # OPENAI_API_KEY is already set in apps/api/.env (used by the chat agent);
    # set ANTHROPIC_API_KEY only when switching provider to anthropic.
