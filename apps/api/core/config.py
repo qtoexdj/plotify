@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     ENABLE_LEGAL_DOCUMENTS: bool = True
     LEGAL_DOCUMENTS_ORG_ALLOWLIST: str = ""
     LEGAL_DOCUMENTS_PROJECT_ALLOWLIST: str = ""
+    LEGAL_TEXT_OCR_ENABLED: bool = False
+    LEGAL_TEXT_OCR_DPI: int = 300
+    LEGAL_TEXT_OCR_TIMEOUT: int = 30
 
     # Meta / WhatsApp API
     META_VERIFY_TOKEN: str = ""  # Populated from .env

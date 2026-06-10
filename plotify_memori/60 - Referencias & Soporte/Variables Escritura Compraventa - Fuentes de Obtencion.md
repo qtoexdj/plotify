@@ -87,7 +87,7 @@ disenar el extractor, la interfaz lateral de revision y los readiness gates.
 | `matriz.inscripcion_numero` | Inscripcion dominio | Dominio vigente/CBR | `project_legal_data` | OCR/extraccion | `title_verified` |
 | `matriz.inscripcion_anio` | Inscripcion dominio | Dominio vigente/CBR | `project_legal_data` | OCR/extraccion | `title_verified` |
 | `matriz.inscripcion_cbr` | Conservador | Dominio vigente/CBR | `project_legal_data` | OCR/extraccion | `title_verified` |
-| `matriz.rol_avaluo` | Rol matriz | Dominio/SII | `project_legal_data` | OCR/extraccion roles | `sii_verified` |
+| `matriz.rol_avaluo` | Rol matriz | Dominio/SII | `project_legal_data` | Extraccion certificado SII/dominio | `sii_verified` |
 | `sag.certificado_numero` | Clausula SEGUNDO | Certificado SAG | `project_legal_data` + `legal_documents` | OCR/extraccion | `sag_verified` |
 | `sag.certificado_fecha` | Clausula SEGUNDO | Certificado SAG | `project_legal_data` + `legal_documents` | OCR/extraccion | `sag_verified` |
 | `sag.oficina_sectorial` | Clausula SEGUNDO | Certificado SAG | `legal_documents` | OCR/extraccion | `sag_verified` |
@@ -97,11 +97,12 @@ disenar el extractor, la interfaz lateral de revision y los readiness gates.
 | `sii.certificado_asignacion_roles_numero` | Evidencia roles | Certificado SII | `legal_documents` | OCR/extraccion | `sii_verified` |
 | `sii.certificado_fecha_emision` | Evidencia roles | Certificado SII | `legal_documents` | OCR/extraccion | `sii_verified` |
 | `sii.solicitud_numero` | F2118/SII | Certificado SII/F2118 | `legal_documents` | OCR/extraccion | `sii_verified` |
-| `sii.rol_matriz` | Rol matriz | Certificado SII/dominio | `project_legal_data` | OCR/extraccion | `sii_verified` |
-| `sii.pre_rol_lote` | Rol/pre-rol lote | Certificado SII | `lot_legal_data` | OCR/extraccion + match lote | `sii_verified` |
-| `sii.rol_avaluo_en_tramite_texto` | Texto renderizado | Resolver + certificado SII | `lot_legal_data` | Generado desde pre-rol/comuna | `sii_verified` |
+| `sii.rol_matriz` | Rol matriz comun | Certificado SII/dominio | `project_legal_data.sii_role_matrix` | Encabezado SII `Rol(es) Matriz(ces)`; comun a todos los lotes del proyecto | `sii_verified` |
+| `sii.pre_rol_lote` | Rol/pre-rol lote | Certificado SII | `lot_legal_data.sii_pre_role` | Fila SII real + comuna de fila o encabezado; unico por `lot_id` | `sii_verified` |
+| `sii.comuna_rol_lote` | Comuna del rol | Certificado SII | `project_legal_data.sii_comuna` | Comun a todos los lotes del certificado activo; encabezado SII o fila uniforme | `sii_verified` |
+| `sii.rol_avaluo_en_tramite_texto` | Texto renderizado | Resolver + certificado SII | `lot_legal_data` | Generado desde tupla `rol + comuna` con evidencia | `sii_verified` |
 | `sii.rol_avaluo_definitivo` | Post inscripcion | SII actualizado | `lot_legal_data` | Post escritura | `post_inscription` |
-| `sii.unidad_nombre` | Unidad/lote SII | Certificado SII | `lot_legal_data` | OCR/extraccion + match lote | `sii_verified` |
+| `sii.unidad_nombre` | Unidad/lote SII | Certificado SII | `lot_legal_data` | Fila SII real, preservando etiqueta original | `sii_verified` |
 
 ## Lote, deslindes y servidumbre
 
@@ -160,10 +161,23 @@ disenar el extractor, la interfaz lateral de revision y los readiness gates.
 | `Revision legal` | No basta con extraerlo; debe ser aprobado por abogado/revisor. |
 | `Post minuta` | No corresponde a Plotify al generar la minuta inicial. |
 
+## Source-of-truth (Phase 12 SDD 007)
+
+| Storage | Datos propios |
+| ------- | ------------- |
+| `project_legal_data` | `sii_comuna`, `sii_role_matrix`, `sii_roles_source_legal_document_id`, `sii_roles_status` — comun a todos los lotes del proyecto |
+| `lot_legal_data` | `sii_pre_role`, `sii_unit_name`, `sii_lot_number_normalized`, `sii_role_in_process_text`, `matching_status` — unico por `lot_id` |
+| `variable_resolutions` | Staging de revision y auditoria para todas las variables canonicas |
+| `escritura_cases` | Snapshot inmutable para SDD 008; `variable_snapshot` contiene solo valores de dominio |
+
+La generacion de minuta y los gates de readiness deben leer `project_legal_data`
+para valores SII comunes y `lot_legal_data` para valores por lote. Nunca deben
+leer propuestas vivas ni metadatos de parser.
+
 ## Notas
 
 - Esta tabla es mas operativa que [[SDD 006 Escrituras Lab - Minuta DOCX y Readiness]]:
   sirve para disenar la UI lateral de variables.
 - El template final debe seguir [[Generador de Escrituras de Compraventa]].
 - Para roles/preroles ver [[Rol de Avaluo en Tramite - Fuentes SII]].
-
+- Para el split de almacenamiento ver [[SDD 007 Escrituras Variable Resolution]].

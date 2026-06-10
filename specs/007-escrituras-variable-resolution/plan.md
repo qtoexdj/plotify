@@ -148,6 +148,9 @@ SDD 007 uses GitHub Spec Kit as the artifact workflow (`specify -> plan -> tasks
 ### Phase 4 - Variable Extraction and Evidence
 
 - Implement domain/SII/SAG/plano extraction contracts.
+- For certificado de roles SII, implement deterministic extraction before LLM fallback: parse repeated records containing lot number, role/pre-role and comuna, then persist that tuple with evidence and row/block location.
+- Extend certificado de roles SII extraction to pilot-real formats: extract certificate number/date, F2118 request number, common matrix role, header comuna, unit row labels and lot numbers even when comuna is not repeated per row.
+- Add OCR fallback for image-only SII PDFs when configured; otherwise surface `ocr_required`/`needs_review` without inventing role data.
 - Persist variable proposals and evidence.
 - Add conflict and missing classification.
 
@@ -159,8 +162,8 @@ SDD 007 uses GitHub Spec Kit as the artifact workflow (`specify -> plan -> tasks
 
 ### Phase 6 - Roles, Lot Readiness and Escritura Cases
 
-- Match roles/pre-roles to lots.
-- Treat `Rol de avaluo en tramite` as valid when backed by SII evidence or legal override.
+- Match roles/pre-roles to lots from a complete extracted SII record containing normalized lot number, role/pre-role and comuna, with common matrix role attached when present; use fuzzy unit labels only for manual-review candidates, not silent automatic matches.
+- Treat `Rol de avaluo en tramite numero [rol] de la comuna de [comuna]` as valid when backed by SII evidence or legal override.
 - Create sold-lot escritura readiness and snapshot gates.
 
 ### Phase 7 - Polish and Guardrails
@@ -173,6 +176,36 @@ SDD 007 uses GitHub Spec Kit as the artifact workflow (`specify -> plan -> tasks
 - Verify feature flags, rollout controls, retry/idempotency, observability, retention and tenant regression coverage.
 - Ensure the next feature consumes `escritura_cases.variable_snapshot`, `escritura_cases.evidence_snapshot`, canonical variable keys and readiness gates instead of raw OCR or live extraction proposals.
 - Output: [handoff-sdd-008.md](./handoff-sdd-008.md).
+
+### Phase 9 - Product Correction: Deterministic SII Tuple Extraction
+
+- Tighten role extraction so automatic matches require row-level role/pre-role plus same certificate/page comuna evidence.
+- Expose `sii_lot_number_normalized`, `sii_comuna`, `sii_role_record` and derived `sii_role_in_process_text`.
+
+### Phase 10 - Product Correction: Real SII Certificate Corpus and Role UX
+
+- Support the observed pilot certificate corpus: Teno, Gaona 3, Gaona 7, Pemuco textual layouts and La Mata/Los Maquis scanned layouts.
+- Extract and persist common SII matrix role (`sii.rol_matriz`/`sii_role_matrix`) for all lot role records from the same certificate.
+- Redesign the role section in Centro de Control Legal so users can inspect certificate metadata, OCR/text status, role matrix, comuna, evidence and row-level review state before applying manual overrides.
+
+### Phase 11 - Production Hardening: SII Role Safety Review Findings
+
+- Fix senior review findings before production rollout: normalized lot matching must use `sii_lot_number_normalized` as the automatic-match key, not fuzzy unit labels with multiple visible numbers.
+- Enforce one-to-one automatic assignment: one extracted SII role row can produce at most one `matched` lot. Competing lots or reused rows become `ambiguous`/`missing` until manual review.
+- Scope current role matching to the active certificado de roles SII version. Superseded certificate variables remain historical evidence only and must not feed current readiness.
+- Propagate SII certificate header context across pages only inside the same certificate identity/document and preserve header evidence. Ambiguous context or multiple matrix roles blocks automatic propagation.
+- Derive manual override `sii_role_in_process_text` on the API side from approved role/pre-role plus comuna, and ignore stale client-composed text.
+- Make OCR production-safe: declare dependencies, set runtime timeouts, and classify dependency/converter/timeouts as `ocr_required`/`needs_review` with stats.
+
+### Phase 12 - Matriz/Lote Source-of-Truth Alignment
+
+- Establish the production source-of-truth split: `project_legal_data` for common SII matriz values shared across all sibling lots; `lot_legal_data` for per-lot role values keyed by `lot_id`.
+- Add `sii_comuna`, `sii_role_matrix`, `sii_roles_source_legal_document_id` and `sii_roles_status` to `project_legal_data` via migration `20260608000100_align_sii_matriz_lot_source_of_truth.sql`.
+- Update role matching persistence so an active certificado de roles SII upserts common SII fields into `project_legal_data` and lot-specific pre-role/matching state into `lot_legal_data`.
+- Enforce that absence of an active certificado blocks SII readiness (no fallback to historical variables).
+- Fix repeatable SII role text persistence scoped by `unit_index` via migration `20260608000200_scope_repeatable_sii_role_text.sql`.
+- Simplify public role provenance to expose only domain attribution (`source_type`, `source_legal_document_id`, `source_document_label`, `source_status`); parser/page/row metadata stays internal.
+- Update minuta variables and readiness gates to read from `project_legal_data` and `lot_legal_data`; snapshots contain legal domain values only.
 
 ## SDD 008 Handoff Contract
 
@@ -199,6 +232,18 @@ SDD 008 must not reopen OCR/extraction ownership. If a variable is wrong, the us
 
 Variable visualization and correction remains in SDD 007 because it is part of extraction quality, evidence and approval. SDD 008 can display variable state and evidence while editing the matriz, but it consumes snapshots and should not become the correction source of truth.
 
+## SDD 008 Handoff Contract
+
+SDD 008 should be scoped as the **Creador de Matriz y Minuta DOCX**. It starts only after SDD 007 provides:
+
+1. Canonical variable catalog and states.
+2. Reviewed or approved variable resolutions.
+3. Lot-level SII role data from `lot_legal_data`, with common SII values from `project_legal_data`.
+4. Escritura case readiness gates with mandatory lawyer-review warning.
+5. Immutable `variable_snapshot` and `evidence_snapshot` per sold-lot case (domain values only, no parser metadata).
+
+SDD 008 must not reopen extraction ownership. Wrong variables are corrected in SDD 007 Centro de Control Legal, then a new snapshot is created.
+
 ## Production Readiness Gates
 
 Before SDD 007 can be considered production-ready:
@@ -206,6 +251,8 @@ Before SDD 007 can be considered production-ready:
 - Database migrations and RLS must pass `pnpm verify:migrations`.
 - FastAPI contracts must be regenerated with `pnpm contracts:generate`.
 - API tests must cover tenant isolation, retries, idempotency and failed extraction handling.
+- SII extraction tests must cover textual pilot layouts plus image-only OCR-required certificates before the role matching UI is considered complete.
+- SII matching tests must cover multi-number unit labels, one-to-one row consumption, superseded certificate exclusion, multi-page header context, multiple matrix roles and server-derived manual override text before production rollout.
 - Web tests must cover onboarding non-blocking behavior, Centro de Control Legal and readiness warning.
 - Background jobs must be retryable and idempotent per document version.
 - Legal document storage access must avoid exposing raw internal paths.

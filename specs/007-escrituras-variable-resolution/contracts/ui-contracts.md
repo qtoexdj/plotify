@@ -111,12 +111,20 @@ Required behavior:
 
 Confirm each lot has the correct role, pre-role or role of avaluo en tramite.
 
+### Source-of-Truth Display (Phase 12)
+
+- Common SII values (`sii_comuna`, `sii_role_matrix`) come from `project_legal_data` and are shown once per certificate/project, not repeated per lot row.
+- Per-lot values (`sii_pre_role`, `sii_unit_name`, `sii_lot_number_normalized`, `sii_role_in_process_text`, `matching_status`) come from `lot_legal_data` and appear as one row per lot.
+- Source labels must read "Certificado de roles SII" (document) or "Ajuste manual" (manual override). Parser/header/row metadata must not be shown as user-facing legal data.
+
 ### Required UI
 
-- Lot list with lot number, SII unit, role/pre-role, match status and source document.
+- Certificate summary with certificate/folio number, emission date, F2118 request number, comuna, matrix role, text/OCR source, declared unit count, extracted unit count and rows needing review.
+- Lot list with Plotify lot number, SII unit, normalized SII lot number, pre-role, match status and source label.
 - `Rol de avaluo en tramite` appears as a valid state when backed by evidence or approved override.
-- Ambiguous/missing matches are visually blocking and filterable.
-- Manual override requires a reason.
+- Ambiguous, missing, OCR-required and manual-review matches are visually blocking and filterable.
+- Manual override opens a focused drawer/modal and requires a reason.
+- Evidence view shows whether the row came from text PDF extraction or OCR, plus snippet; internal page/row parser metadata is not user-facing.
 
 ## Escritura Readiness Contract
 

@@ -190,6 +190,82 @@
 
 ---
 
+## Phase 9: Product Correction - Deterministic SII Role Extraction
+
+**Purpose**: Re-open the role extraction slice after legal/product review found the previous SII extraction approach too generic. Certificado de roles extraction must use the simple certificate pattern `numero de lote + rol/pre-rol + comuna` before any LLM-assisted fallback.
+
+- [x] T072 [P] [US2] Add SII role certificate parser tests for repeated `lote + rol/pre-rol + comuna` rows/blocks, incomplete tuples and multiple comunas in `apps/api/tests/test_escrituras_variable_resolution.py` and `apps/api/tests/test_escrituras_role_matching.py`; Verify: `pnpm test:api`
+- [x] T073 [US2] Implement deterministic certificado roles SII tuple extraction in `apps/api/services/legal_variable_resolution.py`, preserving normalized lot number, role/pre-role, comuna, source page/snippet and row/block index before any LLM fallback; Verify: `pnpm test:api`
+- [x] T074 [US4] Update `apps/api/services/legal_role_matching.py`, `apps/api/schemas/legal_variables.py` and web legal role types so automatic matches require the same extracted tuple and expose `sii_lot_number_normalized`, `sii_comuna`, `sii_role_record` and derived `sii_role_in_process_text`; Verify: `pnpm test:api && pnpm typecheck:web`
+- [x] T075 Run SDD analyze for `specs/007-escrituras-variable-resolution` after this product correction and resolve any critical finding before implementation resumes; Verify: `$speckit-analyze`
+
+---
+
+## Phase 10: Product Correction - Real SII Certificate Corpus and Role UX
+
+**Purpose**: Extend SII extraction from the strict tuple correction into the real pilot certificate formats. Certificados SII must preserve common matrix role, header comuna, OCR/text provenance and row evidence before matching lots or feeding minuta variables.
+
+- [x] T076 [P] [US2] Add SII parser tests for Teno, Gaona 3, Gaona 7 and Pemuco textual row shapes, including header comuna, `Rol(es) Matriz(ces)`, F2118 request number and emission date in `apps/api/tests/test_escrituras_variable_resolution.py`; Verify: `pnpm test:api`
+- [x] T077 [P] [US2] Add OCR fallback tests for image-only certificado roles PDFs with successful OCR and OCR-unavailable paths in `apps/api/tests/test_escrituras_text_extraction.py`; Verify: `pnpm test:api`
+- [x] T078 [US2] Implement OCR fallback for image-only SII PDFs in `apps/api/services/legal_text_extraction.py` and `apps/api/core/config.py`, preserving converter/stats metadata and `ocr_required` failure state; Verify: `pnpm test:api`
+- [x] T079 [US2] Implement real SII certificate parser support in `apps/api/services/legal_variable_resolution.py` for header comuna, certificate number/date, F2118 request number, matrix role, `LOTE N`, prefixed `LOTE N`, `PARCELA X LT N` and similar row shapes; Verify: `pnpm test:api`
+- [x] T080 [US4] Tighten role matching in `apps/api/services/legal_role_matching.py` so automatic `matched` requires normalized lot number, role/pre-role, comuna and parser evidence, and propagates `sii_role_matrix` into `lot_legal_data`; Verify: `pnpm test:api`
+- [x] T081 [P] [US4] Update API schemas/contracts and generated web role types so role responses expose certificate summary, OCR/text provenance, matrix role, row evidence and review counts in `apps/api/schemas/legal_variables.py`, `specs/007-escrituras-variable-resolution/contracts/api-contracts.md` and `apps/web/src/lib/legal/variable-resolution-types.ts`; Verify: `pnpm test:api && pnpm typecheck:web`
+- [x] T082 [US4] Redesign the SII roles section into a scannable certificate summary, filtered role table and manual override drawer in `apps/web/src/components/projects/detail/legal-control-center.tsx`; Verify: `pnpm test:web`
+- [x] T083 Run SDD analyze for `specs/007-escrituras-variable-resolution` after the real SII corpus correction and resolve any critical finding before implementation resumes; Verify: `$speckit-analyze`
+
+---
+
+## Phase 11: Production Hardening - Senior Review Corrections
+
+**Purpose**: Close senior review blockers before SDD 007 is considered production-ready or handed off to SDD 008. These tasks correct unsafe matching, stale certificate scope, cross-page header handling, matrix-role ambiguity, manual override derivation and OCR runtime guardrails.
+
+- [x] T084 [P] [US4] Add role matching regression tests for multi-number SII labels, strict `sii_lot_number_normalized` equality and one-row/one-lot automatic assignment in `apps/api/tests/test_escrituras_role_matching.py`; Verify: `pnpm test:api -- tests/test_escrituras_role_matching.py`
+- [x] T085 [US4] Implement strict normalized lot matching and one-to-one SII row consumption in `apps/api/services/legal_role_matching.py`; Verify: `pnpm test:api -- tests/test_escrituras_role_matching.py`
+- [x] T086 [P] [US4] Add active-certificate scoping tests for superseded SII variables and explicit latest certificado de roles selection in `apps/api/tests/test_escrituras_role_matching.py` and `apps/api/tests/test_escrituras_ingestion.py`; Verify: `pnpm test:api -- tests/test_escrituras_role_matching.py tests/test_escrituras_ingestion.py`
+- [x] T087 [US4] Implement active certificado SII scoping for role units/readiness, excluding superseded document variables while preserving historical evidence, in `apps/api/services/legal_role_matching.py`, `apps/api/services/legal_document_ingestion.py` and `apps/api/api/v1/endpoints/legal_variables.py`; Verify: `pnpm test:api`
+- [x] T088 [P] [US2] Add parser tests for multi-page SII header context and multiple matrix roles requiring manual review in `apps/api/tests/test_escrituras_variable_resolution.py`; Verify: `pnpm test:api -- tests/test_escrituras_variable_resolution.py`
+- [x] T089 [US2] Implement document-level SII header context propagation and multiple matrix role preservation/manual-review classification in `apps/api/services/legal_variable_resolution.py`; Verify: `pnpm test:api -- tests/test_escrituras_variable_resolution.py`
+- [x] T090 [P] [US4] Add manual override derivation tests for changed pre-role/comuna and stale client text rejection in `apps/api/tests/test_escrituras_role_matching.py` and `apps/web/tests/legal-role-matching.test.ts`; Verify: `pnpm test:api -- tests/test_escrituras_role_matching.py && pnpm test:web -- legal-role-matching.test.ts`
+- [x] T091 [US4] Implement server-side `sii_role_in_process_text` derivation and normalized role record persistence for manual overrides in `apps/api/services/legal_role_matching.py`, `apps/api/schemas/legal_variables.py` and `apps/web/src/components/projects/detail/legal-control-center.tsx`; Verify: `pnpm test:api -- tests/test_escrituras_role_matching.py && pnpm test:web -- legal-role-matching.test.ts && pnpm typecheck:web`
+- [x] T092 [P] [US2] Add OCR runtime guardrail tests for missing `pdf2image`/`pytesseract`, missing Poppler/Tesseract, timeout and converter exceptions in `apps/api/tests/test_escrituras_text_extraction.py`; Verify: `pnpm test:api -- tests/test_escrituras_text_extraction.py`
+- [x] T093 [US2] Implement OCR production guardrails, dependency declarations and timeout/error classification in `apps/api/services/legal_text_extraction.py`, `apps/api/core/config.py` and `apps/api/requirements.txt`; Verify: `pnpm test:api`
+- [x] T094 [US4] Update schemas/contracts/web types for strict normalized matching, active certificate provenance, matrix role lists/manual-review counts and server-derived override text in `apps/api/schemas/legal_variables.py`, `specs/007-escrituras-variable-resolution/contracts/api-contracts.md` and `apps/web/src/lib/legal/variable-resolution-types.ts`; Verify: `pnpm test:api && pnpm typecheck:web && pnpm contracts:generate`
+- [x] T095 Run production hardening gates after Phase 11: `pnpm verify:migrations`, `pnpm test:api`, `pnpm test:web`, `pnpm typecheck:web`, `pnpm contracts:generate`, `pnpm format:check`, `pnpm build:web`; Verify: commands listed
+- [x] T096 Run SDD analyze after Phase 11 and resolve critical findings before SDD 007 closure; Verify: `$speckit-analyze`
+
+---
+
+## Phase 12: Production Hardening - Matriz/Lote Source Of Truth Alignment
+
+**Purpose**: Align SDD 007 with the production legal data model agreed in senior/product review: project/matriz data is common to all sibling lots, lot data is keyed by `lot_id`, certificado de roles SII implies `rol_en_tramite` for extracted lot roles, no roles are assumed without an active certificate or audited manual override, and minuta generation consumes stable domain data instead of parser internals.
+
+**Independent Test**: For a project with one active certificado de roles SII, every extracted lot receives `rol_en_tramite`, shared comuna and shared rol matriz from project/matriz legal data, and its own unique pre-role by `lot_id`. For a project with no active certificado, readiness blocks SII role generation unless an audited manual override exists. Generated document variables and escritura case snapshots expose only legal domain values and minimal source document attribution.
+
+### Tests for Phase 12
+
+- [x] T097 [P] [US4] Add API regression tests for the matriz/lote source-of-truth contract in `apps/api/tests/test_escrituras_role_matching.py`, covering active certificado roles SII implies `rol_en_tramite`, shared `sii_comuna`/`sii_role_matrix` across sibling lots, unique `sii_pre_role` per `lot_id`, and no role assumptions when no active certificado exists; Verify: `pnpm test:api -- tests/test_escrituras_role_matching.py`
+- [x] T098 [P] [US5] Add readiness and document generation tests in `apps/api/tests/test_escrituras_readiness.py` and `apps/api/tests/test_mvp_documents.py`, covering no active certificado blocks SII readiness, audited manual override unblocks it, and generated variables consume `project_legal_data` for matriz/common SII values plus `lot_legal_data` for lot-specific role values; Verify: `pnpm test:api -- tests/test_escrituras_readiness.py tests/test_mvp_documents.py`
+- [x] T099 [P] [US2] Add persistence regression tests in `apps/api/tests/test_escrituras_variable_resolution.py` for repeatable `sii.rol_avaluo_en_tramite_texto` scoping by `unit_index`, ensuring each lot role proposal can persist independently without overwriting sibling role text; Verify: `pnpm test:api -- tests/test_escrituras_variable_resolution.py`
+- [x] T100 [P] [US3] Add frontend contract tests in `apps/web/tests/legal-role-matching.test.ts` and `apps/web/tests/legal-control-center.test.ts` so Centro de Control Legal shows source as "Certificado de roles SII" or "Ajuste manual" and does not expose parser/header/fila metadata as user-facing legal data; Verify: `pnpm test:web -- legal-role-matching.test.ts legal-control-center.test.ts`
+
+### Implementation for Phase 12
+
+- [x] T101 [US4] Add a Supabase migration for common SII matriz fields in `project_legal_data` in `packages/database/supabase/migrations/20260608000100_align_sii_matriz_lot_source_of_truth.sql`, including nullable `sii_comuna`, `sii_role_matrix`, `sii_roles_source_legal_document_id`, `sii_roles_status` and tenant/scope validation against `projects` and `legal_documents`; Verify: `pnpm verify:migrations`
+- [x] T102 [US4] Regenerate database types after the migration in `packages/database/types/database.generated.ts` and update web database mirrors if present in `apps/web/src/types/database.types.ts`; Verify: `pnpm typecheck:web`
+- [x] T103 [US4] Update role matching persistence in `apps/api/services/legal_role_matching.py` so active certificado roles SII upserts shared `sii_comuna`, `sii_role_matrix`, source document and common `rol_en_tramite` status into `project_legal_data`, while `lot_legal_data` remains keyed by `lot_id` and stores only lot-specific SII unit/pre-role/definitive role/matching state plus minimal source attribution; Verify: `pnpm test:api -- tests/test_escrituras_role_matching.py`
+- [x] T104 [US4] Update active certificate scoping in `apps/api/services/legal_role_matching.py`, `apps/api/services/legal_document_ingestion.py` and `apps/api/api/v1/endpoints/legal_variables.py` so absence of an active certificado de roles returns missing role inventory/readiness inputs instead of falling back to historical variables; Verify: `pnpm test:api -- tests/test_escrituras_role_matching.py tests/test_escrituras_ingestion.py`
+- [x] T105 [US2] Fix repeatable SII role text persistence in `apps/api/services/legal_variable_resolution.py` and add `packages/database/supabase/migrations/20260608000200_scope_repeatable_sii_role_text.sql` so `sii.rol_avaluo_en_tramite_texto` is scoped by `unit_index` consistently with `sii.unidad_nombre` and `sii.pre_rol_lote`; Verify: `pnpm verify:migrations && pnpm test:api -- tests/test_escrituras_variable_resolution.py`
+- [x] T106 [US4] Simplify public role provenance in `apps/api/schemas/legal_variables.py`, `specs/007-escrituras-variable-resolution/contracts/api-contracts.md` and `apps/web/src/lib/legal/variable-resolution-types.ts` to expose domain attribution (`source_type`, `source_legal_document_id`, `source_document_label`, active/manual status) while keeping parser/page/row metadata internal to `document_evidence` and extraction diagnostics; Verify: `pnpm test:api && pnpm typecheck:web && pnpm contracts:generate`
+- [x] T107 [US5] Update `apps/api/services/document_engine.py` and `apps/api/services/escritura_readiness.py` so minuta variables and readiness gates read common SII matriz values from `project_legal_data`, lot-specific role identity from `lot_legal_data`, and never depend on parser metadata or stale variable proposals; Verify: `pnpm test:api -- tests/test_escrituras_readiness.py tests/test_mvp_documents.py`
+- [x] T108 [US3] Update Centro de Control Legal in `apps/web/src/components/projects/detail/legal-control-center.tsx` to show common matriz SII values once per certificate/project, lot-specific pre-role values per row, and source labels without parser/header/fila details; Verify: `pnpm test:web -- legal-role-matching.test.ts legal-control-center.test.ts && pnpm typecheck:web`
+- [x] T109 [US5] Update escritura case snapshot construction in `apps/api/services/escritura_readiness.py` so `variable_snapshot` contains legal domain values needed by SDD 008 (`sii.rol_matriz`, `sii.comuna`, `lote.rol_tramite`, `sii.rol_avaluo_en_tramite_texto`) and `evidence_snapshot` contains minimal source document references rather than raw OCR/parser metadata; Verify: `pnpm test:api -- tests/test_escrituras_readiness.py`
+- [x] T110 [P] Update SDD 007 documentation and Plotify memory in `specs/007-escrituras-variable-resolution/plan.md`, `specs/007-escrituras-variable-resolution/data-model.md`, `specs/007-escrituras-variable-resolution/contracts/api-contracts.md`, `specs/007-escrituras-variable-resolution/contracts/ui-contracts.md`, `specs/007-escrituras-variable-resolution/quickstart.md`, `plotify_memori/50 - Implementaciones/SDD 007 Escrituras Variable Resolution.md` and `plotify_memori/60 - Referencias & Soporte/Variables Escritura Compraventa - Fuentes de Obtencion.md` to state the source-of-truth split: `project_legal_data` for matriz/common data, `lot_legal_data` for per-lot data, `variable_resolutions` for review/audit staging, and `escritura_cases` for stable snapshots; Verify: `pnpm format:check`
+- [x] T111 Run production source-of-truth quality gates after Phase 12: `pnpm verify:migrations`, `pnpm test:api`, `pnpm test:web`, `pnpm typecheck:web`, `pnpm contracts:generate`, `pnpm format:check`, `pnpm build:web`; Verify: commands listed
+- [x] T112 Run SDD analyze after Phase 12 and resolve critical findings before SDD 007 closure or SDD 008 handoff; Verify: `$speckit-analyze`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -202,6 +278,10 @@
 - **US4 (Phase 6)**: Depends on US2 SII extraction; can run in parallel with late US3 UI once API foundations are present.
 - **US5 (Phase 7)**: Depends on US2, US4 and existing geometry readiness.
 - **Polish (Phase 8)**: Depends on implemented stories and produces the explicit SDD 008 handoff.
+- **SII correction (Phase 9)**: Depends on US2 and US4; reopens only the deterministic certificado roles SII extraction and matching slice.
+- **Real SII corpus correction (Phase 10)**: Depends on Phase 9; reopens OCR/text extraction, SII parser, role matching contracts and role matching UI for the observed pilot certificate corpus.
+- **Production hardening (Phase 11)**: Depends on Phase 10 and is required before SDD 007 can be production-ready or handed off to SDD 008.
+- **Matriz/lote source-of-truth alignment (Phase 12)**: Depends on Phase 11 and is required before SDD 007 can be considered production-ready for minuta generation or handed off to SDD 008.
 
 ### Parallel Opportunities
 
@@ -211,6 +291,14 @@
 - UI components T038 through T041 can be built in parallel after T037 and shared types exist.
 - US3 UI and US4 API matching can proceed in parallel after US2 inventory contracts stabilize.
 - Production guardrail tasks T063 through T067 can run in parallel after the core stories are implemented.
+- T076 and T077 can run in parallel because they cover different extraction layers.
+- T081 can start after T080 defines the final response shape; T082 depends on T081 web types.
+- T084, T086, T088, T090 and T092 can be written in parallel after Phase 10 because they cover distinct regression surfaces; implementation tasks T085, T087, T089, T091, T093 and T094 must follow their relevant tests and avoid parallel edits to shared API contracts.
+- T097, T098, T099 and T100 can be written in parallel after Phase 11 because they cover backend contract, readiness/generation, persistence and frontend behavior separately.
+- T101 and T102 must precede T103, T107 and T109 because they establish the common SII matriz storage contract.
+- T103, T104 and T105 all edit shared backend persistence and must run sequentially in separate implementation passes unless the user explicitly expands scope.
+- T106 must precede T108 because the UI should consume the simplified public provenance contract.
+- T110 can run in parallel with implementation only if no other agent edits the same SDD or Plotify memory files.
 
 ## Implementation Strategy
 
@@ -229,12 +317,20 @@
 4. Role MVP: SII role matching fills lot legal data.
 5. Readiness MVP: sold-lot escritura case snapshots become available.
 6. Handoff MVP: SDD 008 can consume snapshots without touching extraction internals.
+7. Production hardening MVP: strict SII matching, active certificate provenance, OCR guardrails and server-derived role text are complete before SDD 008 handoff.
+8. Source-of-truth MVP: matriz/common legal values live at project level, lot-specific values live by `lot_id`, and minuta/snapshot generation consumes domain values rather than parser metadata.
 
 ## Notes
 
 - Do not implement the visual minuta builder in this SDD.
 - Do implement variable visualization/correction in this SDD; SDD 008 will only consume approved snapshots and may display variables inside the new matriz interface.
 - Do not treat `Rol de avaluo en tramite` as missing when backed by SII evidence or approved legal review.
+- Do not extract SII lot roles as generic free-form variables when the certificate exposes the regular `lote + rol/pre-rol + comuna` pattern.
+- Do not assume SII roles when no active certificado de roles SII exists; use audited manual override or wait for document upload.
+- Do treat roles extracted from an active certificado de roles SII as `rol_en_tramite` until a definitive role certificate or approved post-inscription value exists.
+- Do keep `project_legal_data` as the authoritative home for common matriz/project legal values and `lot_legal_data` as the authoritative home for per-lot legal values keyed by `lot_id`.
+- Do keep parser/page/row metadata internal to extraction diagnostics or `document_evidence`; the public contract and generated escritura variables should expose legal source attribution, not parser internals.
 - Do not use lab schema, lab bucket or MCP server as production runtime.
 - Do not hand-edit generated OpenAPI files as source of truth.
+- Do not mark SDD 007 production-ready until Phase 12 is complete and T112 has no critical analyze findings.
 - SDD 008 starts from `handoff-sdd-008.md` after SDD 007 exposes stable case snapshots.

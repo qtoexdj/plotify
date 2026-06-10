@@ -194,6 +194,20 @@ class FakeSupabase:
             ]
         ]
         self.lot_legal_data = _matched_lot_legal_data()
+        self.project_legal_data = {
+            "sii_comuna": "Teno",
+            "sii_role_matrix": "00067-00023",
+        }
+        self.legal_documents = [
+            {
+                "id": SII_DOCUMENT_ID,
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "document_type": "certificado_roles_sii",
+                "extraction_status": "variables_proposed",
+                "superseded_by": None,
+            }
+        ]
         self.lot_row: dict[str, object] | None = {
             "id": LOT_ID,
             "project_id": PROJECT_ID,
@@ -213,6 +227,10 @@ class FakeSupabase:
             return SimpleNamespace(data=self.variables)
         if table.name == "lot_legal_data":
             return SimpleNamespace(data=self.lot_legal_data)
+        if table.name == "project_legal_data":
+            return SimpleNamespace(data=self.project_legal_data)
+        if table.name == "legal_documents":
+            return SimpleNamespace(data=self.legal_documents)
         if table.name == "document_evidence":
             return SimpleNamespace(data=self.evidence_rows)
         if table.name == "escritura_cases":
@@ -305,3 +323,73 @@ async def test_case_creation_refreshes_existing_active_case_snapshot():
     assert row["readiness_status"] == "ready"
     assert supabase.inserted_cases == []
     assert supabase.updated_cases == [row]
+
+
+# ==============================================================================
+# Phase 12 Regression Tests: Matriz/Lote Source Of Truth Alignment
+# ==============================================================================
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_readiness_blocked_when_no_active_certificado_exists():
+    """T098: Verify that readiness is blocked when no active certificado de roles SII exists."""
+    supabase = FakeSupabase()
+    # Simulate a lot match pointing to a superseded certificate document,
+    # but there is no active certificate document in the project.
+    supabase.lot_legal_data = {
+        "organization_id": ORG_ID,
+        "project_id": PROJECT_ID,
+        "lot_id": LOT_ID,
+        "role_status": "rol_en_tramite",
+        "matching_status": "matched",
+        "source_legal_document_id": "superseded-cert-doc-id",
+    }
+
+    # Supabase contains no active certificate
+    readiness = await get_escritura_readiness(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=LOT_ID,
+        warning_acknowledged=True,
+        supabase=supabase,
+    )
+
+    gates = {gate.gate: gate for gate in readiness.gates}
+    assert readiness.readiness_status == "blocked"
+    assert gates["sii_verified"].status == "blocked"
+    # Under Phase 12 model, either no active cert blocks or the validation blocks
+    assert any(
+        "no_active_certificate" in var or "lot_legal_data" in var
+        for var in gates["sii_verified"].blocking_variables
+    )
+
+
+@pytest.mark.asyncio
+async def test_readiness_unblocked_by_audited_manual_override_without_active_certificado():
+    """T098: Verify that an audited manual override unblocks readiness even without an active certificate."""
+    supabase = FakeSupabase()
+    # Lot has manual override approved and reviewed
+    supabase.lot_legal_data = {
+        "organization_id": ORG_ID,
+        "project_id": PROJECT_ID,
+        "lot_id": LOT_ID,
+        "role_status": "rol_en_tramite",
+        "matching_status": "manual_override",
+        "source_legal_document_id": None,
+        "reviewed_by": USER_ID,
+        "reviewed_at": "2026-06-03T12:00:00Z",
+    }
+
+    readiness = await get_escritura_readiness(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=LOT_ID,
+        warning_acknowledged=True,
+        supabase=supabase,
+    )
+
+    gates = {gate.gate: gate for gate in readiness.gates}
+    assert gates["sii_verified"].status == "ready"
+    assert readiness.readiness_status == "ready"

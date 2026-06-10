@@ -8,9 +8,11 @@ from unittest.mock import AsyncMock
 import pytest
 
 from services.legal_text_extraction import (
-    EmptyLegalTextExtractionError,
+    ExtractedLegalTextPage,
     LegalDocumentExtractionSource,
+    LegalTextExtractionResult,
     LegalTextExtractionService,
+    OcrRequiredLegalTextExtractionError,
     UnsupportedLegalTextConverterError,
 )
 
@@ -158,12 +160,70 @@ async def test_extract_and_persist_document_extracts_textual_pdf_and_marks_ocr_c
     assert repository.update_job_status.await_args_list[-1].kwargs["status"] == "text_extracted"
 
 
-async def test_extract_and_persist_document_marks_failed_when_pdf_has_no_text():
+async def test_extract_and_persist_document_uses_ocr_fallback_for_image_only_pdf(monkeypatch):
     source = _source(content=_text_pdf_bytes(""), mime_type="application/pdf")
     repository = FakeTextExtractionRepository(source)
     service = LegalTextExtractionService(repository=repository)
 
-    with pytest.raises(EmptyLegalTextExtractionError):
+    def fake_ocr_pages(source: LegalDocumentExtractionSource, *, page_count: int):
+        assert page_count == 1
+        return LegalTextExtractionResult(
+            pages=(
+                ExtractedLegalTextPage(
+                    page_number=1,
+                    page_kind="ocr_image",
+                    text_content=(
+                        "Certificado SII LOTE 1 SECTOR EL CONDOR 08179-00001"
+                    ),
+                ),
+            ),
+            converter="ocr",
+            stats={
+                "page_count": 1,
+                "text_page_count": 1,
+                "empty_page_count": 0,
+                "low_text_page_count": 1,
+                "pages_needing_ocr": [1],
+                "ocr_required": False,
+                "ocr_status": "succeeded",
+                "char_count": 59,
+                "raw_sha256_hash": "patched",
+                "mime_type": source.mime_type,
+            },
+        )
+
+    monkeypatch.setattr(
+        "services.legal_text_extraction._extract_pdf_ocr_pages",
+        fake_ocr_pages,
+    )
+
+    result = await service.extract_and_persist_document(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=LEGAL_DOCUMENT_ID,
+        ingestion_job_id=INGESTION_JOB_ID,
+    )
+
+    persisted_pages = repository.replace_document_pages.await_args.kwargs["pages"]
+    assert persisted_pages[0]["page_kind"] == "ocr_image"
+    assert persisted_pages[0]["text_content"] == (
+        "Certificado SII LOTE 1 SECTOR EL CONDOR 08179-00001"
+    )
+    assert result.extraction.converter == "ocr"
+    assert result.extraction.stats["ocr_status"] == "succeeded"
+    assert result.extraction.stats["ocr_required"] is False
+    assert repository.update_job_status.await_args_list[-1].kwargs["converter"] == "ocr"
+    assert repository.update_job_status.await_args_list[-1].kwargs["status"] == (
+        "text_extracted"
+    )
+
+
+async def test_extract_and_persist_document_marks_ocr_required_when_pdf_has_no_text():
+    source = _source(content=_text_pdf_bytes(""), mime_type="application/pdf")
+    repository = FakeTextExtractionRepository(source)
+    service = LegalTextExtractionService(repository=repository)
+
+    with pytest.raises(OcrRequiredLegalTextExtractionError):
         await service.extract_and_persist_document(
             organization_id=ORG_ID,
             project_id=PROJECT_ID,
@@ -174,8 +234,14 @@ async def test_extract_and_persist_document_marks_failed_when_pdf_has_no_text():
     repository.replace_document_pages.assert_not_awaited()
     assert repository.update_job_status.await_args_list[-1].kwargs["status"] == "failed"
     assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == (
-        "empty_text_extraction"
+        "ocr_required"
     )
+    assert repository.update_job_status.await_args_list[-1].kwargs["stats"][
+        "ocr_required"
+    ] is True
+    assert repository.update_job_status.await_args_list[-1].kwargs["stats"][
+        "ocr_status"
+    ] == "required"
     assert repository.update_document_status.await_args_list[-1].kwargs == {
         "organization_id": ORG_ID,
         "project_id": PROJECT_ID,
@@ -246,6 +312,12 @@ class FakeSupabaseTable:
         return self
 
     def eq(self, *_args):
+        return self
+
+    def neq(self, *_args):
+        return self
+
+    def is_(self, *_args):
         return self
 
     def single(self):
@@ -372,3 +444,197 @@ async def test_mark_variables_resolved_maps_needs_review_document_status_to_job_
 
     assert supabase.document_updates[-1] == {"extraction_status": "needs_review"}
     assert supabase.job_updates[-1] == {"status": "variables_proposed"}
+
+
+async def test_ocr_missing_python_dependencies_raises_error(monkeypatch):
+    import sys
+    from core.config import get_settings
+
+    # Habilitar OCR en settings
+    settings = get_settings()
+    monkeypatch.setattr(settings, "LEGAL_TEXT_OCR_ENABLED", True)
+
+    # Provocar ImportError al importar pdf2image/pytesseract
+    monkeypatch.setitem(sys.modules, "pdf2image", None)
+    monkeypatch.setitem(sys.modules, "pytesseract", None)
+
+    source = _source(content=_text_pdf_bytes(""), mime_type="application/pdf")
+    repository = FakeTextExtractionRepository(source)
+    service = LegalTextExtractionService(repository=repository)
+
+    with pytest.raises(OcrRequiredLegalTextExtractionError) as exc_info:
+        await service.extract_and_persist_document(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            legal_document_id=LEGAL_DOCUMENT_ID,
+            ingestion_job_id=INGESTION_JOB_ID,
+        )
+
+    assert exc_info.value.stats["ocr_status"] == "unavailable"
+    assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == "ocr_required"
+
+
+async def test_ocr_missing_poppler_raises_error(monkeypatch):
+    from core.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "LEGAL_TEXT_OCR_ENABLED", True)
+
+    try:
+        from pdf2image.exceptions import PDFInfoNotInstalledError
+    except ImportError:
+        class PDFInfoNotInstalledError(Exception):
+            pass
+
+    def mock_convert(*args, **kwargs):
+        raise PDFInfoNotInstalledError("Unable to get page count. Poppler is not installed?")
+
+    try:
+        import pdf2image
+        monkeypatch.setattr(pdf2image, "convert_from_bytes", mock_convert)
+    except ImportError:
+        class FakePdf2Image:
+            @staticmethod
+            def convert_from_bytes(*args, **kwargs):
+                raise PDFInfoNotInstalledError("Poppler missing")
+        import sys
+        monkeypatch.setitem(sys.modules, "pdf2image", FakePdf2Image)
+
+    # Mockear pytesseract también para evitar que la importación falle temprano en la máquina de pruebas
+    try:
+        import pytesseract
+    except ImportError:
+        class FakePyTesseract:
+            @staticmethod
+            def image_to_string(*args, **kwargs):
+                return "fake"
+        import sys
+        monkeypatch.setitem(sys.modules, "pytesseract", FakePyTesseract)
+
+    source = _source(content=_text_pdf_bytes(""), mime_type="application/pdf")
+    repository = FakeTextExtractionRepository(source)
+    service = LegalTextExtractionService(repository=repository)
+
+    with pytest.raises(Exception) as exc_info:
+        await service.extract_and_persist_document(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            legal_document_id=LEGAL_DOCUMENT_ID,
+            ingestion_job_id=INGESTION_JOB_ID,
+        )
+
+    # Dado que es TDD y el error real de Poppler (PDFInfoNotInstalledError) se propaga
+    # (o lanza un Exception genérico que resolveremos en T093),
+    # asertamos que el mensaje del error mencione "poppler".
+    assert "poppler" in str(exc_info.value).lower() or (exc_info.value.__cause__ and "poppler" in str(exc_info.value.__cause__).lower())
+    assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == "poppler_not_found"
+
+
+async def test_ocr_missing_tesseract_raises_error(monkeypatch):
+    from core.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "LEGAL_TEXT_OCR_ENABLED", True)
+
+    try:
+        from pytesseract import TesseractNotFoundError
+    except ImportError:
+        class TesseractNotFoundError(Exception):
+            pass
+
+    def mock_convert_ok(*args, **kwargs):
+        return ["fake_image_object"]
+
+    def mock_ocr(*args, **kwargs):
+        raise TesseractNotFoundError("tesseract is not installed or it's not in your PATH")
+
+    try:
+        import pdf2image
+        monkeypatch.setattr(pdf2image, "convert_from_bytes", mock_convert_ok)
+    except ImportError:
+        class FakePdf2Image:
+            @staticmethod
+            def convert_from_bytes(*args, **kwargs):
+                return ["fake_image_object"]
+        import sys
+        monkeypatch.setitem(sys.modules, "pdf2image", FakePdf2Image)
+
+    try:
+        import pytesseract
+        monkeypatch.setattr(pytesseract, "image_to_string", mock_ocr)
+    except ImportError:
+        class FakePyTesseract:
+            @staticmethod
+            def image_to_string(*args, **kwargs):
+                raise TesseractNotFoundError("Tesseract missing")
+        import sys
+        monkeypatch.setitem(sys.modules, "pytesseract", FakePyTesseract)
+
+    source = _source(content=_text_pdf_bytes(""), mime_type="application/pdf")
+    repository = FakeTextExtractionRepository(source)
+    service = LegalTextExtractionService(repository=repository)
+
+    with pytest.raises(Exception) as exc_info:
+        await service.extract_and_persist_document(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            legal_document_id=LEGAL_DOCUMENT_ID,
+            ingestion_job_id=INGESTION_JOB_ID,
+        )
+
+    assert "tesseract" in str(exc_info.value).lower() or "tesseract" in str(exc_info.value.__cause__).lower()
+    # En T093 capturaremos el error y asignaremos "tesseract_not_found" al job
+    assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == "tesseract_not_found"
+
+
+async def test_ocr_timeout_expired_raises_error(monkeypatch):
+    import subprocess
+    from core.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "LEGAL_TEXT_OCR_ENABLED", True)
+
+    def mock_convert_ok(*args, **kwargs):
+        return ["fake_image_object"]
+
+    def mock_ocr_timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd="tesseract", timeout=10)
+
+    try:
+        import pdf2image
+        monkeypatch.setattr(pdf2image, "convert_from_bytes", mock_convert_ok)
+    except ImportError:
+        class FakePdf2Image:
+            @staticmethod
+            def convert_from_bytes(*args, **kwargs):
+                return ["fake_image_object"]
+        import sys
+        monkeypatch.setitem(sys.modules, "pdf2image", FakePdf2Image)
+
+    try:
+        import pytesseract
+        monkeypatch.setattr(pytesseract, "image_to_string", mock_ocr_timeout)
+    except ImportError:
+        class FakePyTesseract:
+            @staticmethod
+            def image_to_string(*args, **kwargs):
+                raise subprocess.TimeoutExpired(cmd="tesseract", timeout=10)
+        import sys
+        monkeypatch.setitem(sys.modules, "pytesseract", FakePyTesseract)
+
+    source = _source(content=_text_pdf_bytes(""), mime_type="application/pdf")
+    repository = FakeTextExtractionRepository(source)
+    service = LegalTextExtractionService(repository=repository)
+
+    with pytest.raises(Exception) as exc_info:
+        await service.extract_and_persist_document(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            legal_document_id=LEGAL_DOCUMENT_ID,
+            ingestion_job_id=INGESTION_JOB_ID,
+        )
+
+    assert "tesseract" in str(exc_info.value).lower() or "timeout" in str(exc_info.value).lower()
+    # En T093 capturaremos el error y asignaremos "ocr_timeout" al job
+    assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == "ocr_timeout"
+

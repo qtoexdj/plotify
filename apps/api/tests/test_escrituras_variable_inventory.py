@@ -131,6 +131,10 @@ class FakeSupabaseTable:
         self.filters[str(column)] = value
         return self
 
+    def neq(self, column, value):
+        self.filters[f"{column}__neq"] = value
+        return self
+
     def in_(self, *_args):
         return self
 
@@ -157,38 +161,56 @@ class FakeSupabase:
                 return SimpleNamespace(data=[])
             return SimpleNamespace(data={"id": table.filters.get("id"), "project_id": PROJECT_ID})
         if table.name == "variable_resolutions":
-            return SimpleNamespace(
-                data=[
-                    {
-                        "id": VARIABLE_ID,
-                        "organization_id": ORG_ID,
-                        "project_id": PROJECT_ID,
-                        "variable_key": "matriz.inscripcion_fojas",
-                        "variable_group": "matriz",
-                        "value_text": "4699",
-                        "state": "proposed",
-                        "source_type": "document",
-                        "source_ref": {"document_type": "dominio_vigente"},
-                        "confidence": 0.92,
-                        "approval_required": True,
-                        "created_at": now,
-                        "updated_at": now,
-                    },
-                    {
-                        "id": "00000000-0000-4000-8000-000000000007",
-                        "organization_id": ORG_ID,
-                        "project_id": PROJECT_ID,
-                        "variable_key": "matriz.nombre_predio",
-                        "variable_group": "matriz",
-                        "value_text": None,
-                        "state": "missing",
-                        "source_type": "system",
-                        "source_ref": {},
-                        "confidence": None,
-                        "approval_required": True,
-                    },
+            rows = [
+                {
+                    "id": VARIABLE_ID,
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "variable_key": "matriz.inscripcion_fojas",
+                    "variable_group": "matriz",
+                    "value_text": "4699",
+                    "state": "proposed",
+                    "source_type": "document",
+                    "source_ref": {"document_type": "dominio_vigente"},
+                    "confidence": 0.92,
+                    "approval_required": True,
+                    "created_at": now,
+                    "updated_at": now,
+                },
+                {
+                    "id": "00000000-0000-4000-8000-000000000007",
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "variable_key": "matriz.nombre_predio",
+                    "variable_group": "matriz",
+                    "value_text": None,
+                    "state": "missing",
+                    "source_type": "system",
+                    "source_ref": {},
+                    "confidence": None,
+                    "approval_required": True,
+                },
+                {
+                    "id": "00000000-0000-4000-8000-000000000008",
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "variable_key": "matriz.nombre_predio",
+                    "variable_group": "matriz",
+                    "value_text": None,
+                    "state": "superseded",
+                    "source_type": "system",
+                    "source_ref": {},
+                    "confidence": None,
+                    "approval_required": True,
+                },
+            ]
+            if table.filters.get("state__neq"):
+                rows = [
+                    row
+                    for row in rows
+                    if row.get("state") != table.filters["state__neq"]
                 ]
-            )
+            return SimpleNamespace(data=rows)
         if table.name == "document_evidence":
             return SimpleNamespace(
                 data=[

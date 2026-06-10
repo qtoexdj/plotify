@@ -617,3 +617,77 @@ async def test_document_delivery_retry_marks_existing_document_sent():
     assert result == "SENT"
     assert update_payload["delivery_status"] == "sent"
     assert update_payload["delivery_error_message"] is None
+
+
+# ==============================================================================
+# Phase 12 Regression Tests: Matriz/Lote Source Of Truth Alignment
+# ==============================================================================
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_resolve_variables_consumes_project_legal_data_for_matriz_and_lot_legal_data_for_lot():
+    """T098: Verify that resolve_variables consumes project_legal_data for matriz values and lot_legal_data for lot values."""
+    from services.document_engine import resolve_variables
+
+    lot_result = MagicMock(
+        data={
+            "id": LOT_ID,
+            "numero_lote": "24",
+            "projects": {
+                "id": "project-1",
+                "name": "Proyecto Piloto",
+                "organizations": {"id": ORG_ID, "name": "Org Piloto"},
+            },
+        }
+    )
+    # Matriz/common values live in project_legal_data under Phase 12 design
+    project_legal_result = MagicMock(
+        data={
+            "sii_comuna": "Teno",
+            "sii_role_matrix": "08179-00000",
+            "sii_roles_status": "variables_proposed",
+        }
+    )
+    # Lot-specific role values live in lot_legal_data
+    lot_legal_result = MagicMock(
+        data={
+            "lot_id": LOT_ID,
+            "sii_pre_role": "08179-00024",
+            "sii_definitive_role": None,
+            "role_status": "rol_en_tramite",
+            "matching_status": "matched",
+        }
+    )
+    payment_result = MagicMock(data={})
+    supabase = MagicMock()
+
+    def table_side_effect(table_name):
+        table = MagicMock()
+        if table_name == "lots":
+            table.select.return_value.eq.return_value.single.return_value.execute.return_value = lot_result
+        elif table_name == "project_legal_data":
+            table.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = project_legal_result
+        elif table_name == "lot_legal_data":
+            table.select.return_value.eq.return_value.eq.return_value.maybe_single.return_value.execute.return_value = lot_legal_result
+        elif table_name == "organization_payment_info":
+            table.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = payment_result
+        return table
+
+    supabase.table.side_effect = table_side_effect
+
+    with (
+        patch("services.document_engine.get_supabase_client", return_value=supabase),
+        patch("asyncio.to_thread", new=AsyncMock(side_effect=lambda fn, *a, **kw: fn())),
+    ):
+        variables = await resolve_variables(LOT_ID, ORG_ID)
+
+    # Common matriz values are resolved from project_legal_data
+    assert variables["sii"]["comuna"] == "Teno"
+    assert variables["sii"]["rol_matriz"] == "08179-00000"
+
+    # Lot-specific values are resolved from lot_legal_data
+    assert variables["sii"]["pre_rol_lote"] == "08179-00024"
+    assert variables["lote"]["rol_tramite"] == "08179-00024"
+

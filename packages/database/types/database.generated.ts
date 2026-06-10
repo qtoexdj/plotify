@@ -1769,6 +1769,10 @@ export type Database = {
           sag_resolucion_ano: string | null
           sag_resolucion_numero: string | null
           sag_subdivision_aprobada: boolean | null
+          sii_comuna: string | null
+          sii_role_matrix: string | null
+          sii_roles_source_legal_document_id: string | null
+          sii_roles_status: string | null
           source_document: string | null
           updated_at: string
         }
@@ -1795,6 +1799,10 @@ export type Database = {
           sag_resolucion_ano?: string | null
           sag_resolucion_numero?: string | null
           sag_subdivision_aprobada?: boolean | null
+          sii_comuna?: string | null
+          sii_role_matrix?: string | null
+          sii_roles_source_legal_document_id?: string | null
+          sii_roles_status?: string | null
           source_document?: string | null
           updated_at?: string
         }
@@ -1821,6 +1829,10 @@ export type Database = {
           sag_resolucion_ano?: string | null
           sag_resolucion_numero?: string | null
           sag_subdivision_aprobada?: boolean | null
+          sii_comuna?: string | null
+          sii_role_matrix?: string | null
+          sii_roles_source_legal_document_id?: string | null
+          sii_roles_status?: string | null
           source_document?: string | null
           updated_at?: string
         }
@@ -1835,6 +1847,12 @@ export type Database = {
             foreignKeyName: "project_legal_data_project_id_fkey"
             columns: ["project_id"]
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_legal_data_sii_roles_source_legal_document_id_fkey"
+            columns: ["sii_roles_source_legal_document_id"]
+            referencedRelation: "legal_documents"
             referencedColumns: ["id"]
           },
         ]

@@ -336,6 +336,7 @@ async def update_legal_variable(
 async def get_project_legal_roles(
     project_id: str,
     organization_id: str = Query(...),
+    legal_document_id: str | None = Query(default=None),
 ) -> RoleMatchingInventoryResponse:
     ensure_legal_documents_feature_enabled(
         organization_id=organization_id,
@@ -346,6 +347,7 @@ async def get_project_legal_roles(
             await get_project_role_matching_inventory(
                 project_id=project_id,
                 organization_id=organization_id,
+                legal_document_id=legal_document_id,
             )
         )
     except LegalRoleMatchingScopeError as exc:
@@ -385,10 +387,13 @@ async def update_lot_legal_role(
             project_id=project_id,
             lot_id=lot_id,
             sii_unit_name=payload.sii_unit_name,
+            sii_lot_number_normalized=payload.sii_lot_number_normalized,
+            sii_comuna=payload.sii_comuna,
             sii_role_matrix=payload.sii_role_matrix,
             sii_pre_role=payload.sii_pre_role,
             sii_role_in_process_text=payload.sii_role_in_process_text,
             sii_definitive_role=payload.sii_definitive_role,
+            sii_role_record=payload.sii_role_record,
             role_status=payload.role_status,
             reason=payload.reason,
             source_legal_document_id=payload.source_legal_document_id,

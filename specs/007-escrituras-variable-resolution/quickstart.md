@@ -79,7 +79,7 @@ Expected result:
 
 ## Scenario 4: SII roles match lots
 
-1. Process a certificado de roles SII containing several lots.
+1. Process a certificado de roles SII containing several lots, including a fixture where comuna and rol matriz appear in the header and rows contain unit label plus role.
 2. Open the SII role matching section.
 3. Verify each lot has one of:
    - `matched`
@@ -87,12 +87,65 @@ Expected result:
    - `missing`
    - `manual_override`
 4. Confirm a lot with role in process appears as `Rol de avaluo en tramite` when evidence exists.
+5. Confirm the certificate summary shows comuna, rol matriz, extracted unit count, OCR/text source and rows needing review.
+6. Open evidence for one role row and confirm the snippet includes the source row and header context used for comuna/rol matriz.
 
 Expected result:
 
 - No silent role assignment exists.
 - Ambiguous/missing roles block readiness.
 - Role in process is not flagged as missing when backed by evidence.
+- Matrix role is visible and propagated to each matched lot from the same certificate.
+
+## Scenario 4B: Scanned SII certificate requires OCR
+
+1. Process an image-only certificado de roles SII fixture.
+2. If OCR is configured, wait for OCR-backed extraction to finish.
+3. If OCR is not configured or fails, open Centro de Control Legal.
+
+Expected result:
+
+- The document is not treated as a normal text extraction.
+- OCR-backed pages include converter/stats metadata and evidence when successful.
+- Without successful OCR, the document clearly shows `ocr_required` or `needs_review`, and no SII role rows are silently invented.
+
+## Scenario 4C: Production SII role hardening
+
+1. Process a certificado SII fixture with a multi-number unit label such as `GAONA 7 PARCELA 8 LT 9` and extracted `sii_lot_number_normalized = 9`.
+2. Verify only lot 9 can become `matched`; lots 7 and 8 must remain `missing`, `ambiguous` or manual-review candidates.
+3. Replace the certificado de roles SII with a newer version.
+4. Verify roles from the superseded certificate are excluded from current matching and escritura readiness while historical evidence remains attached to old snapshots.
+5. Process a fixture where comuna/rol matriz appear on page 1 and role rows appear on page 2.
+6. Verify header context is propagated only with certificate/page evidence; ambiguous header context requires `manual_review`.
+7. Process a fixture with multiple matrix roles.
+8. Verify `matrix_roles` preserves the list and automatic matrix-role propagation is blocked unless the parser proves a globally applicable role.
+9. Submit a manual override that changes pre-role or comuna while the client sends stale `sii_role_in_process_text`.
+10. Verify the backend derives and persists the final text from the approved pre-role plus comuna.
+11. Simulate OCR dependency, converter or timeout failures.
+12. Verify the document surfaces `ocr_required`/`needs_review` with stats and no invented SII rows.
+
+Expected result:
+
+- Automatic SII role matching is exact, one-to-one and certificate-version scoped.
+- Cross-page context and matrix roles are evidence-aware and conservative.
+- Manual overrides cannot persist stale derived role text from the browser.
+- OCR runtime failures are operationally visible and deterministic.
+
+## Scenario 4D: Source-of-truth alignment (Phase 12)
+
+1. Upload an active certificado de roles SII for a project with several lots.
+2. Open the SII role matching section.
+3. Confirm the certificate summary shows `sii_comuna` and `sii_role_matrix` once at project level.
+4. Confirm each lot row shows its own `sii_pre_role` and `matching_status` from `lot_legal_data`.
+5. Remove the active certificate (upload a superseding version).
+6. Open escritura readiness for any lot.
+
+Expected result:
+
+- Before superseding: lots with extracted rows are `rol_en_tramite`; `sii_roles_status` on the project is `active`.
+- After superseding: `sii_roles_status` returns to `missing`; SII readiness gate is blocked for all lots until the new certificate is processed.
+- Common SII values (`sii_comuna`, `sii_role_matrix`) come from `project_legal_data` and are shared; per-lot pre-role comes from `lot_legal_data`.
+- Minuta variables and escritura case snapshots expose legal domain values (`sii.comuna`, `sii.rol_matriz`, `lote.rol_tramite`) and not raw parser/OCR metadata.
 
 ## Scenario 5: Sold lot readiness
 

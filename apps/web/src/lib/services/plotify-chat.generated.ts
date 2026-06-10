@@ -208,12 +208,17 @@ export interface components {
       "reviewed_at"?: string | null
       "reviewed_by"?: string | null
       "role_status": string
+      "sii_comuna"?: string | null
       "sii_definitive_role"?: string | null
+      "sii_lot_number_normalized"?: string | null
       "sii_pre_role"?: string | null
       "sii_role_in_process_text"?: string | null
       "sii_role_matrix"?: string | null
       "sii_unit_name"?: string | null
+      "source_document_label"?: string | null
       "source_legal_document_id"?: string | null
+      "source_status"?: string | null
+      "source_type"?: string | null
       "updated_at"?: string | null
     }
     "MarkReadResponse": {
@@ -331,16 +336,21 @@ export interface components {
       "reason": string
       "reviewed_by"?: string | null
       "role_status": string
+      "sii_comuna"?: string | null
       "sii_definitive_role"?: string | null
+      "sii_lot_number_normalized"?: string | null
       "sii_pre_role"?: string | null
       "sii_role_in_process_text"?: string | null
       "sii_role_matrix"?: string | null
+      "sii_role_record"?: Record<string, unknown> | null
       "sii_unit_name"?: string | null
       "source_legal_document_id"?: string | null
     }
     "RoleMatchingInventoryResponse": {
+      "certificate_summary"?: components["schemas"]["SiiRoleCertificateSummary"] | null
       "lots"?: Array<components["schemas"]["LotLegalDataResponse"]>
       "project_id": string
+      "review_counts"?: Record<string, number>
       "summary"?: Record<string, number>
     }
     "SalePayload": {
@@ -365,6 +375,20 @@ export interface components {
       "organization_id": string
       "prompt_content": string
       "test_message": string
+    }
+    "SiiRoleCertificateSummary": {
+      "active_certificate_count"?: number
+      "ambiguous_matrix_role_count"?: number
+      "comunas"?: Array<string>
+      "extracted_unit_count"?: number
+      "manual_review_count"?: number
+      "matched_count"?: number
+      "missing_count"?: number
+      "ocr_required"?: boolean | null
+      "role_matrices"?: Array<string>
+      "source_legal_document_ids"?: Array<string>
+      "superseded_certificate_count"?: number
+      "text_source"?: string | null
     }
     "TelegramTokenRequest": {
       "organization_id"?: string | null

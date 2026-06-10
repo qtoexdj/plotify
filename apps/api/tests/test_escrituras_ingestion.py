@@ -441,17 +441,21 @@ class FakeIngestionSupabase:
         version_number: int,
         extraction_status: str,
         sha256_hash: str,
+        document_type: str = "dominio_vigente",
+        source_field: str = "doc_dominio_vigente",
+        original_filename: str = "Dominio vigente.pdf",
+        superseded_by: str | None = None,
     ) -> dict[str, object]:
         return {
             "id": legal_document_id,
             "organization_id": ORG_ID,
             "project_id": PROJECT_ID,
             "lot_id": None,
-            "document_type": "dominio_vigente",
-            "source_field": "doc_dominio_vigente",
+            "document_type": document_type,
+            "source_field": source_field,
             "storage_bucket": "project-files",
             "storage_path": f"{PROJECT_ID}/legal/{legal_document_id}.pdf",
-            "original_filename": "Dominio vigente.pdf",
+            "original_filename": original_filename,
             "mime_type": "application/pdf",
             "file_size_bytes": 123456,
             "sha256_hash": sha256_hash,
@@ -459,7 +463,7 @@ class FakeIngestionSupabase:
             "upload_source": "project_documents",
             "uploaded_by": USER_ID,
             "extraction_status": extraction_status,
-            "superseded_by": None,
+            "superseded_by": superseded_by,
             "created_at": self.now,
             "updated_at": self.now,
         }
@@ -583,6 +587,24 @@ async def test_retry_queues_next_attempt_and_blocks_duplicate_dispatch():
     assert [job["attempt_number"] for job in supabase.jobs] == [1, 2]
 
 
+async def test_retry_can_reprocess_completed_documents_after_extractor_updates():
+    from services.legal_document_ingestion import queue_retry_for_legal_document
+
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "variables_proposed"
+    supabase.jobs[0]["status"] = "variables_proposed"
+
+    result = await queue_retry_for_legal_document(
+        legal_document_id="00000000-0000-4000-8000-000000000006",
+        organization_id=ORG_ID,
+        supabase=supabase,
+    )
+
+    assert result.legal_document.extraction_status == "queued"
+    assert result.ingestion_job.attempt_number == 2
+    assert supabase.documents[0]["extraction_status"] == "queued"
+
+
 async def test_registering_replacement_supersedes_previous_active_versions():
     from schemas.legal_variables import LegalDocumentRegisterRequest
     from services.legal_document_ingestion import register_legal_document
@@ -622,3 +644,44 @@ async def test_registering_replacement_supersedes_previous_active_versions():
             "superseded_by": LEGAL_DOCUMENT_ID,
         }
     ]
+
+
+async def test_select_active_latest_sii_certificate_excludes_superseded_versions():
+    from services.legal_document_ingestion import get_active_legal_document_for_type
+
+    active_document_id = "00000000-0000-4000-8000-000000000026"
+    superseded_document_id = "00000000-0000-4000-8000-000000000025"
+    supabase = FakeIngestionSupabase()
+    supabase.documents = [
+        supabase.document_row(
+            legal_document_id=superseded_document_id,
+            version_number=1,
+            extraction_status="superseded",
+            sha256_hash="d" * 64,
+            document_type="certificado_roles_sii",
+            source_field="doc_roles",
+            original_filename="Roles SII antiguo.pdf",
+            superseded_by=active_document_id,
+        ),
+        supabase.document_row(
+            legal_document_id=active_document_id,
+            version_number=2,
+            extraction_status="variables_proposed",
+            sha256_hash="e" * 64,
+            document_type="certificado_roles_sii",
+            source_field="doc_roles",
+            original_filename="Roles SII vigente.pdf",
+        ),
+    ]
+
+    active_document = await get_active_legal_document_for_type(
+        project_id=PROJECT_ID,
+        organization_id=ORG_ID,
+        document_type="certificado_roles_sii",
+        supabase=supabase,
+    )
+
+    assert active_document.id == active_document_id
+    assert active_document.document_type == "certificado_roles_sii"
+    assert active_document.version_number == 2
+    assert active_document.extraction_status == "variables_proposed"

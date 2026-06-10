@@ -2,7 +2,6 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -19,6 +18,8 @@ import {
   type LegalDocumentListItem,
   type LegalExtractionStatus,
 } from '@/lib/legal/variable-resolution-types'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { File02Icon, AlertCircleIcon, Refresh01Icon } from '@hugeicons/core-free-icons'
 
 type LegalDocumentStatusItem = LegalDocumentListItem | LegalDocument
 
@@ -31,14 +32,15 @@ interface LegalDocumentStatusPanelProps {
 }
 
 const statusClassName: Record<LegalExtractionStatus, string> = {
-  pending: 'border-slate-200 bg-slate-50 text-slate-700',
-  queued: 'border-sky-200 bg-sky-50 text-sky-700',
-  processing: 'border-blue-200 bg-blue-50 text-blue-700',
-  text_extracted: 'border-indigo-200 bg-indigo-50 text-indigo-700',
-  variables_proposed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  needs_review: 'border-amber-200 bg-amber-50 text-amber-700',
-  failed: 'border-red-200 bg-red-50 text-red-700',
-  superseded: 'border-zinc-200 bg-zinc-50 text-zinc-600',
+  pending: 'border-slate-200/50 bg-slate-500/10 text-slate-600 dark:text-slate-400',
+  queued: 'border-sky-200/50 bg-sky-500/10 text-sky-600 dark:text-sky-400',
+  processing: 'border-blue-200/50 bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  text_extracted: 'border-indigo-200/50 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+  variables_proposed:
+    'border-emerald-200/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  needs_review: 'border-amber-200/50 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  failed: 'border-red-200/50 bg-red-500/10 text-red-600 dark:text-red-400',
+  superseded: 'border-zinc-200/50 bg-zinc-500/10 text-zinc-500 dark:text-zinc-400',
 }
 
 function getUploadedAt(document: LegalDocumentStatusItem) {
@@ -76,13 +78,15 @@ export function LegalDocumentStatusPanel({
   ).length
 
   return (
-    <Card>
-      <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-muted/10">
         <div>
-          <CardTitle>Documentos legales</CardTitle>
-          <CardDescription>
-            Estado de extraccion y variables propuestas desde las fuentes del proyecto.
-          </CardDescription>
+          <h3 className="text-base font-semibold tracking-tight text-foreground">
+            Documentos legales
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Estado de extracción y variables propuestas desde las fuentes del proyecto.
+          </p>
         </div>
         {onOpenControlCenter ? (
           <Button
@@ -90,91 +94,129 @@ export function LegalDocumentStatusPanel({
             variant={needsReviewCount > 0 ? 'default' : 'outline'}
             size="sm"
             onClick={onOpenControlCenter}
+            className="self-start sm:self-auto h-8 text-xs transition-all duration-200"
           >
             Revisar variables
           </Button>
         ) : null}
-      </CardHeader>
-      <CardContent>
+      </div>
+
+      <div className="p-6">
         {isLoading ? (
-          <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-            Cargando documentos legales...
+          <div className="py-8 flex flex-col items-center justify-center text-muted-foreground gap-2 border border-dashed border-border rounded-lg">
+            <HugeiconsIcon icon={Refresh01Icon} className="w-6 h-6 animate-spin text-primary" />
+            <p className="text-xs">Cargando documentos legales...</p>
           </div>
         ) : error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+          <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-xs border border-destructive/20 flex items-center gap-2">
+            <HugeiconsIcon icon={AlertCircleIcon} className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
           </div>
         ) : documents.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-            No hay documentos legales registrados para este proyecto.
+          <div className="py-8 flex flex-col items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg">
+            <HugeiconsIcon icon={File02Icon} className="w-8 h-8 opacity-30 mb-2" />
+            <p className="text-xs">No hay documentos legales registrados para este proyecto.</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Documento</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Variables</TableHead>
-                <TableHead className="text-right">Version</TableHead>
-                <TableHead>Subido</TableHead>
-                <TableHead className="text-right">Accion</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {documents.map((document) => {
-                const summary = getSummary(document)
-                return (
-                  <TableRow key={document.id}>
-                    <TableCell className="max-w-64">
-                      <div className="truncate font-medium">{document.original_filename}</div>
-                      <div className="text-xs text-muted-foreground">{summary.pages} paginas</div>
-                    </TableCell>
-                    <TableCell>
-                      {LEGAL_DOCUMENT_TYPE_LABELS[document.document_type] ?? document.document_type}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(statusClassName[document.extraction_status])}
-                      >
-                        {LEGAL_EXTRACTION_STATUS_LABELS[document.extraction_status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="font-mono text-sm">{summary.variables_proposed}</div>
-                      {(summary.variables_conflict > 0 || summary.variables_missing > 0) && (
-                        <div className="text-xs text-muted-foreground">
-                          {summary.variables_conflict} conflicto, {summary.variables_missing}{' '}
-                          faltante
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      v{document.version_number}
-                    </TableCell>
-                    <TableCell>{formatDate(getUploadedAt(document))}</TableCell>
-                    <TableCell className="text-right">
-                      {document.extraction_status === 'failed' && onRetryDocument ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onRetryDocument(document)}
-                        >
-                          Reintentar
-                        </Button>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">--</span>
-                      )}
-                    </TableCell>
+          <div className="overflow-hidden border border-border rounded-lg bg-muted/5">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-muted/20 border-b border-border">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="py-2.5 px-3 font-semibold text-xs uppercase text-muted-foreground">
+                      Documento
+                    </TableHead>
+                    <TableHead className="py-2.5 px-3 font-semibold text-xs uppercase text-muted-foreground">
+                      Tipo
+                    </TableHead>
+                    <TableHead className="py-2.5 px-3 font-semibold text-xs uppercase text-muted-foreground">
+                      Estado
+                    </TableHead>
+                    <TableHead className="py-2.5 px-3 font-semibold text-xs uppercase text-muted-foreground text-right">
+                      Variables
+                    </TableHead>
+                    <TableHead className="py-2.5 px-3 font-semibold text-xs uppercase text-muted-foreground text-right">
+                      Versión
+                    </TableHead>
+                    <TableHead className="py-2.5 px-3 font-semibold text-xs uppercase text-muted-foreground">
+                      Subido
+                    </TableHead>
+                    <TableHead className="py-2.5 px-3 font-semibold text-xs uppercase text-muted-foreground text-right">
+                      Acción
+                    </TableHead>
                   </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody className="divide-y divide-border/50">
+                  {documents.map((document) => {
+                    const summary = getSummary(document)
+                    return (
+                      <TableRow
+                        key={document.id}
+                        className="align-middle hover:bg-muted/10 transition-colors"
+                      >
+                        <TableCell className="py-3 px-3 max-w-64">
+                          <div className="truncate font-medium text-xs text-foreground">
+                            {document.original_filename}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            {summary.pages} páginas
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 px-3 text-xs text-muted-foreground">
+                          {LEGAL_DOCUMENT_TYPE_LABELS[document.document_type] ??
+                            document.document_type}
+                        </TableCell>
+                        <TableCell className="py-3 px-3">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[9px] px-1.5 py-0 border',
+                              statusClassName[document.extraction_status]
+                            )}
+                          >
+                            {LEGAL_EXTRACTION_STATUS_LABELS[document.extraction_status]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3 px-3 text-right">
+                          <div className="font-mono text-xs text-foreground font-semibold">
+                            {summary.variables_proposed}
+                          </div>
+                          {(summary.variables_conflict > 0 || summary.variables_missing > 0) && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                              {summary.variables_conflict} conf, {summary.variables_missing} falt
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3 px-3 text-right font-mono text-xs text-foreground">
+                          v{document.version_number}
+                        </TableCell>
+                        <TableCell className="py-3 px-3 text-xs text-muted-foreground">
+                          {formatDate(getUploadedAt(document))}
+                        </TableCell>
+                        <TableCell className="py-3 px-3 text-right">
+                          {document.extraction_status === 'failed' && onRetryDocument ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onRetryDocument(document)}
+                              className="h-7 text-xs px-2.5 transition-all duration-150"
+                            >
+                              Reintentar
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">--</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
