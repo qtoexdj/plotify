@@ -534,6 +534,8 @@ export interface LotRoleMatch {
   lot_id: UUID
   lot_number: string
   sii_unit_name: string | null
+  sii_lot_number_normalized?: string | null
+  sii_comuna?: string | null
   sii_role_matrix?: string | null
   sii_pre_role: string | null
   sii_role_in_process_text?: string | null
@@ -541,7 +543,10 @@ export interface LotRoleMatch {
   role_status: LotRoleStatus
   matching_status: RoleMatchingStatus
   matching_score?: number | null
+  source_type?: string | null
   source_legal_document_id: UUID | null
+  source_document_label?: string | null
+  source_status?: string | null
   reviewed_by?: UUID | null
   reviewed_at?: ISODateTimeString | null
 }
@@ -550,14 +555,33 @@ export interface RoleMatchingSummary extends Record<RoleMatchingStatus, number> 
   total: number
 }
 
+export interface SiiRoleCertificateSummary {
+  source_legal_document_ids: UUID[]
+  comunas: string[]
+  role_matrices: string[]
+  extracted_unit_count: number
+  matched_count: number
+  manual_review_count: number
+  missing_count: number
+  active_certificate_count: number
+  superseded_certificate_count: number
+  ambiguous_matrix_role_count: number
+  ocr_required?: boolean | null
+  text_source?: 'pdf_text' | 'ocr' | 'ocr_or_text_pages' | 'manual' | string | null
+}
+
 export interface LegalRoleMatchesResponse {
   project_id: UUID
   lots: LotRoleMatch[]
   summary: RoleMatchingSummary
+  certificate_summary?: SiiRoleCertificateSummary | null
+  review_counts?: Partial<Record<RoleMatchingStatus, number>>
 }
 
 export interface LegalRoleMatchUpdatePayload {
   sii_unit_name?: string | null
+  sii_lot_number_normalized?: string | null
+  sii_comuna?: string | null
   sii_role_matrix?: string | null
   sii_pre_role?: string | null
   sii_definitive_role?: string | null
@@ -662,4 +686,26 @@ export interface LegalReviewDecisionPayload {
   lawyer_name?: string | null
   lawyer_rut?: string | null
   lawyer_email?: string | null
+}
+
+export function deriveRoleInProcessText(
+  preRole: string | null | undefined,
+  comuna: string | null | undefined
+): string {
+  const pr = preRole?.trim()
+  const com = comuna?.trim()
+  if (!pr || !com) return ''
+  return `Rol de avaluo en tramite numero ${pr} de la comuna de ${com}`
+}
+
+export function validateRoleInProcessText(
+  text: string | null | undefined,
+  preRole: string | null | undefined,
+  comuna: string | null | undefined
+): boolean {
+  const pr = preRole?.trim()
+  const com = comuna?.trim()
+  if (!pr || !com) return false
+  const derived = deriveRoleInProcessText(pr, com)
+  return (text || '').trim() === derived
 }

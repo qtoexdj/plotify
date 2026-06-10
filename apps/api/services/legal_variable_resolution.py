@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -63,10 +63,13 @@ SII_ROLES_REQUIRED_VARIABLES = (
 SAG_PLANO_REQUIRED_VARIABLES = (
     "sag.certificado_numero",
     "sag.certificado_fecha",
-    "sag.oficina_sectorial",
+    "sag.region_oficina",
     "sag.plano_cbr_numero",
     "sag.plano_cbr_anio",
-    "sag.plano_cbr_registro",
+)
+PLANO_OFICIAL_REQUIRED_VARIABLES = (
+    "sag.plano_cbr_numero",
+    "sag.plano_cbr_anio",
 )
 CRITICAL_VARIABLE_KEYS = frozenset(
     key
@@ -78,10 +81,9 @@ CRITICAL_VARIABLE_KEYS = frozenset(
         "matriz.rol_avaluo",
         "sag.certificado_numero",
         "sag.certificado_fecha",
-        "sag.oficina_sectorial",
+        "sag.region_oficina",
         "sag.plano_cbr_numero",
         "sag.plano_cbr_anio",
-        "sag.plano_cbr_registro",
         "sii.certificado_asignacion_roles_numero",
         "sii.certificado_fecha_emision",
         "sii.solicitud_numero",
@@ -96,6 +98,7 @@ REPEATABLE_SOURCE_REF_VARIABLE_KEYS = frozenset(
     {
         "sii.unidad_nombre",
         "sii.pre_rol_lote",
+        "sii.rol_avaluo_en_tramite_texto",
     }
 )
 
@@ -152,8 +155,21 @@ _SII_REQUEST_RE = re.compile(
     re.IGNORECASE,
 )
 _SII_MATRIX_ROLE_RE = re.compile(
-    r"(?:rol\s+matriz|rol\s+de\s+origen|predio\s+matriz)\s*(?:n[°ºro.]*|numero)?\s*"
+    r"(?:rol(?:\(es\))?\s+matriz(?:\(ces\))?|numero\(s\)\s+de\s+rol\(es\)\s+matriz\(ces\)|rol\s+de\s+origen|predio\s+matriz)"
+    r"\s*(?:n[°ºro.]*|numero)?\s*:?\s*"
     r"(?P<role>\d{1,7}\s*[-/]\s*\d{1,7})",
+    re.IGNORECASE,
+)
+_SII_MATRIX_ROLE_LABEL_RE = re.compile(
+    r"(?:rol(?:\(es\))?\s+matriz(?:\(ces\))?|numero\(s\)\s+de\s+rol\(es\)\s+matriz\(ces\)|rol\s+de\s+origen|predio\s+matriz)",
+    re.IGNORECASE,
+)
+_SII_ROLE_NUMBER_RE = re.compile(
+    r"\b\d{1,7}\s*[-/]\s*\d{1,7}\b",
+    re.IGNORECASE,
+)
+_SII_HEADER_COMUNA_RE = re.compile(
+    r"\bcomuna\s*:?\s*(?:\r?\n)?\s*(?P<comuna>[A-ZÁÉÍÓÚÜÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]{2,80})",
     re.IGNORECASE,
 )
 _SII_ROLE_IN_PROCESS_RE = re.compile(
@@ -176,14 +192,43 @@ _SII_ASSIGNED_ROLE_ROW_RE = re.compile(
     r"(?:\s+[A-Z])?$",
     re.IGNORECASE,
 )
+_SII_ROLE_TUPLE_ROW_RE = re.compile(
+    r"^(?P<unit>(?P<kind>lote|parcela|unidad)\s+(?P<lot_number>[A-Z0-9.-]+))"
+    r"\s+(?P<pre_role>\d{1,7}\s*[-/]\s*\d{1,7})"
+    r"(?:\s+(?P<comuna>[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ '-]{2,80}))?$",
+    re.IGNORECASE,
+)
+_SII_ROLE_TUPLE_WITHOUT_ROLE_RE = re.compile(
+    r"^(?P<unit>(?P<kind>lote|parcela|unidad)\s+(?P<lot_number>[A-Z0-9.-]+))"
+    r"(?:\s+(?P<comuna>[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ '-]{2,80}))?$",
+    re.IGNORECASE,
+)
+_SII_REAL_ROLE_ROW_RE = re.compile(
+    r"^(?P<unit>[A-ZÁÉÍÓÚÜÑ0-9 .'-]*\b(?:lote|lt|unidad)\s+[A-Z0-9.-]+"
+    r"(?:\s+[A-ZÁÉÍÓÚÜÑ0-9 .'-]+?)?)"
+    r"\s+(?P<pre_role>\d{1,7}\s*[-/]\s*\d{1,7})"
+    r"(?:\s+[A-Z])?$",
+    re.IGNORECASE,
+)
+_SII_LOT_MARKER_RE = re.compile(
+    r"\b(?:lote|lt|unidad)\s+(?P<lot_number>[A-Z0-9.-]+)",
+    re.IGNORECASE,
+)
 _SAG_CERTIFICATE_NUMBER_RE = re.compile(
     r"(?:certificado|resoluci[oó]n)\s*(?:SAG)?\s*(?:exenta)?\s*"
-    r"(?:n[uú]mero|n[°ºro.]*)?\s*(?P<number>[A-Z0-9][A-Z0-9.-]{2,40})",
+    r"(?:n[uú]mero|n[°ºro.]*)?\s*(?P<number>[A-Z0-9][A-Z0-9./-]{1,40})",
     re.IGNORECASE,
 )
 _SAG_CERTIFICATE_DATE_RE = re.compile(
-    r"(?:fecha(?:\s+de\s+certificado|\s+de\s+emisi[oó]n)?|de\s+fecha)\s*"
+    r"(?:fecha(?:\s+de\s+certificado|\s+de\s+emisi[oó]n)?|de\s+fecha|"
+    r"[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ '-]{2,80},)\s*"
     r"(?P<date>\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})",
+    re.IGNORECASE,
+)
+_SAG_REGION_RE = re.compile(
+    r"Servicio\s+Agr[ií]cola\s+y\s+Ganadero,\s*"
+    r"(?P<region>Regi[oó]n\s+(?:del|de\s+la|de\s+los|de\s+las)?\s*"
+    r"[A-ZÁÉÍÓÚÜÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]{2,80}?)(?=\s+en\b|\.|,|;|$)",
     re.IGNORECASE,
 )
 _SAG_OFFICE_RE = re.compile(
@@ -197,11 +242,6 @@ _PLANO_CBR_RE = re.compile(
     r"(?P<number>[A-Z0-9.-]*\d[A-Z0-9.-]{0,30}).{0,80}?"
     r"(?:a(?:n|ñ)o|del\s+a(?:n|ñ)o)\s*(?P<year>\d{4})",
     re.IGNORECASE | re.DOTALL,
-)
-_PLANO_REGISTRY_RE = re.compile(
-    r"(?:registro|archivo|conservador(?:a)?(?:\s+de\s+bienes\s+ra[ií]ces)?(?:\s+de)?)\s+"
-    r"(?P<registry>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{2,80}?)(?=\.|,|;|$)",
-    re.IGNORECASE,
 )
 _LOW_CONFIDENCE_MARKERS_RE = re.compile(
     r"\b(?:borroso|ilegible|posiblemente|probablemente|dudoso|no\s+se\s+lee|OCR)\b",
@@ -227,11 +267,35 @@ class VariableEvidenceInput:
 
 
 @dataclass(frozen=True)
+class SiiHeaderContext:
+    comuna: str | None = None
+    role_matrix: str | None = None
+    matrix_roles: tuple[str, ...] = ()
+    header_page_number: int | None = None
+    header_legal_document_page_id: str | None = None
+    manual_review_reason: str | None = None
+
+    @property
+    def has_values(self) -> bool:
+        return bool(self.comuna or self.role_matrix or self.matrix_roles)
+
+
+@dataclass(frozen=True)
 class SiiUnitTextMatch:
     match: re.Match[str]
     full_text: str
     unit_name: str
-    pre_role: str
+    pre_role: str | None
+    lot_number_normalized: str | None = None
+    comuna: str | None = None
+    role_matrix: str | None = None
+    matrix_roles: tuple[str, ...] = ()
+    row_index: int | None = None
+    parser: str | None = None
+    header_page_number: int | None = None
+    header_legal_document_page_id: str | None = None
+    manual_review_reason: str | None = None
+    complete: bool = True
 
 
 @dataclass(frozen=True)
@@ -363,12 +427,21 @@ class LegalVariableResolutionService:
         declared_unit_count = _declared_sii_unit_count(
             "\n".join(page.text_content for page in normalized_pages)
         )
+        active_header_context: SiiHeaderContext | None = None
         for page in normalized_pages:
+            page_header_context = _extract_sii_header_context(
+                page.text_content,
+                page_number=page.page_number,
+                legal_document_page_id=page.id,
+            )
+            if page_header_context.has_values:
+                active_header_context = page_header_context
             page_proposals = self._extract_sii_roles_page_variables(
                 organization_id=organization_id,
                 project_id=project_id,
                 page=page,
                 unit_index_start=next_unit_index,
+                header_context=active_header_context,
             )
             proposals.extend(page_proposals)
             next_unit_index += sum(
@@ -380,7 +453,7 @@ class LegalVariableResolutionService:
             extracted_unit_count = next_unit_index - 1
             unit_count_matches = declared_unit_count == extracted_unit_count
             for index, proposal in enumerate(proposals):
-                if proposal.variable_key not in {"sii.unidad_nombre", "sii.pre_rol_lote"}:
+                if proposal.variable_key not in {"sii.unidad_nombre", "sii.pre_rol_lote", "sii.rol_avaluo_en_tramite_texto"}:
                     continue
                 proposals[index] = VariableProposalInput(
                     **{
@@ -570,6 +643,7 @@ class LegalVariableResolutionService:
         project_id: str,
         page: LegalDocumentPageInput,
         unit_index_start: int = 1,
+        header_context: SiiHeaderContext | None = None,
     ) -> list[VariableProposalInput]:
         raw_text = page.text_content
         text = normalize_whitespace(raw_text)
@@ -611,43 +685,76 @@ class LegalVariableResolutionService:
                 )
             )
 
-        unit_matches = list(_iter_sii_unit_matches(raw_text, text))
+        unit_matches = list(
+            _iter_sii_unit_matches(
+                raw_text,
+                text,
+                header_context=header_context,
+            )
+        )
         for index, match in enumerate(unit_matches, start=unit_index_start):
-            source_ref = {**common_ref, "unit_index": index}
+            source_ref = {
+                **common_ref,
+                "unit_index": index,
+                **_sii_unit_tuple_source_ref(match),
+            }
             snippet = _snippet_for_match(match.full_text, match.match)
             unit_name = clean_sii_unit_name(match.unit_name)
             pre_role = normalize_role_number(match.pre_role)
-            proposals.append(
-                build_document_proposal(
-                    organization_id=organization_id,
-                    project_id=project_id,
-                    legal_document_id=page.legal_document_id,
-                    legal_document_page_id=page.id,
-                    variable_key="sii.unidad_nombre",
-                    value_text=unit_name,
-                    source_ref=source_ref,
-                    snippet=snippet,
-                    confidence=0.88,
-                    extractor_name=SII_ROLES_EXTRACTOR_NAME,
-                )
+            unit_proposal = build_document_proposal(
+                organization_id=organization_id,
+                project_id=project_id,
+                legal_document_id=page.legal_document_id,
+                legal_document_page_id=page.id,
+                variable_key="sii.unidad_nombre",
+                value_text=unit_name,
+                source_ref=source_ref,
+                snippet=snippet,
+                confidence=0.88 if match.complete else 0.7,
+                extractor_name=SII_ROLES_EXTRACTOR_NAME,
             )
-            proposals.append(
-                build_document_proposal(
-                    organization_id=organization_id,
-                    project_id=project_id,
-                    legal_document_id=page.legal_document_id,
-                    legal_document_page_id=page.id,
-                    variable_key="sii.pre_rol_lote",
-                    value_text=pre_role,
-                    source_ref=source_ref,
-                    snippet=snippet,
-                    confidence=0.88,
-                    extractor_name=SII_ROLES_EXTRACTOR_NAME,
-                )
+            proposals.append(_mark_sii_tuple_manual_review(unit_proposal, match))
+            if not pre_role:
+                continue
+            pre_role_proposal = build_document_proposal(
+                organization_id=organization_id,
+                project_id=project_id,
+                legal_document_id=page.legal_document_id,
+                legal_document_page_id=page.id,
+                variable_key="sii.pre_rol_lote",
+                value_text=pre_role,
+                source_ref=source_ref,
+                snippet=snippet,
+                confidence=0.88 if match.complete else 0.7,
+                extractor_name=SII_ROLES_EXTRACTOR_NAME,
             )
+            proposals.append(_mark_sii_tuple_manual_review(pre_role_proposal, match))
+
+            if match.complete and match.comuna:
+                role_text = (
+                    f"Rol de avaluo en tramite numero {pre_role} "
+                    f"de la comuna de {match.comuna}"
+                )
+                proposals.append(
+                    build_document_proposal(
+                        organization_id=organization_id,
+                        project_id=project_id,
+                        legal_document_id=page.legal_document_id,
+                        legal_document_page_id=page.id,
+                        variable_key="sii.rol_avaluo_en_tramite_texto",
+                        value_text=role_text,
+                        source_ref=source_ref,
+                        snippet=snippet,
+                        confidence=0.88,
+                        extractor_name=SII_ROLES_EXTRACTOR_NAME,
+                    )
+                )
 
         role_in_process = _SII_ROLE_IN_PROCESS_RE.search(text)
-        if role_in_process:
+        if role_in_process and not any(
+            proposal.variable_key == "sii.rol_avaluo_en_tramite_texto"
+            for proposal in proposals
+        ):
             proposals.append(
                 build_document_proposal(
                     organization_id=organization_id,
@@ -685,12 +792,16 @@ class LegalVariableResolutionService:
         pattern_specs = (
             ("sag.certificado_numero", _SAG_CERTIFICATE_NUMBER_RE, "number", confidence),
             ("sag.certificado_fecha", _SAG_CERTIFICATE_DATE_RE, "date", confidence),
+            ("sag.region_oficina", _SAG_REGION_RE, "region", confidence),
             ("sag.oficina_sectorial", _SAG_OFFICE_RE, "office", confidence),
         )
         for variable_key, pattern, group_name, pattern_confidence in pattern_specs:
             match = pattern.search(text)
             if not match:
                 continue
+            value_text = clean_legal_value(match.group(group_name))
+            if variable_key == "sag.certificado_numero":
+                value_text = normalize_sag_certificate_number(value_text)
             proposals.append(
                 build_document_proposal(
                     organization_id=organization_id,
@@ -698,7 +809,7 @@ class LegalVariableResolutionService:
                     legal_document_id=page.legal_document_id,
                     legal_document_page_id=page.id,
                     variable_key=variable_key,
-                    value_text=clean_legal_value(match.group(group_name)),
+                    value_text=value_text,
                     source_ref=common_ref,
                     snippet=_snippet_for_match(text, match),
                     confidence=pattern_confidence,
@@ -737,23 +848,6 @@ class LegalVariableResolutionService:
                         extractor_name=SAG_PLANO_EXTRACTOR_NAME,
                     ),
                 ]
-            )
-
-        registry = _PLANO_REGISTRY_RE.search(text)
-        if registry:
-            proposals.append(
-                build_document_proposal(
-                    organization_id=organization_id,
-                    project_id=project_id,
-                    legal_document_id=page.legal_document_id,
-                    legal_document_page_id=page.id,
-                    variable_key="sag.plano_cbr_registro",
-                    value_text=clean_legal_value(registry.group("registry")),
-                    source_ref=common_ref,
-                    snippet=_snippet_for_match(text, registry),
-                    confidence=confidence,
-                    extractor_name=SAG_PLANO_EXTRACTOR_NAME,
-                )
             )
 
         return proposals
@@ -832,9 +926,63 @@ class LegalVariableResolutionService:
         supabase: Any | None = None,
     ) -> VariablePersistenceResult:
         client = supabase or self._get_supabase_client()
+        # Deduplicate proposals based on database unique constraint to prevent duplicates in the same insert
+        unique_proposals = []
+        seen_scopes = set()
+        for item in proposals:
+            prop = item.proposal
+            lot_id = prop.lot_id or "00000000-0000-0000-0000-000000000000"
+            escritura_case_id = prop.escritura_case_id or "00000000-0000-0000-0000-000000000000"
+            variable_key = prop.variable_key
+            unit_index = ""
+            if variable_key in {"sii.unidad_nombre", "sii.pre_rol_lote", "sii.rol_avaluo_en_tramite_texto"}:
+                unit_index = str(prop.source_ref.get("unit_index") or "")
+            scope = (prop.project_id, lot_id, escritura_case_id, variable_key, unit_index)
+            if scope not in seen_scopes:
+                seen_scopes.add(scope)
+                unique_proposals.append(item)
+
+        proposals = unique_proposals
         variable_payloads = [self._variable_payload(item) for item in proposals]
         if not variable_payloads:
             return VariablePersistenceResult(variable_rows=(), evidence_rows=())
+
+        # Supersede active resolutions for the same scope to prevent duplicate key errors
+        supersede_tasks = []
+        for payload in variable_payloads:
+            project_id = payload.get("project_id")
+            lot_id = payload.get("lot_id")
+            escritura_case_id = payload.get("escritura_case_id")
+            variable_key = payload.get("variable_key")
+
+            def _supersede(proj=project_id, lot=lot_id, case=escritura_case_id, key=variable_key, p=payload):
+                query = (
+                    client.table("variable_resolutions")
+                    .update({"state": "superseded"})
+                    .eq("project_id", proj)
+                    .eq("variable_key", key)
+                    .neq("state", "superseded")
+                )
+                if lot:
+                    query = query.eq("lot_id", lot)
+                else:
+                    query = query.is_("lot_id", "null")
+                if case:
+                    query = query.eq("escritura_case_id", case)
+                else:
+                    query = query.is_("escritura_case_id", "null")
+
+                if key in {"sii.unidad_nombre", "sii.pre_rol_lote", "sii.rol_avaluo_en_tramite_texto"}:
+                    unit_index = p.get("source_ref", {}).get("unit_index")
+                    if unit_index is not None:
+                        query = query.eq("source_ref->>unit_index", str(unit_index))
+
+                query.execute()
+
+            supersede_tasks.append(asyncio.to_thread(_supersede))
+
+        if supersede_tasks:
+            await asyncio.gather(*supersede_tasks)
 
         classification_counts: dict[str, int] = {}
         for item in proposals:
@@ -877,6 +1025,8 @@ class LegalVariableResolutionService:
     def _needs_manual_review(self, proposal: VariableProposalInput) -> bool:
         if proposal.state == "manual_review":
             return True
+        if proposal.source_ref.get("manual_review_reason"):
+            return True
         if proposal.source_type == "document" and not proposal.evidence:
             return True
         return (
@@ -886,6 +1036,8 @@ class LegalVariableResolutionService:
 
     def _manual_review_reason(self, proposal: VariableProposalInput) -> str:
         is_critical = proposal.variable_key in CRITICAL_VARIABLE_KEYS
+        if proposal.source_ref.get("manual_review_reason"):
+            return str(proposal.source_ref["manual_review_reason"])
         if proposal.state == "manual_review":
             return "manual_review_required"
         if proposal.source_type == "document" and not proposal.evidence:
@@ -1002,12 +1154,20 @@ def resolve_document_variables(
             legal_document_id=legal_document_id,
             pages=pages,
         )
-    if document_type in {"certificado_sag", "plano_oficial"}:
+    if document_type == "certificado_sag":
         return service.extract_sag_plano_variables(
             organization_id=organization_id,
             project_id=project_id,
             legal_document_id=legal_document_id,
             pages=pages,
+        )
+    if document_type == "plano_oficial":
+        return service.extract_sag_plano_variables(
+            organization_id=organization_id,
+            project_id=project_id,
+            legal_document_id=legal_document_id,
+            pages=pages,
+            required_variable_keys=PLANO_OFICIAL_REQUIRED_VARIABLES,
         )
     return ()
 
@@ -1479,6 +1639,8 @@ async def _fetch_variable_resolution_rows(
             query = query.eq("lot_id", lot_id)
         if state:
             query = query.eq("state", state)
+        else:
+            query = query.neq("state", "superseded")
         if group:
             query = query.eq("variable_group", group)
         result = query.execute()
@@ -1538,6 +1700,14 @@ def clean_legal_value(value: str | None) -> str:
     return re.sub(r"\s+", " ", (value or "").strip(" .,:;")).strip()
 
 
+def normalize_sag_certificate_number(value: str | None) -> str:
+    cleaned = clean_legal_value(value)
+    title_number = re.fullmatch(r"(?P<number>\d{1,7})\s*/\s*\d{4}", cleaned)
+    if title_number:
+        return title_number.group("number")
+    return cleaned
+
+
 def clean_sii_unit_name(value: str | None) -> str:
     cleaned = clean_legal_value(value)
     return clean_legal_value(
@@ -1547,6 +1717,59 @@ def clean_sii_unit_name(value: str | None) -> str:
             maxsplit=1,
             flags=re.IGNORECASE,
         )[0]
+    )
+
+
+def _sii_unit_tuple_source_ref(match: SiiUnitTextMatch) -> dict[str, Any]:
+    source_ref: dict[str, Any] = {}
+    if match.lot_number_normalized:
+        source_ref["lot_number_normalized"] = match.lot_number_normalized
+    if match.comuna:
+        source_ref["comuna"] = match.comuna
+    if len(match.matrix_roles) > 1:
+        source_ref["matrix_roles"] = list(match.matrix_roles)
+    elif match.role_matrix:
+        source_ref["role_matrix"] = match.role_matrix
+    if match.row_index is not None:
+        source_ref["row_index"] = match.row_index
+    if match.parser:
+        source_ref["parser"] = match.parser
+    if match.header_page_number is not None:
+        source_ref["header_page_number"] = match.header_page_number
+    if match.header_legal_document_page_id:
+        source_ref["header_legal_document_page_id"] = (
+            match.header_legal_document_page_id
+        )
+    manual_review_reason = _sii_tuple_manual_review_reason(match)
+    if manual_review_reason:
+        source_ref["manual_review_reason"] = manual_review_reason
+    return source_ref
+
+
+def _sii_tuple_manual_review_reason(match: SiiUnitTextMatch) -> str | None:
+    if match.manual_review_reason:
+        return match.manual_review_reason
+    if not match.complete:
+        return "incomplete_sii_role_tuple"
+    return None
+
+
+def _mark_sii_tuple_manual_review(
+    proposal: VariableProposalInput,
+    match: SiiUnitTextMatch,
+) -> VariableProposalInput:
+    manual_review_reason = _sii_tuple_manual_review_reason(match)
+    if not manual_review_reason:
+        return proposal
+    return VariableProposalInput(
+        **{
+            **proposal.__dict__,
+            "state": "manual_review",
+            "source_ref": {
+                **proposal.source_ref,
+                "manual_review_reason": manual_review_reason,
+            },
+        }
     )
 
 
@@ -1560,7 +1783,23 @@ def _declared_sii_unit_count(text: str) -> int | None:
 def _iter_sii_unit_matches(
     raw_text: str,
     normalized_text: str,
+    *,
+    header_context: SiiHeaderContext | None = None,
 ) -> tuple[SiiUnitTextMatch, ...]:
+    real_matches = _iter_sii_real_certificate_rows(
+        raw_text,
+        header_context=header_context,
+    )
+    if real_matches:
+        return real_matches
+
+    tuple_matches = _iter_sii_role_tuple_rows(raw_text)
+    if tuple_matches:
+        return tuple(
+            _apply_sii_header_context(match, header_context)
+            for match in tuple_matches
+        )
+
     line_matches: list[SiiUnitTextMatch] = []
     for line in raw_text.splitlines():
         clean_line = clean_legal_value(line)
@@ -1569,27 +1808,256 @@ def _iter_sii_unit_matches(
         match = _SII_ASSIGNED_ROLE_ROW_RE.search(clean_line)
         if not match:
             continue
+        unit_name = match.group("unit")
+        lot_markers = tuple(_SII_LOT_MARKER_RE.finditer(unit_name))
+        lot_number = clean_legal_value(lot_markers[-1].group("lot_number")) if lot_markers else None
         line_matches.append(
+            SiiUnitTextMatch(
+                match=match,
+                full_text=clean_line,
+                unit_name=unit_name,
+                pre_role=match.group("pre_role"),
+                lot_number_normalized=lot_number,
+                parser="sii_role_certificate_tuple_v1",
+            )
+        )
+
+    if line_matches:
+        return tuple(
+            _apply_sii_header_context(match, header_context)
+            for match in line_matches
+        )
+
+    block_matches = []
+    for match in _SII_UNIT_BLOCK_RE.finditer(normalized_text):
+        unit_name = match.group("unit")
+        lot_markers = tuple(_SII_LOT_MARKER_RE.finditer(unit_name))
+        lot_number = clean_legal_value(lot_markers[-1].group("lot_number")) if lot_markers else None
+        block_matches.append(
+            _apply_sii_header_context(
+                SiiUnitTextMatch(
+                    match=match,
+                    full_text=normalized_text,
+                    unit_name=unit_name,
+                    pre_role=match.group("pre_role"),
+                    lot_number_normalized=lot_number,
+                    parser="sii_role_certificate_tuple_v1",
+                ),
+                header_context,
+            )
+        )
+    return tuple(block_matches)
+
+
+def _extract_sii_header_context(
+    raw_text: str,
+    *,
+    page_number: int | None = None,
+    legal_document_page_id: str | None = None,
+) -> SiiHeaderContext:
+    # Restrict comuna search to the header section before the roles table begins
+    header_part = re.split(
+        r"\b(?:direccion\s+o\s+nombre\s+de\s+la\s+unidad|rol\s+de\s+avaluo\s+asignado)\b",
+        raw_text,
+        flags=re.IGNORECASE,
+    )[0]
+
+    comuna_match = _SII_HEADER_COMUNA_RE.search(clean_legal_value(header_part))
+    comuna: str | None = None
+    if comuna_match:
+        comuna = clean_legal_value(
+            re.split(
+                r"\b(?:n[uú]mero(?:\(s\))?|rol(?:\(es\))?|matriz(?:ces)?|direcci[oó]n|certificado|fecha|solicitud|formulario|c[oó]digo|cantidad)\b",
+                comuna_match.group("comuna"),
+                maxsplit=1,
+                flags=re.IGNORECASE,
+            )[0]
+        )
+    matrix_roles = _extract_sii_matrix_roles(raw_text)
+    role_matrix = matrix_roles[0] if len(matrix_roles) == 1 else None
+    manual_review_reason = (
+        "ambiguous_sii_matrix_roles" if len(matrix_roles) > 1 else None
+    )
+    return SiiHeaderContext(
+        comuna=comuna,
+        role_matrix=role_matrix,
+        matrix_roles=matrix_roles,
+        header_page_number=page_number if comuna or matrix_roles else None,
+        header_legal_document_page_id=(
+            legal_document_page_id if comuna or matrix_roles else None
+        ),
+        manual_review_reason=manual_review_reason,
+    )
+
+
+def _extract_sii_matrix_roles(raw_text: str) -> tuple[str, ...]:
+    roles: list[str] = []
+    lines = tuple(clean_legal_value(line) for line in raw_text.splitlines())
+    for index, line in enumerate(lines):
+        if not _SII_MATRIX_ROLE_LABEL_RE.search(line):
+            continue
+        segment = line
+        if not _SII_ROLE_NUMBER_RE.search(segment) and index + 1 < len(lines):
+            segment = f"{segment} {lines[index + 1]}"
+        segment = re.split(r"[.;]", segment, maxsplit=1)[0]
+        for match in _SII_ROLE_NUMBER_RE.finditer(segment):
+            normalized = normalize_role_number(match.group(0))
+            if normalized and normalized not in roles:
+                roles.append(normalized)
+    return tuple(roles)
+
+
+def _apply_sii_header_context(
+    match: SiiUnitTextMatch,
+    header_context: SiiHeaderContext | None,
+) -> SiiUnitTextMatch:
+    if not header_context or not header_context.has_values:
+        return match
+
+    matrix_roles = match.matrix_roles or header_context.matrix_roles
+    role_matrix = match.role_matrix
+    if not role_matrix and len(matrix_roles) <= 1:
+        role_matrix = header_context.role_matrix
+    comuna = match.comuna or header_context.comuna
+    complete = match.complete
+    if match.lot_number_normalized or match.parser == "sii_role_certificate_tuple_v1":
+        complete = bool(match.lot_number_normalized and match.pre_role and comuna)
+    return replace(
+        match,
+        comuna=comuna,
+        role_matrix=role_matrix,
+        matrix_roles=matrix_roles,
+        header_page_number=match.header_page_number
+        or header_context.header_page_number,
+        header_legal_document_page_id=(
+            match.header_legal_document_page_id
+            or header_context.header_legal_document_page_id
+        ),
+        manual_review_reason=(
+            match.manual_review_reason or header_context.manual_review_reason
+        ),
+        complete=complete,
+    )
+
+
+def _iter_sii_real_certificate_rows(
+    raw_text: str,
+    *,
+    header_context: SiiHeaderContext | None = None,
+) -> tuple[SiiUnitTextMatch, ...]:
+    if "ROL" not in raw_text.upper() and not (
+        header_context and header_context.comuna
+    ):
+        return ()
+
+    effective_header_context = (
+        header_context
+        if header_context and header_context.has_values
+        else _extract_sii_header_context(raw_text)
+    )
+    if not effective_header_context.comuna:
+        return ()
+    matches: list[SiiUnitTextMatch] = []
+    row_index = 0
+    for line in raw_text.splitlines():
+        clean_line = clean_legal_value(line)
+        if not clean_line:
+            continue
+        if re.search(r"rol\s+de\s+aval[uú]o\s+en\s+tr[aá]mite", clean_line, re.IGNORECASE):
+            continue
+        match = _SII_REAL_ROLE_ROW_RE.search(clean_line)
+        if not match:
+            continue
+        lot_markers = tuple(_SII_LOT_MARKER_RE.finditer(match.group("unit")))
+        if not lot_markers:
+            continue
+        row_index += 1
+        lot_number = clean_legal_value(lot_markers[-1].group("lot_number"))
+        comuna = effective_header_context.comuna
+        matches.append(
             SiiUnitTextMatch(
                 match=match,
                 full_text=clean_line,
                 unit_name=match.group("unit"),
                 pre_role=match.group("pre_role"),
+                lot_number_normalized=lot_number,
+                comuna=comuna,
+                role_matrix=effective_header_context.role_matrix,
+                matrix_roles=effective_header_context.matrix_roles,
+                row_index=row_index,
+                parser="sii_role_certificate_real_v1",
+                header_page_number=effective_header_context.header_page_number,
+                header_legal_document_page_id=(
+                    effective_header_context.header_legal_document_page_id
+                ),
+                manual_review_reason=effective_header_context.manual_review_reason,
+                complete=bool(lot_number and match.group("pre_role") and comuna),
             )
         )
 
-    if line_matches:
-        return tuple(line_matches)
+    return tuple(matches)
 
-    return tuple(
-        SiiUnitTextMatch(
-            match=match,
-            full_text=normalized_text,
-            unit_name=match.group("unit"),
-            pre_role=match.group("pre_role"),
+
+def _iter_sii_role_tuple_rows(raw_text: str) -> tuple[SiiUnitTextMatch, ...]:
+    if not _looks_like_sii_role_tuple_table(raw_text):
+        return ()
+
+    matches: list[SiiUnitTextMatch] = []
+    row_index = 0
+    for line in raw_text.splitlines():
+        clean_line = clean_legal_value(line)
+        if not clean_line or not _looks_like_sii_unit_row(clean_line):
+            continue
+        row_index += 1
+        complete_match = _SII_ROLE_TUPLE_ROW_RE.search(clean_line)
+        if complete_match:
+            comuna = clean_legal_value(complete_match.group("comuna"))
+            matches.append(
+                SiiUnitTextMatch(
+                    match=complete_match,
+                    full_text=clean_line,
+                    unit_name=complete_match.group("unit"),
+                    pre_role=complete_match.group("pre_role"),
+                    lot_number_normalized=clean_legal_value(
+                        complete_match.group("lot_number")
+                    ),
+                    comuna=comuna or None,
+                    row_index=row_index,
+                    parser="sii_role_certificate_tuple_v1",
+                    complete=bool(comuna),
+                )
+            )
+            continue
+
+        incomplete_match = _SII_ROLE_TUPLE_WITHOUT_ROLE_RE.search(clean_line)
+        if not incomplete_match:
+            continue
+        matches.append(
+            SiiUnitTextMatch(
+                match=incomplete_match,
+                full_text=clean_line,
+                unit_name=incomplete_match.group("unit"),
+                pre_role=None,
+                lot_number_normalized=clean_legal_value(
+                    incomplete_match.group("lot_number")
+                ),
+                comuna=clean_legal_value(incomplete_match.group("comuna")) or None,
+                row_index=row_index,
+                parser="sii_role_certificate_tuple_v1",
+                complete=False,
+            )
         )
-        for match in _SII_UNIT_BLOCK_RE.finditer(normalized_text)
-    )
+
+    return tuple(matches)
+
+
+def _looks_like_sii_role_tuple_table(raw_text: str) -> bool:
+    normalized = normalize_whitespace(raw_text).upper()
+    return "COMUNA" in normalized and "ROL" in normalized
+
+
+def _looks_like_sii_unit_row(line: str) -> bool:
+    return bool(re.match(r"^(?:lote|parcela|unidad)\s+", line, re.IGNORECASE))
 
 
 def build_document_proposal(

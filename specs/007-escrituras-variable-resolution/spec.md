@@ -37,7 +37,7 @@ Como operador legal, quiero que Plotify extraiga texto y proponga variables desd
 **Acceptance Scenarios**:
 
 1. **Given** un dominio vigente procesado, **When** el extractor encuentra inscripcion CBR, rol matriz, predio matriz, ubicacion, superficie e historial de adquisicion, **Then** esas variables aparecen como propuestas con evidencia y fuente `dominio_vigente`.
-2. **Given** un certificado de roles SII procesado, **When** el extractor encuentra unidad/lote y rol o pre-rol, **Then** Plotify propone variables `sii.*` y `lot_legal_data.*` con estado inicial segun confianza y evidencia.
+2. **Given** un certificado de roles SII procesado, **When** el extractor encuentra filas o bloques con numero de lote, rol/pre-rol y comuna, **Then** Plotify propone variables `sii.*` y `lot_legal_data.*` por lote usando esa tupla documental como evidencia primaria, sin depender de inferencia LLM para asociar el rol.
 3. **Given** dos documentos que proponen valores distintos para una misma variable critica, **When** se consolida el inventario, **Then** la variable queda en estado `conflict` y no puede aprobarse automaticamente.
 
 ---
@@ -68,8 +68,8 @@ Como administrador, quiero que Plotify asocie los roles o roles de avaluo en tra
 
 **Acceptance Scenarios**:
 
-1. **Given** un certificado SII que indica unidad/lote y pre-rol, **When** el extractor procesa el documento, **Then** Plotify propone el matching con los lotes existentes por numero/unidad.
-2. **Given** un lote nacido de subdivision con respaldo SII, **When** su rol definitivo aun no existe, **Then** Plotify trata `Rol de avaluo en tramite` como estado valido y no como dato faltante.
+1. **Given** un certificado SII que indica numero de lote, rol/pre-rol y comuna, **When** el extractor procesa el documento, **Then** Plotify extrae cada registro como una tupla normalizada `lote + rol/pre-rol + comuna` y propone el matching con los lotes existentes por numero de lote.
+2. **Given** un lote nacido de subdivision con respaldo SII, **When** el certificado contiene rol/pre-rol asociado al lote y comuna, **Then** Plotify trata `Rol de avaluo en tramite numero [rol] de la comuna de [comuna]` como valor valido y no como dato faltante.
 3. **Given** dos unidades SII que podrian coincidir con un mismo lote, **When** se consolida el matching, **Then** Plotify marca conflicto y exige revision humana.
 
 ---
@@ -93,7 +93,15 @@ Como operador legal, quiero que al preparar una escritura de un lote vendido Plo
 - El dominio vigente puede venir como PDF escaneado, imagen, DOCX, DOC o RTF; el sistema debe aceptar solo formatos soportados y marcar extraccion fallida si no se puede obtener texto suficiente.
 - El usuario puede subir dos dominios vigentes con informacion distinta; los valores criticos deben quedar en conflicto hasta revision.
 - El plano oficial puede no entregar texto confiable; numero de plano, archivo CBR o registro deben quedar como variables manuales cuando la confianza sea baja.
-- Un certificado SII puede usar nombres de unidad que no calzan exactamente con los lotes de Plotify; el matching debe quedar `ambiguous` o `missing`, no inventar una asociacion.
+- Un certificado SII puede usar nombres de unidad que no calzan exactamente con los lotes de Plotify; primero debe intentarse el patron deterministico `numero de lote + rol/pre-rol + comuna`, y si ese patron esta incompleto la extraccion queda `manual_review` mientras el matching queda `ambiguous` o `missing`, no inventar una asociacion.
+- Un certificado SII puede declarar la comuna y el rol matriz en el encabezado, mientras las filas solo muestran unidad y rol/pre-rol; el sistema debe asociar esos valores de encabezado a cada fila con evidencia de la misma pagina/certificado.
+- Un certificado SII puede usar variantes reales como `LOTE N SECTOR... [rol]`, `PROY. PARC... LOTE N [rol]`, `PARCELA X LT N ... [rol]` o `SAN JOSE LOTE N ... [rol]`; el parser debe normalizar el numero de lote sin depender de que la fila empiece por `LOTE`.
+- Una fila SII puede contener varios numeros visibles, por ejemplo `GAONA 7 PARCELA 8 LT 9 01234-00009`; el matching automatico debe usar solo el numero normalizado extraido como lote juridico de la fila, no cualquier numero presente en la etiqueta.
+- Un certificado SII puede partir el encabezado y sus filas en paginas distintas; el parser debe propagar comuna, rol matriz, numero de solicitud y metadatos de certificado dentro del mismo documento/certificado con evidencia de encabezado, y exigir revision si el contexto es ambiguo.
+- Un certificado SII puede venir como PDF escaneado sin texto extraible; el sistema debe intentar OCR configurado, marcar `ocr_required` si no puede ejecutarlo, y no crear datos SII sin evidencia textual u OCR.
+- Un certificado SII puede contener mas de un rol matriz; el sistema debe conservar la lista de roles matriz y exigir revision humana si no puede determinar si todos aplican a todos los lotes.
+- Un certificado SII reemplazado no debe participar en matching automatico ni readiness, aunque sus evidencias historicas sigan disponibles para snapshots antiguos.
+- Una correccion manual de rol/pre-rol o comuna debe regenerar el texto `Rol de avaluo en tramite numero [rol] de la comuna de [comuna]` en backend; el cliente no puede ser la fuente de verdad de ese texto compuesto.
 - El KMZ puede no coincidir con el plano oficial; la geometria solo pasa readiness cuando el usuario verifica o corrige deslindes oficiales.
 - Una variable puede ser correcta pero no aplicable al caso, por ejemplo personeria en una compraventa entre personas naturales.
 - Datos notariales finales como repertorio real, CVE, sellos, autorizacion final o certificaciones CBR/notaria no deben generarse como parte de la minuta preliminar.
@@ -122,6 +130,20 @@ Como operador legal, quiero que al preparar una escritura de un lote vendido Plo
 - **FR-017**: System MUST enforce tenant isolation for all document, extraction, variable, evidence and escritura case records.
 - **FR-018**: System MUST not generate notary/CBR final artifacts such as CVE, final repertoire numbers, certifications, seals or final authorization text unless those values are explicitly entered as post-minuta context.
 - **FR-019**: System MUST persist escritura case variable and evidence snapshots in a stable format consumable by the future matriz builder without querying raw OCR or live extraction proposals.
+- **FR-020**: System MUST extract SII certificate role records with deterministic rules before any LLM-assisted fallback: each record MUST preserve normalized lot number, role/pre-role value, comuna, source page/snippet and row/block position when available.
+- **FR-021**: System MUST render `sii.rol_avaluo_en_tramite_texto` from the extracted certificate tuple as `Rol de avaluo en tramite numero [rol] de la comuna de [comuna]`; the role matrix and all lot roles remain in `rol_en_tramite` until a definitive SII role certificate or approved post-inscription value exists.
+- **FR-022**: System MUST classify a certificado de roles extraction as `manual_review` when the lot number, role/pre-role or comuna is missing from the same documental row/block, instead of silently joining values from unrelated snippets.
+- **FR-023**: System MUST extract the common SII matrix role from phrases such as `Numero(s) de Rol(es) Matriz(ces):` even when the role value appears on a following line, and preserve multiple matrix roles when present.
+- **FR-024**: System MUST extract SII certificate comuna from certificate header/context when rows omit comuna, and attach that comuna to each role row only when the header evidence belongs to the same certificate/page context.
+- **FR-025**: System MUST support real SII row shapes observed in pilot certificates, including `LOTE N ... [rol]`, prefixed `... LOTE N [rol]`, `PARCELA X LT N ... [rol]` and `... UNIDAD N [rol]`, while preserving the original unit label.
+- **FR-026**: System MUST attempt OCR for image-only SII certificate PDFs when OCR is configured, store OCR-derived text as document pages with converter/stats metadata, and mark documents as requiring OCR review when OCR is unavailable or fails.
+- **FR-027**: System MUST expose SII role extraction quality in the Centro de Control Legal, including certificate metadata, matrix role, comuna, OCR/text source, extracted unit count, matched count and rows needing review.
+- **FR-028**: System MUST perform automatic SII lot matching against the extracted `sii_lot_number_normalized` from the role row, not fuzzy matches against every number in `sii_unit_name`; a single SII row MUST NOT automatically match more than one lot.
+- **FR-029**: System MUST exclude superseded or inactive SII certificate versions from current role matching and readiness while preserving their evidence for historical escritura case snapshots.
+- **FR-030**: System MUST propagate SII certificate header context across pages of the same certificate only when certificate identity/page evidence supports that relationship; ambiguous header context MUST force `manual_review`.
+- **FR-031**: System MUST preserve multiple SII matrix roles as a list and block automatic propagation unless the parser can prove the roles are globally applicable to all extracted rows.
+- **FR-032**: System MUST derive manual override `sii_role_in_process_text` server-side from the approved pre-role/role and comuna, and audit the legal reason instead of trusting client-composed text.
+- **FR-033**: System MUST treat OCR runtime dependency, timeout and converter failures as explicit OCR review states with stats, not as generic empty extraction failures.
 
 ### Key Entities _(include if feature involves data)_
 
@@ -130,7 +152,7 @@ Como operador legal, quiero que al preparar una escritura de un lote vendido Plo
 - **Document Text Page**: Extracted text or Markdown for a physical page or logical page, used as the source for evidence.
 - **Variable Resolution**: Canonical variable key, value, state, source type, confidence, scope and review metadata.
 - **Document Evidence**: Link between a variable and a source document/page/chunk/snippet that supports the proposed or approved value.
-- **Lot Legal Data**: Lot-level legal values such as SII unit, pre-rol, rol de avaluo en tramite, definitive role and matching status.
+- **Lot Legal Data**: Lot-level legal values such as SII unit, normalized lot number, comuna, matrix role, pre-rol, rol de avaluo en tramite, definitive role and matching status.
 - **Escritura Case**: Per-lot case created when a sold lot is prepared for minuta, including readiness gates, variable snapshot and legal workflow status.
 - **Legal Review Decision**: Human approval, rejection, correction or legal gate decision with reviewer identity and reason.
 
@@ -146,6 +168,11 @@ Como operador legal, quiero que al preparar una escritura de un lote vendido Plo
 - **SC-006**: A sold lot readiness response explains all blocking gates before minuta generation, including geometry, SII role, domain/title data, buyer/commercial data and lawyer review workflow.
 - **SC-007**: Manual corrections preserve audit history and can be traced back to the user and timestamp in 100% of correction cases.
 - **SC-008**: A future matriz builder can retrieve an approved escritura case snapshot containing canonical variable values, evidence references and readiness gates without depending on raw document extraction tables.
+- **SC-009**: For SII role certificate fixtures that contain tabular or repeated `lote + rol/pre-rol + comuna` records, 100% of complete records are extracted into lot-level role candidates with evidence before any LLM-assisted fallback is considered.
+- **SC-010**: For the pilot SII certificate fixture family covering Teno, Gaona 3, Gaona 7 and Pemuco textual PDFs, the extractor recovers certificate number, emission date, request number, matrix role, comuna and every visible lot role row with page evidence; scanned SII fixtures are classified as OCR-backed or OCR-required, not silently empty.
+- **SC-011**: For multi-number SII unit labels, automatic matching assigns a row only to the lot whose normalized number equals `sii_lot_number_normalized`, and all other visible numbers remain unmatched or manual-review candidates.
+- **SC-012**: Replacing a certificado de roles SII removes superseded certificate variables from current matching/readiness without deleting historical evidence or escritura case snapshots.
+- **SC-013**: OCR-enabled and OCR-unavailable environments produce deterministic statuses: successful OCR stores `ocr_image` pages with converter stats, while dependency, timeout or converter failures surface `ocr_required`/`needs_review` with no invented role rows.
 
 ## Assumptions
 
@@ -154,5 +181,6 @@ Como operador legal, quiero que al preparar una escritura de un lote vendido Plo
 - `COMPRAVENTA LOTE 29.docx` is the structural reference for the future minuta template, while `escritura.pdf` represents a final or certified layer that Plotify should not reproduce automatically.
 - Existing geometry verification and deslinde generators remain the authority for operational lot boundaries, but the user must verify them against the official plan.
 - Existing document generation endpoints and template systems remain in place while this feature creates the variable/evidence/readiness foundation.
+- The SII certificate shapes for this feature include both simple row tuples and real pilot layouts where comuna and rol matriz are declared in the header while rows contain unit labels plus role/pre-role. Deterministic parsing remains the extraction authority; OCR/LLM usage is only a controlled fallback for image-only or unusual layouts and cannot approve legal values.
 - Production implementation will reuse patterns from the lab, but the lab schema and MCP server are not production runtime dependencies.
 - The next SDD after this feature should build the matriz builder UI on top of approved escritura case snapshots, canonical variable tokens and versioned clause blocks.

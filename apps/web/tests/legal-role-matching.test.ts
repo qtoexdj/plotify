@@ -7,6 +7,8 @@ import {
   ROLE_STATUS_LABELS,
   type LegalRoleMatchesResponse,
   type LegalRoleMatchUpdatePayload,
+  deriveRoleInProcessText,
+  validateRoleInProcessText,
 } from '@/lib/legal/variable-resolution-types'
 
 function readSource(relativePath: string) {
@@ -36,10 +38,16 @@ describe('T044 - SII lot role matching frontend contract', () => {
           lot_id: 'lot-29',
           lot_number: '29',
           sii_unit_name: 'Lote 29',
+          sii_lot_number_normalized: '29',
+          sii_comuna: 'Teno',
+          sii_role_matrix: '00067-00023',
           sii_pre_role: '08179-00029',
           role_status: 'rol_en_tramite',
           matching_status: 'matched',
+          source_type: 'document',
           source_legal_document_id: 'legal-doc-roles',
+          source_document_label: 'Certificado de roles SII',
+          source_status: 'active',
         },
         {
           lot_id: 'lot-30',
@@ -58,6 +66,9 @@ describe('T044 - SII lot role matching frontend contract', () => {
           role_status: 'rol_en_tramite',
           matching_status: 'ambiguous',
           source_legal_document_id: 'legal-doc-roles',
+          source_type: 'document',
+          source_document_label: 'Certificado de roles SII',
+          source_status: 'active',
         },
         {
           lot_id: 'lot-32',
@@ -67,12 +78,35 @@ describe('T044 - SII lot role matching frontend contract', () => {
           role_status: 'rol_en_tramite',
           matching_status: 'manual_override',
           source_legal_document_id: 'legal-doc-roles',
+          source_type: 'manual',
+          source_document_label: 'Ajuste manual',
+          source_status: 'manual',
           reviewed_by: 'user-1',
           reviewed_at: '2026-06-04T12:00:00Z',
         },
       ],
       summary: {
         total: 4,
+        matched: 1,
+        ambiguous: 1,
+        missing: 1,
+        manual_override: 1,
+      },
+      certificate_summary: {
+        source_legal_document_ids: ['legal-doc-roles'],
+        comunas: ['Teno'],
+        role_matrices: ['00067-00023'],
+        extracted_unit_count: 4,
+        matched_count: 1,
+        manual_review_count: 1,
+        missing_count: 1,
+        active_certificate_count: 1,
+        superseded_certificate_count: 0,
+        ambiguous_matrix_role_count: 0,
+        ocr_required: false,
+        text_source: 'pdf_text',
+      },
+      review_counts: {
         matched: 1,
         ambiguous: 1,
         missing: 1,
@@ -87,6 +121,8 @@ describe('T044 - SII lot role matching frontend contract', () => {
       'manual_override',
     ])
     expect(inventory.lots[0]?.role_status).toBe('rol_en_tramite')
+    expect(inventory.lots[0]?.source_document_label).toBe('Certificado de roles SII')
+    expect(inventory.certificate_summary?.role_matrices).toEqual(['00067-00023'])
     expect(inventory.summary.manual_override).toBe(1)
   })
 
@@ -122,9 +158,40 @@ describe('T044 - SII lot role matching frontend contract', () => {
     const centerSource = readSource('../src/components/projects/detail/legal-control-center.tsx')
 
     expect(centerSource).toContain('ROLE_MATCHING_STATUS_LABELS')
+    expect(centerSource).toContain('ROLE_FILTER_OPTIONS')
     expect(centerSource).toContain('ROLE_STATUS_LABELS')
+    expect(centerSource).toContain('certificate_summary')
+    expect(centerSource).toContain('source_document_label')
     expect(centerSource).toContain('manual_override')
     expect(centerSource).toContain('reason')
-    expect(centerSource).toContain('Rol de avaluo en tramite')
+    expect(centerSource).toContain('rol_en_tramite')
+  })
+
+  it('derives the correct role in process text when pre-role and comuna are updated', () => {
+    const derived = deriveRoleInProcessText('08179-00029', 'Teno')
+    expect(derived).toBe('Rol de avaluo en tramite numero 08179-00029 de la comuna de Teno')
+  })
+
+  it('rejects stale or mismatched client role in process text', () => {
+    const preRole = '08179-00029'
+    const comuna = 'Teno'
+    const staleText = 'Rol de avaluo en tramite numero 99999-99999 de la comuna de Pemuco'
+    const validText = 'Rol de avaluo en tramite numero 08179-00029 de la comuna de Teno'
+
+    expect(validateRoleInProcessText(staleText, preRole, comuna)).toBe(false)
+    expect(validateRoleInProcessText(validText, preRole, comuna)).toBe(true)
+  })
+
+  it('covers the source label formatting to show user-friendly text instead of parser metadata', () => {
+    const getSourceLabel = (matchingStatus: string, sourceDocumentLabel?: string | null) => {
+      if (matchingStatus === 'manual_override') {
+        return 'Ajuste manual'
+      }
+      return sourceDocumentLabel ?? 'Sin evidencia'
+    }
+
+    expect(getSourceLabel('matched', 'Certificado de roles SII')).toBe('Certificado de roles SII')
+    expect(getSourceLabel('manual_override', null)).toBe('Ajuste manual')
+    expect(getSourceLabel('missing', null)).toBe('Sin evidencia')
   })
 })

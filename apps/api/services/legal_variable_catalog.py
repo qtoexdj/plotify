@@ -169,6 +169,7 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
     "sag": (
         "sag.certificado_numero",
         "sag.certificado_fecha",
+        "sag.region_oficina",
         "sag.oficina_sectorial",
         "sag.plano_cbr_numero",
         "sag.plano_cbr_anio",
@@ -306,9 +307,9 @@ READINESS_REQUIRED_VARIABLES_BY_GATE: Final[dict[str, tuple[str, ...]]] = {
     "sag_plano_verified": (
         "sag.certificado_numero",
         "sag.certificado_fecha",
+        "sag.region_oficina",
         "sag.plano_cbr_numero",
         "sag.plano_cbr_anio",
-        "sag.plano_cbr_registro",
     ),
     "geometry_verified": (
         "lote.superficie_m2",

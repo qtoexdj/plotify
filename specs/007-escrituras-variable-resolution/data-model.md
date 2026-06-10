@@ -151,28 +151,37 @@ Validation:
 
 Stores lot-level legal values not represented by geometry alone.
 
-| Field                         | Type                      | Notes                                                       |
-| ----------------------------- | ------------------------- | ----------------------------------------------------------- |
-| `id`                          | uuid                      | Primary key                                                 |
-| `organization_id`             | uuid                      | Required                                                    |
-| `project_id`                  | uuid                      | Required                                                    |
-| `lot_id`                      | uuid                      | Required                                                    |
-| `sii_unit_name`               | text nullable             | Unit/lote as shown in SII certificate                       |
-| `sii_role_matrix`             | text nullable             | Matriz role if present                                      |
-| `sii_pre_role`                | text nullable             | Pre-role or role in process                                 |
-| `sii_role_in_process_text`    | text nullable             | Rendered wording for minuta                                 |
-| `sii_definitive_role`         | text nullable             | Post-inscription definitive role                            |
-| `role_status`                 | text                      | `missing`, `rol_en_tramite`, `definitive`, `not_applicable` |
-| `matching_status`             | text                      | `matched`, `ambiguous`, `missing`, `manual_override`        |
-| `matching_score`              | numeric nullable          | Normalization score                                         |
-| `source_legal_document_id`    | uuid nullable             | SII certificate                                             |
-| `reviewed_by` / `reviewed_at` | uuid/timestamptz nullable | Manual/legal review                                         |
-| `created_at` / `updated_at`   | timestamptz               | Audit timestamps                                            |
+| Field                         | Type                      | Notes                                                                       |
+| ----------------------------- | ------------------------- | --------------------------------------------------------------------------- |
+| `id`                          | uuid                      | Primary key                                                                 |
+| `organization_id`             | uuid                      | Required                                                                    |
+| `project_id`                  | uuid                      | Required                                                                    |
+| `lot_id`                      | uuid                      | Required                                                                    |
+| `sii_unit_name`               | text nullable             | Unit/lote as shown in SII certificate                                       |
+| `sii_lot_number_normalized`   | text nullable             | Lot number extracted from the SII role row/block                            |
+| `sii_comuna`                  | text nullable             | Comuna extracted from the same SII role row/block                           |
+| `sii_role_matrix`             | text nullable             | Matrix role shared by the SII certificate row when present                  |
+| `sii_pre_role`                | text nullable             | Pre-role or role in process                                                 |
+| `sii_role_in_process_text`    | text nullable             | Rendered wording for minuta                                                 |
+| `sii_definitive_role`         | text nullable             | Post-inscription definitive role                                            |
+| `role_status`                 | text                      | `missing`, `rol_en_tramite`, `definitive`, `not_applicable`                 |
+| `matching_status`             | text                      | `matched`, `ambiguous`, `missing`, `manual_override`                        |
+| `matching_score`              | numeric nullable          | Normalization score                                                         |
+| `sii_role_record`             | jsonb nullable            | Original normalized tuple, header context, row/block index and parser notes |
+| `source_legal_document_id`    | uuid nullable             | SII certificate                                                             |
+| `reviewed_by` / `reviewed_at` | uuid/timestamptz nullable | Manual/legal review                                                         |
+| `created_at` / `updated_at`   | timestamptz               | Audit timestamps                                                            |
 
 Validation:
 
 - One row per lot.
 - `rol_en_tramite` is valid only with SII evidence or approved manual/legal review.
+- Automatic role matching requires `sii_lot_number_normalized`, role/pre-role and `sii_comuna` from the same active certificate row/block or same certificate header/page context; otherwise extraction proposals remain `manual_review` and lot matching stays `ambiguous` or `missing`.
+- Automatic matching must compare the project lot's normalized number directly against `sii_lot_number_normalized`. Other numbers embedded in `sii_unit_name` are display/evidence only and must not produce automatic matches.
+- One extracted SII role row may be consumed by at most one lot. If two lots compete for the same row, both outcomes require manual review instead of silently duplicating the role.
+- `sii_role_matrix` is propagated from certificate-level matrix role evidence only when one globally applicable matrix role is proven. Multiple matrix roles are preserved in `sii_role_record.matrix_roles` and block automatic propagation unless the parser can prove applicability per row.
+- `sii_role_record` must include parser, row/page evidence, source legal document id and active/superseded provenance needed to exclude stale certificate versions from current readiness.
+- `sii_role_in_process_text` is derived server-side from the approved role/pre-role plus comuna using `Rol de avaluo en tramite numero [rol] de la comuna de [comuna]`; client-composed text is not authoritative.
 
 ## Entity: escritura_cases
 
@@ -269,10 +278,39 @@ any active state -> cancelled
 | `legal_review_ready`   | Lawyer/redactor workflow variables assigned for approval stage         |
 | `warning_acknowledged` | User sees minuta requires lawyer review before external use            |
 
+## Entity: project_legal_data (SII common fields — Phase 12)
+
+Stores common SII matriz values shared across all lots in a project. Added in migration `20260608000100_align_sii_matriz_lot_source_of_truth.sql`.
+
+| Field                                | Type          | Notes                                                     |
+| ------------------------------------ | ------------- | --------------------------------------------------------- |
+| `sii_comuna`                         | text nullable | Common comuna from active certificado de roles SII header |
+| `sii_role_matrix`                    | text nullable | Common matriz role from active certificado de roles SII   |
+| `sii_roles_source_legal_document_id` | uuid nullable | FK to the active certificado de roles SII document        |
+| `sii_roles_status`                   | text nullable | `active`, `missing`, `manual_override`                    |
+
+Validation:
+
+- Only one active certificado de roles SII at a time per project.
+- When a new certificado is registered, old `sii_roles_*` fields are cleared and recalculated from the new active document.
+- `sii_roles_status = 'missing'` means no active certificado exists; SII readiness gate is blocked.
+
+## Source-of-Truth Split (Phase 12)
+
+| Storage                | Owns                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `project_legal_data`   | Common SII matriz values: `sii_comuna`, `sii_role_matrix`, source document, status                                                         |
+| `lot_legal_data`       | Per-lot values keyed by `lot_id`: `sii_pre_role`, `sii_unit_name`, `sii_lot_number_normalized`, `sii_role_in_process_text`, matching state |
+| `variable_resolutions` | Review/audit staging for all canonical variables; source for Centro de Control Legal                                                       |
+| `escritura_cases`      | Immutable snapshots consumed by SDD 008; `variable_snapshot` contains domain-level values only                                             |
+
+Minuta generation and readiness gates must read common SII values from `project_legal_data` and lot-specific role values from `lot_legal_data`. They must never depend on parser metadata, raw OCR or live variable proposals.
+
 ## Relationship to Existing Tables
 
 - `projects`: retains existing document path columns for backward compatibility.
-- `project_legal_data`: remains a compatibility table for existing resolver fields; approved variable resolutions can backfill or override its current values during resolver integration.
-- `lots`: remains source for lot number, geometry, official area/perimeter and verified boundaries.
-- `lot_records`: remains source for comprador and commercial sale data.
-- `document_templates`, `document_blocks`, `generated_documents`: remain the generation system; future integration will use escritura case snapshots.
+- `project_legal_data`: extended in Phase 12 with common SII matriz fields; authoritative source for `sii_comuna`, `sii_role_matrix` and the active certificado reference.
+- `lot_legal_data`: authoritative source for per-lot SII role values, keyed by `lot_id`.
+- `lots`: source for lot number, geometry, official area/perimeter and verified boundaries.
+- `lot_records`: source for comprador and commercial sale data.
+- `document_templates`, `document_blocks`, `generated_documents`: generation system; integration uses `escritura_cases.variable_snapshot`.

@@ -12,6 +12,17 @@ These contracts describe the planned typed API surface. Per repository rules, ac
 - No endpoint trusts a free-form `organization_id` without validating project/lot membership.
 - Every mutation that changes variables, evidence, roles or readiness creates audit history.
 
+## Source-of-Truth Split (Phase 12)
+
+| Storage                | Owns                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `project_legal_data`   | Common SII fields: `sii_comuna`, `sii_role_matrix`, `sii_roles_source_legal_document_id`, `sii_roles_status`                    |
+| `lot_legal_data`       | Per-lot SII fields: `sii_pre_role`, `sii_unit_name`, `sii_lot_number_normalized`, `sii_role_in_process_text`, `matching_status` |
+| `variable_resolutions` | Review/audit staging; feeds Centro de Control Legal                                                                             |
+| `escritura_cases`      | Immutable snapshot for SDD 008; `variable_snapshot` contains domain values only                                                 |
+
+Public role responses expose `source_type`, `source_legal_document_id`, `source_document_label` and `source_status`. Parser/page/row metadata is internal to `document_evidence` and extraction diagnostics only.
+
 ## Shared Enums
 
 ### LegalDocumentType
@@ -252,6 +263,8 @@ Validation:
 
 Returns SII role/pre-role matching status by lot.
 
+Current matching uses only active, non-superseded certificado de roles SII evidence for the project. Historical certificate evidence may still appear in old escritura case snapshots, but it is excluded from this endpoint unless the caller requests historical audit data through a separate future endpoint.
+
 Response:
 
 ```json
@@ -262,13 +275,41 @@ Response:
       "lot_id": "uuid",
       "lot_number": "29",
       "sii_unit_name": "Lote 29",
+      "sii_lot_number_normalized": "29",
+      "sii_comuna": "Teno",
+      "sii_role_matrix": "00067-00023",
       "sii_pre_role": "08179-00029",
+      "sii_role_in_process_text": "Rol de avaluo en tramite numero 08179-00029 de la comuna de Teno",
       "role_status": "rol_en_tramite",
       "matching_status": "matched",
-      "source_legal_document_id": "uuid"
+      "source_type": "document",
+      "source_legal_document_id": "uuid",
+      "source_document_label": "Certificado de roles SII",
+      "source_status": "active"
     }
   ],
   "summary": {
+    "total": 43,
+    "matched": 40,
+    "ambiguous": 1,
+    "missing": 2,
+    "manual_override": 0
+  },
+  "certificate_summary": {
+    "source_legal_document_ids": ["uuid"],
+    "comunas": ["Teno"],
+    "role_matrices": ["00067-00023"],
+    "extracted_unit_count": 43,
+    "matched_count": 40,
+    "manual_review_count": 1,
+    "missing_count": 2,
+    "active_certificate_count": 1,
+    "superseded_certificate_count": 0,
+    "ambiguous_matrix_role_count": 0,
+    "ocr_required": false,
+    "text_source": "pdf_text"
+  },
+  "review_counts": {
     "matched": 40,
     "ambiguous": 1,
     "missing": 2,
@@ -276,6 +317,15 @@ Response:
   }
 }
 ```
+
+Validation:
+
+- `matching_status: "matched"` requires exact equality between the project lot number normalized by the backend and the extracted row's `sii_lot_number_normalized`.
+- Numbers embedded in `sii_unit_name` are display/evidence only; they may inform manual-review hints but must not produce automatic matches.
+- One extracted SII role row may produce at most one automatic `matched` lot. Reused rows or competing lots become `ambiguous`/`missing` until manual review.
+- Rows from superseded or inactive certificado de roles documents are excluded from current matching and readiness summaries.
+- Header context may cross pages only when certificate identity and page evidence link the header and rows; ambiguous context produces `manual_review`.
+- Multiple matrix roles must be represented in `sii_role_record.matrix_roles`. Automatic propagation is allowed only when the parser proves one globally applicable matrix role.
 
 ### PATCH `/legal-roles/lots/{lot_id}`
 
@@ -286,12 +336,23 @@ Request:
 ```json
 {
   "sii_unit_name": "Lote 29",
+  "sii_lot_number_normalized": "29",
+  "sii_comuna": "Teno",
+  "sii_role_matrix": "00067-00023",
   "sii_pre_role": "08179-00029",
   "role_status": "rol_en_tramite",
   "matching_status": "manual_override",
   "reason": "Validado por certificado SII"
 }
 ```
+
+Validation:
+
+- Automatic `matched` records must come from one extracted certificate tuple containing lot number, role/pre-role and comuna.
+- A certificate-level matrix role may be attached to every row when supported by header evidence from the same certificate; multiple matrix roles require `sii_role_record.matrix_roles` plus manual review unless globally applicable.
+- `sii_role_in_process_text` is not authoritative input. The backend derives it from the approved role/pre-role plus comuna and persists the derived value with the manual override audit reason.
+- Client-sent stale role text must be ignored or rejected when it disagrees with the submitted role/pre-role and comuna.
+- If the tuple is incomplete, the API returns `ambiguous`, `missing` or `manual_review` state through the variable inventory instead of silently matching.
 
 ### GET `/escritura-cases/lots/{lot_id}/readiness`
 

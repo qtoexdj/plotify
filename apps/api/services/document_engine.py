@@ -215,7 +215,10 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
             "sii_unidad_nombre": lot_legal_data.get("sii_unit_name", "")
             if has_usable_role_match
             else "",
-            "sii_rol_matriz": lot_legal_data.get("sii_role_matrix", "")
+            "sii_rol_matriz": legal_data.get("sii_role_matrix", "")
+            if has_usable_role_match
+            else "",
+            "sii_comuna": legal_data.get("sii_comuna", "")
             if has_usable_role_match
             else "",
             "sii_pre_rol_lote": lot_legal_data.get("sii_pre_role", "")
@@ -285,14 +288,10 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
         "rol_matriz": flat_vars["sii_rol_matriz"],
         "pre_rol_lote": flat_vars["sii_pre_rol_lote"],
         "rol_definitivo": flat_vars["sii_rol_definitivo"],
-        "rol_avaluo_en_tramite_texto": lot_legal_data.get(
-            "sii_role_in_process_text",
-            "",
-        )
-        if has_usable_role_match
-        else "",
+        "rol_avaluo_en_tramite_texto": flat_vars["sii_rol_avaluo_en_tramite_texto"],
         "estado_rol": lot_legal_data.get("role_status", ""),
         "estado_matching": lot_legal_data.get("matching_status", ""),
+        "comuna": flat_vars["sii_comuna"],
     }
     nested_groups["lote"] = {
         **nested_groups.get("lote", {}),

@@ -236,10 +236,13 @@ class RoleMatchingRequest(LegalVariableBaseModel):
 
 class RoleManualOverrideRequest(LegalVariableBaseModel):
     sii_unit_name: str | None = None
+    sii_lot_number_normalized: str | None = None
+    sii_comuna: str | None = None
     sii_role_matrix: str | None = None
     sii_pre_role: str | None = None
     sii_role_in_process_text: str | None = None
     sii_definitive_role: str | None = None
+    sii_role_record: dict[str, Any] | None = None
     role_status: str
     matching_status: str = "manual_override"
     reason: str
@@ -275,6 +278,8 @@ class LotLegalDataResponse(LegalVariableResponseModel):
     lot_id: str
     lot_number: str | None = None
     sii_unit_name: str | None = None
+    sii_lot_number_normalized: str | None = None
+    sii_comuna: str | None = None
     sii_role_matrix: str | None = None
     sii_pre_role: str | None = None
     sii_role_in_process_text: str | None = None
@@ -282,7 +287,10 @@ class LotLegalDataResponse(LegalVariableResponseModel):
     role_status: str
     matching_status: str
     matching_score: float | None = Field(default=None, ge=0, le=1)
+    source_type: str | None = None
     source_legal_document_id: str | None = None
+    source_document_label: str | None = None
+    source_status: str | None = None
     reviewed_by: str | None = None
     reviewed_at: datetime | None = None
     created_at: datetime | None = None
@@ -294,10 +302,27 @@ class RoleMatchingResponse(LegalVariableResponseModel):
     matches: list[LotLegalDataResponse] = Field(default_factory=list)
 
 
+class SiiRoleCertificateSummary(LegalVariableResponseModel):
+    source_legal_document_ids: list[str] = Field(default_factory=list)
+    comunas: list[str] = Field(default_factory=list)
+    role_matrices: list[str] = Field(default_factory=list)
+    extracted_unit_count: int = 0
+    matched_count: int = 0
+    manual_review_count: int = 0
+    missing_count: int = 0
+    active_certificate_count: int = 0
+    superseded_certificate_count: int = 0
+    ambiguous_matrix_role_count: int = 0
+    ocr_required: bool | None = None
+    text_source: str | None = None
+
+
 class RoleMatchingInventoryResponse(LegalVariableResponseModel):
     project_id: str
     lots: list[LotLegalDataResponse] = Field(default_factory=list)
     summary: dict[str, int] = Field(default_factory=dict)
+    certificate_summary: SiiRoleCertificateSummary | None = None
+    review_counts: dict[str, int] = Field(default_factory=dict)
 
 
 class ReadinessGateResponse(LegalVariableResponseModel):

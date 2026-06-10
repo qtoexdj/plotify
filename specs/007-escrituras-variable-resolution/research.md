@@ -114,6 +114,75 @@ Alternatives considered:
 
 - Require definitive role before minuta: rejected because it does not match the first-transfer flow for subdivided lots.
 
+### Certificado SII role extraction pattern
+
+Decision: Extract certificado de roles SII records with deterministic parsing before any LLM-assisted fallback.
+
+Rationale:
+
+- The common certificate pattern is simple and legally important: numero de lote, rol/pre-rol and comuna.
+- Role matching should not depend on semantic guessing when the document gives a direct tuple.
+- The tuple itself is the evidence needed to render `Rol de avaluo en tramite numero [rol] de la comuna de [comuna]`.
+- Rol matriz and lot roles from the certificate remain in `rol_en_tramite` until a definitive role certificate or approved post-inscription value supersedes them.
+
+Alternatives considered:
+
+- Treating SII roles as generic OCR variables: rejected because it creates unnecessary ambiguity and can join unrelated snippets.
+- LLM-first extraction: rejected for role association because the certificate structure is regular enough for a rule parser and the legal risk of a wrong lot-role match is high.
+
+### Real SII certificate corpus and matrix role
+
+Decision: Treat the pilot SII certificates as a small corpus of supported layouts instead of a single strict row shape.
+
+Rationale:
+
+- Textual certificates can declare comuna and rol matriz in the header while each row contains only unit label plus assigned role/pre-role.
+- The rol matriz is a critical certificate-level value shared by every role row in the certificate and must be propagated to `lot_legal_data.sii_role_matrix`.
+- Observed textual row families include `LOTE N ... [rol]`, prefixed `... LOTE N [rol]`, `PARCELA X LT N ... [rol]` and similar unit labels where the lot number is embedded rather than first in the line.
+- Image-only certificates must go through OCR before variable extraction; an empty text layer is an extraction input problem, not a reason to invent or mark role rows as missing.
+
+Alternatives considered:
+
+- Keep requiring comuna on every row: rejected because real SII certificates often show comuna once in the header.
+- Use fuzzy matching without tuple evidence: rejected because it can create legally dangerous lot-role assignments.
+- Ignore scanned certificates until manual upload: rejected for the pilot because several real SII files are image-only PDFs.
+
+### SII OCR fallback
+
+Decision: Add OCR as a fallback only after `pypdf` yields no usable text for SII certificate pages.
+
+Rationale:
+
+- Existing text extraction works for searchable PDFs and should remain deterministic and cheap.
+- Scanned certificates are pages with image XObjects and zero text; they require OCR before the existing evidence pipeline can work.
+- OCR output must be stored as document page text with converter/stats metadata so evidence remains traceable.
+
+Alternatives considered:
+
+- Make OCR the first extraction path: rejected because it increases cost and may degrade clean searchable PDFs.
+- Mark all image-only PDFs as failed forever: rejected because it blocks real pilot documents that are otherwise valid certificates.
+
+### Senior review hardening 2026-06-08
+
+Decision: Re-open SDD 007 with production-hardening tasks before SDD 008 handoff.
+
+Rationale:
+
+- CodeGraph review of `match_sii_roles_to_lots` showed automatic matching can score against `unit_name`, which means labels such as `GAONA 7 PARCELA 8 LT 9` can accidentally match lots 7, 8 or 9 when only lot 9 is the juridical row lot.
+- Automatic role assignment is legally sensitive; one extracted SII row must not be reused across multiple lots.
+- Current role unit lookup can read project variables without an explicit active certificado de roles scope; replacing a certificate must remove superseded evidence from current matching/readiness while preserving old evidence for snapshots.
+- CodeGraph review of `_iter_sii_real_certificate_rows` showed header context is tied to the same page text. Real PDFs can split header and rows across pages, so propagation must happen at document/certificate level with evidence and ambiguity checks.
+- Multiple `Rol(es) Matriz(ces)` values cannot be collapsed into the first regex match without preserving ambiguity.
+- Manual override UX can edit role/pre-role/comuna while sending stale `sii_role_in_process_text`; the API must derive this text server-side.
+- OCR imports and system dependencies must be production guardrails, not best-effort dynamic paths that fail as generic empty extraction.
+
+Alternatives considered:
+
+- Continue from Phase 10 directly into SDD 008: rejected because the role-matching surface can still produce legally wrong lot-role assignments.
+- Treat fuzzy unit label matching as a fallback automatic match: rejected because visible parcel/project numbers are not the same as the extracted juridical lot number.
+- Delete superseded certificate variables: rejected because historical escritura snapshots and audit evidence must remain inspectable.
+- Let the frontend compose manual override role text: rejected because the backend owns canonical legal variable derivation and audit.
+
 ### Lawyer/redactor as workflow gate
 
 Decision: Store lawyer/redactor variables and legal review decisions as workflow data, not necessarily visible template text.

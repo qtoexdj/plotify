@@ -24,6 +24,18 @@ REVIEW_VARIABLE_STATES = frozenset(("proposed",))
 BLOCKING_VARIABLE_STATES = frozenset(catalog.VARIABLE_BLOCKING_STATES)
 VALID_ROLE_STATUSES = frozenset(("definitive", "rol_en_tramite", "not_applicable"))
 VALID_MATCHING_STATUSES = frozenset(("matched", "manual_override"))
+ACTIVE_SII_DOCUMENT_STATUSES = frozenset(
+    (
+        "pending",
+        "queued",
+        "processing",
+        "text_extracted",
+        "variables_proposed",
+        "needs_review",
+        "failed",
+    )
+)
+PROJECT_SII_COMMON_COLUMNS = "sii_comuna, sii_role_matrix"
 LEGAL_REVIEW_WARNING = (
     "La minuta generada automaticamente debe ser revisada y aprobada por "
     "abogado antes de usarse en notaria o como instrumento final."
@@ -173,13 +185,27 @@ def _evaluate_sii_gate(
     else:
         role_status = lot_legal_data.get("role_status")
         matching_status = lot_legal_data.get("matching_status")
+        source_legal_document_id = lot_legal_data.get("source_legal_document_id")
         if role_status not in VALID_ROLE_STATUSES:
             blocking.append("lot_legal_data.role_status")
         if matching_status not in VALID_MATCHING_STATUSES:
             blocking.append("lot_legal_data.matching_status")
 
+        active_certificate_ids = lot_legal_data.get("_active_sii_certificate_ids")
+        if (
+            matching_status == "matched"
+            and source_legal_document_id
+            and isinstance(active_certificate_ids, set)
+            and source_legal_document_id not in active_certificate_ids
+        ):
+            blocking.append("lot_legal_data.no_active_certificate")
+
+        has_active_document_support = bool(source_legal_document_id)
+        if isinstance(active_certificate_ids, set) and source_legal_document_id:
+            has_active_document_support = source_legal_document_id in active_certificate_ids
+
         has_legal_support = bool(
-            lot_legal_data.get("source_legal_document_id")
+            has_active_document_support
             or (lot_legal_data.get("reviewed_by") and lot_legal_data.get("reviewed_at"))
         )
         if role_status == "rol_en_tramite" and not has_legal_support:
@@ -222,7 +248,11 @@ def _overall_status(gates: tuple[ReadinessGate, ...]) -> ReadinessStatus:
     return "ready"
 
 
-def build_variable_snapshot(variables: list[dict[str, Any]]) -> dict[str, Any]:
+def build_variable_snapshot(
+    variables: list[dict[str, Any]],
+    lot_legal_data: dict[str, Any] | None = None,
+    project_legal_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Build the stable placeholder snapshot consumed by future minuta builders."""
     snapshot: dict[str, Any] = {}
     for variable in variables:
@@ -241,7 +271,172 @@ def build_variable_snapshot(variables: list[dict[str, Any]]) -> dict[str, Any]:
             "confidence": variable.get("confidence"),
             "reviewed_at": variable.get("reviewed_at"),
         }
+
+    # Inject stable official SII lot and matrix variables from domain tables
+    if lot_legal_data and lot_legal_data.get("matching_status") in {"matched", "manual_override"}:
+        matching_status = lot_legal_data.get("matching_status")
+        # sii.rol_matriz (from project level project_legal_data)
+        rol_matriz = (project_legal_data or {}).get(
+            "sii_role_matrix"
+        ) or lot_legal_data.get("sii_role_matrix")
+        if rol_matriz:
+            snapshot["sii.rol_matriz"] = {
+                "value_text": rol_matriz,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document",
+                "source_ref": {"source": "project_legal_data"},
+                "confidence": 1.0,
+            }
+        # sii.comuna (from project level project_legal_data)
+        comuna = (project_legal_data or {}).get("sii_comuna") or lot_legal_data.get(
+            "sii_comuna"
+        )
+        if comuna:
+            snapshot["sii.comuna"] = {
+                "value_text": comuna,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document",
+                "source_ref": {"source": "project_legal_data"},
+                "confidence": 1.0,
+            }
+        # sii.pre_rol_lote
+        pre_rol = lot_legal_data.get("sii_pre_role")
+        if pre_rol:
+            snapshot["sii.pre_rol_lote"] = {
+                "value_text": pre_rol,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document" if matching_status == "matched" else "manual",
+                "source_ref": {
+                    "source": "lot_legal_data",
+                    "lot_id": lot_legal_data.get("lot_id"),
+                },
+                "confidence": 1.0,
+            }
+        # sii.unidad_nombre
+        unidad = lot_legal_data.get("sii_unit_name")
+        if unidad:
+            snapshot["sii.unidad_nombre"] = {
+                "value_text": unidad,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document" if matching_status == "matched" else "manual",
+                "source_ref": {
+                    "source": "lot_legal_data",
+                    "lot_id": lot_legal_data.get("lot_id"),
+                },
+                "confidence": 1.0,
+            }
+        # sii.rol_avaluo_en_tramite_texto
+        rol_texto = lot_legal_data.get("sii_role_in_process_text")
+        if rol_texto:
+            snapshot["sii.rol_avaluo_en_tramite_texto"] = {
+                "value_text": rol_texto,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document" if matching_status == "matched" else "manual",
+                "source_ref": {
+                    "source": "lot_legal_data",
+                    "lot_id": lot_legal_data.get("lot_id"),
+                },
+                "confidence": 1.0,
+            }
+        # lote.rol_tramite and lote.rol_avaluo
+        role_status = lot_legal_data.get("role_status")
+        role_value = (
+            lot_legal_data.get("sii_definitive_role")
+            or lot_legal_data.get("sii_pre_role")
+            or lot_legal_data.get("sii_role_in_process_text")
+            or ""
+        )
+        if role_status == "rol_en_tramite" and role_value:
+            snapshot["lote.rol_tramite"] = {
+                "value_text": role_value,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document" if matching_status == "matched" else "manual",
+                "source_ref": {"source": "lot_legal_data"},
+                "confidence": 1.0,
+            }
+        if role_value:
+            snapshot["lote.rol_avaluo"] = {
+                "value_text": role_value,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document" if matching_status == "matched" else "manual",
+                "source_ref": {"source": "lot_legal_data"},
+                "confidence": 1.0,
+            }
+
     return snapshot
+
+
+async def _fetch_project_sii_common_data(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+) -> dict[str, Any] | None:
+    try:
+        result = await asyncio.to_thread(
+            lambda: (
+                supabase.table("project_legal_data")
+                .select(PROJECT_SII_COMMON_COLUMNS)
+                .eq("project_id", project_id)
+                .eq("organization_id", organization_id)
+                .maybe_single()
+                .execute()
+            )
+        )
+    except Exception as exc:
+        if _is_missing_project_sii_columns_error(exc):
+            logger.warning(
+                "project_legal_data_sii_columns_missing_for_readiness",
+                organization_id=organization_id,
+                project_id=project_id,
+            )
+            return None
+        raise
+    return _first_row(result.data)
+
+
+async def _fetch_active_sii_certificate_ids(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+) -> set[str]:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("legal_documents")
+            .select("id")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("document_type", "certificado_roles_sii")
+            .in_("extraction_status", sorted(ACTIVE_SII_DOCUMENT_STATUSES))
+            .execute()
+        )
+    )
+    rows = result.data if isinstance(result.data, list) else []
+    return {str(row.get("id")) for row in rows if row.get("id")}
+
+
+def _is_missing_project_sii_columns_error(exc: Exception) -> bool:
+    code = getattr(exc, "code", None)
+    message = getattr(exc, "message", None) or str(exc)
+    if not code and getattr(exc, "args", None):
+        first_arg = exc.args[0]
+        if isinstance(first_arg, dict):
+            code = first_arg.get("code")
+            message = str(first_arg.get("message") or message)
+    message = str(message)
+    return (
+        code == "42703"
+        or "project_legal_data.sii_comuna" in message
+        or "project_legal_data.sii_role_matrix" in message
+    )
 
 
 def build_evidence_snapshot(variables: list[dict[str, Any]]) -> dict[str, Any]:
@@ -249,9 +444,18 @@ def build_evidence_snapshot(variables: list[dict[str, Any]]) -> dict[str, Any]:
     snapshot: dict[str, Any] = {}
     for variable in variables:
         key = variable.get("variable_key")
-        evidence = variable.get("evidence")
-        if isinstance(key, str) and isinstance(evidence, list):
-            snapshot[key] = evidence
+        evidence_list = variable.get("evidence")
+        if isinstance(key, str) and isinstance(evidence_list, list):
+            snapshot[key] = [
+                {
+                    "legal_document_id": ev.get("legal_document_id"),
+                    "legal_document_page_id": ev.get("legal_document_page_id"),
+                    "page_number": ev.get("page_number"),
+                    "snippet": ev.get("snippet"),
+                }
+                for ev in evidence_list
+                if isinstance(ev, dict)
+            ]
     return snapshot
 
 
@@ -262,6 +466,7 @@ def calculate_escritura_readiness(
     lot_id: str,
     variables: list[dict[str, Any]],
     lot_legal_data: dict[str, Any] | None = None,
+    project_legal_data: dict[str, Any] | None = None,
     warning_acknowledged: bool = False,
 ) -> EscrituraReadiness:
     """Evaluate SDD 007 readiness gates from canonical variables and lot legal data."""
@@ -283,7 +488,7 @@ def calculate_escritura_readiness(
         lot_id=lot_id,
         readiness_status=_overall_status(gate_tuple),
         gates=gate_tuple,
-        variable_snapshot=build_variable_snapshot(variables),
+        variable_snapshot=build_variable_snapshot(variables, lot_legal_data, project_legal_data),
         evidence_snapshot=build_evidence_snapshot(variables),
     )
 
@@ -294,7 +499,7 @@ async def fetch_readiness_inputs(
     project_id: str,
     lot_id: str,
     supabase: Any | None = None,
-) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None]:
     """Load active variable rows and lot legal data needed by readiness calculation."""
     if supabase is None:
         from core.database import get_supabase_client
@@ -308,7 +513,7 @@ async def fetch_readiness_inputs(
         lot_id=lot_id,
     )
 
-    variables_result, lot_legal_result = await asyncio.gather(
+    variables_result, lot_legal_result, project_legal_data, active_sii_certificate_ids = await asyncio.gather(
         asyncio.to_thread(
             lambda: (
                 supabase.table("variable_resolutions")
@@ -332,8 +537,32 @@ async def fetch_readiness_inputs(
                 .execute()
             )
         ),
+        _fetch_project_sii_common_data(
+            supabase=supabase,
+            organization_id=organization_id,
+            project_id=project_id,
+        ),
+        _fetch_active_sii_certificate_ids(
+            supabase=supabase,
+            organization_id=organization_id,
+            project_id=project_id,
+        ),
     )
     variables = variables_result.data if isinstance(variables_result.data, list) else []
+    lot_legal_data = _first_row(lot_legal_result.data)
+    if lot_legal_data:
+        lot_legal_data = dict(lot_legal_data)
+        lot_legal_data["_active_sii_certificate_ids"] = active_sii_certificate_ids
+
+    # Blend shared matrix/comuna fields into lot_legal_data for API contract consistency
+    if lot_legal_data and project_legal_data:
+        shared_comuna = project_legal_data.get("sii_comuna")
+        shared_matrix = project_legal_data.get("sii_role_matrix")
+        if shared_comuna:
+            lot_legal_data["sii_comuna"] = shared_comuna
+        if shared_matrix:
+            lot_legal_data["sii_role_matrix"] = shared_matrix
+
     variable_ids = [
         variable["id"]
         for variable in variables
@@ -364,7 +593,7 @@ async def fetch_readiness_inputs(
                 variable_id,
                 variable.get("evidence") if isinstance(variable.get("evidence"), list) else [],
             )
-    return variables, _first_row(lot_legal_result.data)
+    return variables, lot_legal_data, project_legal_data
 
 
 async def get_escritura_readiness(
@@ -375,7 +604,7 @@ async def get_escritura_readiness(
     warning_acknowledged: bool = False,
     supabase: Any | None = None,
 ) -> EscrituraReadiness:
-    variables, lot_legal_data = await fetch_readiness_inputs(
+    variables, lot_legal_data, project_legal_data = await fetch_readiness_inputs(
         organization_id=organization_id,
         project_id=project_id,
         lot_id=lot_id,
@@ -387,6 +616,7 @@ async def get_escritura_readiness(
         lot_id=lot_id,
         variables=variables,
         lot_legal_data=lot_legal_data,
+        project_legal_data=project_legal_data,
         warning_acknowledged=warning_acknowledged,
     )
     logger.info(

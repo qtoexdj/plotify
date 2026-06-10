@@ -42,6 +42,7 @@ class LegalTextExtractionError(ValueError):
     """Base error for extraction failures with a machine-readable code."""
 
     error_code = "legal_text_extraction_error"
+    stats: dict[str, Any] | None = None
 
 
 class UnsupportedLegalTextConverterError(LegalTextExtractionError):
@@ -56,10 +57,50 @@ class EmptyLegalTextExtractionError(LegalTextExtractionError):
     error_code = "empty_text_extraction"
 
 
+class OcrRequiredLegalTextExtractionError(LegalTextExtractionError):
+    """Raised when a PDF needs OCR but OCR is not available/configured."""
+
+    error_code = "ocr_required"
+
+    def __init__(self, message: str, *, stats: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.stats = stats
+
+
 class EncryptedLegalTextExtractionError(LegalTextExtractionError):
     """Raised when a source PDF is encrypted and cannot be opened."""
 
     error_code = "encrypted_pdf"
+
+
+class PopplerNotFoundError(LegalTextExtractionError):
+    """Raised when Poppler binary is missing on the system."""
+
+    error_code = "poppler_not_found"
+
+    def __init__(self, message: str, *, stats: dict[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.stats = stats
+
+
+class TesseractNotFoundError(LegalTextExtractionError):
+    """Raised when Tesseract binary is missing on the system."""
+
+    error_code = "tesseract_not_found"
+
+    def __init__(self, message: str, *, stats: dict[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.stats = stats
+
+
+class OcrTimeoutError(LegalTextExtractionError):
+    """Raised when OCR processing times out."""
+
+    error_code = "ocr_timeout"
+
+    def __init__(self, message: str, *, stats: dict[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.stats = stats
 
 
 @dataclass(frozen=True)
@@ -255,9 +296,7 @@ def _extract_pdf_text_pages(source: LegalDocumentExtractionSource) -> LegalTextE
         if page.char_count < PDF_LOW_TEXT_CHAR_THRESHOLD
     )
     if not non_empty_pages:
-        raise EmptyLegalTextExtractionError(
-            "PDF has no extractable text; OCR/manual review is required."
-        )
+        return _extract_pdf_ocr_pages(source, page_count=len(pages))
 
     return LegalTextExtractionResult(
         pages=non_empty_pages,
@@ -274,6 +313,118 @@ def _extract_pdf_text_pages(source: LegalDocumentExtractionSource) -> LegalTextE
             "mime_type": source.mime_type,
             "storage_bucket": source.storage_bucket,
             "storage_path": source.storage_path,
+        },
+    )
+
+
+def _extract_pdf_ocr_pages(
+    source: LegalDocumentExtractionSource,
+    *,
+    page_count: int,
+) -> LegalTextExtractionResult:
+    from core.config import get_settings
+
+    settings = get_settings()
+    base_stats = {
+        "page_count": page_count,
+        "text_page_count": 0,
+        "empty_page_count": page_count,
+        "low_text_page_count": page_count,
+        "pages_needing_ocr": list(range(1, page_count + 1)),
+        "ocr_required": True,
+        "ocr_status": "required",
+        "char_count": 0,
+        "raw_sha256_hash": checksum_bytes(source.content),
+        "mime_type": source.mime_type,
+        "storage_bucket": source.storage_bucket,
+        "storage_path": source.storage_path,
+    }
+    if not settings.LEGAL_TEXT_OCR_ENABLED:
+        raise OcrRequiredLegalTextExtractionError(
+            "PDF has no extractable text and OCR is not enabled.",
+            stats=base_stats,
+        )
+
+    try:
+        from pdf2image import convert_from_bytes
+        from pytesseract import image_to_string
+    except ImportError as exc:
+        raise OcrRequiredLegalTextExtractionError(
+            "PDF has no extractable text and OCR dependencies are not installed.",
+            stats={**base_stats, "ocr_status": "unavailable"},
+        ) from exc
+
+    try:
+        images = convert_from_bytes(source.content, dpi=settings.LEGAL_TEXT_OCR_DPI)
+    except Exception as exc:
+        exc_type_name = type(exc).__name__
+        exc_msg = str(exc).lower()
+        if (
+            "poppler" in exc_msg
+            or "pdfinfonotinstallederror" in exc_type_name.lower()
+            or "pdfpagecounterror" in exc_type_name.lower()
+        ):
+            raise PopplerNotFoundError(
+                f"Poppler binary not found on system: {exc}",
+                stats={**base_stats, "ocr_status": "poppler_missing"},
+            ) from exc
+        raise LegalTextExtractionError(
+            f"Failed to convert PDF to images during OCR: {exc}"
+        ) from exc
+
+    ocr_pages = []
+    timeout_seconds = getattr(settings, "LEGAL_TEXT_OCR_TIMEOUT", 30)
+    for index, image in enumerate(images, start=1):
+        try:
+            text = image_to_string(image, timeout=timeout_seconds).strip()
+            ocr_pages.append(
+                ExtractedLegalTextPage(
+                    page_number=index,
+                    page_kind="ocr_image",
+                    text_content=text,
+                )
+            )
+        except Exception as exc:
+            exc_type_name = type(exc).__name__
+            exc_msg = str(exc).lower()
+            if (
+                "tesseractnotfounderror" in exc_type_name.lower()
+                or "tesseractnotfounderror" in exc_msg
+                or "tesseract is not installed" in exc_msg
+                or "not in your path" in exc_msg
+            ):
+                raise TesseractNotFoundError(
+                    f"Tesseract binary not found on system: {exc}",
+                    stats={**base_stats, "ocr_status": "tesseract_missing"},
+                ) from exc
+            elif "timeoutexpired" in exc_type_name.lower() or "timeout" in exc_msg:
+                raise OcrTimeoutError(
+                    f"OCR processing timed out after {timeout_seconds}s: {exc}",
+                    stats={**base_stats, "ocr_status": "timeout"},
+                ) from exc
+            else:
+                raise LegalTextExtractionError(
+                    f"Failed during OCR text extraction on page {index}: {exc}"
+                ) from exc
+
+    non_empty_pages = tuple(page for page in ocr_pages if page.text_content)
+    if not non_empty_pages:
+        raise OcrRequiredLegalTextExtractionError(
+            "OCR did not recover usable text from the PDF.",
+            stats={**base_stats, "ocr_status": "empty"},
+        )
+
+    return LegalTextExtractionResult(
+        pages=non_empty_pages,
+        converter="ocr",
+        stats={
+            **base_stats,
+            "text_page_count": len(non_empty_pages),
+            "empty_page_count": len(ocr_pages) - len(non_empty_pages),
+            "ocr_required": False,
+            "ocr_status": "succeeded",
+            "ocr_dpi": settings.LEGAL_TEXT_OCR_DPI,
+            "char_count": sum(page.char_count for page in non_empty_pages),
         },
     )
 
@@ -384,7 +535,12 @@ class LegalTextExtractionService:
                 stored_pages=tuple(stored_pages),
             )
         except LegalTextExtractionError as exc:
-            await self.mark_failed(source, exc.error_code, str(exc))
+            await self.mark_failed(
+                source,
+                exc.error_code,
+                str(exc),
+                stats=getattr(exc, "stats", None),
+            )
             raise
         except Exception as exc:
             await self.mark_failed(source, "text_extraction_failed", str(exc))
@@ -416,11 +572,13 @@ class LegalTextExtractionService:
         source: LegalDocumentExtractionSource,
         error_code: str,
         error_message: str,
+        stats: dict[str, Any] | None = None,
     ) -> None:
         await self._set_statuses(
             source,
             job_status="failed",
             document_status="failed",
+            stats=stats,
             error_code=error_code,
             error_message=error_message,
             completed=True,

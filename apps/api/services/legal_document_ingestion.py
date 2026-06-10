@@ -25,6 +25,9 @@ logger = get_logger(__name__)
 PIPELINE_VERSION = "sdd_007_v1"
 DEFAULT_STORAGE_BUCKET = "project-files"
 QUEUED_STATUS = "queued"
+RETRYABLE_EXTRACTION_STATUSES = frozenset(
+    {"failed", "needs_review", "text_extracted", "variables_proposed"}
+)
 ACTIVE_DOCUMENT_STATUSES = (
     "pending",
     "queued",
@@ -361,6 +364,46 @@ async def list_project_legal_documents(
     return [LegalDocumentResponse.model_validate(row) for row in _rows(result)]
 
 
+async def get_active_legal_document_for_type(
+    *,
+    project_id: str,
+    organization_id: str,
+    document_type: str,
+    supabase: Any | None = None,
+) -> LegalDocumentResponse:
+    """Return the latest non-superseded legal document for the project/type."""
+    client = supabase or _get_supabase_client()
+    await ensure_project_scope(
+        supabase=client,
+        organization_id=organization_id,
+        project_id=project_id,
+    )
+    if not catalog.is_legal_document_type(document_type):
+        raise LegalDocumentValidationError(
+            f"Unsupported legal document type: {document_type}"
+        )
+
+    result = await _run_supabase(
+        lambda: (
+            client.table("legal_documents")
+            .select("*")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("document_type", document_type)
+            .in_("extraction_status", ACTIVE_DOCUMENT_STATUSES)
+            .order("version_number", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    row = _first_row(result)
+    if not row:
+        raise LegalDocumentNotFoundError(
+            f"No active legal document found for type {document_type}."
+        )
+    return LegalDocumentResponse.model_validate(row)
+
+
 async def create_ingestion_job(
     *,
     supabase: Any,
@@ -516,9 +559,9 @@ async def queue_retry_for_legal_document(
         raise LegalDocumentNotFoundError("Legal document not found.")
 
     legal_document = LegalDocumentResponse.model_validate(document_row)
-    if legal_document.extraction_status not in {"failed", "needs_review"}:
+    if legal_document.extraction_status not in RETRYABLE_EXTRACTION_STATUSES:
         raise LegalDocumentValidationError(
-            "Only failed or needs_review legal documents can be retried."
+            "Only completed, failed or review-required legal documents can be retried."
         )
 
     attempts_result = await _run_supabase(
