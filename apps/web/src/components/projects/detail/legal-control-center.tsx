@@ -30,6 +30,7 @@ import { LegalVariableEditor } from '@/components/projects/legal/legal-variable-
 import { PlanoArchivePanel } from '@/components/projects/legal/plano-archive-panel'
 import { SagArticleTwoPanel } from '@/components/projects/legal/sag-article-two-panel'
 import { EscrituraReadinessPanel } from '@/components/projects/legal/escritura-readiness-panel'
+import { TitleCasePanel } from '@/components/projects/legal/title-case-panel'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   File02Icon,
@@ -619,8 +620,10 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
           <EscrituraReadinessPanel projectId={projectId} lotId={activeLotId} />
         </div>
 
-        {/* Columna Derecha (col-span-8): SAG, Plano y Roles */}
+        {/* Columna Derecha (col-span-8): Título, SAG, Plano y Roles */}
         <div className="lg:col-span-8 space-y-6">
+          <TitleCasePanel projectId={projectId} />
+
           <SagArticleTwoPanel
             variables={variables}
             isLoading={isLoadingVariables}

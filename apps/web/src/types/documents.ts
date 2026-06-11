@@ -38,14 +38,9 @@ export interface EscrituraVariables {
       surponiente?: string
       [key: string]: string | undefined
     }
-    adquisicion_modo?: string
-    adquisicion_notaria?: string
-    adquisicion_fecha?: string
-    adquisicion_repertorio?: string
-    inscripcion_fojas?: string
-    inscripcion_numero?: string
-    inscripcion_anio?: string
-    inscripcion_cbr?: string
+    comuna?: string
+    provincia?: string
+    region?: string
     rol_avaluo?: string
   }
 
@@ -166,11 +161,6 @@ export const ESCRITURA_ARTICLES: ArticleMetadata[] = [
       'matriz.nombre_predio',
       'matriz.ubicacion',
       'matriz.deslindes',
-      'matriz.adquisicion_modo',
-      'matriz.adquisicion_notaria',
-      'matriz.adquisicion_fecha',
-      'matriz.inscripcion_fojas',
-      'matriz.inscripcion_cbr',
       'matriz.rol_avaluo',
     ],
   },

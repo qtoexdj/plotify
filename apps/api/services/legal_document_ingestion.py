@@ -37,6 +37,10 @@ ACTIVE_DOCUMENT_STATUSES = (
     "needs_review",
     "failed",
 )
+# Document types consumed by the SDD 009 title analysis pipeline.
+TITLE_ANALYSIS_DOCUMENT_TYPES = frozenset(
+    {"dominio_vigente", "personeria", "hipoteca_gravamen"}
+)
 
 SUPPORTED_MIME_TYPES: frozenset[str] = frozenset(
     {
@@ -96,6 +100,7 @@ class LegalDocumentRegistrationInput:
     sha256_hash: str | None
     upload_source: str
     uploaded_by: str | None
+    replaces_legal_document_id: str | None = None
 
     @classmethod
     def from_schema(
@@ -109,6 +114,13 @@ class LegalDocumentRegistrationInput:
 class LegalDocumentRegistrationResult:
     legal_document: LegalDocumentResponse
     ingestion_job: DocumentIngestionJobResponse
+
+
+@dataclass(frozen=True, slots=True)
+class LegalDocumentArchiveResult:
+    legal_document: LegalDocumentResponse
+    title_analysis_superseded: bool
+    title_reanalysis_recommended: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -251,6 +263,21 @@ def validate_registration_input(
     )
     sha256_hash = _validate_sha256(payload.sha256_hash)
 
+    replaces_legal_document_id = (
+        payload.replaces_legal_document_id.strip()
+        if payload.replaces_legal_document_id
+        else None
+    )
+    if replaces_legal_document_id and not catalog.is_multi_active_legal_document_type(
+        document_type
+    ):
+        # Single-active types always supersede every previous version; an
+        # explicit replace target would be ambiguous (FR-032).
+        raise LegalDocumentValidationError(
+            "replaces_legal_document_id is only supported for multi-active "
+            f"document types, not for {document_type}."
+        )
+
     return LegalDocumentRegistrationInput(
         organization_id=organization_id,
         project_id=project_id,
@@ -265,6 +292,7 @@ def validate_registration_input(
         sha256_hash=sha256_hash,
         upload_source=upload_source,
         uploaded_by=payload.uploaded_by.strip() if payload.uploaded_by else None,
+        replaces_legal_document_id=replaces_legal_document_id,
     )
 
 
@@ -448,6 +476,11 @@ async def register_legal_document(
         project_id=registration.project_id,
         lot_id=registration.lot_id,
     )
+    if registration.replaces_legal_document_id:
+        await _ensure_replace_target(
+            supabase=client,
+            registration=registration,
+        )
 
     version_number = await next_document_version(
         supabase=client,
@@ -479,10 +512,35 @@ async def register_legal_document(
         raise LegalDocumentIngestionError("Failed to register legal document.")
 
     legal_document = LegalDocumentResponse.model_validate(document_row)
-    await supersede_previous_document_versions(
-        supabase=client,
-        legal_document=legal_document,
-    )
+    if catalog.is_multi_active_legal_document_type(legal_document.document_type):
+        # FR-031/FR-032: multi-active types coexist; only an explicit replace
+        # target is superseded.
+        if registration.replaces_legal_document_id:
+            await supersede_replaced_document(
+                supabase=client,
+                legal_document=legal_document,
+                replaced_document_id=registration.replaces_legal_document_id,
+            )
+    else:
+        await supersede_previous_document_versions(
+            supabase=client,
+            legal_document=legal_document,
+        )
+    if legal_document.document_type in TITLE_ANALYSIS_DOCUMENT_TYPES:
+        try:
+            from services.legal_title_analysis import _supersede_current_title_analyses
+            await _supersede_current_title_analyses(
+                supabase=client,
+                organization_id=legal_document.organization_id,
+                project_id=legal_document.project_id,
+            )
+        except Exception as exc:
+            logger.error(
+                "title_analysis_supersede_failed_on_registration",
+                organization_id=legal_document.organization_id,
+                project_id=legal_document.project_id,
+                error=str(exc),
+            )
     ingestion_job = await create_ingestion_job(
         supabase=client,
         legal_document=legal_document,
@@ -499,6 +557,74 @@ async def register_legal_document(
     return LegalDocumentRegistrationResult(
         legal_document=legal_document,
         ingestion_job=ingestion_job,
+    )
+
+
+async def _ensure_replace_target(
+    *,
+    supabase: Any,
+    registration: LegalDocumentRegistrationInput,
+) -> dict[str, Any]:
+    result = await _run_supabase(
+        lambda: (
+            supabase.table("legal_documents")
+            .select("id, organization_id, project_id, document_type, extraction_status")
+            .eq("id", registration.replaces_legal_document_id)
+            .limit(1)
+            .execute()
+        )
+    )
+    target = _first_row(result)
+    if not target:
+        raise LegalDocumentNotFoundError(
+            "replaces_legal_document_id does not reference an existing document."
+        )
+    if (
+        target.get("organization_id") != registration.organization_id
+        or target.get("project_id") != registration.project_id
+    ):
+        raise LegalDocumentScopeError(
+            "replaces_legal_document_id does not belong to the organization/project."
+        )
+    if target.get("document_type") != registration.document_type:
+        raise LegalDocumentValidationError(
+            "replaces_legal_document_id must reference a document of the same type."
+        )
+    if target.get("extraction_status") not in ACTIVE_DOCUMENT_STATUSES:
+        raise LegalDocumentValidationError(
+            "replaces_legal_document_id must reference an active document."
+        )
+    return target
+
+
+async def supersede_replaced_document(
+    *,
+    supabase: Any,
+    legal_document: LegalDocumentResponse,
+    replaced_document_id: str,
+) -> None:
+    await _run_supabase(
+        lambda: (
+            supabase.table("legal_documents")
+            .update(
+                {
+                    "extraction_status": "superseded",
+                    "superseded_by": legal_document.id,
+                }
+            )
+            .eq("id", replaced_document_id)
+            .eq("organization_id", legal_document.organization_id)
+            .eq("project_id", legal_document.project_id)
+            .execute()
+        )
+    )
+    logger.info(
+        "legal_document_replaced",
+        organization_id=legal_document.organization_id,
+        project_id=legal_document.project_id,
+        legal_document_id=legal_document.id,
+        replaced_document_id=replaced_document_id,
+        document_type=legal_document.document_type,
     )
 
 
@@ -531,6 +657,109 @@ async def supersede_previous_document_versions(
         legal_document_id=legal_document.id,
         document_type=legal_document.document_type,
         version_number=legal_document.version_number,
+    )
+
+
+async def archive_legal_document(
+    *,
+    legal_document_id: str,
+    organization_id: str,
+    project_id: str,
+    supabase: Any | None = None,
+) -> LegalDocumentArchiveResult:
+    """Archive (soft-delete) a legal document by marking it superseded.
+
+    The row and its storage object are preserved as historical evidence; the
+    document simply stops being active. Archiving a title-type document
+    supersedes the current title analysis (the active source set changed) and
+    reports whether a reanalysis makes sense (other active title docs remain).
+    """
+    client = supabase or _get_supabase_client()
+    result = await _run_supabase(
+        lambda: (
+            client.table("legal_documents")
+            .select("*")
+            .eq("id", legal_document_id)
+            .limit(1)
+            .execute()
+        )
+    )
+    row = _first_row(result)
+    if not row:
+        raise LegalDocumentNotFoundError("Legal document not found.")
+    if (
+        row.get("organization_id") != organization_id
+        or row.get("project_id") != project_id
+    ):
+        raise LegalDocumentScopeError(
+            "Legal document does not belong to the organization/project."
+        )
+    if row.get("extraction_status") == "superseded":
+        raise LegalDocumentValidationError(
+            "Legal document is already archived/superseded."
+        )
+
+    await _run_supabase(
+        lambda: (
+            client.table("legal_documents")
+            .update({"extraction_status": "superseded"})
+            .eq("id", legal_document_id)
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .execute()
+        )
+    )
+    archived = LegalDocumentResponse.model_validate(
+        {**row, "extraction_status": "superseded"}
+    )
+
+    title_analysis_superseded = False
+    title_reanalysis_recommended = False
+    if archived.document_type in TITLE_ANALYSIS_DOCUMENT_TYPES:
+        try:
+            from services.legal_title_analysis import _supersede_current_title_analyses
+
+            await _supersede_current_title_analyses(
+                supabase=client,
+                organization_id=organization_id,
+                project_id=project_id,
+            )
+            title_analysis_superseded = True
+        except Exception as exc:
+            logger.error(
+                "title_analysis_supersede_failed_on_archive",
+                organization_id=organization_id,
+                project_id=project_id,
+                legal_document_id=legal_document_id,
+                error=str(exc),
+            )
+        remaining_result = await _run_supabase(
+            lambda: (
+                client.table("legal_documents")
+                .select("id")
+                .eq("organization_id", organization_id)
+                .eq("project_id", project_id)
+                .in_("document_type", sorted(TITLE_ANALYSIS_DOCUMENT_TYPES))
+                .in_("extraction_status", list(ACTIVE_DOCUMENT_STATUSES))
+                .limit(1)
+                .execute()
+            )
+        )
+        title_reanalysis_recommended = _first_row(remaining_result) is not None
+
+    logger.info(
+        "legal_document_archived",
+        organization_id=organization_id,
+        project_id=project_id,
+        legal_document_id=legal_document_id,
+        document_type=archived.document_type,
+        title_analysis_superseded=title_analysis_superseded,
+        title_reanalysis_recommended=title_reanalysis_recommended,
+    )
+    return LegalDocumentArchiveResult(
+        legal_document=archived,
+        title_analysis_superseded=title_analysis_superseded,
+        title_reanalysis_recommended=title_reanalysis_recommended,
     )
 
 
@@ -620,6 +849,7 @@ async def run_document_ingestion_job(
     project_id: str,
     ingestion_job_id: str | None = None,
     supabase: Any | None = None,
+    redis: Any | None = None,
 ) -> LegalDocumentIngestionRunResult:
     """Worker boundary for legal ingestion jobs."""
     from services.legal_text_extraction import (
@@ -685,6 +915,34 @@ async def run_document_ingestion_job(
         proposal_count=len(proposals),
         blocking_proposal_count=sum(1 for item in proposals if item.blocks_readiness),
     )
+    if document.document_type in TITLE_ANALYSIS_DOCUMENT_TYPES:
+        try:
+            arq_pool = redis
+            if arq_pool is None:
+                from core.redis import get_arq_pool
+                arq_pool = await get_arq_pool()
+            
+            if arq_pool is not None:
+                await arq_pool.enqueue_job(
+                    "analyze_project_title",
+                    {
+                        "organization_id": organization_id,
+                        "project_id": project_id,
+                    }
+                )
+                logger.info(
+                    "title_analysis_queued_after_ingestion",
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=legal_document_id,
+                )
+        except Exception as exc:
+            logger.error(
+                "title_analysis_enqueue_failed_after_ingestion",
+                organization_id=organization_id,
+                project_id=project_id,
+                error=str(exc),
+            )
     return LegalDocumentIngestionRunResult(
         legal_document_id=legal_document_id,
         organization_id=organization_id,

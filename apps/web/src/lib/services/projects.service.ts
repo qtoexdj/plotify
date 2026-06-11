@@ -21,6 +21,8 @@ export const PROJECT_LEGAL_DOCUMENT_FIELDS = {
   doc_roles: 'certificado_roles_sii',
   doc_subdivision: 'certificado_sag',
   doc_plano_oficial: 'plano_oficial',
+  // Sin columna en projects: vive solo en legal_documents (FR-033).
+  doc_personeria: 'personeria',
   doc_otros: 'otro',
 } as const satisfies Record<string, LegalDocumentType>
 
@@ -33,6 +35,7 @@ export interface ProjectLegalDocumentUploadMetadata {
   mime_type: string
   file_size_bytes: number
   sha256_hash: string
+  replaces_legal_document_id?: string | null
 }
 
 export async function registerProjectLegalDocuments({
@@ -69,6 +72,7 @@ export async function registerProjectLegalDocuments({
         sha256_hash: document.sha256_hash,
         upload_source: uploadSource,
         uploaded_by: uploadedBy,
+        replaces_legal_document_id: document.replaces_legal_document_id ?? null,
       }
 
       return microserviceFetch('/api/v1/legal-documents/register', {

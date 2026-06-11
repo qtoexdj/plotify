@@ -11,6 +11,13 @@ export interface components {
       "overrides"?: Record<string, unknown> | null
       "position": number
     }
+    "Adquirente": {
+      "cuota"?: string | null
+      "nombre"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "Antecesor": {
+      "nombre"?: components["schemas"]["EvidencedValue"] | null
+    }
     "ApprovalRequestDetailResponse": {
       "created_at": string
       "id": string
@@ -117,6 +124,17 @@ export interface components {
       "readiness_status": string
       "variable_snapshot"?: Record<string, unknown>
     }
+    "Evidence": {
+      "legal_document_id"?: string | null
+      "page_number"?: number | null
+      "snippet"?: string | null
+    }
+    "EvidencedValue": {
+      "confidence"?: number | null
+      "evidence"?: components["schemas"]["Evidence"] | null
+      "value"?: string | null
+      "verified"?: boolean | null
+    }
     "GenerateRequest": {
       "document_type"?: string
       "format"?: "pdf" | "docx"
@@ -141,8 +159,36 @@ export interface components {
     "HTTPValidationError": {
       "detail"?: Array<components["schemas"]["ValidationError"]>
     }
+    "InscriptionDetalle": {
+      "anio"?: components["schemas"]["EvidencedValue"] | null
+      "cbr"?: components["schemas"]["EvidencedValue"] | null
+      "fojas"?: components["schemas"]["EvidencedValue"] | null
+      "numero"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "InscriptionEscritura": {
+      "fecha"?: components["schemas"]["EvidencedValue"] | null
+      "notaria_ciudad"?: components["schemas"]["EvidencedValue"] | null
+      "notario"?: components["schemas"]["EvidencedValue"] | null
+      "repertorio"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "InscriptionObservacion": {
+      "evidence"?: components["schemas"]["Evidence"] | null
+      "tipo"?: string | null
+    }
+    "InscriptionRectificatoria": {
+      "fecha"?: components["schemas"]["EvidencedValue"] | null
+      "notario"?: components["schemas"]["EvidencedValue"] | null
+      "repertorio"?: components["schemas"]["EvidencedValue"] | null
+    }
     "InvalidateCacheRequest": {
       "organization_id": string
+    }
+    "LegalDocumentArchiveResponse": {
+      "extraction_status": string
+      "legal_document_id": string
+      "reanalysis_queued": boolean
+      "title_analysis_superseded": boolean
+      "title_reanalysis_recommended": boolean
     }
     "LegalDocumentListResponse": {
       "documents"?: Array<components["schemas"]["LegalDocumentResponse"]>
@@ -156,6 +202,7 @@ export interface components {
       "organization_id": string
       "original_filename": string
       "project_id": string
+      "replaces_legal_document_id"?: string | null
       "sha256_hash": string
       "source_field"?: string | null
       "storage_bucket"?: string
@@ -300,6 +347,31 @@ export interface components {
     "PreviewResponse": {
       "html": string
     }
+    "PropertyDeslindes": {
+      "norte"?: components["schemas"]["EvidencedValue"] | null
+      "oriente"?: components["schemas"]["EvidencedValue"] | null
+      "poniente"?: components["schemas"]["EvidencedValue"] | null
+      "sur"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "PropertyIdentity": {
+      "comuna"?: components["schemas"]["EvidencedValue"] | null
+      "deslindes"?: components["schemas"]["PropertyDeslindes"] | null
+      "nombre_predio"?: components["schemas"]["EvidencedValue"] | null
+      "provincia"?: components["schemas"]["EvidencedValue"] | null
+      "region"?: components["schemas"]["EvidencedValue"] | null
+      "rol_avaluo"?: components["schemas"]["EvidencedValue"] | null
+      "superficie_texto"?: components["schemas"]["EvidencedValue"] | null
+      "ubicacion"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "PropietarioActual": {
+      "cuota"?: string | null
+      "domicilio"?: components["schemas"]["EvidencedValue"] | null
+      "estado_civil"?: components["schemas"]["EvidencedValue"] | null
+      "nombre"?: components["schemas"]["EvidencedValue"] | null
+      "profesion"?: components["schemas"]["EvidencedValue"] | null
+      "requiere_personeria"?: boolean | null
+      "rut"?: components["schemas"]["EvidencedValue"] | null
+    }
     "ReadinessGateResponse": {
       "blocking_variables"?: Array<string>
       "gate": string
@@ -398,6 +470,102 @@ export interface components {
       "bot_username": string
       "deep_link": string
       "token": string
+    }
+    "TitleAlert": {
+      "detalle"?: string | null
+      "evidence"?: components["schemas"]["Evidence"] | null
+      "reason"?: string | null
+      "resolution"?: string
+      "tipo": string
+    }
+    "TitleAlertResolveRequest": {
+      "reason": string
+      "resolution": string
+      "resolved_by": string
+    }
+    "TitleAnalysis": {
+      "alertas"?: Array<components["schemas"]["TitleAlert"]>
+      "inscripciones"?: Array<components["schemas"]["TitleInscription"]>
+      "property_identity"?: components["schemas"]["PropertyIdentity"] | null
+      "propietarios_actuales"?: Array<components["schemas"]["PropietarioActual"]>
+      "structure_type"?: string | null
+    }
+    "TitleAnalysisNarrative": {
+      "comparecencia"?: components["schemas"]["TitleAnalysisNarrativeBlock"] | null
+      "primero"?: components["schemas"]["TitleAnalysisNarrativeBlock"] | null
+    }
+    "TitleAnalysisNarrativeBlock": {
+      "edited"?: string | null
+      "effective"?: string | null
+      "generated"?: string | null
+    }
+    "TitleAnalysisPendingReview": {
+      "path": string
+      "state"?: string
+    }
+    "TitleAnalysisReanalyzeResponse": {
+      "analysis_id": string
+      "queued": boolean
+      "status": string
+    }
+    "TitleAnalysisResponseData": {
+      "alerts"?: Array<components["schemas"]["TitleAlert"]>
+      "analysis"?: components["schemas"]["TitleAnalysis"] | null
+      "approved_at"?: string | null
+      "approved_by"?: string | null
+      "id": string
+      "narrative"?: components["schemas"]["TitleAnalysisNarrative"] | null
+      "pending_review"?: Array<components["schemas"]["TitleAnalysisPendingReview"]>
+      "run"?: components["schemas"]["TitleAnalysisRunDetails"] | null
+      "source_documents"?: Array<components["schemas"]["TitleAnalysisSourceDocument"]>
+      "status": string
+      "structure_type"?: string | null
+      "verification"?: components["schemas"]["TitleAnalysisVerification"] | null
+    }
+    "TitleAnalysisRunDetails": {
+      "created_at"?: string | null
+      "duration_ms"?: number | null
+      "extractor_name": string
+      "model_name": string
+      "prompt_version": string
+    }
+    "TitleAnalysisSourceDocument": {
+      "document_type": string
+      "filename"?: string | null
+      "legal_document_id": string
+      "version"?: number
+    }
+    "TitleAnalysisVerification": {
+      "failures"?: Array<components["schemas"]["TitleAnalysisVerificationFailure"]>
+      "unverified_count"?: number
+      "verified_count"?: number
+    }
+    "TitleAnalysisVerificationFailure": {
+      "path": string
+      "proposed_snippet"?: string | null
+      "reason": string
+    }
+    "TitleApproveRequest": {
+      "approved_by": string
+    }
+    "TitleCaseResponse": {
+      "analysis"?: components["schemas"]["TitleAnalysisResponseData"] | null
+    }
+    "TitleInscription": {
+      "adquirentes"?: Array<components["schemas"]["Adquirente"]>
+      "antecesor"?: components["schemas"]["Antecesor"] | null
+      "escritura"?: components["schemas"]["InscriptionEscritura"] | null
+      "inscripcion"?: components["schemas"]["InscriptionDetalle"] | null
+      "observaciones"?: Array<components["schemas"]["InscriptionObservacion"]>
+      "orden": number
+      "rectificatorias"?: Array<components["schemas"]["InscriptionRectificatoria"]>
+      "tipo_adquisicion": string
+    }
+    "TitleNarrativeUpdateRequest": {
+      "block": string
+      "edited_by": string
+      "edited_text": string
+      "reason": string
     }
     "UpdateBlockRequest": {
       "category"?: string | null
@@ -639,6 +807,12 @@ export interface operations {
     requestBody: components["schemas"]["LegalDocumentRegisterRequest"]
     response: components["schemas"]["LegalDocumentRegistrationQueuedResponse"]
   }
+  "archive_legal_document_api_v1_legal_documents__legal_document_id__archive_post": {
+    method: "POST"
+    path: "/api/v1/legal-documents/{legal_document_id}/archive"
+    requestBody: never
+    response: components["schemas"]["LegalDocumentArchiveResponse"]
+  }
   "retry_legal_document_ingestion_api_v1_legal_documents__legal_document_id__retry_post": {
     method: "POST"
     path: "/api/v1/legal-documents/{legal_document_id}/retry"
@@ -656,6 +830,36 @@ export interface operations {
     path: "/api/v1/legal-roles/project/{project_id}/matches"
     requestBody: never
     response: components["schemas"]["RoleMatchingInventoryResponse"]
+  }
+  "get_project_title_case_api_v1_legal_titles_project__project_id__get": {
+    method: "GET"
+    path: "/api/v1/legal-titles/project/{project_id}"
+    requestBody: never
+    response: components["schemas"]["TitleCaseResponse"]
+  }
+  "reanalyze_project_title_api_v1_legal_titles_project__project_id__reanalyze_post": {
+    method: "POST"
+    path: "/api/v1/legal-titles/project/{project_id}/reanalyze"
+    requestBody: never
+    response: components["schemas"]["TitleAnalysisReanalyzeResponse"]
+  }
+  "resolve_title_alert_api_v1_legal_titles__analysis_id__alerts__alert_index__resolve_post": {
+    method: "POST"
+    path: "/api/v1/legal-titles/{analysis_id}/alerts/{alert_index}/resolve"
+    requestBody: components["schemas"]["TitleAlertResolveRequest"]
+    response: components["schemas"]["TitleAlert"]
+  }
+  "approve_title_case_api_v1_legal_titles__analysis_id__approve_post": {
+    method: "POST"
+    path: "/api/v1/legal-titles/{analysis_id}/approve"
+    requestBody: components["schemas"]["TitleApproveRequest"]
+    response: components["schemas"]["TitleAnalysisResponseData"]
+  }
+  "update_title_narrative_api_v1_legal_titles__analysis_id__narrative_patch": {
+    method: "PATCH"
+    path: "/api/v1/legal-titles/{analysis_id}/narrative"
+    requestBody: components["schemas"]["TitleNarrativeUpdateRequest"]
+    response: components["schemas"]["TitleAnalysisNarrative"]
   }
   "get_project_legal_variables_api_v1_legal_variables_project__project_id__get": {
     method: "GET"

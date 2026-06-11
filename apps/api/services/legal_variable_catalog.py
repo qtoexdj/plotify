@@ -22,6 +22,20 @@ LEGAL_DOCUMENT_TYPES: Final[tuple[str, ...]] = (
 )
 LEGAL_DOCUMENT_TYPE_SET: Final = frozenset(LEGAL_DOCUMENT_TYPES)
 
+# FR-031 (SDD 009 correccion 2026-06-10): types where several active
+# documents coexist per project. Every other type keeps replace-by-type
+# semantics (a new upload supersedes all previous versions).
+MULTI_ACTIVE_LEGAL_DOCUMENT_TYPES: Final[tuple[str, ...]] = (
+    "dominio_vigente",
+    "personeria",
+    "hipoteca_gravamen",
+    "plano_oficial",
+    "otro",
+)
+MULTI_ACTIVE_LEGAL_DOCUMENT_TYPE_SET: Final = frozenset(
+    MULTI_ACTIVE_LEGAL_DOCUMENT_TYPES
+)
+
 LEGAL_DOCUMENT_UPLOAD_SOURCES: Final[tuple[str, ...]] = (
     "onboarding",
     "project_documents",
@@ -341,6 +355,10 @@ def is_legal_document_type(value: str) -> bool:
     return value in LEGAL_DOCUMENT_TYPE_SET
 
 
+def is_multi_active_legal_document_type(value: str) -> bool:
+    return value in MULTI_ACTIVE_LEGAL_DOCUMENT_TYPE_SET
+
+
 def is_extraction_status(value: str) -> bool:
     return value in EXTRACTION_STATUS_SET
 
@@ -365,24 +383,12 @@ def is_variable_group(value: str) -> bool:
     return value in VARIABLE_GROUP_SET
 
 
-# Transitional shim (SDD 009): the dominio_vigente_rules_v1 regex extractor
-# still proposes these removed keys until T020 deletes that dispatch path.
-# T020/T021 MUST remove this shim together with the extractor.
-LEGACY_DEPRECATED_KEYS: Final[tuple[str, ...]] = (
-    "matriz.inscripcion_fojas",
-    "matriz.inscripcion_numero",
-    "matriz.inscripcion_anio",
-    "matriz.inscripcion_cbr",
-    "matriz.adquisicion_modo",
-    "matriz.adquisicion_notaria",
-    "matriz.adquisicion_fecha",
-    "matriz.adquisicion_repertorio",
-)
-LEGACY_DEPRECATED_KEY_SET: Final = frozenset(LEGACY_DEPRECATED_KEYS)
-
-
 def is_variable_key(value: str) -> bool:
-    return value in VARIABLE_KEY_SET or value in LEGACY_DEPRECATED_KEY_SET
+    if value in VARIABLE_KEY_SET:
+        return True
+    if value.startswith("matriz.deslindes."):
+        return True
+    return False
 
 
 def is_role_status(value: str) -> bool:
@@ -410,7 +416,6 @@ def variable_keys_for_group(group: str) -> tuple[str, ...]:
 
 
 def variable_group_for_key(variable_key: str) -> str | None:
-    group = VARIABLE_GROUP_BY_KEY.get(variable_key)
-    if group is None and variable_key in LEGACY_DEPRECATED_KEY_SET:
+    if variable_key.startswith("matriz.deslindes."):
         return "matriz"
-    return group
+    return VARIABLE_GROUP_BY_KEY.get(variable_key)

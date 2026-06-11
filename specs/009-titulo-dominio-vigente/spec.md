@@ -380,3 +380,86 @@ estructurada, los bloques narrativos aprobados y los datos del vendedor, y que
   approved data and narrative blocks, not documents.
 - Buyer-side comparecencia (`comprador.*`) remains sourced from operational
   sales data, out of scope here.
+
+## Correccion producto 2026-06-10: cardinalidad multi-documento
+
+La prueba manual del flujo detecto que la capa de ingesta heredada de SDD 007
+impide cumplir FR-001: `register_legal_document` supersede todos los documentos
+activos del mismo `document_type`, y la pestania de documentos del proyecto
+modela cada tipo como slot unico. Un proyecto real puede requerir:
+
+- **1..N dominios vigentes** activos a la vez (multiples dominios, compra de
+  derechos, herencias cuya cadena se acredita con varias inscripciones CBR).
+- **0..N personerias** y documentos complementarios (posesiones efectivas,
+  representaciones) activos a la vez.
+- **1..N planos** (varias laminas PDF cuando el proyecto abarca varios
+  terrenos).
+
+Requisitos incorporados:
+
+- **FR-031**: Legal document types MUST declare cardinality. Multi-active
+  types (`dominio_vigente`, `personeria`, `hipoteca_gravamen`, `plano_oficial`,
+  `otro`) allow several active documents to coexist per project. Single-active
+  types (`certificado_roles_sii`, `certificado_sag`, `rnda`,
+  `instruccion_pago`) keep replace-by-type semantics.
+- **FR-032**: Registration MUST distinguish **add** (new coexisting document)
+  from **replace** (`replaces_legal_document_id` supersedes only the referenced
+  document, validated against org/project/type scope). Single-active types keep
+  supersede-all on every upload.
+- **FR-033**: Project documents UI MUST list every active document for
+  multi-active types with per-document actions (view/download/replace) and an
+  always-available add action, including a `personeria` row even though the
+  legacy `projects` table has no column for it.
+- **FR-034**: Adding or replacing any title-type document keeps the SDD 009
+  behavior: the current title analysis is superseded and re-queued after
+  ingestion (source content hash covers all active documents).
+
+Out of scope of this correction: merging multiple planos in the SDD 007
+plano/SAG deterministic extractors (they keep reading the latest active
+plano), and onboarding multi-upload UX.
+
+## Correccion producto 2026-06-10 (2): migracion pipeline -> agente
+
+La revision del resultado real detecto que la implementacion del nucleo de
+extraccion (pipeline de 4 pasos por segmento + merge mecanico) no reconstruye
+la historia juridica de la propiedad: cada documento se analizaba aislado, la
+clasificacion de estructura quedaba last-wins, los propietarios historicos se
+mezclaban con los actuales y las inscripciones citadas en mas de un titulo se
+duplicaban con `orden` colisionado. Ademas, las plantillas Python de bloques
+narrativos estaban sobreajustadas al golden Teno e inventaban hechos
+(nacionalidad/genero por nombre de pila, notarios hardcodeados).
+
+Decision de producto: el nucleo de extraccion se reemplaza por **un agente
+LangGraph con herramientas** que lee todo el corpus de titulo como un solo
+caso, reconstruye la cadena consolidada y **redacta** los bloques narrativos.
+Plan detallado en `plan-migracion-agente.md`.
+
+Requisitos corregidos:
+
+- **FR-006 (corregido)**: System MUST produce narrative blocks
+  (`titulo.comparecencia_vendedor_texto`, `titulo.clausula_primero_texto`)
+  drafted by the title agent, and validate them with a deterministic block
+  fact-checker: every number-in-words, date-in-words, name, notary and
+  registral reference in the drafted text MUST match a verified chain field
+  (using deterministic number-to-words rendering). Any failed match degrades
+  the block to `manual_review` with the failed matches visible to the
+  reviewer; blocks are never silently absent. SC-002 (zero unverified facts
+  in blocks) keeps applying unchanged.
+- **FR-035**: The title agent MUST analyze all active title documents as a
+  single case within one reasoning loop (cross-document consolidation):
+  deduplicate inscriptions cited by more than one title, order the chain
+  chronologically with a global `orden`, and consolidate current owners using
+  the most recent evidenced data. Per-document isolated extraction is not a
+  valid production path.
+- **FR-036**: Seller comparecencia data (`PropietarioActual`) MUST include
+  `nacionalidad` and `tratamiento` (don/dona) as evidenced values extracted
+  from the documents; they are never inferred from first-name heuristics.
+  When absent, they stay `manual_review` for the lawyer.
+- **FR-017 (alcance ampliado)**: run bounding now also covers agent loop
+  iterations (`LEGAL_TITLE_AGENT_MAX_ITERATIONS`) and per-tool-read character
+  budgets; token usage MUST be recorded per run (this was specified and not
+  implemented).
+
+Sin cambios: verificador deterministico como gate final obligatorio (fuera
+del agente), aprobacion humana, staging en `variable_resolutions`, contrato
+SDD 008, extractores deterministicos SII/SAG/plano intocables.

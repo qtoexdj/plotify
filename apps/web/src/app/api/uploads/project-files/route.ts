@@ -13,7 +13,8 @@ export const runtime = 'nodejs'
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const ALLOWED_DOC_TYPES = ['application/pdf']
-const ALLOWED_PROJECT_DOC_FIELDS = [
+// Campos con columna propia en projects (compatibilidad con la UI legacy).
+const PROJECT_COLUMN_DOC_FIELDS = [
   'doc_dominio_vigente',
   'doc_hipoteca_gravamen',
   'doc_roles',
@@ -21,6 +22,8 @@ const ALLOWED_PROJECT_DOC_FIELDS = [
   'doc_plano_oficial',
   'doc_otros',
 ]
+// doc_personeria vive solo en legal_documents (FR-033), sin columna en projects.
+const ALLOWED_PROJECT_DOC_FIELDS = [...PROJECT_COLUMN_DOC_FIELDS, 'doc_personeria']
 const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15MB
 
 async function sha256Hex(file: File) {
@@ -41,6 +44,8 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     const projectId = formData.get('projectId') as string | null
     const type = formData.get('type') as string | null
+    const replacesLegalDocumentId =
+      (formData.get('replacesLegalDocumentId') as string | null)?.trim() || null
 
     if (!file || !projectId || !type) {
       return NextResponse.json(
@@ -147,22 +152,29 @@ export async function POST(request: NextRequest) {
       throw new Error('Error al subir a Storage')
     }
 
-    const updates =
-      type === 'images' ? { images: [...(project.images || []), data.path] } : { [type]: data.path }
+    const hasProjectColumn = type === 'images' || PROJECT_COLUMN_DOC_FIELDS.includes(type)
+    let updatedProject = project
+    if (hasProjectColumn) {
+      const updates =
+        type === 'images'
+          ? { images: [...(project.images || []), data.path] }
+          : { [type]: data.path }
 
-    const { data: updatedProject, error: dbError } = await supabase
-      .from('projects')
-      .update(updates)
-      .eq('id', projectId)
-      .eq('organization_id', membership.organization_id)
-      .select()
-      .single()
+      const { data: refreshedProject, error: dbError } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', projectId)
+        .eq('organization_id', membership.organization_id)
+        .select()
+        .single()
 
-    if (dbError) {
-      logger.error({ projectId, error: dbError }, 'upload_db_update_error')
-      // Intentar remover el archivo subido en caso de error en base de datos para no dejarlo huérfano
-      await supabase.storage.from('project-files').remove([filePath])
-      throw dbError
+      if (dbError) {
+        logger.error({ projectId, error: dbError }, 'upload_db_update_error')
+        // Intentar remover el archivo subido en caso de error en base de datos para no dejarlo huérfano
+        await supabase.storage.from('project-files').remove([filePath])
+        throw dbError
+      }
+      updatedProject = refreshedProject
     }
 
     if (
@@ -184,6 +196,7 @@ export async function POST(request: NextRequest) {
               mime_type: typeInfo.mime,
               file_size_bytes: file.size,
               sha256_hash: await sha256Hex(file),
+              replaces_legal_document_id: replacesLegalDocumentId,
             },
           ],
           uploadSource: 'project_documents',

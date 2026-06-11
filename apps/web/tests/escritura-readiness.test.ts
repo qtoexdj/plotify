@@ -8,6 +8,11 @@ import {
   type CreateEscrituraCasePayload,
   type EscrituraReadinessResponse,
 } from '@/lib/legal/variable-resolution-types'
+import {
+  TITLE_CASE_PANEL_ANCHOR,
+  TITLE_VERIFIED_BLOCKING_CAUSE_LABELS,
+  isTitleVerifiedBlockingCause,
+} from '@/lib/legal/title-types'
 
 function readSource(relativePath: string) {
   const sourcePath = path.resolve(__dirname, relativePath)
@@ -53,13 +58,13 @@ describe('T052 - Escritura readiness frontend contract', () => {
         },
       ],
       variable_snapshot: {
-        'matriz.inscripcion_fojas': {
+        'matriz.rol_avaluo': {
           value_text: '4699',
           state: 'approved',
         },
       },
       evidence_snapshot: {
-        'matriz.inscripcion_fojas': [
+        'matriz.rol_avaluo': [
           {
             legal_document_id: 'doc-1',
             page_number: 1,
@@ -70,8 +75,8 @@ describe('T052 - Escritura readiness frontend contract', () => {
     } satisfies EscrituraReadinessResponse
 
     expect(readiness.gates[0]?.blocking_variables).toEqual(['comprador.rut'])
-    expect(readiness.variable_snapshot).toHaveProperty('matriz.inscripcion_fojas')
-    expect(readiness.evidence_snapshot).toHaveProperty('matriz.inscripcion_fojas')
+    expect(readiness.variable_snapshot).toHaveProperty('matriz.rol_avaluo')
+    expect(readiness.evidence_snapshot).toHaveProperty('matriz.rol_avaluo')
   })
 
   it('models case creation with explicit warning acknowledgement', () => {
@@ -113,5 +118,33 @@ describe('T052 - Escritura readiness frontend contract', () => {
     expect(wizardSource).toContain('escrituraCaseReady')
     expect(wizardSource).toContain('Crea un snapshot de escritura listo')
     expect(wizardSource).toContain("documentType === 'escritura' && !escrituraCaseReady")
+  })
+})
+
+describe('T043 - title_verified blocking causes in readiness panel', () => {
+  it('labels every SDD 009 blocking cause for the title gate', () => {
+    expect(TITLE_VERIFIED_BLOCKING_CAUSE_LABELS).toEqual({
+      no_title_documents: 'Sin documentos de titulo',
+      analysis_processing: 'Analisis en curso',
+      analysis_needs_review: 'Analisis en revision',
+      analysis_failed: 'Analisis fallido',
+      llm_disabled: 'Agente de titulo deshabilitado',
+      analysis_superseded: 'Analisis supersedido',
+      pending_manual_review: 'Revision manual pendiente',
+      unresolved_alerts: 'Alertas sin resolver',
+    })
+    expect(isTitleVerifiedBlockingCause('analysis_superseded')).toBe(true)
+    expect(isTitleVerifiedBlockingCause('comprador.rut')).toBe(false)
+  })
+
+  it('deep links blocking causes to the title case panel anchor', () => {
+    const panelSource = readSource('../src/components/projects/legal/escritura-readiness-panel.tsx')
+    const titlePanelSource = readSource('../src/components/projects/legal/title-case-panel.tsx')
+
+    expect(panelSource).toContain('isTitleVerifiedBlockingCause')
+    expect(panelSource).toContain('TITLE_VERIFIED_BLOCKING_CAUSE_LABELS')
+    expect(panelSource).toContain('TITLE_CASE_PANEL_ANCHOR')
+    expect(titlePanelSource).toContain('id={TITLE_CASE_PANEL_ANCHOR}')
+    expect(TITLE_CASE_PANEL_ANCHOR).toBe('title-case-panel')
   })
 })

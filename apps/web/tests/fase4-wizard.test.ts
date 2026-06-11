@@ -59,13 +59,6 @@ const WizardFormSchema = z.object({
   matriz_sur: z.string(),
   matriz_oriente: z.string(),
   matriz_poniente: z.string(),
-  matriz_adquisicion_modo: z.string(),
-  matriz_adquisicion_notaria: z.string(),
-  matriz_adquisicion_fecha: z.string(),
-  matriz_inscripcion_fojas: z.string(),
-  matriz_inscripcion_numero: z.string(),
-  matriz_inscripcion_anio: z.string(),
-  matriz_inscripcion_cbr: z.string(),
   matriz_rol_avaluo: z.string(),
   sag_certificado_numero: z.string(),
   sag_certificado_fecha: z.string(),
@@ -122,13 +115,6 @@ function formValuesToEscrituraVars(vals: WizardFormValues): EscrituraVariables {
         oriente: vals.matriz_oriente,
         poniente: vals.matriz_poniente,
       },
-      adquisicion_modo: vals.matriz_adquisicion_modo,
-      adquisicion_notaria: vals.matriz_adquisicion_notaria,
-      adquisicion_fecha: vals.matriz_adquisicion_fecha,
-      inscripcion_fojas: vals.matriz_inscripcion_fojas,
-      inscripcion_numero: vals.matriz_inscripcion_numero,
-      inscripcion_anio: vals.matriz_inscripcion_anio,
-      inscripcion_cbr: vals.matriz_inscripcion_cbr,
       rol_avaluo: vals.matriz_rol_avaluo,
     },
     sag: {
@@ -241,13 +227,6 @@ const FULL_FORM_VALUES: WizardFormValues = {
   matriz_sur: 'con río Lircay',
   matriz_oriente: 'con Lote 4',
   matriz_poniente: 'con predio Santa Ana',
-  matriz_adquisicion_modo: 'compraventa',
-  matriz_adquisicion_notaria: 'Notaría de Talca',
-  matriz_adquisicion_fecha: '01/03/2010',
-  matriz_inscripcion_fojas: '200',
-  matriz_inscripcion_numero: '301',
-  matriz_inscripcion_anio: '2010',
-  matriz_inscripcion_cbr: 'Conservador de Bienes Raíces de Talca',
   matriz_rol_avaluo: '123-456',
   sag_certificado_numero: 'SAG-2024-001',
   sag_certificado_fecha: '15/01/2024',
@@ -553,13 +532,6 @@ describe('F-v2-4.11 — WizardFormSchema: validación Zod del Step 2', () => {
     matriz_sur: '',
     matriz_oriente: '',
     matriz_poniente: '',
-    matriz_adquisicion_modo: '',
-    matriz_adquisicion_notaria: '',
-    matriz_adquisicion_fecha: '',
-    matriz_inscripcion_fojas: '',
-    matriz_inscripcion_numero: '',
-    matriz_inscripcion_anio: '',
-    matriz_inscripcion_cbr: '',
     matriz_rol_avaluo: '',
     sag_certificado_numero: '',
     sag_certificado_fecha: '',
@@ -627,10 +599,10 @@ describe('F-v2-4.11 — WizardFormSchema: validación Zod del Step 2', () => {
     expect(result.success).toBe(false)
   })
 
-  it('tiene 46 campos en el schema', () => {
+  it('tiene 41 campos en el schema', () => {
     const parsed = WizardFormSchema.safeParse(validPayload)
     if (parsed.success) {
-      expect(Object.keys(parsed.data)).toHaveLength(48)
+      expect(Object.keys(parsed.data)).toHaveLength(41)
     }
   })
 })

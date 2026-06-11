@@ -523,6 +523,14 @@ class FakeIngestionSupabase:
                 document
                 for document in self.documents
                 if all(document.get(key) == value for key, value in table.filters.items())
+                and all(
+                    document.get(key) != value
+                    for key, value in table.negated_filters.items()
+                )
+                and all(
+                    document.get(key) in values
+                    for key, values in table.in_filters.items()
+                )
             ]
             if table.order_column:
                 rows.sort(
@@ -605,30 +613,43 @@ async def test_retry_can_reprocess_completed_documents_after_extractor_updates()
     assert supabase.documents[0]["extraction_status"] == "queued"
 
 
-async def test_registering_replacement_supersedes_previous_active_versions():
+def _register_payload(**overrides) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "organization_id": ORG_ID,
+        "project_id": PROJECT_ID,
+        "lot_id": None,
+        "document_type": "dominio_vigente",
+        "source_field": "doc_dominio_vigente",
+        "storage_bucket": "project-files",
+        "storage_path": f"{PROJECT_ID}/legal/upload-v2.pdf",
+        "original_filename": "Documento legal.pdf",
+        "mime_type": "application/pdf",
+        "file_size_bytes": 223456,
+        "sha256_hash": "c" * 64,
+        "upload_source": "project_documents",
+        "uploaded_by": USER_ID,
+    }
+    payload.update(overrides)
+    return payload
+
+
+async def test_registering_single_active_type_supersedes_previous_active_versions():
+    """Single-active types (FR-031) keep SDD 007 replace-by-type semantics."""
     from schemas.legal_variables import LegalDocumentRegisterRequest
     from services.legal_document_ingestion import register_legal_document
 
     supabase = FakeIngestionSupabase()
+    supabase.documents[0]["document_type"] = "certificado_roles_sii"
+    supabase.documents[0]["source_field"] = "doc_roles"
     supabase.documents[0]["extraction_status"] = "variables_proposed"
 
     result = await register_legal_document(
         LegalDocumentRegisterRequest.model_validate(
-            {
-                "organization_id": ORG_ID,
-                "project_id": PROJECT_ID,
-                "lot_id": None,
-                "document_type": "dominio_vigente",
-                "source_field": "doc_dominio_vigente",
-                "storage_bucket": "project-files",
-                "storage_path": f"{PROJECT_ID}/legal/dominio-vigente-v2.pdf",
-                "original_filename": "Dominio vigente actualizado.pdf",
-                "mime_type": "application/pdf",
-                "file_size_bytes": 223456,
-                "sha256_hash": "c" * 64,
-                "upload_source": "project_documents",
-                "uploaded_by": USER_ID,
-            }
+            _register_payload(
+                document_type="certificado_roles_sii",
+                source_field="doc_roles",
+                original_filename="Certificado de roles actualizado.pdf",
+            )
         ),
         supabase=supabase,
     )
@@ -644,6 +665,277 @@ async def test_registering_replacement_supersedes_previous_active_versions():
             "superseded_by": LEGAL_DOCUMENT_ID,
         }
     ]
+
+
+async def test_registering_additional_multi_active_document_keeps_both_active():
+    """FR-031/FR-032: adding a second dominio vigente must not supersede the first."""
+    from schemas.legal_variables import LegalDocumentRegisterRequest
+    from services.legal_document_ingestion import register_legal_document
+
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "variables_proposed"
+
+    result = await register_legal_document(
+        LegalDocumentRegisterRequest.model_validate(
+            _register_payload(original_filename="Dominio vigente 1996.pdf")
+        ),
+        supabase=supabase,
+    )
+
+    assert result.legal_document.version_number == 2
+    assert supabase.documents[0]["extraction_status"] == "variables_proposed"
+    assert supabase.documents[0]["superseded_by"] is None
+    assert supabase.documents[-1]["extraction_status"] == "queued"
+    assert supabase.supersede_updates == []
+
+
+async def test_replacing_specific_multi_active_document_supersedes_only_target():
+    from schemas.legal_variables import LegalDocumentRegisterRequest
+    from services.legal_document_ingestion import register_legal_document
+
+    target_id = "00000000-0000-4000-8000-000000000006"
+    other_id = "00000000-0000-4000-8000-000000000031"
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "variables_proposed"
+    supabase.documents.append(
+        supabase.document_row(
+            legal_document_id=other_id,
+            version_number=2,
+            extraction_status="variables_proposed",
+            sha256_hash="d" * 64,
+        )
+    )
+
+    await register_legal_document(
+        LegalDocumentRegisterRequest.model_validate(
+            _register_payload(replaces_legal_document_id=target_id)
+        ),
+        supabase=supabase,
+    )
+
+    by_id = {document["id"]: document for document in supabase.documents}
+    assert by_id[target_id]["extraction_status"] == "superseded"
+    assert by_id[target_id]["superseded_by"] == LEGAL_DOCUMENT_ID
+    assert by_id[other_id]["extraction_status"] == "variables_proposed"
+    assert by_id[other_id]["superseded_by"] is None
+
+
+async def test_replace_target_validation_rejects_bad_targets():
+    from schemas.legal_variables import LegalDocumentRegisterRequest
+    from services.legal_document_ingestion import (
+        LegalDocumentNotFoundError,
+        LegalDocumentScopeError,
+        LegalDocumentValidationError,
+        register_legal_document,
+    )
+
+    target_id = "00000000-0000-4000-8000-000000000006"
+
+    # Target of another document type.
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["document_type"] = "personeria"
+    with pytest.raises(LegalDocumentValidationError):
+        await register_legal_document(
+            LegalDocumentRegisterRequest.model_validate(
+                _register_payload(replaces_legal_document_id=target_id)
+            ),
+            supabase=supabase,
+        )
+
+    # Target outside the organization scope.
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["organization_id"] = "00000000-0000-4000-8000-000000000099"
+    with pytest.raises(LegalDocumentScopeError):
+        await register_legal_document(
+            LegalDocumentRegisterRequest.model_validate(
+                _register_payload(replaces_legal_document_id=target_id)
+            ),
+            supabase=supabase,
+        )
+
+    # Missing target.
+    supabase = FakeIngestionSupabase()
+    with pytest.raises(LegalDocumentNotFoundError):
+        await register_legal_document(
+            LegalDocumentRegisterRequest.model_validate(
+                _register_payload(
+                    replaces_legal_document_id="00000000-0000-4000-8000-000000000404"
+                )
+            ),
+            supabase=supabase,
+        )
+
+    # Superseded target is not replaceable.
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "superseded"
+    with pytest.raises(LegalDocumentValidationError):
+        await register_legal_document(
+            LegalDocumentRegisterRequest.model_validate(
+                _register_payload(replaces_legal_document_id=target_id)
+            ),
+            supabase=supabase,
+        )
+
+
+async def test_archive_marks_superseded_and_supersedes_title_analysis(monkeypatch):
+    from services.legal_document_ingestion import archive_legal_document
+
+    supersede_called = []
+
+    async def mock_supersede(*args, **kwargs):
+        supersede_called.append(kwargs)
+
+    monkeypatch.setattr(
+        "services.legal_title_analysis._supersede_current_title_analyses",
+        mock_supersede,
+    )
+
+    target_id = "00000000-0000-4000-8000-000000000006"
+    other_id = "00000000-0000-4000-8000-000000000031"
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "variables_proposed"
+    supabase.documents.append(
+        supabase.document_row(
+            legal_document_id=other_id,
+            version_number=2,
+            extraction_status="variables_proposed",
+            sha256_hash="d" * 64,
+        )
+    )
+
+    result = await archive_legal_document(
+        legal_document_id=target_id,
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        supabase=supabase,
+    )
+
+    assert result.legal_document.extraction_status == "superseded"
+    assert result.title_analysis_superseded is True
+    # Another active dominio remains, so a reanalysis makes sense.
+    assert result.title_reanalysis_recommended is True
+    by_id = {document["id"]: document for document in supabase.documents}
+    assert by_id[target_id]["extraction_status"] == "superseded"
+    assert by_id[target_id]["superseded_by"] is None
+    assert by_id[other_id]["extraction_status"] == "variables_proposed"
+    assert len(supersede_called) == 1
+
+
+async def test_archive_last_title_document_does_not_recommend_reanalysis(monkeypatch):
+    from services.legal_document_ingestion import archive_legal_document
+
+    async def mock_supersede(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(
+        "services.legal_title_analysis._supersede_current_title_analyses",
+        mock_supersede,
+    )
+
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "variables_proposed"
+
+    result = await archive_legal_document(
+        legal_document_id="00000000-0000-4000-8000-000000000006",
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        supabase=supabase,
+    )
+
+    assert result.legal_document.extraction_status == "superseded"
+    assert result.title_analysis_superseded is True
+    assert result.title_reanalysis_recommended is False
+
+
+async def test_archive_non_title_document_skips_title_supersede(monkeypatch):
+    from services.legal_document_ingestion import archive_legal_document
+
+    async def mock_supersede(*args, **kwargs):
+        raise AssertionError("Title analyses must not be touched for non-title types")
+
+    monkeypatch.setattr(
+        "services.legal_title_analysis._supersede_current_title_analyses",
+        mock_supersede,
+    )
+
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["document_type"] = "certificado_roles_sii"
+    supabase.documents[0]["extraction_status"] = "variables_proposed"
+
+    result = await archive_legal_document(
+        legal_document_id="00000000-0000-4000-8000-000000000006",
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        supabase=supabase,
+    )
+
+    assert result.legal_document.extraction_status == "superseded"
+    assert result.title_analysis_superseded is False
+    assert result.title_reanalysis_recommended is False
+
+
+async def test_archive_validates_scope_state_and_existence():
+    from services.legal_document_ingestion import (
+        LegalDocumentNotFoundError,
+        LegalDocumentScopeError,
+        LegalDocumentValidationError,
+        archive_legal_document,
+    )
+
+    target_id = "00000000-0000-4000-8000-000000000006"
+
+    # Cross-organization scope.
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["organization_id"] = "00000000-0000-4000-8000-000000000099"
+    with pytest.raises(LegalDocumentScopeError):
+        await archive_legal_document(
+            legal_document_id=target_id,
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            supabase=supabase,
+        )
+
+    # Missing document.
+    supabase = FakeIngestionSupabase()
+    with pytest.raises(LegalDocumentNotFoundError):
+        await archive_legal_document(
+            legal_document_id="00000000-0000-4000-8000-000000000404",
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            supabase=supabase,
+        )
+
+    # Already archived.
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "superseded"
+    with pytest.raises(LegalDocumentValidationError):
+        await archive_legal_document(
+            legal_document_id=target_id,
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            supabase=supabase,
+        )
+
+
+async def test_replaces_param_rejected_for_single_active_type():
+    from schemas.legal_variables import LegalDocumentRegisterRequest
+    from services.legal_document_ingestion import (
+        LegalDocumentValidationError,
+        register_legal_document,
+    )
+
+    supabase = FakeIngestionSupabase()
+    with pytest.raises(LegalDocumentValidationError):
+        await register_legal_document(
+            LegalDocumentRegisterRequest.model_validate(
+                _register_payload(
+                    document_type="certificado_roles_sii",
+                    source_field="doc_roles",
+                    replaces_legal_document_id="00000000-0000-4000-8000-000000000006",
+                )
+            ),
+            supabase=supabase,
+        )
 
 
 async def test_select_active_latest_sii_certificate_excludes_superseded_versions():
@@ -685,3 +977,44 @@ async def test_select_active_latest_sii_certificate_excludes_superseded_versions
     assert active_document.document_type == "certificado_roles_sii"
     assert active_document.version_number == 2
     assert active_document.extraction_status == "variables_proposed"
+
+
+async def test_registering_title_document_supersedes_analysis(monkeypatch):
+    from schemas.legal_variables import LegalDocumentRegisterRequest
+    from services.legal_document_ingestion import register_legal_document
+
+    supabase = FakeIngestionSupabase()
+    supersede_called = []
+    async def mock_supersede(*args, **kwargs):
+        supersede_called.append(kwargs)
+
+    monkeypatch.setattr(
+        "services.legal_title_analysis._supersede_current_title_analyses",
+        mock_supersede,
+    )
+
+    await register_legal_document(
+        LegalDocumentRegisterRequest.model_validate(
+            {
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "lot_id": None,
+                "document_type": "dominio_vigente",
+                "source_field": "doc_dominio_vigente",
+                "storage_bucket": "project-files",
+                "storage_path": f"{PROJECT_ID}/legal/dominio-vigente-v2.pdf",
+                "original_filename": "Dominio vigente actualizado.pdf",
+                "mime_type": "application/pdf",
+                "file_size_bytes": 223456,
+                "sha256_hash": "c" * 64,
+                "upload_source": "project_documents",
+                "uploaded_by": USER_ID,
+            }
+        ),
+        supabase=supabase,
+    )
+
+    assert len(supersede_called) == 1
+    assert supersede_called[0]["organization_id"] == ORG_ID
+    assert supersede_called[0]["project_id"] == PROJECT_ID
+

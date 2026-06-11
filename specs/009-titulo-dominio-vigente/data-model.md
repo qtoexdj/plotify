@@ -194,3 +194,22 @@ lives in `evidence_snapshot` keyed by variable, per SDD 007 conventions.
   generated-vs-edited pair.
 - Manual variable entry under `llm_disabled` uses the existing SDD 007
   variable correction audit path.
+
+## Correccion 2026-06-10: cardinalidad de documentos legales
+
+- No schema change: `legal_documents` already supports N rows per
+  (project, document_type); `version_number` has no uniqueness constraint and
+  acts as an upload sequence per type. `superseded_by` keeps pointing to the
+  replacing document.
+- Catalog gains `MULTI_ACTIVE_LEGAL_DOCUMENT_TYPES` (`dominio_vigente`,
+  `personeria`, `hipoteca_gravamen`, `plano_oficial`, `otro`). All other types
+  are single-active.
+- `LegalDocumentRegisterRequest` gains optional `replaces_legal_document_id`:
+  - Multi-active type + param absent -> add; no documents are superseded.
+  - Multi-active type + param present -> only that document is superseded
+    (must belong to same org/project/document_type and be active).
+  - Single-active type -> supersede-all previous versions (unchanged); the
+    param is rejected as a validation error to avoid ambiguous semantics.
+- Title analysis supersede/re-queue on registration and post-ingestion is
+  unchanged: it is driven by the set of active documents, which both add and
+  replace mutate.

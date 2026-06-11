@@ -1,4 +1,6 @@
 export type TitleAnalysisStatus =
+  // Sintético: hay documentos de título activos pero ningún análisis vigente.
+  | 'not_started'
   | 'processing'
   | 'proposed'
   | 'needs_review'
@@ -102,6 +104,9 @@ export interface PropietarioActual {
   estado_civil: EvidencedValue<string | null>
   profesion: EvidencedValue<string | null>
   domicilio: EvidencedValue<string | null>
+  // FR-036: hechos con evidencia, nunca inferidos del nombre de pila.
+  nacionalidad?: EvidencedValue<string | null> | null
+  tratamiento?: EvidencedValue<string | null> | null
   cuota: string
   requiere_personeria: boolean
 }
@@ -157,10 +162,23 @@ export interface VerificationFailure {
   proposed_snippet: string
 }
 
+export interface BlockCheckIssue {
+  hecho: string
+  motivo: string
+}
+
+/** FR-006: fact-check determinístico del bloque redactado por el agente. */
+export interface BlockCheck {
+  ok: boolean
+  issues: BlockCheckIssue[]
+}
+
 export interface VerificationStats {
   verified_count: number
   unverified_count: number
   failures: VerificationFailure[]
+  block_checks?: Record<string, BlockCheck> | null
+  agent_notes?: string[]
 }
 
 export interface PendingReviewItem {
@@ -201,3 +219,73 @@ export interface ProjectTitleCase {
 export interface ProjectTitleCaseResponse {
   analysis: ProjectTitleCase
 }
+
+export interface TitleReanalyzeResponse {
+  analysis_id: string
+  status: TitleAnalysisStatus
+  queued: boolean
+}
+
+export interface TitleNarrativeEditPayload {
+  block: 'comparecencia' | 'primero'
+  edited_text: string
+  reason: string
+}
+
+export interface TitleApproveBlockingItem {
+  kind: 'variable' | 'alert'
+  key?: string | null
+  state?: string | null
+  tipo?: string | null
+}
+
+export interface TitleApproveBlockingDetail {
+  blocking: TitleApproveBlockingItem[]
+}
+
+/**
+ * Panel-level state: the analysis statuses plus the empty state used when the
+ * project has no title documents (proxy returns 404).
+ */
+export type TitleCasePanelState = TitleAnalysisStatus | 'no_documents'
+
+export interface TitleAlertResolvePayload {
+  resolution: Exclude<TitleAlertResolution, 'pending'>
+  reason: string
+}
+
+/**
+ * SDD 009 US5: blocking causes surfaced by the title_verified readiness gate
+ * (escritura_readiness.py). They arrive mixed with variable keys inside
+ * `blocking_variables`.
+ */
+export const TITLE_VERIFIED_BLOCKING_CAUSES = [
+  'no_title_documents',
+  'analysis_processing',
+  'analysis_needs_review',
+  'analysis_failed',
+  'llm_disabled',
+  'analysis_superseded',
+  'pending_manual_review',
+  'unresolved_alerts',
+] as const
+
+export type TitleVerifiedBlockingCause = (typeof TITLE_VERIFIED_BLOCKING_CAUSES)[number]
+
+export const TITLE_VERIFIED_BLOCKING_CAUSE_LABELS = {
+  no_title_documents: 'Sin documentos de titulo',
+  analysis_processing: 'Analisis en curso',
+  analysis_needs_review: 'Analisis en revision',
+  analysis_failed: 'Analisis fallido',
+  llm_disabled: 'Agente de titulo deshabilitado',
+  analysis_superseded: 'Analisis supersedido',
+  pending_manual_review: 'Revision manual pendiente',
+  unresolved_alerts: 'Alertas sin resolver',
+} as const satisfies Record<TitleVerifiedBlockingCause, string>
+
+export function isTitleVerifiedBlockingCause(value: string): value is TitleVerifiedBlockingCause {
+  return (TITLE_VERIFIED_BLOCKING_CAUSES as readonly string[]).includes(value)
+}
+
+/** In-page anchor of the title case panel inside the Centro de Control Legal. */
+export const TITLE_CASE_PANEL_ANCHOR = 'title-case-panel'

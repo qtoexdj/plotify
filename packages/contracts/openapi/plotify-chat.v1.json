@@ -44,6 +44,51 @@
         "title": "AddBlockToTemplateRequest",
         "type": "object"
       },
+      "Adquirente": {
+        "additionalProperties": false,
+        "properties": {
+          "cuota": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuota"
+          },
+          "nombre": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "Adquirente",
+        "type": "object"
+      },
+      "Antecesor": {
+        "additionalProperties": false,
+        "properties": {
+          "nombre": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "Antecesor",
+        "type": "object"
+      },
       "ApprovalRequestDetailResponse": {
         "description": "Detalle completo de una solicitud de aprobación de reserva o venta.",
         "properties": {
@@ -661,6 +706,98 @@
         "title": "EscrituraReadinessResponse",
         "type": "object"
       },
+      "Evidence": {
+        "additionalProperties": false,
+        "properties": {
+          "legal_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Document Id"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet"
+          }
+        },
+        "title": "Evidence",
+        "type": "object"
+      },
+      "EvidencedValue": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Evidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified"
+          }
+        },
+        "title": "EvidencedValue",
+        "type": "object"
+      },
       "GenerateRequest": {
         "properties": {
           "document_type": {
@@ -784,6 +921,165 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "InscriptionDetalle": {
+        "additionalProperties": false,
+        "properties": {
+          "anio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cbr": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fojas": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "numero": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "InscriptionDetalle",
+        "type": "object"
+      },
+      "InscriptionEscritura": {
+        "additionalProperties": false,
+        "properties": {
+          "fecha": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notaria_ciudad": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repertorio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "InscriptionEscritura",
+        "type": "object"
+      },
+      "InscriptionObservacion": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Evidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tipo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo"
+          }
+        },
+        "title": "InscriptionObservacion",
+        "type": "object"
+      },
+      "InscriptionRectificatoria": {
+        "additionalProperties": false,
+        "properties": {
+          "fecha": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repertorio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "InscriptionRectificatoria",
+        "type": "object"
+      },
       "InvalidateCacheRequest": {
         "properties": {
           "organization_id": {
@@ -793,6 +1089,39 @@
         },
         "required": ["organization_id"],
         "title": "InvalidateCacheRequest",
+        "type": "object"
+      },
+      "LegalDocumentArchiveResponse": {
+        "properties": {
+          "extraction_status": {
+            "title": "Extraction Status",
+            "type": "string"
+          },
+          "legal_document_id": {
+            "title": "Legal Document Id",
+            "type": "string"
+          },
+          "reanalysis_queued": {
+            "title": "Reanalysis Queued",
+            "type": "boolean"
+          },
+          "title_analysis_superseded": {
+            "title": "Title Analysis Superseded",
+            "type": "boolean"
+          },
+          "title_reanalysis_recommended": {
+            "title": "Title Reanalysis Recommended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "legal_document_id",
+          "extraction_status",
+          "title_analysis_superseded",
+          "title_reanalysis_recommended",
+          "reanalysis_queued"
+        ],
+        "title": "LegalDocumentArchiveResponse",
         "type": "object"
       },
       "LegalDocumentListResponse": {
@@ -857,6 +1186,17 @@
           "project_id": {
             "title": "Project Id",
             "type": "string"
+          },
+          "replaces_legal_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replaces Legal Document Id"
           },
           "sha256_hash": {
             "maxLength": 64,
@@ -1744,6 +2084,219 @@
         "title": "PreviewResponse",
         "type": "object"
       },
+      "PropertyDeslindes": {
+        "additionalProperties": false,
+        "properties": {
+          "norte": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "oriente": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "poniente": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sur": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "PropertyDeslindes",
+        "type": "object"
+      },
+      "PropertyIdentity": {
+        "additionalProperties": false,
+        "properties": {
+          "comuna": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deslindes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertyDeslindes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nombre_predio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provincia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rol_avaluo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "superficie_texto": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ubicacion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "PropertyIdentity",
+        "type": "object"
+      },
+      "PropietarioActual": {
+        "additionalProperties": false,
+        "properties": {
+          "cuota": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuota"
+          },
+          "domicilio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "estado_civil": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nombre": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "profesion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requiere_personeria": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requiere Personeria"
+          },
+          "rut": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "PropietarioActual",
+        "type": "object"
+      },
       "ReadinessGateResponse": {
         "properties": {
           "blocking_variables": {
@@ -2330,6 +2883,581 @@
         },
         "required": ["token", "bot_username", "deep_link"],
         "title": "TelegramTokenResponse",
+        "type": "object"
+      },
+      "TitleAlert": {
+        "additionalProperties": false,
+        "properties": {
+          "detalle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detalle"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Evidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "resolution": {
+            "default": "pending",
+            "title": "Resolution",
+            "type": "string"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": ["tipo"],
+        "title": "TitleAlert",
+        "type": "object"
+      },
+      "TitleAlertResolveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "resolution": {
+            "title": "Resolution",
+            "type": "string"
+          },
+          "resolved_by": {
+            "format": "uuid",
+            "title": "Resolved By",
+            "type": "string"
+          }
+        },
+        "required": ["resolution", "reason", "resolved_by"],
+        "title": "TitleAlertResolveRequest",
+        "type": "object"
+      },
+      "TitleAnalysis": {
+        "additionalProperties": false,
+        "properties": {
+          "alertas": {
+            "items": {
+              "$ref": "#/components/schemas/TitleAlert"
+            },
+            "title": "Alertas",
+            "type": "array"
+          },
+          "inscripciones": {
+            "items": {
+              "$ref": "#/components/schemas/TitleInscription"
+            },
+            "title": "Inscripciones",
+            "type": "array"
+          },
+          "property_identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertyIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "propietarios_actuales": {
+            "items": {
+              "$ref": "#/components/schemas/PropietarioActual"
+            },
+            "title": "Propietarios Actuales",
+            "type": "array"
+          },
+          "structure_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure Type"
+          }
+        },
+        "title": "TitleAnalysis",
+        "type": "object"
+      },
+      "TitleAnalysisNarrative": {
+        "properties": {
+          "comparecencia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TitleAnalysisNarrativeBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "primero": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TitleAnalysisNarrativeBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "TitleAnalysisNarrative",
+        "type": "object"
+      },
+      "TitleAnalysisNarrativeBlock": {
+        "properties": {
+          "edited": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited"
+          },
+          "effective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective"
+          },
+          "generated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated"
+          }
+        },
+        "title": "TitleAnalysisNarrativeBlock",
+        "type": "object"
+      },
+      "TitleAnalysisPendingReview": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "state": {
+            "default": "manual_review",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": ["path"],
+        "title": "TitleAnalysisPendingReview",
+        "type": "object"
+      },
+      "TitleAnalysisReanalyzeResponse": {
+        "properties": {
+          "analysis_id": {
+            "format": "uuid",
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "queued": {
+            "title": "Queued",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": ["analysis_id", "status", "queued"],
+        "title": "TitleAnalysisReanalyzeResponse",
+        "type": "object"
+      },
+      "TitleAnalysisResponseData": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/TitleAlert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TitleAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TitleAnalysisNarrative"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_review": {
+            "items": {
+              "$ref": "#/components/schemas/TitleAnalysisPendingReview"
+            },
+            "title": "Pending Review",
+            "type": "array"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TitleAnalysisRunDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_documents": {
+            "items": {
+              "$ref": "#/components/schemas/TitleAnalysisSourceDocument"
+            },
+            "title": "Source Documents",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "structure_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure Type"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TitleAnalysisVerification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["id", "status"],
+        "title": "TitleAnalysisResponseData",
+        "type": "object"
+      },
+      "TitleAnalysisRunDetails": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "extractor_name": {
+            "title": "Extractor Name",
+            "type": "string"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          }
+        },
+        "required": ["extractor_name", "model_name", "prompt_version"],
+        "title": "TitleAnalysisRunDetails",
+        "type": "object"
+      },
+      "TitleAnalysisSourceDocument": {
+        "properties": {
+          "document_type": {
+            "title": "Document Type",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "legal_document_id": {
+            "title": "Legal Document Id",
+            "type": "string"
+          },
+          "version": {
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": ["legal_document_id", "document_type"],
+        "title": "TitleAnalysisSourceDocument",
+        "type": "object"
+      },
+      "TitleAnalysisVerification": {
+        "properties": {
+          "failures": {
+            "items": {
+              "$ref": "#/components/schemas/TitleAnalysisVerificationFailure"
+            },
+            "title": "Failures",
+            "type": "array"
+          },
+          "unverified_count": {
+            "default": 0,
+            "title": "Unverified Count",
+            "type": "integer"
+          },
+          "verified_count": {
+            "default": 0,
+            "title": "Verified Count",
+            "type": "integer"
+          }
+        },
+        "title": "TitleAnalysisVerification",
+        "type": "object"
+      },
+      "TitleAnalysisVerificationFailure": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "proposed_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Snippet"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": ["path", "reason"],
+        "title": "TitleAnalysisVerificationFailure",
+        "type": "object"
+      },
+      "TitleApproveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_by": {
+            "format": "uuid",
+            "title": "Approved By",
+            "type": "string"
+          }
+        },
+        "required": ["approved_by"],
+        "title": "TitleApproveRequest",
+        "type": "object"
+      },
+      "TitleCaseResponse": {
+        "properties": {
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TitleAnalysisResponseData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "TitleCaseResponse",
+        "type": "object"
+      },
+      "TitleInscription": {
+        "additionalProperties": false,
+        "properties": {
+          "adquirentes": {
+            "items": {
+              "$ref": "#/components/schemas/Adquirente"
+            },
+            "title": "Adquirentes",
+            "type": "array"
+          },
+          "antecesor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Antecesor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "escritura": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InscriptionEscritura"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inscripcion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InscriptionDetalle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observaciones": {
+            "items": {
+              "$ref": "#/components/schemas/InscriptionObservacion"
+            },
+            "title": "Observaciones",
+            "type": "array"
+          },
+          "orden": {
+            "title": "Orden",
+            "type": "integer"
+          },
+          "rectificatorias": {
+            "items": {
+              "$ref": "#/components/schemas/InscriptionRectificatoria"
+            },
+            "title": "Rectificatorias",
+            "type": "array"
+          },
+          "tipo_adquisicion": {
+            "title": "Tipo Adquisicion",
+            "type": "string"
+          }
+        },
+        "required": ["orden", "tipo_adquisicion"],
+        "title": "TitleInscription",
+        "type": "object"
+      },
+      "TitleNarrativeUpdateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "block": {
+            "title": "Block",
+            "type": "string"
+          },
+          "edited_by": {
+            "format": "uuid",
+            "title": "Edited By",
+            "type": "string"
+          },
+          "edited_text": {
+            "title": "Edited Text",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": ["block", "edited_text", "reason", "edited_by"],
+        "title": "TitleNarrativeUpdateRequest",
         "type": "object"
       },
       "UpdateBlockRequest": {
@@ -4266,6 +5394,69 @@
         "tags": ["legal-variables"]
       }
     },
+    "/api/v1/legal-documents/{legal_document_id}/archive": {
+      "post": {
+        "operationId": "archive_legal_document_api_v1_legal_documents__legal_document_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "legal_document_id",
+            "required": true,
+            "schema": {
+              "title": "Legal Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalDocumentArchiveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Archive Legal Document",
+        "tags": ["legal-variables"]
+      }
+    },
     "/api/v1/legal-documents/{legal_document_id}/retry": {
       "post": {
         "operationId": "retry_legal_document_ingestion_api_v1_legal_documents__legal_document_id__retry_post",
@@ -4470,6 +5661,355 @@
         ],
         "summary": "Get Project Legal Roles",
         "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/legal-titles/project/{project_id}": {
+      "get": {
+        "operationId": "get_project_title_case_api_v1_legal_titles_project__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TitleCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Project Title Case",
+        "tags": ["legal-titles"]
+      }
+    },
+    "/api/v1/legal-titles/project/{project_id}/reanalyze": {
+      "post": {
+        "operationId": "reanalyze_project_title_api_v1_legal_titles_project__project_id__reanalyze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TitleAnalysisReanalyzeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Reanalyze Project Title",
+        "tags": ["legal-titles"]
+      }
+    },
+    "/api/v1/legal-titles/{analysis_id}/alerts/{alert_index}/resolve": {
+      "post": {
+        "operationId": "resolve_title_alert_api_v1_legal_titles__analysis_id__alerts__alert_index__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "alert_index",
+            "required": true,
+            "schema": {
+              "title": "Alert Index",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TitleAlertResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TitleAlert"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Resolve Title Alert",
+        "tags": ["legal-titles"]
+      }
+    },
+    "/api/v1/legal-titles/{analysis_id}/approve": {
+      "post": {
+        "operationId": "approve_title_case_api_v1_legal_titles__analysis_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TitleApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TitleAnalysisResponseData"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Approve Title Case",
+        "tags": ["legal-titles"]
+      }
+    },
+    "/api/v1/legal-titles/{analysis_id}/narrative": {
+      "patch": {
+        "operationId": "update_title_narrative_api_v1_legal_titles__analysis_id__narrative_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TitleNarrativeUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TitleAnalysisNarrative"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Update Title Narrative",
+        "tags": ["legal-titles"]
       }
     },
     "/api/v1/legal-variables/project/{project_id}": {

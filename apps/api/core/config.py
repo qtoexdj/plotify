@@ -41,8 +41,14 @@ class Settings(BaseSettings):
     LEGAL_TITLE_AGENT_ENABLED: bool = False
     LEGAL_TITLE_AGENT_PROVIDER: str = "openai"
     LEGAL_TITLE_AGENT_MODEL: str = "gpt-4o"
-    LEGAL_TITLE_AGENT_TIMEOUT_SECONDS: int = 10
+    # Budget for the whole agent run (reasoning loop + synthesis), not a
+    # single LLM call.
+    LEGAL_TITLE_AGENT_TIMEOUT_SECONDS: int = 300
     LEGAL_TITLE_AGENT_MAX_INPUT_CHARS: int = 240_000
+    # FR-017: agent loop bounding — max reasoning iterations (LLM turns) and
+    # max characters returned by a single tool read.
+    LEGAL_TITLE_AGENT_MAX_ITERATIONS: int = 24
+    LEGAL_TITLE_AGENT_MAX_TOOL_CHARS: int = 60_000
 
     # Meta / WhatsApp API
     META_VERIFY_TOKEN: str = ""  # Populated from .env

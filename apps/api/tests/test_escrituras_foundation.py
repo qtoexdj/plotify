@@ -191,6 +191,7 @@ async def test_worker_process_legal_document_ingestion_calls_service_boundary():
         organization_id="org-1",
         project_id="project-1",
         ingestion_job_id="job-1",
+        redis=None,
     )
 
 

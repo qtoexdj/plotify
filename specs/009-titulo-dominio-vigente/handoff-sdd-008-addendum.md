@@ -24,6 +24,13 @@ Removed (no longer exist in catalog or snapshots):
 `matriz.inscripcion_fojas/numero/anio/cbr`, `matriz.adquisicion_*`. Any SDD 008
 template referencing those keys must use `titulo.inscripciones[]` instead.
 
+The `titulo` snapshot domain only exists when the title case status is
+`approved`. While unapproved, `title_verified` stays blocked with a specific
+cause (`no_title_documents`, `analysis_processing`, `analysis_needs_review`,
+`analysis_failed`, `llm_disabled`, `unresolved_alerts`,
+`pending_manual_review`); SDD 008 surfaces those causes as deep links back to
+the title panel instead of rendering a partial matriz.
+
 ## Rendering rules for SDD 008
 
 1. **Block-level tokens**: `comparecencia_vendedor_texto` and
@@ -33,11 +40,25 @@ template referencing those keys must use `titulo.inscripciones[]` instead.
    and any clause citing the matriz inscriptions must template over
    `titulo.inscripciones[]` items (with deterministic numbers-to-words), never
    re-parse the narrative blocks.
-3. **Alert-driven clause requirements**: a snapshot containing a `dl_3516`
-   alert resolved as `clause_added` requires the LGUC 55/56 clause present in
-   the matriz; the builder must surface a blocking warning if the template
-   omits it. Alerts resolved as `dismissed_with_reason` surface the reason in
-   the review sidebar.
+3. **Alert-driven clause requirements**: `titulo.alertas_resueltas[]` never
+   contains `pending` alerts (approval is blocked while one exists). Each alert
+   resolved as `clause_added` is a contract: the matriz must contain the
+   corresponding clause, and the builder surfaces a blocking warning when the
+   template omits it. `acknowledged` carries no clause obligation;
+   `dismissed_with_reason` surfaces the reason in the review sidebar. The audit
+   trail lives in `legal_review_decisions` (`title_alert_resolved`).
+
+   | Alert `tipo`               | Clause required when `clause_added`                              |
+   | -------------------------- | ---------------------------------------------------------------- |
+   | `dl_3516`                  | LGUC 55/56 / DL 3.516 destination-prohibition clause             |
+   | `derechos_aguas`           | Water-rights clause (included or expressly reserved)             |
+   | `vigente_en_el_resto`      | Antecedent wording acknowledging the partial transfer            |
+   | `multi_inmueble`           | Singularization clause limiting the sale to the subject property |
+   | `gravamen`                 | Clause acknowledging or raising the mortgage/encumbrance         |
+   | `personeria_requerida`     | Representation recitals citing the personeria                    |
+   | `discrepancia_declaracion` | Clarifying declaration agreed by the lawyer                      |
+   | `otro` / unknown tipos     | Lawyer-defined clause per the resolution reason                  |
+
 4. **Correction boundary unchanged**: wrong title facts are corrected in the
    SDD 007/009 Centro de Control Legal (title panel), which supersedes,
    re-approves and produces a new snapshot. SDD 008 never edits title facts or

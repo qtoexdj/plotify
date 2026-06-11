@@ -21,6 +21,20 @@ export const LEGAL_DOCUMENT_TYPES = [
 
 export type LegalDocumentType = (typeof LEGAL_DOCUMENT_TYPES)[number]
 
+// FR-031 (SDD 009 correccion): tipos donde varios documentos activos
+// coexisten por proyecto; el resto reemplaza por tipo al subir.
+export const MULTI_ACTIVE_LEGAL_DOCUMENT_TYPES = [
+  'dominio_vigente',
+  'personeria',
+  'hipoteca_gravamen',
+  'plano_oficial',
+  'otro',
+] as const satisfies readonly LegalDocumentType[]
+
+export function isMultiActiveLegalDocumentType(type: LegalDocumentType): boolean {
+  return (MULTI_ACTIVE_LEGAL_DOCUMENT_TYPES as readonly LegalDocumentType[]).includes(type)
+}
+
 export const LEGAL_DOCUMENT_TYPE_LABELS = {
   dominio_vigente: 'Dominio vigente',
   hipoteca_gravamen: 'Hipotecas y gravamenes',
@@ -344,6 +358,8 @@ export interface RegisterLegalDocumentPayload {
   sha256_hash: string
   upload_source: LegalUploadSource
   uploaded_by?: UUID | null
+  // FR-032: en tipos multi-documento, reemplaza solo al documento referenciado.
+  replaces_legal_document_id?: UUID | null
 }
 
 export interface RegisterLegalDocumentResponse {
