@@ -28,6 +28,10 @@ import { datosAgrupados, pendientesDelGrupo } from '@/components/documents/mesa/
 import { contadorPendientes, contextoDelCaso } from '@/components/documents/mesa/mesa-encabezado'
 import { pendientesDeClausula, reordenarClausulas } from '@/components/documents/mesa/mesa-indice'
 import { contieneBloquesTitulo } from '@/components/documents/mesa/clausula-editor-inline'
+import {
+  atributosDeDato,
+  insertablesAgrupados,
+} from '@/components/documents/mesa/insertar-dato-picker'
 import { MatrizClientError } from '@/lib/documents/matriz-client'
 import {
   preparacionProgreso,
@@ -690,6 +694,48 @@ describe('editor in-place (T014, FR-008/US3)', () => {
   })
 })
 
+// ─── T015: picker "Insertar dato" ────────────────────────────────────────────
+
+describe('picker de inserción (T015, FR-009/research D6)', () => {
+  const CATALOGO = [
+    {
+      key: 'comprador.nombre',
+      label: 'Nombre de la compradora',
+      category: 'comprador',
+      category_label: 'Compradora',
+    },
+    {
+      key: 'comprador.rut',
+      label: 'RUT de la compradora',
+      category: 'comprador',
+      category_label: 'Compradora',
+    },
+    {
+      key: 'precio.total_palabras',
+      label: 'Precio en palabras',
+      category: 'precio',
+      category_label: 'Precio',
+    },
+  ]
+
+  it('agrupa el catálogo por categoría humana conservando el orden', () => {
+    const grupos = insertablesAgrupados(CATALOGO)
+    expect(grupos.map((grupo) => grupo.categoriaLabel)).toEqual(['Compradora', 'Precio'])
+    expect(grupos[0].variables.map((variable) => variable.key)).toEqual([
+      'comprador.nombre',
+      'comprador.rut',
+    ])
+  })
+
+  it('el dato insertado lleva la clave y la etiqueta del catálogo', () => {
+    expect(atributosDeDato(CATALOGO[2])).toEqual({
+      variableKey: 'precio.total_palabras',
+      label: 'Precio en palabras',
+      format: null,
+    })
+  })
+})
+
 describe('cableado de la ruta y los componentes', () => {
   const read = (relative: string) =>
     fs.readFileSync(path.resolve(__dirname, '..', relative), 'utf-8')
@@ -792,6 +838,24 @@ describe('cableado de la ruta y los componentes', () => {
     const orquestador = read('src/components/documents/mesa/mesa-escritura.tsx')
     expect(orquestador).toContain('borradores')
     expect(orquestador).toContain('...overridesDeLaMatriz(matriz.clauses), ...borradores')
+  })
+
+  it('el picker se abre por botón y atajo @ e inserta el nodo de dato (T015)', () => {
+    const picker = read('src/components/documents/mesa/insertar-dato-picker.tsx')
+    expect(picker).toContain('data-testid="insertar-dato-picker"')
+    expect(picker).toContain('CommandInput')
+    expect(picker).toContain('CommandGroup')
+    expect(picker).toContain('MESA_TEXT.insertarDato')
+
+    const editor = read('src/components/documents/mesa/clausula-editor-inline.tsx')
+    expect(editor).toContain('InsertarDatoPicker')
+    expect(editor).toContain('defineKeyDownHandler')
+    expect(editor).toContain("event.key !== '@'")
+    expect(editor).toContain('insertNode')
+    expect(editor).toContain('atributosDeDato')
+
+    const orquestador = read('src/components/documents/mesa/mesa-escritura.tsx')
+    expect(orquestador).toContain('insertable_variables')
   })
 
   it('los datos del texto son chips con popover de evidencia (T011)', () => {

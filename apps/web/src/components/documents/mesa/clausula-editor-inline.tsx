@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ProseKit, useDocChange } from '@prosekit/react'
-import { createEditor } from '@prosekit/core'
+import { createEditor, defineKeyDownHandler, insertNode } from '@prosekit/core'
 import type { ProseMirrorNode } from '@prosekit/pm/model'
 import { Check, LockKeyhole } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -16,8 +16,13 @@ import {
 } from '@/lib/documents/matriz-schema'
 import { cn } from '@/lib/utils'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
-import type { ClauseContentJson, MatrizClauseView } from '@/lib/documents/matriz-types'
+import type {
+  ClauseContentJson,
+  InsertableVariable,
+  MatrizClauseView,
+} from '@/lib/documents/matriz-types'
 import { urlCorreccion } from './dato-popover'
+import { InsertarDatoPicker, atributosDeDato } from './insertar-dato-picker'
 
 /**
  * Editor in-place de cláusula (SDD 010 T014, FR-008, research D1): ProseKit
@@ -47,6 +52,7 @@ type ClausulaEditorInlineProps = {
   clause: MatrizClauseView
   projectId: string
   soloLectura: boolean
+  insertables?: InsertableVariable[]
   onCambio: (content: ClauseContentJson) => void
   onCerrar: () => void
 }
@@ -55,10 +61,12 @@ export function ClausulaEditorInline({
   clause,
   projectId,
   soloLectura,
+  insertables = [],
   onCambio,
   onCerrar,
 }: ClausulaEditorInlineProps) {
   const mountRef = useRef<HTMLDivElement>(null)
+  const [pickerAbierto, setPickerAbierto] = useState(false)
   const conBloques = useMemo(() => contieneBloquesTitulo(clause.content_json), [clause])
   const editor = useMemo(() => {
     const instance = createEditor({ extension: defineMatrizClauseExtension() })
@@ -81,6 +89,23 @@ export function ClausulaEditorInline({
     return cleanup
   }, [editor, soloLectura])
 
+  // Atajo `@`: abre el picker sin escribir el carácter (research D6).
+  useEffect(() => {
+    if (soloLectura || insertables.length === 0) return
+    return editor.use(
+      defineKeyDownHandler((_view, event) => {
+        if (event.key !== '@' || event.ctrlKey || event.metaKey || event.altKey) return false
+        setPickerAbierto(true)
+        return true
+      })
+    )
+  }, [editor, soloLectura, insertables.length])
+
+  function insertarDato(variable: InsertableVariable) {
+    editor.exec(insertNode({ type: 'variable_token', attrs: atributosDeDato(variable) }))
+    editor.focus()
+  }
+
   return (
     <ProseKit editor={editor}>
       <div
@@ -92,10 +117,20 @@ export function ClausulaEditorInline({
             <p className="truncate text-sm font-semibold">{clause.title}</p>
             {soloLectura ? <Badge variant="outline">{MESA_TEXT.soloLectura}</Badge> : null}
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={onCerrar}>
-            <Check />
-            {MESA_TEXT.cerrarEditor}
-          </Button>
+          <div className="flex items-center gap-2">
+            {soloLectura ? null : (
+              <InsertarDatoPicker
+                variables={insertables}
+                abierto={pickerAbierto}
+                onAbiertoChange={setPickerAbierto}
+                onInsertar={insertarDato}
+              />
+            )}
+            <Button type="button" variant="outline" size="sm" onClick={onCerrar}>
+              <Check />
+              {MESA_TEXT.cerrarEditor}
+            </Button>
+          </div>
         </div>
 
         <DocChangeBridge onChange={soloLectura ? undefined : onCambio} />

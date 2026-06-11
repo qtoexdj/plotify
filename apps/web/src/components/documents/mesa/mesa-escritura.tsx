@@ -210,6 +210,7 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
           puedeEditar={resumen.puedeEditar}
           clausulaActiva={clausulaActiva}
           clausulasConCambios={Object.keys(borradores)}
+          insertables={data.insertable_variables ?? []}
           onActivarClausula={setClausulaActiva}
           onCambioClausula={handleCambioClausula}
           onCerrarEditor={() => setClausulaActiva(null)}

@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type {
   ClauseContentJson,
+  InsertableVariable,
   MatrizClauseView,
   MatrizView,
   ResolutionManifest,
@@ -459,6 +460,7 @@ type MesaDocumentoProps = {
   puedeEditar?: boolean
   clausulaActiva?: string | null
   clausulasConCambios?: string[]
+  insertables?: InsertableVariable[]
   onActivarClausula?: (clauseKey: string) => void
   onCambioClausula?: (clauseKey: string, content: ClauseContentJson) => void
   onCerrarEditor?: () => void
@@ -469,6 +471,7 @@ export function MesaDocumento({
   puedeEditar = false,
   clausulaActiva = null,
   clausulasConCambios = [],
+  insertables = [],
   onActivarClausula,
   onCambioClausula,
   onCerrarEditor,
@@ -523,6 +526,7 @@ export function MesaDocumento({
                   clause={clause}
                   projectId={matriz.project_id}
                   soloLectura={!puedeEditar}
+                  insertables={insertables}
                   onCambio={(content) => onCambioClausula?.(clause.clause_key, content)}
                   onCerrar={() => onCerrarEditor?.()}
                 />

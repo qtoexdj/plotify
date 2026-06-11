@@ -62,6 +62,8 @@ export const MESA_TEXT = {
   cerrarEditor: 'Listo',
   cambiosSinGuardar: 'Cambios sin guardar',
   irAlPanelTitulo: 'Ir al panel de título',
+  buscarDato: 'Buscar dato',
+  sinResultadosDatos: 'Ningún dato coincide con la búsqueda.',
   posicionFija: 'Esta cláusula tiene posición fija',
   clausulaNoAplica: 'Esta cláusula no aplica en este caso',
   plantillaPublicadaInmutable:
