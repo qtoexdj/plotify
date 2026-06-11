@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { LockKeyhole } from 'lucide-react'
+import { LockKeyhole, PencilLine } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
@@ -13,6 +14,7 @@ import type {
   TokenResolution,
   TokenResolutionStatus,
 } from '@/lib/documents/matriz-types'
+import { ClausulaEditorInline } from './clausula-editor-inline'
 import { DatoChip } from './dato-chip'
 import { DatoPopover } from './dato-popover'
 
@@ -400,7 +402,12 @@ function DatoEnTexto({ segmento, projectId }: { segmento: SegmentoDato; projectI
       evidencia={segmento.dato?.evidence_refs ?? []}
       origen={segmento.dato?.source_label ?? null}
     >
-      <DatoChip label={segmento.label} estado={segmento.estado} valor={segmento.valor} />
+      <DatoChip
+        label={segmento.label}
+        estado={segmento.estado}
+        valor={segmento.valor}
+        onClick={(event) => event.stopPropagation()}
+      />
     </DatoPopover>
   )
 }
@@ -449,12 +456,27 @@ function ClausulaOmitida({ clause }: { clause: MatrizClauseView }) {
 
 type MesaDocumentoProps = {
   matriz: MatrizView
+  puedeEditar?: boolean
+  clausulaActiva?: string | null
+  clausulasConCambios?: string[]
+  onActivarClausula?: (clauseKey: string) => void
+  onCambioClausula?: (clauseKey: string, content: ClauseContentJson) => void
+  onCerrarEditor?: () => void
 }
 
-export function MesaDocumento({ matriz }: MesaDocumentoProps) {
+export function MesaDocumento({
+  matriz,
+  puedeEditar = false,
+  clausulaActiva = null,
+  clausulasConCambios = [],
+  onActivarClausula,
+  onCambioClausula,
+  onCerrarEditor,
+}: MesaDocumentoProps) {
   const [vista, setVista] = useState<VistaDocumento>('resuelta')
   const clausulas = useMemo(() => clausulasOrdenadas(matriz), [matriz])
   const ordinales = useMemo(() => ordinalesLegales(clausulas), [clausulas])
+  const conCambios = useMemo(() => new Set(clausulasConCambios), [clausulasConCambios])
 
   return (
     <section
@@ -483,37 +505,84 @@ export function MesaDocumento({ matriz }: MesaDocumentoProps) {
             return <ClausulaOmitida key={clause.clause_key} clause={clause} />
           }
           const ordinal = ordinales.get(clause.clause_key)
-          const bloques = bloquesDeClausula(clause, vista, matriz.resolution)
+          const activa = clausulaActiva === clause.clause_key
+          const puedeActivar = Boolean(puedeEditar && onActivarClausula)
+          const activar = () => {
+            onActivarClausula?.(clause.clause_key)
+          }
           return (
             <section
               key={clause.clause_key}
               id={`clausula-${clause.clause_key}`}
               data-testid="mesa-clausula"
               aria-label={clause.title}
-              className="mt-8"
+              className="group relative mt-8"
             >
-              <h3 className="text-sm font-bold uppercase tracking-wide">
-                {ordinal ? `${ordinal}: ` : ''}
-                {clause.title}
-              </h3>
-              {bloques.map((bloque, index) =>
-                bloque.kind === 'bloque-titulo' ? (
-                  <BloqueTituloAprobado key={`${clause.clause_key}-${index}`} bloque={bloque} />
-                ) : (
-                  <p key={`${clause.clause_key}-${index}`} className="mt-3 text-justify">
-                    {bloque.segmentos.map((segmento, posicion) =>
-                      segmento.kind === 'texto' ? (
-                        <span key={posicion}>{segmento.texto}</span>
-                      ) : (
-                        <DatoEnTexto
-                          key={posicion}
-                          segmento={segmento}
-                          projectId={matriz.project_id}
+              {activa ? (
+                <ClausulaEditorInline
+                  clause={clause}
+                  projectId={matriz.project_id}
+                  soloLectura={!puedeEditar}
+                  onCambio={(content) => onCambioClausula?.(clause.clause_key, content)}
+                  onCerrar={() => onCerrarEditor?.()}
+                />
+              ) : (
+                <>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wide">
+                      {ordinal ? `${ordinal}: ` : ''}
+                      {clause.title}
+                    </h3>
+                    <span className="flex shrink-0 items-center gap-2 font-sans">
+                      {conCambios.has(clause.clause_key) ? (
+                        <span className="text-xs text-amber-700">
+                          {MESA_TEXT.cambiosSinGuardar}
+                        </span>
+                      ) : null}
+                      {puedeActivar ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={activar}
+                          className="text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+                        >
+                          <PencilLine />
+                          {MESA_TEXT.editarClausula}
+                        </Button>
+                      ) : null}
+                    </span>
+                  </div>
+                  {/* La superficie de lectura activa la edición al click (J3);
+                      los chips detienen la propagación para abrir su popover. */}
+                  <div
+                    onClick={puedeActivar ? activar : undefined}
+                    className={puedeActivar ? 'cursor-text' : undefined}
+                  >
+                    {bloquesDeClausula(clause, vista, matriz.resolution).map((bloque, index) =>
+                      bloque.kind === 'bloque-titulo' ? (
+                        <BloqueTituloAprobado
+                          key={`${clause.clause_key}-${index}`}
+                          bloque={bloque}
                         />
+                      ) : (
+                        <p key={`${clause.clause_key}-${index}`} className="mt-3 text-justify">
+                          {bloque.segmentos.map((segmento, posicion) =>
+                            segmento.kind === 'texto' ? (
+                              <span key={posicion}>{segmento.texto}</span>
+                            ) : (
+                              <DatoEnTexto
+                                key={posicion}
+                                segmento={segmento}
+                                projectId={matriz.project_id}
+                              />
+                            )
+                          )}
+                        </p>
                       )
                     )}
-                  </p>
-                )
+                  </div>
+                </>
               )}
             </section>
           )

@@ -44,7 +44,7 @@ tarea sin checkear por pasada salvo pedido explicito de mayor alcance.
 
 ## Phase 5: US3 — Edicion en contexto (P2)
 
-- [ ] T014 [US3] `clausula-editor-inline.tsx`: ProseKit montado in-place al click (una instancia activa, research D1), solo-lectura segun estado del workflow, `block_token` no editable dentro de la clausula (conserva la regla de schema SDD 008) con explicacion y link al panel de titulo (US3 escenario 3), guardado con optimistic locking y mensaje humano de conflicto; Verify: `pnpm test:web`
+- [x] T014 [US3] `clausula-editor-inline.tsx`: ProseKit montado in-place al click (una instancia activa, research D1), solo-lectura segun estado del workflow, `block_token` no editable dentro de la clausula (conserva la regla de schema SDD 008) con explicacion y link al panel de titulo (US3 escenario 3), guardado con optimistic locking y mensaje humano de conflicto; Verify: `pnpm test:web`
 - [ ] T015 [US3] `insertar-dato-picker.tsx`: shadcn `Command` sobre `insertable_variables` agrupado por categoria, boton "Insertar dato" + atajo `@`, insercion de nodo `variable_token` con label del catalogo; Verify: `pnpm test:web`
 
 ## Phase 6: US4 — Workflow y generacion con lenguaje humano (P2)

@@ -58,6 +58,10 @@ export const MESA_TEXT = {
   reordenarClausula: 'Reordenar cláusula',
   noAplicaCorto: 'No aplica',
   clausulaCompleta: 'Completa',
+  editarClausula: 'Editar cláusula',
+  cerrarEditor: 'Listo',
+  cambiosSinGuardar: 'Cambios sin guardar',
+  irAlPanelTitulo: 'Ir al panel de título',
   posicionFija: 'Esta cláusula tiene posición fija',
   clausulaNoAplica: 'Esta cláusula no aplica en este caso',
   plantillaPublicadaInmutable:

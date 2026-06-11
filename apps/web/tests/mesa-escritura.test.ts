@@ -27,6 +27,7 @@ import { evidenciaDocumental, urlCorreccion } from '@/components/documents/mesa/
 import { datosAgrupados, pendientesDelGrupo } from '@/components/documents/mesa/panel-datos'
 import { contadorPendientes, contextoDelCaso } from '@/components/documents/mesa/mesa-encabezado'
 import { pendientesDeClausula, reordenarClausulas } from '@/components/documents/mesa/mesa-indice'
+import { contieneBloquesTitulo } from '@/components/documents/mesa/clausula-editor-inline'
 import { MatrizClientError } from '@/lib/documents/matriz-client'
 import {
   preparacionProgreso,
@@ -679,6 +680,16 @@ describe('índice: estado por cláusula (T013)', () => {
   })
 })
 
+// ─── T014: edición in-place ──────────────────────────────────────────────────
+
+describe('editor in-place (T014, FR-008/US3)', () => {
+  it('detecta los bloques de título protegidos de la cláusula', () => {
+    expect(contieneBloquesTitulo(CLAUSULA_COMPARECENCIA.content_json)).toBe(true)
+    expect(contieneBloquesTitulo(CLAUSULA_PRECIO.content_json)).toBe(false)
+    expect(contieneBloquesTitulo(null)).toBe(false)
+  })
+})
+
 describe('cableado de la ruta y los componentes', () => {
   const read = (relative: string) =>
     fs.readFileSync(path.resolve(__dirname, '..', relative), 'utf-8')
@@ -759,6 +770,28 @@ describe('cableado de la ruta y los componentes', () => {
     expect(panel).toContain('DatoPopover')
     expect(panel).toContain('MESA_TEXT.datosTitle')
     expect(panel).toContain('datoStatusLabel')
+  })
+
+  it('el editor in-place conserva el schema SDD 008 y respeta solo-lectura (T014)', () => {
+    const editor = read('src/components/documents/mesa/clausula-editor-inline.tsx')
+    expect(editor).toContain('data-testid="clausula-editor-inline"')
+    expect(editor).toContain('ProseKit')
+    expect(editor).toContain('defineMatrizClauseExtension')
+    expect(editor).toContain('aria-readonly')
+    expect(editor).toContain('MESA_TEXT.soloLectura')
+    expect(editor).toContain('MESA_TEXT.irAlPanelTitulo')
+    expect(editor).toContain('data-testid="editor-bloque-titulo-nota"')
+
+    const documento = read('src/components/documents/mesa/mesa-documento.tsx')
+    expect(documento).toContain('ClausulaEditorInline')
+    expect(documento).toContain('clausulaActiva')
+    expect(documento).toContain('MESA_TEXT.editarClausula')
+    expect(documento).toContain('MESA_TEXT.cambiosSinGuardar')
+    expect(documento).toContain('stopPropagation')
+
+    const orquestador = read('src/components/documents/mesa/mesa-escritura.tsx')
+    expect(orquestador).toContain('borradores')
+    expect(orquestador).toContain('...overridesDeLaMatriz(matriz.clauses), ...borradores')
   })
 
   it('los datos del texto son chips con popover de evidencia (T011)', () => {

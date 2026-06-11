@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { getMatrizCase, saveMatriz, MatrizClientError } from '@/lib/documents/matriz-client'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type {
+  ClauseContentJson,
   MatrizCaseResponse,
   MatrizClauseOverride,
   MatrizClauseView,
@@ -88,6 +89,8 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [clausulaActiva, setClausulaActiva] = useState<string | null>(null)
+  const [borradores, setBorradores] = useState<Record<string, MatrizClauseOverride>>({})
 
   useEffect(() => {
     if (initialData) return
@@ -125,6 +128,10 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
     })
   }
 
+  function handleCambioClausula(clauseKey: string, content: ClauseContentJson) {
+    setBorradores((current) => ({ ...current, [clauseKey]: { content_json: content } }))
+  }
+
   async function handleGuardar() {
     if (!matriz || !resumen?.puedeEditar) return
     setGuardando(true)
@@ -133,9 +140,10 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
       const response = await saveMatriz(matriz.id, {
         version: matriz.version,
         clause_order: matriz.clause_order,
-        clause_overrides: overridesDeLaMatriz(matriz.clauses),
+        clause_overrides: { ...overridesDeLaMatriz(matriz.clauses), ...borradores },
       })
       setData((current) => (current ? { ...current, matriz: response.matriz } : response))
+      setBorradores({})
     } catch (err) {
       setAviso(mensajeDeGuardado(err))
     } finally {
@@ -197,7 +205,15 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
           onReordenar={handleReordenar}
         />
 
-        <MesaDocumento matriz={matriz} />
+        <MesaDocumento
+          matriz={matriz}
+          puedeEditar={resumen.puedeEditar}
+          clausulaActiva={clausulaActiva}
+          clausulasConCambios={Object.keys(borradores)}
+          onActivarClausula={setClausulaActiva}
+          onCambioClausula={handleCambioClausula}
+          onCerrarEditor={() => setClausulaActiva(null)}
+        />
 
         <aside className="space-y-4">
           {matriz.approval_blockers.length > 0 ? (
