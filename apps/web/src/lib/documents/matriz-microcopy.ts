@@ -54,8 +54,11 @@ export const MESA_TEXT = {
   preparacionTitle: 'Tu escritura se está preparando',
   preparacionSubtitle:
     'Faltan datos o verificaciones del caso. Resuélvelos y la mesa se abrirá lista para leer.',
+  preparacionEstado: 'Preparación',
+  pendienteGenerico: 'Pendiente del caso',
   sinPendientes: 'No hay pendientes. La escritura está lista para revisión.',
   abrirMesa: 'Abrir mesa de escritura',
+  noSePudoCargar: 'No se pudo cargar la escritura. Recarga para intentarlo de nuevo.',
 } as const
 
 /**
