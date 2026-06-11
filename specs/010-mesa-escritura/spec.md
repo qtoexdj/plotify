@@ -45,6 +45,17 @@ extiende de forma aditiva (etiquetas y mensajes humanos en el manifiesto).
 El SDD 008 ya anticipaba esta fase en sus Assumptions ("Post-SDD 008 queda
 la consolidacion UX legal").
 
+**Encuadre de producto (sesion 2026-06-11)**: la matriz vive en dos
+niveles. La organizacion mantiene una plantilla general (la actual v1); cada
+proyecto tendra una **matriz del proyecto** revisada y aprobada una vez por
+el abogado, con los datos de venta como huecos senalizados esperando que un
+lote se venda; y cada venta validada por el administrador generara el
+**borrador del lote** automaticamente. Ese flujo completo (matriz del
+proyecto, creacion automatica del caso al validar la venta, entrega al
+vendedor) se especifica en **SDD 011** (`specs/011-venta-escritura/`).
+SDD 010 construye la superficie comun a ambos niveles: la mesa que aqui se
+especifica por caso es la misma que SDD 011 reutiliza a nivel proyecto.
+
 Reglas de arquitectura heredadas (no negociables):
 
 1. **Snapshot-only**: la mesa consume snapshots, nunca extraccion viva, y
@@ -399,5 +410,15 @@ peor deuda (JSON en textarea) y debe quedar al nivel del resto.
 - El mockup aprobado en la sesion de consultoria del 2026-06-11 es la
   referencia visual de partida; los wireframes definitivos se validan con el
   usuario antes de implementar (gate de proceso en plan/tasks).
+- El flujo venta→escritura (matriz del proyecto aprobada por el abogado,
+  creacion automatica del caso al validar la venta, revision liviana del
+  administrador y entrega al vendedor) se especifica en SDD 011
+  (`specs/011-venta-escritura/`); la mesa de SDD 010 se construye para ser
+  reutilizada alli sin reescritura — documento continuo, chips, panel y
+  pendientes son agnosticos del nivel proyecto/lote.
+- La revision de calce deslindes↔plano oficial queda explicitamente fuera
+  de SDD 010 y SDD 011 (mejora futura): la mesa consume los resultados
+  existentes de deslindes y servidumbre (`lote.deslindes`,
+  `servidumbre.*`) tal cual los produce el motor actual.
 - ProseKit sigue siendo la capa de edicion; el documento continuo se
   construye sobre el modelo de clausulas existente sin migrar contenido.
