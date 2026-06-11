@@ -19,14 +19,18 @@ export interface components {
       "nombre"?: components["schemas"]["EvidencedValue"] | null
     }
     "ApprovalBlocker": {
+      "action_href"?: string | null
+      "action_label"?: string | null
       "alert_tipo"?: string | null
       "cause"?: string | null
+      "description"?: string | null
       "fix_url"?: string | null
       "gate"?: string | null
       "key"?: string | null
       "kind": "token_missing" | "readiness_gate" | "alert_clause_missing" | "snapshot_stale"
       "message"?: string | null
       "required_clause"?: string | null
+      "title"?: string | null
     }
     "ApprovalRequestDetailResponse": {
       "created_at": string
@@ -43,6 +47,7 @@ export interface components {
     }
     "BlockResolution": {
       "blockKey": string
+      "label"?: string | null
       "status": "resolved" | "missing" | "blocked"
       "text"?: string | null
     }
@@ -233,6 +238,12 @@ export interface components {
       "notario"?: components["schemas"]["EvidencedValue"] | null
       "repertorio"?: components["schemas"]["EvidencedValue"] | null
     }
+    "InsertableVariable": {
+      "category": string
+      "category_label": string
+      "key": string
+      "label": string
+    }
     "InvalidateCacheRequest": {
       "organization_id": string
     }
@@ -329,6 +340,7 @@ export interface components {
       "approved_by": string
     }
     "MatrizCaseResponse": {
+      "insertable_variables"?: Array<components["schemas"]["InsertableVariable"]>
       "matriz": components["schemas"]["MatrizView"]
     }
     "MatrizClauseCondition": {
@@ -348,6 +360,7 @@ export interface components {
       "content_json": Record<string, unknown>
       "disabled"?: boolean
       "fixed_position": boolean
+      "omitted_reason"?: string | null
       "overridden"?: boolean
       "position": number
       "resolved_content"?: Record<string, unknown> | null
@@ -750,7 +763,11 @@ export interface components {
       "reason": string
     }
     "TokenResolution": {
+      "category"?: string | null
+      "category_label"?: string | null
       "evidence_refs"?: Array<components["schemas"]["MatrizEvidenceRef"]>
+      "label"?: string | null
+      "source_label"?: string | null
       "source_type"?: string | null
       "state"?: string | null
       "status": "resolved" | "missing" | "blocked"

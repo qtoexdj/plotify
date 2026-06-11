@@ -91,6 +91,28 @@
       },
       "ApprovalBlocker": {
         "properties": {
+          "action_href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Href"
+          },
+          "action_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Label"
+          },
           "alert_tipo": {
             "anyOf": [
               {
@@ -112,6 +134,17 @@
               }
             ],
             "title": "Cause"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "fix_url": {
             "anyOf": [
@@ -172,6 +205,17 @@
               }
             ],
             "title": "Required Clause"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": ["kind"],
@@ -254,6 +298,17 @@
           "blockKey": {
             "title": "Blockkey",
             "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
           },
           "status": {
             "enum": ["resolved", "missing", "blocked"],
@@ -1421,6 +1476,29 @@
         "title": "InscriptionRectificatoria",
         "type": "object"
       },
+      "InsertableVariable": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "category_label": {
+            "title": "Category Label",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": ["key", "label", "category", "category_label"],
+        "title": "InsertableVariable",
+        "type": "object"
+      },
       "InvalidateCacheRequest": {
         "properties": {
           "organization_id": {
@@ -2058,6 +2136,13 @@
       },
       "MatrizCaseResponse": {
         "properties": {
+          "insertable_variables": {
+            "items": {
+              "$ref": "#/components/schemas/InsertableVariable"
+            },
+            "title": "Insertable Variables",
+            "type": "array"
+          },
           "matriz": {
             "$ref": "#/components/schemas/MatrizView"
           }
@@ -2167,6 +2252,17 @@
           "fixed_position": {
             "title": "Fixed Position",
             "type": "boolean"
+          },
+          "omitted_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Omitted Reason"
           },
           "overridden": {
             "default": false,
@@ -4535,12 +4631,56 @@
       },
       "TokenResolution": {
         "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "category_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Label"
+          },
           "evidence_refs": {
             "items": {
               "$ref": "#/components/schemas/MatrizEvidenceRef"
             },
             "title": "Evidence Refs",
             "type": "array"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
           },
           "source_type": {
             "anyOf": [
