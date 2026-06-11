@@ -49,6 +49,8 @@ export const MESA_TEXT = {
   bloqueTituloPendiente: 'Este texto aún no está aprobado en el estudio de título.',
   datoSinNombre: 'Dato del expediente',
   datoSinValor: 'Sin valor en el expediente',
+  categoriaSinNombre: 'Otros datos',
+  expedienteVacio: 'El expediente del caso aún no tiene datos.',
   posicionFija: 'Esta cláusula tiene posición fija',
   clausulaNoAplica: 'Esta cláusula no aplica en este caso',
   plantillaPublicadaInmutable:

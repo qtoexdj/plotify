@@ -19,6 +19,7 @@ import {
 } from '@/components/documents/mesa/mesa-documento'
 import { DATO_CHIP_TESTID, textoDelChip } from '@/components/documents/mesa/dato-chip'
 import { evidenciaDocumental, urlCorreccion } from '@/components/documents/mesa/dato-popover'
+import { datosAgrupados, pendientesDelGrupo } from '@/components/documents/mesa/panel-datos'
 import {
   preparacionProgreso,
   preparacionSubtitulo,
@@ -502,6 +503,58 @@ describe('popover de evidencia (T011, FR-003)', () => {
   })
 })
 
+// ─── T012: panel de datos ────────────────────────────────────────────────────
+
+describe('panel de datos agrupado (T012, FR-004)', () => {
+  const DATOS: TokenResolution[] = [
+    {
+      ...token('resolved'),
+      variableKey: 'comprador.nombre',
+      value_text: 'MARÍA PAZ ROJAS',
+      label: 'Nombre de la compradora',
+      category: 'comprador',
+      category_label: 'Compradora',
+    },
+    {
+      ...token('missing'),
+      variableKey: 'comprador.estado_civil',
+      label: 'Estado civil de la compradora',
+      category: 'comprador',
+      category_label: 'Compradora',
+    },
+    {
+      ...token('resolved'),
+      variableKey: 'precio.total_palabras',
+      value_text: 'veinte millones de pesos',
+      label: 'Precio en palabras',
+      category: 'precio',
+      category_label: 'Precio',
+    },
+  ]
+
+  it('agrupa por categoría humana conservando el orden del servidor', () => {
+    const grupos = datosAgrupados(DATOS)
+    expect(grupos.map((grupo) => grupo.categoriaLabel)).toEqual(['Compradora', 'Precio'])
+    expect(grupos[0].datos.map((dato) => dato.variableKey)).toEqual([
+      'comprador.nombre',
+      'comprador.estado_civil',
+    ])
+  })
+
+  it('un dato sin categoría cae al grupo genérico, jamás se oculta', () => {
+    const grupos = datosAgrupados([token('resolved')])
+    expect(grupos).toHaveLength(1)
+    expect(grupos[0].categoriaLabel).toBe(MESA_TEXT.categoriaSinNombre)
+    expect(grupos[0].datos).toHaveLength(1)
+  })
+
+  it('cuenta los pendientes del grupo (todo lo no verificado)', () => {
+    const grupos = datosAgrupados(DATOS)
+    expect(pendientesDelGrupo(grupos[0])).toBe(1)
+    expect(pendientesDelGrupo(grupos[1])).toBe(0)
+  })
+})
+
 describe('cláusulas omitidas consultables (T010, FR-010)', () => {
   it('una condición no cumplida marca la cláusula como omitida', () => {
     expect(esClausulaOmitida(CLAUSULA_SERVIDUMBRE)).toBe(true)
@@ -564,6 +617,15 @@ describe('cableado de la ruta y los componentes', () => {
     expect(source).toContain('data-testid="clausula-omitida"')
     expect(source).toContain('data-testid="bloque-titulo"')
     expect(source).toContain('omitted_reason')
+  })
+
+  it('el panel de datos usa el mismo popover y muestra estados en español (T012)', () => {
+    const panel = read('src/components/documents/mesa/panel-datos.tsx')
+    expect(panel).toContain('data-testid="panel-datos"')
+    expect(panel).toContain('data-testid="panel-datos-fila"')
+    expect(panel).toContain('DatoPopover')
+    expect(panel).toContain('MESA_TEXT.datosTitle')
+    expect(panel).toContain('datoStatusLabel')
   })
 
   it('los datos del texto son chips con popover de evidencia (T011)', () => {
