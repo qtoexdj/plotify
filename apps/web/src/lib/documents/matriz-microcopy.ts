@@ -51,6 +51,13 @@ export const MESA_TEXT = {
   datoSinValor: 'Sin valor en el expediente',
   categoriaSinNombre: 'Otros datos',
   expedienteVacio: 'El expediente del caso aún no tiene datos.',
+  guardar: 'Guardar',
+  guardando: 'Guardando',
+  noSePudoGuardar: 'No se pudo guardar la escritura. Intenta de nuevo.',
+  indiceTitle: 'Cláusulas',
+  reordenarClausula: 'Reordenar cláusula',
+  noAplicaCorto: 'No aplica',
+  clausulaCompleta: 'Completa',
   posicionFija: 'Esta cláusula tiene posición fija',
   clausulaNoAplica: 'Esta cláusula no aplica en este caso',
   plantillaPublicadaInmutable:

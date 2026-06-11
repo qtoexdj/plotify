@@ -278,13 +278,14 @@ describe('T022 — source wiring', () => {
 
   it('wires the builder route and client actions', () => {
     const builderSource = readSource('../src/components/documents/matriz/matriz-builder.tsx')
-    // SDD 010 T008: la ruta monta MesaEscritura; el builder queda como rama
-    // puente dentro del orquestador hasta T013 (retiro en T020).
+    // SDD 010 T013: la mesa reemplaza al builder en la ruta; el archivo del
+    // builder sobrevive sin referencias hasta su retiro en T020.
     const mesaSource = readSource('../src/components/documents/mesa/mesa-escritura.tsx')
     expect(builderSource).toContain('getMatrizCase')
     expect(builderSource).toContain('saveMatriz')
     expect(builderSource).toContain('data-testid="matriz-blocking-list"')
-    expect(mesaSource).toContain('MatrizBuilder')
+    expect(mesaSource).not.toContain('MatrizBuilder')
+    expect(mesaSource).toContain('saveMatriz')
   })
 })
 

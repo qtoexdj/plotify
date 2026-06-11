@@ -10,7 +10,12 @@ import { describe, expect, it } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 
-import { decideMesaVista } from '@/components/documents/mesa/mesa-escritura'
+import {
+  decideMesaVista,
+  mensajeDeGuardado,
+  overridesDeLaMatriz,
+  resumenDeMesa,
+} from '@/components/documents/mesa/mesa-escritura'
 import {
   bloquesDeClausula,
   clausulasOrdenadas,
@@ -20,6 +25,9 @@ import {
 import { DATO_CHIP_TESTID, textoDelChip } from '@/components/documents/mesa/dato-chip'
 import { evidenciaDocumental, urlCorreccion } from '@/components/documents/mesa/dato-popover'
 import { datosAgrupados, pendientesDelGrupo } from '@/components/documents/mesa/panel-datos'
+import { contadorPendientes, contextoDelCaso } from '@/components/documents/mesa/mesa-encabezado'
+import { pendientesDeClausula, reordenarClausulas } from '@/components/documents/mesa/mesa-indice'
+import { MatrizClientError } from '@/lib/documents/matriz-client'
 import {
   preparacionProgreso,
   preparacionSubtitulo,
@@ -566,6 +574,111 @@ describe('cláusulas omitidas consultables (T010, FR-010)', () => {
   })
 })
 
+// ─── T013: encabezado, índice y cableado final de la mesa ────────────────────
+
+describe('reorden con fijas ancladas (T013, FR-011 — migrado de matriz-builder)', () => {
+  const CUATRO_CLAUSULAS = [
+    { ...CLAUSULA_COMPARECENCIA, position: 0 },
+    { ...CLAUSULA_COMPRAVENTA, clause_key: 'pago', title: 'PAGO', position: 1 },
+    {
+      ...CLAUSULA_ANTECEDENTES,
+      clause_key: 'primero',
+      title: 'PRIMERO',
+      position: 2,
+      fixed_position: true,
+    },
+    { ...CLAUSULA_COMPRAVENTA, clause_key: 'cierre', title: 'CIERRE', position: 3 },
+  ]
+
+  it('reordena solo las movibles y mantiene las fijas ancladas', () => {
+    const reordenadas = reordenarClausulas(CUATRO_CLAUSULAS, 'cierre', 'pago')
+    expect(reordenadas.map((clause) => clause.clause_key)).toEqual([
+      'comparecencia',
+      'cierre',
+      'primero',
+      'pago',
+    ])
+    expect(reordenadas.find((clause) => clause.clause_key === 'comparecencia')?.position).toBe(0)
+    expect(reordenadas.find((clause) => clause.clause_key === 'primero')?.position).toBe(2)
+  })
+
+  it('no mueve una cláusula sobre un ancla fija (misma referencia)', () => {
+    expect(reordenarClausulas(CUATRO_CLAUSULAS, 'pago', 'comparecencia')).toBe(CUATRO_CLAUSULAS)
+    expect(reordenarClausulas(CUATRO_CLAUSULAS, 'primero', 'pago')).toBe(CUATRO_CLAUSULAS)
+  })
+})
+
+describe('resumen y guardado de la mesa (T013 — migrado de matriz-builder)', () => {
+  it('resume cláusulas, pendientes y editabilidad', () => {
+    const matriz = matrizWith([DATO_BLOCKER])
+    matriz.clauses = [
+      CLAUSULA_COMPARECENCIA,
+      { ...CLAUSULA_COMPRAVENTA, disabled: true },
+      CLAUSULA_SERVIDUMBRE,
+    ]
+    const resumen = resumenDeMesa(matriz)
+    expect(resumen.totalClausulas).toBe(3)
+    expect(resumen.fijas).toBe(1)
+    expect(resumen.desactivadas).toBe(1)
+    expect(resumen.pendientes).toBe(1)
+    expect(resumen.puedeEditar).toBe(true)
+    expect(resumenDeMesa({ ...matriz, status: 'approved' }).puedeEditar).toBe(false)
+    expect(resumenDeMesa({ ...matriz, snapshot_stale: true }).puedeEditar).toBe(false)
+  })
+
+  it('el conflicto de versión produce el mensaje humano, jamás el código', () => {
+    const conflicto = new MatrizClientError('version conflict', 409)
+    expect(mensajeDeGuardado(conflicto)).toBe(MESA_TEXT.conflictoGuardado)
+    expect(mensajeDeGuardado(new MatrizClientError('boom', 500))).toBe(MESA_TEXT.noSePudoGuardar)
+    expect(mensajeDeGuardado(new Error('x'))).toBe(MESA_TEXT.noSePudoGuardar)
+  })
+
+  it('los overrides persistibles incluyen solo cláusulas desactivadas o intervenidas', () => {
+    const overrides = overridesDeLaMatriz([
+      CLAUSULA_COMPARECENCIA,
+      { ...CLAUSULA_COMPRAVENTA, disabled: true },
+      { ...CLAUSULA_PRECIO, overridden: true },
+    ])
+    expect(Object.keys(overrides)).toEqual(['compraventa', 'precio_liquidacion'])
+    expect(overrides.compraventa.disabled).toBe(true)
+  })
+})
+
+describe('encabezado de la mesa (T013, FR-015)', () => {
+  it('compone proyecto · lote · comprador desde el expediente', () => {
+    const contexto = contextoDelCaso([
+      { ...token('resolved'), variableKey: 'proyecto.nombre', value_text: 'El Cóndor de Teno' },
+      { ...token('resolved'), variableKey: 'lote.numero_nombre', value_text: 'Lote 12' },
+      { ...token('resolved'), variableKey: 'lote.numero', value_text: '12' },
+      { ...token('resolved'), variableKey: 'comprador.nombre', value_text: 'MARÍA PAZ ROJAS' },
+    ])
+    expect(contexto).toBe('El Cóndor de Teno · Lote 12 · MARÍA PAZ ROJAS')
+  })
+
+  it('omite las partes sin valor sin dejar separadores colgando', () => {
+    expect(
+      contextoDelCaso([
+        { ...token('resolved'), variableKey: 'comprador.nombre', value_text: 'MARÍA PAZ ROJAS' },
+      ])
+    ).toBe('MARÍA PAZ ROJAS')
+    expect(contextoDelCaso([])).toBe('')
+  })
+
+  it('el contador de pendientes concuerda en número', () => {
+    expect(contadorPendientes(1)).toBe('1 pendiente')
+    expect(contadorPendientes(0)).toBe('0 pendientes')
+    expect(contadorPendientes(3)).toBe('3 pendientes')
+  })
+})
+
+describe('índice: estado por cláusula (T013)', () => {
+  it('cuenta los datos no verificados de la cláusula', () => {
+    expect(pendientesDeClausula(CLAUSULA_COMPRAVENTA, RESOLUCION)).toBe(1)
+    expect(pendientesDeClausula(CLAUSULA_PRECIO, RESOLUCION)).toBe(0)
+    expect(pendientesDeClausula(CLAUSULA_COMPARECENCIA, RESOLUCION)).toBe(0)
+  })
+})
+
 describe('cableado de la ruta y los componentes', () => {
   const read = (relative: string) =>
     fs.readFileSync(path.resolve(__dirname, '..', relative), 'utf-8')
@@ -576,10 +689,30 @@ describe('cableado de la ruta y los componentes', () => {
     expect(page).not.toContain('MatrizBuilder')
   })
 
-  it('el orquestador decide preparación y delega la mesa al builder solo como puente (hasta T013)', () => {
+  it('el orquestador monta la mesa completa sin el builder viejo (T013)', () => {
     const source = read('src/components/documents/mesa/mesa-escritura.tsx')
     expect(source).toContain('EstadoPreparacion')
-    expect(source).toContain('T013')
+    expect(source).toContain('MesaEncabezado')
+    expect(source).toContain('MesaIndice')
+    expect(source).toContain('MesaDocumento')
+    expect(source).toContain('PanelDatos')
+    expect(source).toContain('PendientesList')
+    expect(source).not.toContain('MatrizBuilder')
+  })
+
+  it('el índice reordena con dnd-kit y las fijas ancladas (T013)', () => {
+    const indice = read('src/components/documents/mesa/mesa-indice.tsx')
+    expect(indice).toContain('data-testid="mesa-indice"')
+    expect(indice).toContain('DndContext')
+    expect(indice).toContain('SortableContext')
+    expect(indice).toContain('useSortable')
+    expect(indice).toContain('arrayMove')
+    expect(indice).toContain('MESA_TEXT.posicionFija')
+
+    const encabezado = read('src/components/documents/mesa/mesa-encabezado.tsx')
+    expect(encabezado).toContain('data-testid="mesa-encabezado"')
+    expect(encabezado).toContain('data-testid="mesa-contador-pendientes"')
+    expect(encabezado).toContain('MESA_TEXT.expedienteCambio')
   })
 
   it('el CCL muestra el caso activo con CTA a la mesa y sin jerga (T009)', () => {
