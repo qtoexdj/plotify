@@ -4,22 +4,31 @@ import { useMemo, useState } from 'react'
 import { LockKeyhole } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { cn } from '@/lib/utils'
-import { MESA_TEXT, datoStatusLabel } from '@/lib/documents/matriz-microcopy'
+import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type {
   ClauseContentJson,
   MatrizClauseView,
   MatrizView,
   ResolutionManifest,
+  TokenResolution,
   TokenResolutionStatus,
 } from '@/lib/documents/matriz-types'
+import { DatoChip } from './dato-chip'
+import { DatoPopover } from './dato-popover'
 
 /**
- * Documento continuo de la mesa (SDD 010 T010, FR-001, wireframe 2
- * aprobado): la escritura completa apilada en orden, en vista resuelta por
- * defecto. El modo estructura muestra los huecos de datos con su nombre
- * humano. La numeración y la detección de bloques de título espejan al
- * renderer DOCX server-side para que la mesa lea igual que la minuta.
+ * Documento continuo de la mesa (SDD 010 T010/T011, FR-001/FR-002,
+ * wireframe 2 aprobado): la escritura completa apilada en orden, en vista
+ * resuelta por defecto con cada dato como chip clickeable. El modo
+ * estructura muestra los huecos de datos con su nombre humano. La
+ * numeración y la detección de bloques de título espejan al renderer DOCX
+ * server-side para que la mesa lea igual que la minuta.
+ *
+ * El resolutor sustituye cada nodo inline 1 a 1 dentro del párrafo, así que
+ * la vista resuelta fusiona la estructura (posición de cada dato) con el
+ * texto resuelto (valor real) mediante un cursor conservador: ante una
+ * sección expandida (repeticiones, condicionales) la fusión se detiene y el
+ * resto se lee como texto plano con sus huecos.
  */
 
 export type VistaDocumento = 'resuelta' | 'estructura'
@@ -32,6 +41,7 @@ export type SegmentoDato = {
   label: string
   estado: TokenResolutionStatus
   valor: string | null
+  dato: TokenResolution | null
 }
 
 export type SegmentoParrafo = SegmentoTexto | SegmentoDato
@@ -199,10 +209,10 @@ function clavesDeBloquesTitulo(content: ClauseContentJson | null): Set<string> {
 }
 
 /**
- * Convierte una cláusula en bloques de presentación. En la vista resuelta el
- * texto llega ya sustituido por el resolutor server-side: los datos sin
- * valor quedan como huecos con nombre humano y los bloques de título
- * aprobados se reconocen por su texto en el inventario de bloques del caso.
+ * Convierte una cláusula en bloques de presentación. En la vista resuelta
+ * la fusión estructura↔texto resuelto produce chips con valor real para los
+ * datos verificados; los datos sin valor quedan como huecos con nombre
+ * humano y los bloques de título aprobados se distinguen con su texto.
  */
 export function bloquesDeClausula(
   clause: MatrizClauseView,
@@ -222,21 +232,24 @@ export function bloquesDeClausula(
     }
   }
 
-  const content = vista === 'resuelta' ? (clause.resolved_content ?? null) : clause.content_json
-  if (!content) return []
-
   const bloques: BloqueDocumento[] = []
 
-  const segmentoDato = (attrs: Record<string, unknown> | undefined): SegmentoDato => {
+  const segmentoDato = (
+    attrs: Record<string, unknown> | undefined,
+    valorResuelto: string | null = null
+  ): SegmentoDato => {
     const variableKey = String(attrs?.variableKey ?? '')
-    const dato = datosPorClave.get(variableKey)
+    const dato = datosPorClave.get(variableKey) ?? null
     const nodeLabel = typeof attrs?.label === 'string' ? attrs.label.trim() : ''
+    const estado: TokenResolutionStatus =
+      valorResuelto !== null ? (dato?.status ?? 'resolved') : (dato?.status ?? 'missing')
     return {
       kind: 'dato',
       variableKey,
       label: nodeLabel || dato?.label || MESA_TEXT.datoSinNombre,
-      estado: dato?.status ?? 'missing',
-      valor: dato?.value_text ?? null,
+      estado,
+      valor: valorResuelto ?? dato?.value_text ?? null,
+      dato,
     }
   }
 
@@ -256,7 +269,51 @@ export function bloquesDeClausula(
     return segmentos
   }
 
-  const recorrer = (nodes: unknown[]) => {
+  /**
+   * Fusión inline 1 a 1: en la posición donde la estructura tiene un dato y
+   * el texto resuelto tiene texto, ese texto es el valor del dato (chip
+   * verificado). Si las longitudes no calzan, no se fusiona.
+   */
+  const parrafoFusionado = (
+    estructuraInline: unknown[],
+    resueltoInline: unknown[]
+  ): SegmentoParrafo[] | null => {
+    const izquierda = estructuraInline.map(comoNodo).filter((node) => node !== null)
+    const derecha = resueltoInline.map(comoNodo).filter((node) => node !== null)
+    if (izquierda.length !== derecha.length) return null
+    const segmentos: SegmentoParrafo[] = []
+    for (let i = 0; i < derecha.length; i += 1) {
+      const original = izquierda[i]
+      const final = derecha[i]
+      if (final.type === 'variable_token') {
+        segmentos.push(segmentoDato(final.attrs))
+        continue
+      }
+      if (final.type !== 'text') continue
+      if (original.type === 'variable_token') {
+        segmentos.push(segmentoDato(original.attrs, final.text ?? ''))
+        continue
+      }
+      if (final.text) segmentos.push({ kind: 'texto', texto: final.text })
+    }
+    return segmentos
+  }
+
+  const emitirBloqueTitulo = (attrs: Record<string, unknown> | undefined, texto: string | null) => {
+    const blockKey = String(attrs?.blockKey ?? '')
+    const inventario = bloquesPorClave.get(blockKey)
+    const nodeLabel = typeof attrs?.label === 'string' ? attrs.label.trim() : ''
+    const aprobado = texto !== null || inventario?.status === 'resolved'
+    bloques.push({
+      kind: 'bloque-titulo',
+      blockKey,
+      label: nodeLabel || inventario?.label || null,
+      texto,
+      estado: aprobado ? 'aprobado' : 'pendiente',
+    })
+  }
+
+  const recorrerPlano = (nodes: unknown[]) => {
     for (const value of nodes) {
       const node = comoNodo(value)
       if (!node) continue
@@ -279,45 +336,72 @@ export function bloquesDeClausula(
         continue
       }
       if (node.type === 'block_token') {
-        const blockKey = String(node.attrs?.blockKey ?? '')
-        const inventario = bloquesPorClave.get(blockKey)
-        const nodeLabel = typeof node.attrs?.label === 'string' ? node.attrs.label.trim() : ''
-        bloques.push({
-          kind: 'bloque-titulo',
-          blockKey,
-          label: nodeLabel || inventario?.label || null,
-          texto: null,
-          estado: inventario?.status === 'resolved' ? 'aprobado' : 'pendiente',
-        })
+        emitirBloqueTitulo(node.attrs, null)
         continue
       }
-      if (node.content) recorrer(node.content)
+      if (node.content) recorrerPlano(node.content)
     }
   }
 
-  recorrer(content.content)
+  if (vista === 'estructura') {
+    recorrerPlano(clause.content_json?.content ?? [])
+    return bloques
+  }
+
+  if (!clause.resolved_content) return []
+
+  const estructura = (clause.content_json?.content ?? []).map(comoNodo).filter((n) => n !== null)
+  const resueltos = (clause.resolved_content.content ?? []).map(comoNodo).filter((n) => n !== null)
+
+  let posicion = 0
+  while (posicion < estructura.length && posicion < resueltos.length) {
+    const original = estructura[posicion]
+    const final = resueltos[posicion]
+    if (original.type === 'paragraph' && final.type === 'paragraph') {
+      const segmentos =
+        parrafoFusionado(original.content ?? [], final.content ?? []) ??
+        segmentosDeParrafo(final.content ?? [])
+      if (segmentos.length > 0) bloques.push({ kind: 'parrafo', segmentos })
+      posicion += 1
+      continue
+    }
+    if (original.type === 'block_token' && final.type === 'paragraph') {
+      const texto = (final.content ?? [])
+        .map((child) => {
+          const inline = comoNodo(child)
+          return inline?.type === 'text' ? (inline.text ?? '') : ''
+        })
+        .join('')
+      emitirBloqueTitulo(original.attrs, texto || null)
+      posicion += 1
+      continue
+    }
+    if (original.type === 'block_token' && final.type === 'block_token') {
+      emitirBloqueTitulo(original.attrs, null)
+      posicion += 1
+      continue
+    }
+    break
+  }
+
+  recorrerPlano(resueltos.slice(posicion))
   return bloques
 }
 
-const CLASES_ESTADO_DATO: Record<TokenResolutionStatus, string> = {
-  resolved: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
-  blocked: 'bg-sky-50 text-sky-900 ring-sky-200',
-  missing: 'bg-amber-50 text-amber-900 ring-amber-200',
-}
-
-/** Hueco de dato con nombre humano; T011 lo reemplaza por el chip con popover. */
-function DatoHueco({ segmento }: { segmento: SegmentoDato }) {
+/** Chip de dato anclado a su popover de evidencia (T011, FR-002/FR-003). */
+function DatoEnTexto({ segmento, projectId }: { segmento: SegmentoDato; projectId: string }) {
   return (
-    <span
-      data-testid="dato-hueco"
-      className={cn(
-        'rounded px-1 font-sans text-[0.85em] ring-1',
-        CLASES_ESTADO_DATO[segmento.estado]
-      )}
+    <DatoPopover
+      projectId={projectId}
+      variableKey={segmento.variableKey}
+      label={segmento.label}
+      estado={segmento.estado}
+      valor={segmento.valor}
+      evidencia={segmento.dato?.evidence_refs ?? []}
+      origen={segmento.dato?.source_label ?? null}
     >
-      {segmento.label}
-      <span className="sr-only"> ({datoStatusLabel(segmento.estado)})</span>
-    </span>
+      <DatoChip label={segmento.label} estado={segmento.estado} valor={segmento.valor} />
+    </DatoPopover>
   )
 }
 
@@ -421,7 +505,11 @@ export function MesaDocumento({ matriz }: MesaDocumentoProps) {
                       segmento.kind === 'texto' ? (
                         <span key={posicion}>{segmento.texto}</span>
                       ) : (
-                        <DatoHueco key={posicion} segmento={segmento} />
+                        <DatoEnTexto
+                          key={posicion}
+                          segmento={segmento}
+                          projectId={matriz.project_id}
+                        />
                       )
                     )}
                   </p>

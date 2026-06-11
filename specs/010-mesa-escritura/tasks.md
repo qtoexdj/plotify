@@ -38,7 +38,7 @@ tarea sin checkear por pasada salvo pedido explicito de mayor alcance.
 ## Phase 4: US1 — Mesa de lectura con evidencia (P1)
 
 - [x] T010 [US1] `mesa-documento.tsx`: clausulas resueltas apiladas en orden, numeracion, tipografia serif del documento, bloques de titulo distinguidos con explicacion, clausulas omitidas consultables (`omitted_reason`), y toggle "Mostrar estructura" (FR-001, research D2) que alterna a los huecos de datos con nombre humano; Verify: `pnpm test:web`
-- [ ] T011 [US1] `dato-chip.tsx` + `dato-popover.tsx`: estados verificado/por revisar/falta (AA, teclado), popover con etiqueta humana, valor, evidencia via `legal-evidence-viewer` compact o `source_label`, CTA "Corregir en Centro de Control Legal"; Verify: `pnpm test:web`
+- [x] T011 [US1] `dato-chip.tsx` + `dato-popover.tsx`: estados verificado/por revisar/falta (AA, teclado), popover con etiqueta humana, valor, evidencia via `legal-evidence-viewer` compact o `source_label`, CTA "Corregir en Centro de Control Legal"; Verify: `pnpm test:web`
 - [ ] T012 [P] [US1] `panel-datos.tsx`: datos agrupados por `category_label` con estado y acceso al mismo popover; Verify: `pnpm test:web`
 - [ ] T013 [US1] `mesa-encabezado.tsx` (proyecto · lote · comprador, estado, contador de pendientes, acciones) + `mesa-indice.tsx` (navegacion + dnd-kit con fijas ancladas, logica de reorden migrada con sus tests desde `matriz-builder.test.ts`); Verify: `pnpm test:web && pnpm typecheck:web`
 

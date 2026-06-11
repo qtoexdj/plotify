@@ -17,6 +17,8 @@ import {
   esClausulaOmitida,
   ordinalesLegales,
 } from '@/components/documents/mesa/mesa-documento'
+import { DATO_CHIP_TESTID, textoDelChip } from '@/components/documents/mesa/dato-chip'
+import { evidenciaDocumental, urlCorreccion } from '@/components/documents/mesa/dato-popover'
 import {
   preparacionProgreso,
   preparacionSubtitulo,
@@ -286,13 +288,13 @@ describe('documento continuo: orden y numeración legal (T010, FR-001)', () => {
 })
 
 describe('documento continuo: bloques y huecos (T010, FR-002/FR-010)', () => {
-  it('la vista resuelta reconoce el bloque de título aprobado por su texto', () => {
+  it('la vista resuelta reconoce el bloque de título aprobado', () => {
     const bloques = bloquesDeClausula(CLAUSULA_COMPARECENCIA, 'resuelta', RESOLUCION)
     expect(bloques).toEqual([
       {
         kind: 'bloque-titulo',
         blockKey: 'titulo.comparecencia_vendedor_texto',
-        label: 'Comparecencia del vendedor',
+        label: 'Comparecencia aprobada',
         texto: COMPARECENCIA_TEXTO,
         estado: 'aprobado',
       },
@@ -346,6 +348,157 @@ describe('documento continuo: bloques y huecos (T010, FR-002/FR-010)', () => {
         estado: 'pendiente',
       },
     ])
+  })
+})
+
+// ─── T011: chips de dato y popover de evidencia ──────────────────────────────
+
+const CLAUSULA_PRECIO = clausula({
+  clause_key: 'precio_liquidacion',
+  title: 'PRECIO Y LIQUIDACIÓN',
+  content_json: doc([
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'El precio de la compraventa es la suma de ' },
+        {
+          type: 'variable_token',
+          attrs: { variableKey: 'precio.total_palabras', label: '' },
+        },
+        { type: 'text', text: ', que se paga al contado.' },
+      ],
+    },
+  ]),
+  resolved_content: doc([
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'El precio de la compraventa es la suma de ' },
+        { type: 'text', text: 'veinte millones de pesos' },
+        { type: 'text', text: ', que se paga al contado.' },
+      ],
+    },
+  ]),
+})
+
+const CLAUSULA_INSCRIPCIONES = clausula({
+  clause_key: 'titulos_inscripciones',
+  title: 'TÍTULOS E INSCRIPCIONES VIGENTES',
+  content_json: doc([
+    {
+      type: 'repeat_section',
+      attrs: { arrayKey: 'titulo.inscripciones' },
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Inscrita a fojas ' },
+            { type: 'variable_token', attrs: { variableKey: 'item.fojas', label: 'Fojas' } },
+            { type: 'text', text: '.' },
+          ],
+        },
+      ],
+    },
+  ]),
+  resolved_content: doc([
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'Inscrita a fojas ' },
+        { type: 'text', text: '1338' },
+        { type: 'text', text: '.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      content: [
+        { type: 'text', text: 'Inscrita a fojas ' },
+        { type: 'text', text: '2410' },
+        { type: 'text', text: '.' },
+      ],
+    },
+  ]),
+})
+
+describe('fusión estructura↔resuelto: chips con valor real (T011, FR-002/FR-003)', () => {
+  it('un dato verificado queda como chip con el valor del texto resuelto', () => {
+    const bloques = bloquesDeClausula(CLAUSULA_PRECIO, 'resuelta', RESOLUCION)
+    expect(bloques).toHaveLength(1)
+    const parrafo = bloques[0]
+    if (parrafo.kind !== 'parrafo') throw new Error('Se esperaba un párrafo')
+    expect(parrafo.segmentos).toHaveLength(3)
+    expect(parrafo.segmentos[1]).toMatchObject({
+      kind: 'dato',
+      variableKey: 'precio.total_palabras',
+      label: 'Precio en palabras',
+      estado: 'resolved',
+      valor: 'veinte millones de pesos',
+    })
+  })
+
+  it('una sección expandida (repeticiones) cae a texto plano sin fusión y sin perder contenido', () => {
+    const bloques = bloquesDeClausula(CLAUSULA_INSCRIPCIONES, 'resuelta', RESOLUCION)
+    expect(bloques).toHaveLength(2)
+    for (const bloque of bloques) {
+      if (bloque.kind !== 'parrafo') throw new Error('Se esperaba un párrafo')
+      expect(bloque.segmentos.every((segmento) => segmento.kind === 'texto')).toBe(true)
+    }
+    const textos = bloques
+      .flatMap((bloque) => (bloque.kind === 'parrafo' ? bloque.segmentos : []))
+      .map((segmento) => (segmento.kind === 'texto' ? segmento.texto : ''))
+      .join('')
+    expect(textos).toContain('1338')
+    expect(textos).toContain('2410')
+  })
+})
+
+describe('chip de dato (T011, ui-contracts §4)', () => {
+  it('muestra el valor cuando existe y el nombre del dato en el hueco vacío', () => {
+    expect(
+      textoDelChip({ estado: 'resolved', valor: '12.345.678-9', label: 'RUT de la compradora' })
+    ).toBe('12.345.678-9')
+    expect(
+      textoDelChip({ estado: 'missing', valor: null, label: 'Estado civil de la compradora' })
+    ).toBe('Estado civil de la compradora')
+    expect(textoDelChip({ estado: 'blocked', valor: null, label: 'Precio en palabras' })).toBe(
+      'Precio en palabras'
+    )
+  })
+
+  it('los data-testid del contrato usan estados en español', () => {
+    expect(DATO_CHIP_TESTID).toEqual({
+      resolved: 'dato-chip-verificado',
+      blocked: 'dato-chip-por-revisar',
+      missing: 'dato-chip-falta',
+    })
+  })
+})
+
+describe('popover de evidencia (T011, FR-003)', () => {
+  it('el CTA de corrección apunta al CCL con la variable enfocada', () => {
+    expect(urlCorreccion('p1', 'comprador.rut')).toBe(
+      '/projects/p1?tab=legal&variable=comprador.rut'
+    )
+    expect(urlCorreccion('p1')).toBe('/projects/p1?tab=legal')
+  })
+
+  it('mapea las referencias del expediente al visor de evidencia', () => {
+    const documentos = evidenciaDocumental([
+      {
+        legal_document_id: 'doc-1',
+        legal_document_page_id: 'pagina-7',
+        page_number: 7,
+        snippet: 'cédula nacional de identidad número 12.345.678-9',
+      },
+      { legal_document_id: null, legal_document_page_id: null, page_number: null, snippet: null },
+    ])
+    expect(documentos[0]).toMatchObject({
+      id: 'pagina-7',
+      legal_document_id: 'doc-1',
+      page_number: 7,
+      snippet: 'cédula nacional de identidad número 12.345.678-9',
+    })
+    expect(documentos[1].legal_document_id).toBe('sin-documento')
   })
 })
 
@@ -410,7 +563,24 @@ describe('cableado de la ruta y los componentes', () => {
     expect(source).toContain('MESA_TEXT.mostrarEstructura')
     expect(source).toContain('data-testid="clausula-omitida"')
     expect(source).toContain('data-testid="bloque-titulo"')
-    expect(source).toContain('data-testid="dato-hueco"')
     expect(source).toContain('omitted_reason')
+  })
+
+  it('los datos del texto son chips con popover de evidencia (T011)', () => {
+    const documento = read('src/components/documents/mesa/mesa-documento.tsx')
+    expect(documento).toContain('DatoChip')
+    expect(documento).toContain('DatoPopover')
+
+    const chip = read('src/components/documents/mesa/dato-chip.tsx')
+    expect(chip).toContain('dato-chip-verificado')
+    expect(chip).toContain('dato-chip-por-revisar')
+    expect(chip).toContain('dato-chip-falta')
+    expect(chip).toContain('type="button"')
+
+    const popover = read('src/components/documents/mesa/dato-popover.tsx')
+    expect(popover).toContain('data-testid="dato-popover"')
+    expect(popover).toContain('MESA_TEXT.corregirEnControlLegal')
+    expect(popover).toContain('LegalEvidenceViewer')
+    expect(popover).toContain('compact')
   })
 })
