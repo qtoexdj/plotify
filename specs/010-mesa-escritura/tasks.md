@@ -19,7 +19,7 @@ tarea sin checkear por pasada salvo pedido explicito de mayor alcance.
 
 ## Phase 1: Setup
 
-- [ ] T001 Update active SDD pointers to 010 in `.agents/rules/sdd-implementation.md`, `.agents/rules/plotify-rules.md` and `AGENTS.md`; Verify: `pnpm format:check`
+- [x] T001 Update active SDD pointers to 010 in `.agents/rules/sdd-implementation.md`, `.agents/rules/plotify-rules.md` and `AGENTS.md`; Verify: `pnpm format:check`
 - [ ] T002 Inventario de etiquetas: `VARIABLE_LABELS`, `VARIABLE_GROUP_LABELS` y `variable_label_for_key()` en `apps/api/services/legal_variable_catalog.py` (data-model §1) + test de cobertura 100% en `apps/api/tests/test_variable_catalog_labels.py` + test de paridad de etiquetas de grupo con la copia web del CCL (`apps/web/src/lib/legal/variable-resolution-types.ts`, que permanece para el CCL hasta el rediseno futuro — research D4); Verify: `pnpm test:api`
 - [ ] T003 [P] Diccionario server-side `apps/api/services/legal_microcopy.py` (gates, causas de bloqueo, tipos de alerta, acciones, estados — data-model §2) con tests de redaccion (caso `dl_3516`, `derechos_aguas`, `token_missing`); Verify: `pnpm test:api`
 

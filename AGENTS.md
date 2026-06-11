@@ -18,15 +18,15 @@ shell commands, and other important information, read the current plan:
 
 This repository uses Spec Kit SDD as the implementation authority. The active feature is:
 
-- `specs/008-creador-matriz/spec.md`
-- `specs/008-creador-matriz/plan.md`
-- `specs/008-creador-matriz/agent-execution.md`
-- `specs/008-creador-matriz/tasks.md`
+- `specs/010-mesa-escritura/spec.md`
+- `specs/010-mesa-escritura/plan.md`
+- `specs/010-mesa-escritura/agent-execution.md`
+- `specs/010-mesa-escritura/tasks.md`
 - `.specify/memory/constitution.md`
 
 Before implementation:
 
-1. Read `specs/008-creador-matriz/agent-execution.md`.
+1. Read `specs/010-mesa-escritura/agent-execution.md`.
 2. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
 3. Do not start implementation while critical analyze findings remain unresolved.
 4. Run `git status --short` and `codegraph sync .`.
@@ -46,9 +46,9 @@ Canonical implementation prompt:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/008-creador-matriz/tasks.md.
+Implementa solo TXXX de specs/010-mesa-escritura/tasks.md.
 No avances a otra tarea.
-Lee specs/008-creador-matriz/agent-execution.md.
+Lee specs/010-mesa-escritura/agent-execution.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.
