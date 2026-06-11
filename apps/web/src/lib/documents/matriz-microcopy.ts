@@ -46,6 +46,8 @@ export const MESA_TEXT = {
   conflictoGuardado: 'Otra persona guardó cambios. Recarga antes de seguir.',
   bloqueTitulo: 'Texto aprobado en el estudio de título',
   bloqueTituloAyuda: 'Este texto se corrige en el panel de título del proyecto.',
+  bloqueTituloPendiente: 'Este texto aún no está aprobado en el estudio de título.',
+  datoSinNombre: 'Dato del expediente',
   posicionFija: 'Esta cláusula tiene posición fija',
   clausulaNoAplica: 'Esta cláusula no aplica en este caso',
   plantillaPublicadaInmutable:
