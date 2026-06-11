@@ -115,12 +115,19 @@ class TokenResolution(MatrizResponseModel):
     state: str | None = None
     source_type: str | None = None
     evidence_refs: list[MatrizEvidenceRef] = Field(default_factory=list)
+    # SDD 010 (contracts/api-contracts.md §1): campos humanos aditivos.
+    # Opcionales para tolerar manifiestos persistidos antes de SDD 010.
+    label: str | None = None
+    category: str | None = None
+    category_label: str | None = None
+    source_label: str | None = None
 
 
 class BlockResolution(MatrizResponseModel):
     blockKey: str
     status: TokenResolutionStatus
     text: str | None = None
+    label: str | None = None
 
 
 class ResolutionManifest(MatrizResponseModel):
@@ -146,6 +153,11 @@ class ApprovalBlocker(MatrizResponseModel):
     required_clause: str | None = None
     fix_url: str | None = None
     message: str | None = None
+    # SDD 010 (FR-005): pendiente humanizado redactado server-side.
+    title: str | None = None
+    description: str | None = None
+    action_label: str | None = None
+    action_href: str | None = None
 
 
 class DismissedAlert(MatrizResponseModel):
@@ -173,6 +185,8 @@ class MatrizClauseView(MatrizResponseModel):
     disabled: bool = False
     condition: MatrizClauseCondition | None = None
     alert_tipo: str | None = None
+    # SDD 010 (FR-010): explicacion humana cuando la condicion no se cumple.
+    omitted_reason: str | None = None
 
 
 class MatrizTemplateRef(MatrizResponseModel):
@@ -196,8 +210,17 @@ class MatrizView(MatrizResponseModel):
     dismissed_alerts: list[DismissedAlert] = Field(default_factory=list)
 
 
+# SDD 010 (research D6): catalogo humanizado para el picker "Insertar dato".
+class InsertableVariable(MatrizResponseModel):
+    key: str
+    label: str
+    category: str
+    category_label: str
+
+
 class MatrizCaseResponse(MatrizResponseModel):
     matriz: MatrizView
+    insertable_variables: list[InsertableVariable] = Field(default_factory=list)
 
 
 class MatrizClauseOverride(MatrizBaseModel):

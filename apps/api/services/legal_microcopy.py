@@ -118,6 +118,29 @@ ALERT_REQUIRED_CLAUSE_TEXTS: Final[dict[str, str]] = {
 }
 
 
+# ─── Origen operacional de un dato (cuando no hay evidencia documental) ─────
+
+SOURCE_TYPE_ORIGIN_LABELS: Final[dict[str, str]] = {
+    "system": "Registro de venta del lote",
+    "geometry": "Geometría oficial del lote",
+    "derived": "Calculado automáticamente desde el expediente",
+    "manual": "Ingresado en el Centro de Control Legal",
+    "legal_review": "Definido en la revisión jurídica",
+    "post_minuta": "Definido después de la minuta",
+}
+
+
+def source_origin_label(source_type: str | None) -> str | None:
+    """Descripcion humana del origen de un dato sin evidencia documental.
+
+    ``document`` (y desconocidos) devuelven None: su respaldo se muestra via
+    las referencias de evidencia, no como texto de origen.
+    """
+    if not source_type:
+        return None
+    return SOURCE_TYPE_ORIGIN_LABELS.get(source_type)
+
+
 # ─── Estados de workflow ─────────────────────────────────────────────────────
 
 MATRIZ_STATUS_LABELS: Final[dict[str, str]] = {
@@ -192,15 +215,45 @@ def escritura_case_status_label(status: str) -> str:
     return label
 
 
-def token_missing_microcopy(variable_key: str) -> BlockerMicrocopy:
-    label = variable_label_for_key(variable_key)
+def token_missing_microcopy(
+    variable_key: str, label: str | None = None
+) -> BlockerMicrocopy:
+    """``label`` permite pasar una etiqueta ya resuelta (claves dinamicas
+    de secciones repetidas que el catalogo no conoce de forma exacta)."""
+    resolved_label = label or variable_label_for_key(variable_key)
     return BlockerMicrocopy(
-        title=f"Falta {_lower_first(label)}",
+        title=f"Falta {_lower_first(resolved_label)}",
         description=(
             "Completa este dato en el Centro de Control Legal; la escritura "
             "lo tomará del expediente actualizado."
         ),
         action_label="Completar dato",
+    )
+
+
+def token_blocked_microcopy(
+    variable_key: str, label: str | None = None
+) -> BlockerMicrocopy:
+    resolved_label = label or variable_label_for_key(variable_key)
+    return BlockerMicrocopy(
+        title=f"Dato por revisar: {_lower_first(resolved_label)}",
+        description=(
+            "El dato tiene un valor propuesto que aún no se aprueba. "
+            "Revísalo en el Centro de Control Legal."
+        ),
+        action_label="Revisar dato",
+    )
+
+
+def clause_omitted_reason(condition_key: str) -> str:
+    """Explicacion humana de una clausula condicional que no aplica."""
+    try:
+        condition_label = variable_label_for_key(condition_key)
+    except KeyError:
+        return "No aplica en este caso: la condición declarada no se cumple."
+    return (
+        f"No aplica en este caso: {_lower_first(condition_label)} "
+        "no se cumple."
     )
 
 

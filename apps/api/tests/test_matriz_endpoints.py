@@ -733,9 +733,16 @@ class TestAlertClauseContract:
             if blocker["kind"] == "alert_clause_missing"
             and blocker["alert_tipo"] == "derechos_aguas"
         )
-        assert blocker["required_clause"] == "Water-rights clause (included or expressly reserved)"
+        assert blocker["required_clause"] == (
+            "Cláusula de derechos de aguas, incluidos o expresamente reservados."
+        )
         assert blocker["fix_url"] == "/documentos/plantillas"
         assert blocker["message"] == "Agregar reserva expresa de derechos de aguas."
+        assert blocker["title"] == (
+            "Falta la cláusula comprometida: Derechos de aguas"
+        )
+        assert blocker["action_label"] == "Agregar cláusula"
+        assert blocker["action_href"] == "/documentos/plantillas"
 
     def test_get_accepts_clause_added_alert_when_active_clause_has_alert_tipo(
         self, monkeypatch
@@ -915,14 +922,21 @@ class TestGenerateMinuta:
         assert response.status_code == 422
         detail = response.json()["detail"]
         assert detail["code"] == "readiness_blocked"
-        assert detail["blocking"] == [
-            {
-                "kind": "readiness_gate",
-                "gate": "title_verified",
-                "cause": "titulo.clausula_primero_texto",
-                "fix_url": f"/projects/{PROJECT_ID}?tab=legal",
-            }
-        ]
+        assert len(detail["blocking"]) == 1
+        blocking = detail["blocking"][0]
+        assert blocking["kind"] == "readiness_gate"
+        assert blocking["gate"] == "title_verified"
+        assert blocking["cause"] == "titulo.clausula_primero_texto"
+        assert blocking["fix_url"] == f"/projects/{PROJECT_ID}?tab=legal"
+        # SDD 010: el pendiente llega redactado server-side.
+        assert blocking["title"] == (
+            "Verificación pendiente: estudio de título aprobado"
+        )
+        assert blocking["description"].startswith(
+            "Falta cláusula PRIMERO (texto aprobado)."
+        )
+        assert blocking["action_label"] == "Revisar estudio de título"
+        assert blocking["action_href"] == f"/projects/{PROJECT_ID}?tab=legal"
         assert store.storage.uploads == []
         assert store.tables.get("escritura_minuta_generations") is None
 

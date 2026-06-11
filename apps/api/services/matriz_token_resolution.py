@@ -25,18 +25,82 @@ Resolution semantics:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
 from core.logger import get_logger
+from services.legal_microcopy import source_origin_label
 from services.legal_title_words import (
     date_to_words_spanish,
     number_to_words_spanish,
     parse_int_or_none,
     rut_to_words_spanish,
 )
+from services.legal_variable_catalog import (
+    VARIABLE_GROUP_LABELS,
+    variable_group_for_key,
+    variable_label_for_key,
+)
 
 logger = get_logger(__name__)
+
+# SDD 010 (research D11/D4): claves de presentacion derivadas — se renderizan
+# deterministicamente y no viven en el catalogo, pero igual necesitan
+# etiqueta humana en el manifiesto.
+DERIVED_KEY_LABELS = {
+    "proyecto.nombre": "Nombre del proyecto",
+    "vendedor.representantes_texto": "Representantes del vendedor",
+}
+
+_ARRAY_ITEM_RE = re.compile(r"^(?P<base>.+)\[(?P<index>\d+)\]\.(?P<field>.+)$")
+_FALLBACK_CATEGORY = ("otros", "Otros datos")
+
+
+def _humanize_fragment(fragment: str) -> str:
+    return fragment.replace("_", " ").strip()
+
+
+def token_label(variable_key: str, override: str | None = None) -> str:
+    """Etiqueta humana de cualquier clave del manifiesto (SDD 010 FR-002).
+
+    Orden: override de plantilla → catalogo → claves derivadas → claves de
+    filas repetidas (``array[N].campo``) → humanizacion determinista. Nunca
+    devuelve la clave cruda.
+    """
+    if override and override.strip() and override.strip() != variable_key:
+        return override.strip()
+    derived = DERIVED_KEY_LABELS.get(variable_key)
+    if derived is not None:
+        return derived
+    try:
+        return variable_label_for_key(variable_key)
+    except KeyError:
+        pass
+    match = _ARRAY_ITEM_RE.match(variable_key)
+    if match:
+        base_label = token_label(f"{match.group('base')}[]")
+        row = int(match.group("index")) + 1
+        return (
+            f"{base_label} (fila {row}): "
+            f"{_humanize_fragment(match.group('field'))}"
+        )
+    fragment = _humanize_fragment(
+        variable_key.removesuffix("[]").rsplit(".", 1)[-1]
+    )
+    return fragment[:1].upper() + fragment[1:] if fragment else "Dato"
+
+
+def token_category(variable_key: str) -> tuple[str, str]:
+    """(categoria, etiqueta de categoria) de una clave del manifiesto."""
+    group = variable_group_for_key(variable_key)
+    if group is None:
+        prefix = variable_key.split(".", 1)[0]
+        if prefix in VARIABLE_GROUP_LABELS:
+            group = prefix
+    if group is None:
+        return _FALLBACK_CATEGORY
+    return group, VARIABLE_GROUP_LABELS[group]
 
 MATRIZ_SCHEMA_VERSION = 1
 
@@ -78,8 +142,10 @@ class TokenResolutionEntry:
     state: str | None = None
     source_type: str | None = None
     evidence_refs: tuple[dict[str, Any], ...] = ()
+    label_override: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        category, category_label = token_category(self.variable_key)
         return {
             "variableKey": self.variable_key,
             "status": self.status,
@@ -87,6 +153,17 @@ class TokenResolutionEntry:
             "state": self.state,
             "source_type": self.source_type,
             "evidence_refs": list(self.evidence_refs),
+            # SDD 010: campos humanos (contracts/api-contracts.md §1). El
+            # origen operacional solo se describe cuando no hay evidencia
+            # documental que mostrar.
+            "label": token_label(self.variable_key, self.label_override),
+            "category": category,
+            "category_label": category_label,
+            "source_label": (
+                source_origin_label(self.source_type)
+                if not self.evidence_refs
+                else None
+            ),
         }
 
 
@@ -101,6 +178,7 @@ class BlockResolutionEntry:
             "blockKey": self.block_key,
             "status": self.status,
             "text": self.text,
+            "label": token_label(self.block_key),
         }
 
 
@@ -248,7 +326,12 @@ class _ClauseResolver:
 
     # ── scalar tokens ──
 
-    def _resolve_scalar(self, key: str, token_format: str | None) -> TokenResolutionEntry:
+    def _resolve_scalar(
+        self,
+        key: str,
+        token_format: str | None,
+        node_label: str | None = None,
+    ) -> TokenResolutionEntry:
         if key == "proyecto.nombre":
             nombre = self.context.get("proyecto_nombre")
             if isinstance(nombre, str) and nombre.strip():
@@ -259,9 +342,14 @@ class _ClauseResolver:
                         value_text=nombre,
                         state="derived",
                         source_type="system",
+                        label_override=node_label,
                     )
                 )
-            return self._record(TokenResolutionEntry(variable_key=key, status="missing"))
+            return self._record(
+                TokenResolutionEntry(
+                    variable_key=key, status="missing", label_override=node_label
+                )
+            )
 
         if key == "vendedor.representantes_texto":
             texto = _representantes_texto(self.snapshot)
@@ -273,9 +361,14 @@ class _ClauseResolver:
                         value_text=texto,
                         state="derived",
                         source_type="derived",
+                        label_override=node_label,
                     )
                 )
-            return self._record(TokenResolutionEntry(variable_key=key, status="missing"))
+            return self._record(
+                TokenResolutionEntry(
+                    variable_key=key, status="missing", label_override=node_label
+                )
+            )
 
         entry = snapshot_entry(self.snapshot, key)
         if entry is None and key.startswith(TITULO_PREFIX):
@@ -288,11 +381,20 @@ class _ClauseResolver:
                         value_text=_apply_format(value, token_format),
                         state="approved",
                         source_type="document",
+                        label_override=node_label,
                     )
                 )
-            return self._record(TokenResolutionEntry(variable_key=key, status="missing"))
+            return self._record(
+                TokenResolutionEntry(
+                    variable_key=key, status="missing", label_override=node_label
+                )
+            )
         if entry is None:
-            return self._record(TokenResolutionEntry(variable_key=key, status="missing"))
+            return self._record(
+                TokenResolutionEntry(
+                    variable_key=key, status="missing", label_override=node_label
+                )
+            )
 
         state = str(entry.get("state") or "")
         if state == "not_applicable":
@@ -303,6 +405,7 @@ class _ClauseResolver:
                     value_text="",
                     state=state,
                     source_type=entry.get("source_type"),
+                    label_override=node_label,
                 )
             )
         text = _entry_text(entry)
@@ -313,6 +416,7 @@ class _ClauseResolver:
                     status="missing",
                     state=state or None,
                     source_type=entry.get("source_type"),
+                    label_override=node_label,
                 )
             )
         status = "blocked" if state in BLOCKED_SNAPSHOT_STATES else "resolved"
@@ -324,6 +428,7 @@ class _ClauseResolver:
                 state=state or None,
                 source_type=entry.get("source_type"),
                 evidence_refs=self._evidence_refs(key),
+                label_override=node_label,
             )
         )
 
@@ -364,6 +469,8 @@ class _ClauseResolver:
             attrs = node.get("attrs") or {}
             key = str(attrs.get("variableKey") or "")
             token_format = attrs.get("format")
+            node_label = attrs.get("label")
+            node_label = str(node_label) if node_label else None
 
             if key.startswith(ITEM_PREFIX):
                 if repeat_item is None or repeat_context is None:
@@ -385,7 +492,7 @@ class _ClauseResolver:
                 resolved.append(_text_node(_apply_format(str(value), token_format)))
                 continue
 
-            entry = self._resolve_scalar(key, token_format)
+            entry = self._resolve_scalar(key, token_format, node_label)
             if entry.status == "missing":
                 resolved.append(node)
             else:

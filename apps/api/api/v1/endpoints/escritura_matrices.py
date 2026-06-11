@@ -18,6 +18,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from urllib.parse import quote
+
 from api.deps import verify_internal_secret
 from core.logger import get_logger
 from schemas.escritura_matrices import (
@@ -31,9 +33,22 @@ from schemas.escritura_matrices import (
     MinutaGenerationListResponse,
     StageOperationalResult,
 )
+from services.legal_microcopy import (
+    ALERT_REQUIRED_CLAUSE_TEXTS,
+    BlockerMicrocopy,
+    alert_clause_missing_microcopy,
+    clause_omitted_reason,
+    readiness_gate_microcopy,
+    snapshot_stale_microcopy,
+    token_blocked_microcopy,
+    token_missing_microcopy,
+)
+from services.legal_variable_catalog import VARIABLE_KEYS
 from services.matriz_token_resolution import (
     UnknownNodeError,
     resolve_matriz_clauses,
+    token_category,
+    token_label,
 )
 from services.matriz_docx_renderer import (
     MatrizDocxError,
@@ -77,16 +92,19 @@ GENERATION_COLUMNS = (
     "warning_acknowledged_at, generated_by, generated_at"
 )
 MINUTA_STORAGE_BUCKET = "documents"
-ALERT_REQUIRED_CLAUSE_LABELS = {
-    "dl_3516": "LGUC 55/56 / DL 3.516 destination-prohibition clause",
-    "derechos_aguas": "Water-rights clause (included or expressly reserved)",
-    "vigente_en_el_resto": "Antecedent wording acknowledging the partial transfer",
-    "multi_inmueble": "Singularization clause limiting the sale to the subject property",
-    "gravamen": "Clause acknowledging or raising the mortgage/encumbrance",
-    "personeria_requerida": "Representation recitals citing the personeria",
-    "discrepancia_declaracion": "Clarifying declaration agreed by the lawyer",
-    "otro": "Lawyer-defined clause per the resolution reason",
-}
+
+# SDD 010 (research D6): catalogo humanizado para el picker "Insertar dato",
+# construido una vez desde el catalogo canonico (claves removidas jamas
+# aparecen porque VARIABLE_KEYS es el catalogo vigente).
+INSERTABLE_VARIABLES: list[dict[str, str]] = [
+    {
+        "key": key,
+        "label": token_label(key),
+        "category": token_category(key)[0],
+        "category_label": token_category(key)[1],
+    }
+    for key in VARIABLE_KEYS
+]
 
 
 def _first_row(data: Any) -> dict[str, Any] | None:
@@ -381,11 +399,33 @@ def _effective_clauses(
             "disabled": disabled,
             "condition": condition,
             "alert_tipo": clause.get("alert_tipo"),
+            # SDD 010 (FR-010): la clausula condicional que no aplica explica
+            # su regla en lenguaje humano.
+            "omitted_reason": (
+                clause_omitted_reason(str(condition_key))
+                if condition is not None and not condition["active"]
+                else None
+            ),
         }
         view_clauses.append(view)
         if not disabled:
             active_clauses.append({**clause, "position": index})
     return view_clauses, active_clauses
+
+
+def _humanized(blocker: dict[str, Any], copy: BlockerMicrocopy, action_href: str | None) -> dict[str, Any]:
+    """Adjunta los campos humanos SDD 010 (FR-005) a un blocker."""
+    return {
+        **blocker,
+        "title": copy.title,
+        "description": copy.description,
+        "action_label": copy.action_label,
+        "action_href": action_href,
+    }
+
+
+def _variable_fix_url(project_id: str, key: str) -> str:
+    return f"/projects/{project_id}?tab=legal&variable={quote(key, safe='')}"
 
 
 def _approval_blockers(
@@ -400,40 +440,66 @@ def _approval_blockers(
     blockers: list[dict[str, Any]] = []
     if snapshot_stale:
         blockers.append(
-            {
-                "kind": "snapshot_stale",
-                "message": "El snapshot del caso cambió; recarga la matriz antes de guardar o aprobar.",
-                "fix_url": fix_url,
-            }
+            _humanized(
+                {
+                    "kind": "snapshot_stale",
+                    "message": "El expediente del caso cambió; recarga la matriz antes de guardar o aprobar.",
+                    "fix_url": fix_url,
+                },
+                snapshot_stale_microcopy(),
+                None,
+            )
         )
 
     for token in manifest.get("tokens") or []:
         if not isinstance(token, dict) or token.get("status") == "resolved":
             continue
         key = str(token.get("variableKey") or "")
+        label = token.get("label") or token_label(key)
+        blocked = token.get("status") == "blocked"
+        copy = (
+            token_blocked_microcopy(key, label)
+            if blocked
+            else token_missing_microcopy(key, label)
+        )
         blockers.append(
-            {
-                "kind": "token_missing",
-                "key": key,
-                "message": (
-                    "Token pendiente de revisión."
-                    if token.get("status") == "blocked"
-                    else "Token sin valor en el snapshot."
-                ),
-                "fix_url": fix_url,
-            }
+            _humanized(
+                {
+                    "kind": "token_missing",
+                    "key": key,
+                    "message": (
+                        "Dato pendiente de revisión."
+                        if blocked
+                        else "Dato sin valor en el expediente."
+                    ),
+                    "fix_url": fix_url,
+                },
+                copy,
+                _variable_fix_url(project_id, key),
+            )
         )
     for block in manifest.get("blocks") or []:
         if not isinstance(block, dict) or block.get("status") == "resolved":
             continue
         key = str(block.get("blockKey") or "")
         blockers.append(
-            {
-                "kind": "token_missing",
-                "key": key,
-                "message": "Bloque narrativo sin texto aprobado en el snapshot.",
-                "fix_url": fix_url,
-            }
+            _humanized(
+                {
+                    "kind": "token_missing",
+                    "key": key,
+                    "message": "Bloque narrativo sin texto aprobado en el expediente.",
+                    "fix_url": fix_url,
+                },
+                BlockerMicrocopy(
+                    title=f"Falta el texto aprobado: {token_label(key)}",
+                    description=(
+                        "El texto se redacta y aprueba en el estudio de "
+                        "título del proyecto."
+                    ),
+                    action_label="Revisar estudio de título",
+                ),
+                fix_url,
+            )
         )
 
     blockers.extend(_readiness_gate_blockers(case_row=case_row, fix_url=fix_url))
@@ -476,15 +542,19 @@ def _alert_clause_blockers(
             continue
         seen.add(tipo)
         blockers.append(
-            {
-                "kind": "alert_clause_missing",
-                "alert_tipo": tipo,
-                "required_clause": ALERT_REQUIRED_CLAUSE_LABELS.get(
-                    tipo, ALERT_REQUIRED_CLAUSE_LABELS["otro"]
-                ),
-                "message": alert.get("reason") or alert.get("resolution_reason"),
-                "fix_url": fix_url,
-            }
+            _humanized(
+                {
+                    "kind": "alert_clause_missing",
+                    "alert_tipo": tipo,
+                    "required_clause": ALERT_REQUIRED_CLAUSE_TEXTS.get(
+                        tipo, ALERT_REQUIRED_CLAUSE_TEXTS["otro"]
+                    ),
+                    "message": alert.get("reason") or alert.get("resolution_reason"),
+                    "fix_url": fix_url,
+                },
+                alert_clause_missing_microcopy(tipo),
+                fix_url,
+            )
         )
     return blockers
 
@@ -501,13 +571,31 @@ def _readiness_gate_blockers(
         if not causes:
             causes = [None]
         for cause in causes:
+            cause_text = str(cause) if cause is not None else None
+            try:
+                copy = readiness_gate_microcopy(str(gate), cause_text)
+            except KeyError:
+                # Gate fuera del catalogo (futuro): texto generico, nunca 500
+                # ni codigo crudo en pantalla.
+                copy = BlockerMicrocopy(
+                    title="Verificación pendiente del caso",
+                    description=(
+                        "Una verificación del caso sigue bloqueada. "
+                        "Se revisa en el Centro de Control Legal."
+                    ),
+                    action_label="Completar dato",
+                )
             blockers.append(
-                {
-                    "kind": "readiness_gate",
-                    "gate": str(gate),
-                    "cause": str(cause) if cause is not None else None,
-                    "fix_url": fix_url,
-                }
+                _humanized(
+                    {
+                        "kind": "readiness_gate",
+                        "gate": str(gate),
+                        "cause": cause_text,
+                        "fix_url": fix_url,
+                    },
+                    copy,
+                    fix_url,
+                )
             )
     return blockers
 
@@ -609,7 +697,8 @@ async def _case_response(
                     snapshot_stale=snapshot_stale,
                 ),
                 "dismissed_alerts": _dismissed_alerts(variable_snapshot),
-            }
+            },
+            "insertable_variables": INSERTABLE_VARIABLES,
         }
     )
 
