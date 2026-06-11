@@ -281,6 +281,138 @@ VARIABLE_GROUP_BY_KEY: Final[dict[str, str]] = {
     key: group for group, keys in VARIABLE_KEYS_BY_GROUP.items() for key in keys
 }
 
+# SDD 010 (research D4): fuente unica de etiquetas humanas es-CL. La copia
+# web de los grupos (`LEGAL_VARIABLE_GROUP_LABELS`) queda para el CCL hasta
+# su rediseno; un test de paridad evita divergencia. Toda clave del catalogo
+# DEBE tener etiqueta (test de inventario al 100%).
+VARIABLE_GROUP_LABELS: Final[dict[str, str]] = {
+    "documento": "Documento",
+    "revision_juridica": "Revisión jurídica",
+    "vendedor": "Vendedor",
+    "comprador": "Comprador",
+    "personeria": "Personería",
+    "matriz": "Predio matriz",
+    "sag": "SAG y plano",
+    "sii": "Roles SII",
+    "lote": "Lote",
+    "servidumbre": "Servidumbre",
+    "transaccion": "Precio y pago",
+    "clausulas": "Cláusulas",
+    "mandato": "Mandato",
+    "evidencia": "Evidencia",
+    "titulo": "Estudio de título",
+}
+
+VARIABLE_LABELS: Final[dict[str, str]] = {
+    "documento.tipo": "Tipo de documento",
+    "documento.ciudad_otorgamiento": "Ciudad de otorgamiento",
+    "documento.fecha_otorgamiento": "Fecha de otorgamiento",
+    "documento.repertorio_numero": "Número de repertorio",
+    "documento.notario.nombre": "Nombre del notario",
+    "documento.notaria.direccion": "Dirección de la notaría",
+    "documento.notaria.jurisdiccion": "Jurisdicción de la notaría",
+    "documento.abogado_redactor.nombre": "Nombre del abogado redactor",
+    "documento.abogado_redactor.rut": "RUT del abogado redactor",
+    "documento.abogado_redactor.email": "Correo del abogado redactor",
+    "revision_juridica.estado": "Estado de la revisión jurídica",
+    "revision_juridica.aprobada_por": "Revisión aprobada por",
+    "revision_juridica.aprobada_at": "Fecha de aprobación de la revisión",
+    "vendedor.tipo": "Tipo de vendedor",
+    "vendedor.nombre": "Nombre del vendedor",
+    "vendedor.rut": "RUT del vendedor",
+    "vendedor.domicilio": "Domicilio del vendedor",
+    "vendedor.profesion_giro": "Profesión o giro del vendedor",
+    "vendedor.representantes[]": "Representantes del vendedor",
+    "comprador.nombre": "Nombre del comprador",
+    "comprador.rut": "RUT del comprador",
+    "comprador.domicilio": "Domicilio del comprador",
+    "comprador.estado_civil": "Estado civil del comprador",
+    "comprador.profesion_giro": "Profesión o giro del comprador",
+    "comprador.nacionalidad": "Nacionalidad del comprador",
+    "personeria.aplica": "Aplica personería",
+    "personeria.constitucion_texto": "Texto de constitución de la sociedad",
+    "personeria.poder_texto": "Texto del poder de representación",
+    "personeria.estado_revision": "Estado de revisión de la personería",
+    "personeria.delegacion_facultades": "Delegación de facultades",
+    "matriz.nombre_predio": "Nombre del predio matriz",
+    "matriz.ubicacion": "Ubicación del predio matriz",
+    "matriz.comuna": "Comuna del predio matriz",
+    "matriz.provincia": "Provincia del predio matriz",
+    "matriz.region": "Región del predio matriz",
+    "matriz.superficie_total": "Superficie total del predio matriz",
+    "matriz.deslindes.*": "Deslindes del predio matriz",
+    "matriz.rol_avaluo": "Rol de avalúo del predio matriz",
+    "sag.certificado_numero": "Número del certificado SAG",
+    "sag.certificado_fecha": "Fecha del certificado SAG",
+    "sag.region_oficina": "Región de la oficina SAG",
+    "sag.oficina_sectorial": "Oficina sectorial SAG",
+    "sag.plano_cbr_numero": "Número del plano en el CBR",
+    "sag.plano_cbr_anio": "Año del plano en el CBR",
+    "sag.plano_cbr_registro": "Registro del plano en el CBR",
+    "sii.certificado_asignacion_roles_numero": (
+        "Número del certificado de asignación de roles"
+    ),
+    "sii.certificado_fecha_emision": "Fecha de emisión del certificado SII",
+    "sii.solicitud_numero": "Número de solicitud SII",
+    "sii.rol_matriz": "Rol SII de la matriz",
+    "sii.pre_rol_lote": "Pre-rol SII del lote",
+    "sii.rol_avaluo_en_tramite_texto": "Rol de avalúo en trámite",
+    "sii.rol_avaluo_definitivo": "Rol de avalúo definitivo",
+    "sii.unidad_nombre": "Nombre de la unidad SII",
+    "lote.numero": "Número del lote",
+    "lote.numero_nombre": "Número o nombre del lote",
+    "lote.superficie_m2": "Superficie del lote en metros cuadrados",
+    "lote.superficie_texto": "Superficie del lote en palabras",
+    "lote.superficie_ha_texto": "Superficie del lote en hectáreas, en palabras",
+    "lote.boundaries_official": "Geometría oficial del lote",
+    "lote.deslindes": "Deslindes del lote",
+    "lote.rol_tramite": "Rol en trámite del lote",
+    "servidumbre.aplica": "Aplica servidumbre",
+    "servidumbre.superficie_m2": "Superficie de la servidumbre en metros cuadrados",
+    "servidumbre.superficie_texto": "Superficie de la servidumbre en palabras",
+    "servidumbre.deslindes_tramo": "Deslindes del tramo de servidumbre",
+    "servidumbre.predio_sirviente": "Predio sirviente",
+    "servidumbre.predios_dominantes": "Predios dominantes",
+    "transaccion.precio_numeros": "Precio de venta en números",
+    "transaccion.precio_letras": "Precio de venta en palabras",
+    "transaccion.moneda": "Moneda",
+    "transaccion.forma_pago": "Forma de pago",
+    "transaccion.detalle_pago[]": "Detalle del pago",
+    "transaccion.saldo_pendiente": "Saldo pendiente",
+    "clausulas.cuerpo_cierto": "Venta como cuerpo cierto",
+    "clausulas.saneamiento_eviccion": "Saneamiento de la evicción",
+    "clausulas.exencion_eviccion_aprobada": "Exención de evicción aprobada",
+    "clausulas.exencion_eviccion_texto": "Texto de la exención de evicción",
+    "clausulas.entrega_material": "Entrega material del inmueble",
+    "clausulas.entrega_fecha": "Fecha de entrega material",
+    "clausulas.ocupantes_excepciones": "Excepciones de ocupantes",
+    "clausulas.gastos_cargo": "Gastos a cargo de",
+    "clausulas.gastos_excepciones": "Excepciones al reparto de gastos",
+    "clausulas.domicilio_contractual": "Domicilio contractual",
+    "clausulas.tribunales_competentes": "Tribunales competentes",
+    "clausulas.promesa_finiquito": "Finiquito de la promesa",
+    "clausulas.factibilidad_servicios": "Factibilidad de servicios",
+    "clausulas.lguc_destino_suelo": "Destino de suelo según LGUC",
+    "clausulas.rnda_declaracion": "Declaración RNDA",
+    "mandato.rectificacion_nombre": "Nombre para el mandato de rectificación",
+    "mandato.rectificacion_rut": "RUT para el mandato de rectificación",
+    "mandato.facultades": "Facultades del mandato",
+    "evidencia.documentos_fuente[]": "Documentos fuente",
+    "evidencia.estado": "Estado de la evidencia",
+    "evidencia.gravamenes_excepciones": "Excepciones de gravámenes",
+    "evidencia.certificado_gp_referencia": (
+        "Referencia del certificado de gravámenes y prohibiciones"
+    ),
+    "titulo.estructura": "Estructura del título",
+    "titulo.inscripciones[]": "Inscripciones del título",
+    "titulo.propietarios[]": "Propietarios actuales",
+    "titulo.comparecencia_vendedor_texto": (
+        "Comparecencia del vendedor (texto aprobado)"
+    ),
+    "titulo.clausula_primero_texto": "Cláusula PRIMERO (texto aprobado)",
+    "titulo.alertas[]": "Alertas del estudio de título",
+}
+
 ROLE_STATUSES: Final[tuple[str, ...]] = (
     "missing",
     "rol_en_tramite",
@@ -443,3 +575,28 @@ def variable_group_for_key(variable_key: str) -> str | None:
     if variable_key.startswith("matriz.deslindes."):
         return "matriz"
     return VARIABLE_GROUP_BY_KEY.get(variable_key)
+
+
+def variable_label_for_key(variable_key: str) -> str:
+    """Etiqueta humana es-CL de una clave del catalogo.
+
+    Sin fallback silencioso: una clave desconocida es un error del llamador
+    (la UI jamas debe mostrar una clave cruda). Las claves dinamicas de
+    deslindes (`matriz.deslindes.norte`) se componen deterministicamente.
+    """
+    label = VARIABLE_LABELS.get(variable_key)
+    if label is not None:
+        return label
+    if variable_key.startswith("matriz.deslindes."):
+        suffix = variable_key.removeprefix("matriz.deslindes.").replace("_", " ").strip()
+        if suffix and suffix != "*":
+            return f"Deslinde {suffix} del predio matriz"
+        return VARIABLE_LABELS["matriz.deslindes.*"]
+    raise KeyError(f"Variable sin etiqueta en el catalogo: {variable_key}")
+
+
+def variable_group_label(group: str) -> str:
+    label = VARIABLE_GROUP_LABELS.get(group)
+    if label is None:
+        raise KeyError(f"Grupo sin etiqueta en el catalogo: {group}")
+    return label
