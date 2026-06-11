@@ -15,8 +15,8 @@ Este componente es el motor FastAPI/LangGraph de Plotify para mensajería, aprob
 # Protocolo SDD de Inicio del Agente
 Antes de escribir o modificar código en `apps/api`, confirma:
 
-1. La tarea exacta de `specs/009-titulo-dominio-vigente/tasks.md`.
-2. El protocolo de `specs/009-titulo-dominio-vigente/agent-execution.md`.
+1. La tarea exacta de `specs/008-creador-matriz/tasks.md`.
+2. El protocolo de `specs/008-creador-matriz/agent-execution.md`.
 3. Que no quedan hallazgos `CRITICAL` pendientes de `$speckit-analyze`.
 4. `git status --short`.
 5. `codegraph sync .`.

@@ -175,6 +175,40 @@ def superficie_to_words(sup: str) -> str:
     return f"{words} {unit}"
 
 
+def _quantity_to_words(value: float) -> str:
+    """Whole + decimal quantity in words: 385.5 -> 'trescientos ochenta y cinco coma cinco'."""
+    whole = int(value)
+    decimals = round((value - whole) * 100)
+    words = number_to_words_spanish(whole)
+    if decimals:
+        # ,50 reads as the bare digit ('coma cinco'), matching notarial usage.
+        if decimals % 10 == 0:
+            decimals //= 10
+        words = f"{words} coma {number_to_words_spanish(decimals)}"
+    return words
+
+
+def pesos_to_words(amount: int | float) -> str:
+    """Chilean pesos amount in words (SDD 008 D4): 45000000 -> 'cuarenta y
+    cinco millones de pesos'; 45500000 -> 'cuarenta y cinco millones
+    quinientos mil pesos' (no 'de' when the number does not end in millones).
+    """
+    words = number_to_words_spanish(int(round(amount)))
+    if words.endswith(("millón", "millones")):
+        return f"{words} de pesos"
+    return f"{words} pesos"
+
+
+def metros_cuadrados_to_words(value: int | float) -> str:
+    """5100 -> 'cinco mil cien metros cuadrados'."""
+    return f"{_quantity_to_words(float(value))} metros cuadrados"
+
+
+def hectareas_to_words(value: int | float) -> str:
+    """0.51 -> 'cero coma cincuenta y uno hectáreas'."""
+    return f"{_quantity_to_words(float(value))} hectáreas"
+
+
 def normalize_text(text: str | None) -> str:
     """Lowercase, strip accents and collapse whitespace for robust comparison."""
     if text is None:

@@ -9,12 +9,12 @@ Esta regla aplica a Codex CLI, Codex en VSCode, Antigravity y cualquier agente q
 ## Artefactos Activos
 
 - Constitución: `.specify/memory/constitution.md`
-- Feature activa: `specs/009-titulo-dominio-vigente/`
-- Spec: `specs/009-titulo-dominio-vigente/spec.md`
-- Plan: `specs/009-titulo-dominio-vigente/plan.md`
-- Protocolo agentes/subagentes: `specs/009-titulo-dominio-vigente/agent-execution.md`
-- Tareas: `specs/009-titulo-dominio-vigente/tasks.md`
-- Contratos de diseño: `specs/009-titulo-dominio-vigente/contracts/`
+- Feature activa: `specs/008-creador-matriz/`
+- Spec: `specs/008-creador-matriz/spec.md`
+- Plan: `specs/008-creador-matriz/plan.md`
+- Protocolo agentes/subagentes: `specs/008-creador-matriz/agent-execution.md`
+- Tareas: `specs/008-creador-matriz/tasks.md`
+- Contratos de diseño: `specs/008-creador-matriz/contracts/`
 
 ## Orden de Trabajo
 
@@ -31,7 +31,7 @@ No saltes directo a implementación si `analyze` reporta issues `CRITICAL`.
 ## Protocolo Antes de Implementar
 
 1. Lee la primera tarea pendiente en `tasks.md`.
-2. Lee `specs/009-titulo-dominio-vigente/agent-execution.md`.
+2. Lee `specs/008-creador-matriz/agent-execution.md`.
 3. Confirma dependencias previas y fase.
 4. Ejecuta `git status --short`.
 5. Ejecuta `codegraph sync .`.
@@ -54,9 +54,9 @@ No saltes directo a implementación si `analyze` reporta issues `CRITICAL`.
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/009-titulo-dominio-vigente/tasks.md.
+Implementa solo TXXX de specs/008-creador-matriz/tasks.md.
 No avances a otra tarea.
-Lee specs/009-titulo-dominio-vigente/agent-execution.md.
+Lee specs/008-creador-matriz/agent-execution.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.

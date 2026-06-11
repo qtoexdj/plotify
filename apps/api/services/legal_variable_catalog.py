@@ -133,6 +133,9 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "documento.repertorio_numero",
         "documento.notario.nombre",
         "documento.notaria.direccion",
+        # SDD 008 (research D11): jurisdiccion de la notaria usada por la
+        # clausula de comparecencia del template golden.
+        "documento.notaria.jurisdiccion",
         "documento.abogado_redactor.nombre",
         "documento.abogado_redactor.rut",
         "documento.abogado_redactor.email",
@@ -156,12 +159,18 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "comprador.domicilio",
         "comprador.estado_civil",
         "comprador.profesion_giro",
+        # SDD 008 (research D11): hecho juridico independiente; no existe en
+        # lot_records, entra manual via CCL. Nunca se infiere del nombre.
+        "comprador.nacionalidad",
     ),
     "personeria": (
         "personeria.aplica",
         "personeria.constitucion_texto",
         "personeria.poder_texto",
         "personeria.estado_revision",
+        # SDD 008 (research D11): delegacion de facultades citada por la
+        # clausula de personeria del template golden.
+        "personeria.delegacion_facultades",
     ),
     "matriz": (
         "matriz.nombre_predio",
@@ -222,8 +231,18 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "clausulas.cuerpo_cierto",
         "clausulas.saneamiento_eviccion",
         "clausulas.exencion_eviccion_aprobada",
+        # SDD 008 (research D11): texto aprobado de la exencion de eviccion
+        # citado por el template golden cuando la exencion aplica.
+        "clausulas.exencion_eviccion_texto",
         "clausulas.entrega_material",
+        # SDD 008 (research D11): fecha pactada de entrega material y
+        # excepciones de ocupantes declaradas en la clausula de entrega.
+        "clausulas.entrega_fecha",
+        "clausulas.ocupantes_excepciones",
         "clausulas.gastos_cargo",
+        # SDD 008 (research D11): excepciones al reparto de gastos del
+        # template golden (p. ej. derechos de inscripcion del comprador).
+        "clausulas.gastos_excepciones",
         "clausulas.domicilio_contractual",
         "clausulas.tribunales_competentes",
         "clausulas.promesa_finiquito",
@@ -239,6 +258,11 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
     "evidencia": (
         "evidencia.documentos_fuente[]",
         "evidencia.estado",
+        # SDD 008 (research D11): excepciones de gravamenes citadas por la
+        # clausula de dominio y referencia al certificado de gravamenes y
+        # prohibiciones del template golden.
+        "evidencia.gravamenes_excepciones",
+        "evidencia.certificado_gp_referencia",
     ),
     "titulo": (
         "titulo.estructura",

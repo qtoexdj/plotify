@@ -912,6 +912,7 @@ async def create_escritura_case_snapshot(
     lot_id: str,
     created_by: str | None = None,
     warning_acknowledged: bool = False,
+    stage_operational: bool = True,
     supabase: Any | None = None,
 ) -> dict[str, Any]:
     """Create a draft escritura case row with deterministic readiness snapshots."""
@@ -919,6 +920,29 @@ async def create_escritura_case_snapshot(
         from core.database import get_supabase_client
 
         supabase = get_supabase_client()
+
+    if stage_operational:
+        # SDD 008 US6: stage comprador/transaccion/lote/servidumbre proposals
+        # from operational rows before snapshotting, so the party/price/
+        # geometry gates see them. A bridge failure must not block the case:
+        # the affected keys simply stay missing and the gates surface them.
+        from services.escritura_operational_bridge import stage_operational_variables
+
+        try:
+            await stage_operational_variables(
+                organization_id=organization_id,
+                project_id=project_id,
+                lot_id=lot_id,
+                supabase=supabase,
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging path
+            logger.warning(
+                "operational_bridge_staging_failed",
+                organization_id=organization_id,
+                project_id=project_id,
+                lot_id=lot_id,
+                error=str(exc),
+            )
 
     readiness = await get_escritura_readiness(
         organization_id=organization_id,

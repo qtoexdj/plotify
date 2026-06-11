@@ -699,6 +699,295 @@ export type Database = {
           },
         ]
       }
+      escritura_matrices: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          clause_order: Json
+          clause_overrides: Json
+          created_at: string
+          escritura_case_id: string
+          id: string
+          organization_id: string
+          project_id: string
+          snapshot_case_status: string
+          snapshot_hash: string
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          template_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          clause_order?: Json
+          clause_overrides?: Json
+          created_at?: string
+          escritura_case_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+          snapshot_case_status: string
+          snapshot_hash: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          template_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          clause_order?: Json
+          clause_overrides?: Json
+          created_at?: string
+          escritura_case_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          snapshot_case_status?: string
+          snapshot_hash?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          template_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_matrices_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_matrices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_matrices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_matrices_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritura_minuta_generations: {
+        Row: {
+          content_hash: string
+          escritura_case_id: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          matriz_id: string
+          matriz_version: number
+          organization_id: string
+          project_id: string
+          resolution_manifest: Json
+          snapshot_hash: string
+          storage_path: string
+          template_id: string
+          warning_acknowledged_at: string
+          warning_acknowledged_by: string
+        }
+        Insert: {
+          content_hash: string
+          escritura_case_id: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          matriz_id: string
+          matriz_version: number
+          organization_id: string
+          project_id: string
+          resolution_manifest?: Json
+          snapshot_hash: string
+          storage_path: string
+          template_id: string
+          warning_acknowledged_at: string
+          warning_acknowledged_by: string
+        }
+        Update: {
+          content_hash?: string
+          escritura_case_id?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          matriz_id?: string
+          matriz_version?: number
+          organization_id?: string
+          project_id?: string
+          resolution_manifest?: Json
+          snapshot_hash?: string
+          storage_path?: string
+          template_id?: string
+          warning_acknowledged_at?: string
+          warning_acknowledged_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_minuta_generations_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_minuta_generations_matriz_id_fkey"
+            columns: ["matriz_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_matrices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_minuta_generations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_minuta_generations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_minuta_generations_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritura_template_clauses: {
+        Row: {
+          alert_tipo: string | null
+          clause_key: string
+          condition_key: string | null
+          condition_mode: string | null
+          content_json: Json
+          created_at: string
+          fixed_position: boolean
+          id: string
+          organization_id: string
+          position: number
+          template_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          alert_tipo?: string | null
+          clause_key: string
+          condition_key?: string | null
+          condition_mode?: string | null
+          content_json?: Json
+          created_at?: string
+          fixed_position?: boolean
+          id?: string
+          organization_id: string
+          position: number
+          template_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          alert_tipo?: string | null
+          clause_key?: string
+          condition_key?: string | null
+          condition_mode?: string | null
+          content_json?: Json
+          created_at?: string
+          fixed_position?: boolean
+          id?: string
+          organization_id?: string
+          position?: number
+          template_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_template_clauses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_template_clauses_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritura_templates: {
+        Row: {
+          created_at: string
+          document_type: string
+          id: string
+          name: string
+          organization_id: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          document_type?: string
+          id?: string
+          name: string
+          organization_id: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_documents: {
         Row: {
           created_at: string | null
@@ -1062,6 +1351,7 @@ export type Database = {
         Row: {
           decided_at: string
           decided_by: string
+          decision_payload: Json | null
           decision_status: string
           decision_type: string
           escritura_case_id: string | null
@@ -1073,11 +1363,13 @@ export type Database = {
           organization_id: string
           project_id: string
           reason: string | null
+          title_analysis_id: string | null
           variable_resolution_id: string | null
         }
         Insert: {
           decided_at?: string
           decided_by: string
+          decision_payload?: Json | null
           decision_status: string
           decision_type: string
           escritura_case_id?: string | null
@@ -1089,11 +1381,13 @@ export type Database = {
           organization_id: string
           project_id: string
           reason?: string | null
+          title_analysis_id?: string | null
           variable_resolution_id?: string | null
         }
         Update: {
           decided_at?: string
           decided_by?: string
+          decision_payload?: Json | null
           decision_status?: string
           decision_type?: string
           escritura_case_id?: string | null
@@ -1105,6 +1399,7 @@ export type Database = {
           organization_id?: string
           project_id?: string
           reason?: string | null
+          title_analysis_id?: string | null
           variable_resolution_id?: string | null
         }
         Relationships: [
@@ -1134,6 +1429,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_review_decisions_title_analysis_id_fkey"
+            columns: ["title_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "title_analyses"
             referencedColumns: ["id"]
           },
           {
