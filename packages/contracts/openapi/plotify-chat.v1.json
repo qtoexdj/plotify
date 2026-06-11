@@ -857,6 +857,25 @@
         "title": "DocumentVariablesGroup",
         "type": "object"
       },
+      "EscrituraActiveCase": {
+        "properties": {
+          "case_status": {
+            "title": "Case Status",
+            "type": "string"
+          },
+          "case_status_label": {
+            "title": "Case Status Label",
+            "type": "string"
+          },
+          "escritura_case_id": {
+            "title": "Escritura Case Id",
+            "type": "string"
+          }
+        },
+        "required": ["escritura_case_id", "case_status", "case_status_label"],
+        "title": "EscrituraActiveCase",
+        "type": "object"
+      },
       "EscrituraCaseCreateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -924,6 +943,16 @@
       },
       "EscrituraReadinessResponse": {
         "properties": {
+          "active_case": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EscrituraActiveCase"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "evidence_snapshot": {
             "additionalProperties": true,
             "title": "Evidence Snapshot",

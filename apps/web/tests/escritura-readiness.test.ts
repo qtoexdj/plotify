@@ -112,7 +112,9 @@ describe('T052 - Escritura readiness frontend contract', () => {
     expect(panelSource).toContain('LEGAL_REVIEW_WARNING')
     expect(panelSource).toContain('warningAcknowledged')
     expect(panelSource).toContain('blockingGates.length === 0')
-    expect(panelSource).toContain('Crear snapshot')
+    // SDD 010 T009: vocabulario unificado — el boton dejo de llamarse
+    // "Crear snapshot" (jerga vetada en pantalla).
+    expect(panelSource).toContain('Crear expediente de escritura')
     expect(documentsTabSource).toContain('EscrituraReadinessPanel')
     expect(documentsTabSource).toContain("estado === 'vendido'")
     expect(wizardSource).toContain('escrituraCaseReady')

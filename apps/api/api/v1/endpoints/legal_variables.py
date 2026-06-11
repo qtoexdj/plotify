@@ -54,8 +54,10 @@ from services.legal_role_matching import (
 from services.escritura_readiness import (
     EscrituraReadinessScopeError,
     create_escritura_case_snapshot as create_escritura_case_snapshot_service,
+    get_active_escritura_case as get_active_escritura_case_service,
     get_escritura_readiness as get_escritura_readiness_service,
 )
+from services.legal_microcopy import escritura_case_status_label
 
 logger = get_logger(__name__)
 
@@ -513,7 +515,23 @@ async def get_escritura_readiness(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from exc
-    return EscrituraReadinessResponse.model_validate(readiness.to_dict())
+
+    payload = readiness.to_dict()
+    # SDD 010 T009 (handoff SDD 008): caso activo + estado unificado para el
+    # CTA "Abrir mesa de escritura" del CCL.
+    case_row = await get_active_escritura_case_service(
+        organization_id=organization_id,
+        project_id=project_id,
+        lot_id=lot_id,
+    )
+    if case_row and case_row.get("id"):
+        case_status = str(case_row.get("case_status") or "draft")
+        payload["active_case"] = {
+            "escritura_case_id": str(case_row["id"]),
+            "case_status": case_status,
+            "case_status_label": escritura_case_status_label(case_status),
+        }
+    return EscrituraReadinessResponse.model_validate(payload)
 
 
 @router.post(

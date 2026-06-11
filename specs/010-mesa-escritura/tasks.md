@@ -33,7 +33,7 @@ tarea sin checkear por pasada salvo pedido explicito de mayor alcance.
 ## Phase 3: US2 — Llegada guiada y pendientes accionables (P1)
 
 - [x] T008 [US2] `estado-preparacion.tsx` + `pendientes-list.tsx` en `apps/web/src/components/documents/mesa/` y orquestador `mesa-escritura.tsx` que decide preparacion vs mesa desde gates/blockers del GET (research D7); recablear `apps/web/src/app/(dashboard)/documentos/matriz/[caseId]/page.tsx`; tests en `apps/web/tests/mesa-escritura.test.ts`; Verify: `pnpm test:web`
-- [ ] T009 [US2] CTA "Abrir mesa de escritura" + estados unificados del caso en el CCL del proyecto (vocabulario de `matriz-microcopy.ts`, handoff SDD 008); Verify: `pnpm test:web`
+- [x] T009 [US2] CTA "Abrir mesa de escritura" + estados unificados del caso en el CCL del proyecto (vocabulario de `matriz-microcopy.ts`, handoff SDD 008); Verify: `pnpm test:web`
 
 ## Phase 4: US1 — Mesa de lectura con evidencia (P1)
 

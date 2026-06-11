@@ -142,30 +142,95 @@ def test_legal_variables_router_exposes_contract_paths():
             == 200
         )
     assert client.post("/api/v1/legal-roles/match", json={}).status_code == 404
-    with patch.object(
-        legal_variables_endpoint,
-        "get_escritura_readiness_service",
-        new=AsyncMock(
-            return_value=SimpleNamespace(
-                to_dict=lambda: {
-                    "organization_id": "org-1",
-                    "project_id": "project-1",
-                    "lot_id": "lot-1",
-                    "readiness_status": "blocked",
-                    "gates": [],
-                    "variable_snapshot": {},
-                    "evidence_snapshot": {},
-                }
-            )
+    with (
+        patch.object(
+            legal_variables_endpoint,
+            "get_escritura_readiness_service",
+            new=AsyncMock(
+                return_value=SimpleNamespace(
+                    to_dict=lambda: {
+                        "organization_id": "org-1",
+                        "project_id": "project-1",
+                        "lot_id": "lot-1",
+                        "readiness_status": "blocked",
+                        "gates": [],
+                        "variable_snapshot": {},
+                        "evidence_snapshot": {},
+                    }
+                )
+            ),
+        ),
+        patch.object(
+            legal_variables_endpoint,
+            "get_active_escritura_case_service",
+            new=AsyncMock(return_value=None),
         ),
     ):
-        assert (
-            client.get(
-                "/api/v1/escritura-cases/lots/lot-1/readiness",
-                params={"organization_id": "org-1", "project_id": "project-1"},
-            ).status_code
-            == 200
+        response = client.get(
+            "/api/v1/escritura-cases/lots/lot-1/readiness",
+            params={"organization_id": "org-1", "project_id": "project-1"},
         )
+        assert response.status_code == 200
+        assert response.json()["active_case"] is None
+
+
+def test_escritura_readiness_includes_active_case_with_unified_label():
+    """SDD 010 T009: la respuesta de readiness trae el caso activo con su
+    estado redactado por el diccionario (CTA + estado unificado del CCL)."""
+    from api.deps import verify_internal_secret
+    import api.v1.endpoints.legal_variables as legal_variables_endpoint
+    from api.v1.router import api_router
+
+    app = FastAPI()
+
+    async def bypass_secret():
+        return "test"
+
+    app.dependency_overrides[verify_internal_secret] = bypass_secret
+    app.include_router(api_router, prefix="/api/v1")
+    client = TestClient(app, headers={"X-Internal-Secret": "test"})
+
+    with (
+        patch.object(
+            legal_variables_endpoint,
+            "get_escritura_readiness_service",
+            new=AsyncMock(
+                return_value=SimpleNamespace(
+                    to_dict=lambda: {
+                        "organization_id": "org-1",
+                        "project_id": "project-1",
+                        "lot_id": "lot-1",
+                        "readiness_status": "ready",
+                        "gates": [],
+                        "variable_snapshot": {},
+                        "evidence_snapshot": {},
+                    }
+                )
+            ),
+        ),
+        patch.object(
+            legal_variables_endpoint,
+            "get_active_escritura_case_service",
+            new=AsyncMock(
+                return_value={
+                    "id": "case-77",
+                    "case_status": "legal_review_pending",
+                }
+            ),
+        ),
+    ):
+        response = client.get(
+            "/api/v1/escritura-cases/lots/lot-1/readiness",
+            params={"organization_id": "org-1", "project_id": "project-1"},
+        )
+
+    assert response.status_code == 200
+    active_case = response.json()["active_case"]
+    assert active_case == {
+        "escritura_case_id": "case-77",
+        "case_status": "legal_review_pending",
+        "case_status_label": "En revisión legal",
+    }
 
 
 async def test_worker_process_legal_document_ingestion_calls_service_boundary():

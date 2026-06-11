@@ -135,6 +135,11 @@ export interface components {
       "transaccion"?: Record<string, unknown>
       "vendedor"?: Record<string, unknown>
     }
+    "EscrituraActiveCase": {
+      "case_status": string
+      "case_status_label": string
+      "escritura_case_id": string
+    }
     "EscrituraCaseCreateRequest": {
       "created_by"?: string | null
       "organization_id": string
@@ -149,6 +154,7 @@ export interface components {
       "variable_snapshot_count": number
     }
     "EscrituraReadinessResponse": {
+      "active_case"?: components["schemas"]["EscrituraActiveCase"] | null
       "evidence_snapshot"?: Record<string, unknown>
       "gates"?: Array<components["schemas"]["ReadinessGateResponse"]>
       "lot_id": string

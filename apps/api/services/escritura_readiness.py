@@ -905,6 +905,38 @@ async def get_escritura_readiness(
     return readiness
 
 
+async def get_active_escritura_case(
+    *,
+    organization_id: str,
+    project_id: str,
+    lot_id: str,
+    supabase: Any | None = None,
+) -> dict[str, Any] | None:
+    """SDD 010 T009 (handoff SDD 008): caso de escritura activo del lote.
+
+    Devuelve la fila activa (no cancelada) o None; alimenta el CTA "Abrir
+    mesa de escritura" y el estado unificado del caso en el CCL.
+    """
+    if supabase is None:
+        from core.database import get_supabase_client
+
+        supabase = get_supabase_client()
+
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("escritura_cases")
+            .select("id, case_status")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("lot_id", lot_id)
+            .neq("case_status", "cancelled")
+            .maybe_single()
+            .execute()
+        )
+    )
+    return _first_row(result.data) if result is not None else None
+
+
 async def create_escritura_case_snapshot(
     *,
     organization_id: str,

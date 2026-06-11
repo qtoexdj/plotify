@@ -135,6 +135,19 @@ describe('cableado de la ruta y los componentes', () => {
     expect(source).toContain('T013')
   })
 
+  it('el CCL muestra el caso activo con CTA a la mesa y sin jerga (T009)', () => {
+    const panel = read('src/components/projects/legal/escritura-readiness-panel.tsx')
+    expect(panel).toContain('MESA_TEXT.abrirMesa')
+    expect(panel).toContain('/documentos/matriz/')
+    expect(panel).toContain('active_case')
+    expect(panel).toContain('case_status_label')
+    expect(panel).toContain('data-testid="abrir-mesa-escritura"')
+    expect(panel).not.toContain('Crear snapshot')
+    expect(panel).not.toContain('Readiness escritura')
+    expect(panel).not.toContain('Hay gates bloqueados')
+    expect(panel).not.toContain('readiness de escritura')
+  })
+
   it('los data-testid del contrato UI están presentes', () => {
     expect(read('src/components/documents/mesa/mesa-escritura.tsx')).toContain(
       'data-testid="mesa-escritura"'
