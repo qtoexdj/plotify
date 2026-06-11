@@ -91,7 +91,8 @@ sin este gate).
 
 ## Registro de resultados
 
-| Fecha       | Validacion     | Resultado | Notas |
-| ----------- | -------------- | --------- | ----- |
-| _pendiente_ | A. E2E tecnico | —         | —     |
-| _pendiente_ | B. Usabilidad  | —         | —     |
+| Fecha       | Validacion             | Resultado       | Notas                                                                                                                                                                                                                                                                  |
+| ----------- | ---------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-11  | T007 Wireframes (gate) | Aprobados (5/5) | Aprobacion explicita del usuario ("apruebo las 5") sobre las pantallas: preparacion, mesa lectura, popover evidencia, edicion + picker, generacion. Pantallas 1 y 2 con doble proposito confirmado para SDD 011 (llegada post-venta y matriz del proyecto con huecos). |
+| _pendiente_ | A. E2E tecnico         | —               | —                                                                                                                                                                                                                                                                      |
+| _pendiente_ | B. Usabilidad          | —               | —                                                                                                                                                                                                                                                                      |

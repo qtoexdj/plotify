@@ -28,7 +28,7 @@ tarea sin checkear por pasada salvo pedido explicito de mayor alcance.
 - [x] T004 Manifiesto humanizado: extension aditiva de `apps/api/schemas/escritura_matrices.py` + `matriz_token_resolution.py` emite `label`/`category`/`category_label`/`source_label`, blockers ganan `title`/`description`/`action_label`/`action_href`, respuesta GET gana `insertable_variables` y `omitted_reason` (contracts/api-contracts.md); tests con snapshot Teno en `apps/api/tests/test_matriz_manifest_humanized.py`; Verify: `pnpm test:api`
 - [x] T005 Regenerar contratos y tipos: `pnpm contracts:generate` + extension de `apps/web/src/lib/documents/matriz-types.ts`; Verify: `pnpm typecheck:web`
 - [x] T006 [P] Vocabulario estatico de UI en `apps/web/src/lib/documents/matriz-microcopy.ts` (tabla ui-contracts §3) + test permanente de terminos prohibidos `apps/web/tests/mesa-vocabulario.test.ts` (corre sobre `components/documents/mesa/`); Verify: `pnpm test:web`
-- [ ] T007 **GATE (usuario)** Wireframes de las 5 pantallas clave (preparacion, mesa lectura, popover evidencia, edicion + picker, workflow de generacion) partiendo del mockup 2026-06-11; aprobacion explicita del usuario registrada en `quickstart.md`; Verify: aprobacion del usuario (no automatizable) — **bloquea Fases 3-7**
+- [x] T007 **GATE (usuario)** Wireframes de las 5 pantallas clave (preparacion, mesa lectura, popover evidencia, edicion + picker, workflow de generacion) partiendo del mockup 2026-06-11; aprobacion explicita del usuario registrada en `quickstart.md` (2026-06-11: "apruebo las 5"); Verify: aprobacion del usuario (no automatizable) — **bloquea Fases 3-7**
 
 ## Phase 3: US2 — Llegada guiada y pendientes accionables (P1)
 
