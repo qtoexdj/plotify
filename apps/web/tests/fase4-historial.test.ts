@@ -422,8 +422,8 @@ describe('F-v2-4.15 — navItems: grupo Documentos', () => {
     expect(docGroup?.items?.length).toBeGreaterThan(0)
   })
 
-  it('tiene exactamente 3 subitems', () => {
-    expect(docGroup?.items).toHaveLength(3)
+  it('tiene exactamente 2 subitems', () => {
+    expect(docGroup?.items).toHaveLength(2)
   })
 
   it('subitem Plantillas existe con la URL correcta', () => {
@@ -432,10 +432,9 @@ describe('F-v2-4.15 — navItems: grupo Documentos', () => {
     expect(sub?.url).toBe('/documentos/plantillas')
   })
 
-  it('subitem Bloques existe con la URL correcta', () => {
+  it('no publica la ruta MVP de Bloques', () => {
     const sub = docGroup?.items?.find((i) => i.title === 'Bloques')
-    expect(sub).toBeDefined()
-    expect(sub?.url).toBe('/documentos/bloques')
+    expect(sub).toBeUndefined()
   })
 
   it('subitem Historial existe con la URL correcta', () => {

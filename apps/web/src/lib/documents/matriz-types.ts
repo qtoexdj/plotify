@@ -231,6 +231,7 @@ export interface MatrizClauseView {
   position: number
   fixed_position: boolean
   content_json: ClauseContentJson
+  resolved_content: ClauseContentJson | null
   overridden: boolean
   disabled: boolean
   condition: MatrizClauseCondition | null
@@ -253,6 +254,7 @@ export interface MatrizTemplateRef {
 export interface MatrizView {
   id: string
   escritura_case_id: string
+  project_id: string
   status: MatrizStatus
   version: number
   template: MatrizTemplateRef
@@ -274,6 +276,14 @@ export interface MatrizSaveRequest {
   clause_overrides: Record<string, MatrizClauseOverride>
 }
 
+export type MatrizSubmitRequest = Record<string, never>
+
+export type MatrizApproveRequest = Record<string, never>
+
+export interface MatrizRejectRequest {
+  reason: string
+}
+
 // ─── Generaciones de minuta ──────────────────────────────────────────────────
 
 export interface MinutaGeneration {
@@ -290,6 +300,10 @@ export interface MinutaGeneration {
   generated_by: string | null
   generated_at: string
   download_url: string | null
+}
+
+export interface MinutaGenerationListResponse {
+  generations: MinutaGeneration[]
 }
 
 export interface GenerateMinutaRequest {

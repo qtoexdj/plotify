@@ -168,6 +168,7 @@ class MatrizClauseView(MatrizResponseModel):
     position: int
     fixed_position: bool
     content_json: dict[str, Any]
+    resolved_content: dict[str, Any] | None = None
     overridden: bool = False
     disabled: bool = False
     condition: MatrizClauseCondition | None = None
@@ -183,6 +184,7 @@ class MatrizTemplateRef(MatrizResponseModel):
 class MatrizView(MatrizResponseModel):
     id: UUID
     escritura_case_id: UUID
+    project_id: UUID
     status: MatrizStatus
     version: int
     template: MatrizTemplateRef

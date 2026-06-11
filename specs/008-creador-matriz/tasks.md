@@ -52,29 +52,29 @@ tarea sin checkear por pasada salvo pedido explicito de mayor alcance.
 
 ## Phase 5: US2 — Generacion DOCX (P1)
 
-- [ ] T024 [US2] Renderer DOCX completo (estilos minuta: clausulas numeradas en negrita, parrafos justificados, bloques de titulo verbatim) en `matriz_docx_renderer.py`; tests round-trip python-docx en `apps/api/tests/test_matriz_docx.py` (orden, cero tokens sin resolver, PRIMERO verbatim); Verify: `pnpm test:api`
-- [ ] T025 [US2] Endpoint generate: precondiciones (approved + snapshot vigente + warning ack), persistencia en `escritura_minuta_generations` + Storage + URL firmada; tests incl. 409/422 en `test_matriz_endpoints.py`; Verify: `pnpm test:api`
-- [ ] T026 [US2] UI generacion: `matriz-approval-bar.tsx` (dialogo warning ADR-009, descarga) + `generation-history.tsx` + recableo de `documentos/historial/page.tsx` a la tabla nueva; Verify: `pnpm test:web`
+- [x] T024 [US2] Renderer DOCX completo (estilos minuta: clausulas numeradas en negrita, parrafos justificados, bloques de titulo verbatim) en `matriz_docx_renderer.py`; tests round-trip python-docx en `apps/api/tests/test_matriz_docx.py` (orden, cero tokens sin resolver, PRIMERO verbatim); Verify: `pnpm test:api`
+- [x] T025 [US2] Endpoint generate: precondiciones (approved + snapshot vigente + warning ack), persistencia en `escritura_minuta_generations` + Storage + URL firmada; tests incl. 409/422 en `test_matriz_endpoints.py`; Verify: `pnpm test:api`
+- [x] T026 [US2] UI generacion: `matriz-approval-bar.tsx` (dialogo warning ADR-009, descarga) + `generation-history.tsx` + recableo de `documentos/historial/page.tsx` a la tabla nueva; Verify: `pnpm test:web`
 
 ## Phase 6: US3 — Vistas y evidencia (P2)
 
-- [ ] T027 [US3] `matriz-view-switch.tsx` con modos template/resuelto/evidencia alimentados por el manifiesto; Verify: `pnpm test:web`
-- [ ] T028 [US3] Vista evidencia: reutilizar `legal-evidence-viewer.tsx` por token (snippet/pagina/documento desde evidence_snapshot) + boton "Corregir en Centro de Control Legal" con deep link; Verify: `pnpm test:web`
+- [x] T027 [US3] `matriz-view-switch.tsx` con modos template/resuelto/evidencia alimentados por el manifiesto; Verify: `pnpm test:web`
+- [x] T028 [US3] Vista evidencia: reutilizar `legal-evidence-viewer.tsx` por token (snippet/pagina/documento desde evidence_snapshot) + boton "Corregir en Centro de Control Legal" con deep link; Verify: `pnpm test:web`
 
 ## Phase 7: US4 — Orden y contrato de alertas (P2)
 
-- [ ] T029 [US4] dnd-kit sortable con `fixed_position` anclado y persistencia de `clause_order` (PUT con CAS); tests de orden en `matriz-builder.test.ts`; Verify: `pnpm test:web`
-- [ ] T030 [US4] Contrato de alertas server-side: blockers `alert_clause_missing` desde `titulo.alertas_resueltas[]` × `alert_tipo` de clausulas activas; razon de dismissed en respuesta; tests en `test_matriz_endpoints.py` (caso derechos_aguas Teno); Verify: `pnpm test:api`
-- [ ] T031 [US4] UI blockers (patron title-blocking-list) + sidebar con razones de alertas descartadas; Verify: `pnpm test:web`
+- [x] T029 [US4] dnd-kit sortable con `fixed_position` anclado y persistencia de `clause_order` (PUT con CAS); tests de orden en `matriz-builder.test.ts`; Verify: `pnpm test:web`
+- [x] T030 [US4] Contrato de alertas server-side: blockers `alert_clause_missing` desde `titulo.alertas_resueltas[]` × `alert_tipo` de clausulas activas; razon de dismissed en respuesta; tests en `test_matriz_endpoints.py` (caso derechos_aguas Teno); Verify: `pnpm test:api`
+- [x] T031 [US4] UI blockers (patron title-blocking-list) + sidebar con razones de alertas descartadas; Verify: `pnpm test:web`
 
 ## Phase 8: US5 — Workflow de revision (P3)
 
-- [ ] T032 [US5] Transiciones submit/approve/reject con revisor autorizado, auditoria en `legal_review_decisions`, candado de editor en approved; tests en `test_matriz_endpoints.py`; Verify: `pnpm test:api`
-- [ ] T033 [US5] Supersesion: deteccion de snapshot_hash divergente en GET/PUT/generate, vuelta a draft preservando historial, banner `snapshot_stale` + recarga en UI; tests api+web; Verify: `pnpm test:api && pnpm test:web`
+- [x] T032 [US5] Transiciones submit/approve/reject con revisor autorizado, auditoria en `legal_review_decisions`, candado de editor en approved; tests en `test_matriz_endpoints.py`; Verify: `pnpm test:api`
+- [x] T033 [US5] Supersesion: deteccion de snapshot_hash divergente en GET/PUT/generate, vuelta a draft preservando historial, banner `snapshot_stale` + recarga en UI; tests api+web; Verify: `pnpm test:api && pnpm test:web`
 
 ## Phase 9: Polish & Cross-Cutting
 
-- [ ] T034 Retirar paginas MVP (`documentos/generar`, `documentos/bloques`, `documentos/plantillas` viejas) de navegacion y rutas; marcar `document_engine.py`/`document_generator.py` como deprecated sin rutas (eliminacion en tarea separada si nada los importa); Verify: `pnpm build:web && pnpm test:api`
-- [ ] T035 [P] Regresion tenant cross-org/cross-project para los 4 recursos nuevos (patron TestTenantRegression) en `apps/api/tests/test_matriz_endpoints.py`; Verify: `pnpm test:api`
-- [ ] T036 [P] Contracts: regenerar OpenAPI (`pnpm contracts:generate`) y tipos `plotify-chat.generated.ts`; Verify: `pnpm typecheck:web`
-- [ ] T037 Quickstart E2E Teno completo (quickstart.md pasos 1-8) documentando resultados; actualizar `plotify_memori/50 - Implementaciones/SDD 008 Creador de Matriz - Handoff.md` a estado implementado + handoff de consolidacion UX legal; Verify: `pnpm format:check`
+- [x] T034 Retirar paginas MVP (`documentos/generar`, `documentos/bloques`, `documentos/plantillas` viejas) de navegacion y rutas; marcar `document_engine.py`/`document_generator.py` como deprecated sin rutas (eliminacion en tarea separada si nada los importa); Verify: `pnpm build:web && pnpm test:api`
+- [x] T035 [P] Regresion tenant cross-org/cross-project para los 4 recursos nuevos (patron TestTenantRegression) en `apps/api/tests/test_matriz_endpoints.py`; Verify: `pnpm test:api`
+- [x] T036 [P] Contracts: regenerar OpenAPI (`pnpm contracts:generate`) y tipos `plotify-chat.generated.ts`; Verify: `pnpm typecheck:web`
+- [x] T037 Quickstart E2E Teno completo (quickstart.md pasos 1-8) documentando resultados; actualizar `plotify_memori/50 - Implementaciones/SDD 008 Creador de Matriz - Handoff.md` a estado implementado + handoff de consolidacion UX legal; Verify: `pnpm format:check`

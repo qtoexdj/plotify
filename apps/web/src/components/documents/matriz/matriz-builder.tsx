@@ -1,11 +1,38 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, CheckCircle2, FileText, RefreshCw, Save } from 'lucide-react'
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  type DragEndEvent,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FileText,
+  GripVertical,
+  LockKeyhole,
+  RefreshCw,
+  Save,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getMatrizCase, saveMatriz } from '@/lib/documents/matriz-client'
+import { cn } from '@/lib/utils'
 import type {
   ApprovalBlocker,
   ClauseContentJson,
@@ -14,7 +41,9 @@ import type {
   MatrizStatus,
   MatrizView,
 } from '@/lib/documents/matriz-types'
+import { MatrizApprovalBar } from './matriz-approval-bar'
 import { MatrizClauseEditor } from './matriz-clause-editor'
+import { MatrizViewSwitch, type MatrizViewMode } from './matriz-view-switch'
 
 export const MATRIZ_STATUS_LABELS = {
   draft: 'Borrador',
@@ -53,6 +82,38 @@ export function summarizeMatrizBuilder(matriz: MatrizView) {
   }
 }
 
+export function reorderMatrizClauses(
+  clauses: MatrizClauseView[],
+  activeKey: string,
+  overKey: string
+): MatrizClauseView[] {
+  if (activeKey === overKey) return clauses
+  const activeClause = clauses.find((clause) => clause.clause_key === activeKey)
+  const overClause = clauses.find((clause) => clause.clause_key === overKey)
+  if (!activeClause || !overClause || activeClause.fixed_position || overClause.fixed_position) {
+    return clauses
+  }
+
+  const movableKeys = clauses
+    .filter((clause) => !clause.fixed_position)
+    .map((clause) => clause.clause_key)
+  const oldIndex = movableKeys.indexOf(activeKey)
+  const newIndex = movableKeys.indexOf(overKey)
+  if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return clauses
+
+  const reorderedMovableKeys = arrayMove(movableKeys, oldIndex, newIndex)
+  const byKey = new Map(clauses.map((clause) => [clause.clause_key, clause]))
+  let movableIndex = 0
+  return clauses.map((clause, position) => {
+    if (clause.fixed_position) {
+      return { ...clause, position }
+    }
+    const nextKey = reorderedMovableKeys[movableIndex++]
+    const nextClause = byKey.get(nextKey) ?? clause
+    return { ...nextClause, position }
+  })
+}
+
 type MatrizBuilderProps = {
   caseId: string
   initialData?: MatrizCaseResponse | null
@@ -69,6 +130,12 @@ export function MatrizBuilder({ caseId, initialData = null }: MatrizBuilderProps
   const [isLoading, setIsLoading] = useState(!initialData)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<MatrizViewMode>('template')
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 160, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   useEffect(() => {
     if (initialData) return
@@ -97,6 +164,29 @@ export function MatrizBuilder({ caseId, initialData = null }: MatrizBuilderProps
     () => matriz?.clauses.find((clause) => clause.clause_key === selectedClauseKey) ?? null,
     [matriz, selectedClauseKey]
   )
+  const clauseIds = useMemo(
+    () => matriz?.clauses.map((clause) => clause.clause_key) ?? [],
+    [matriz?.clauses]
+  )
+
+  function handleClauseDragEnd(event: DragEndEvent) {
+    if (!matriz || !summary?.canEdit || !event.over) return
+    const activeKey = String(event.active.id)
+    const overKey = String(event.over.id)
+    const reorderedClauses = reorderMatrizClauses(matriz.clauses, activeKey, overKey)
+    if (reorderedClauses === matriz.clauses) return
+    setData((current) => {
+      if (!current) return current
+      return {
+        ...current,
+        matriz: {
+          ...current.matriz,
+          clauses: reorderedClauses,
+          clause_order: reorderedClauses.map((clause) => clause.clause_key),
+        },
+      }
+    })
+  }
 
   async function handleSave() {
     if (!matriz || !summary?.canEdit) return
@@ -203,47 +293,50 @@ export function MatrizBuilder({ caseId, initialData = null }: MatrizBuilderProps
             <p className="text-xs text-muted-foreground">Orden actual de la matriz</p>
           </div>
           <div className="max-h-[620px] overflow-auto p-2">
-            {matriz.clauses.map((clause) => (
-              <button
-                key={clause.clause_key}
-                type="button"
-                onClick={() => setSelectedClauseKey(clause.clause_key)}
-                className={`mb-1 w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
-                  selectedClauseKey === clause.clause_key
-                    ? 'border-primary bg-primary/10 text-foreground'
-                    : 'border-transparent hover:bg-muted'
-                }`}
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate font-medium">{clause.title}</span>
-                  {clause.fixed_position ? (
-                    <Badge variant="outline" className="shrink-0">
-                      fija
-                    </Badge>
-                  ) : null}
-                </span>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {clause.disabled ? 'Deshabilitada' : `Posición ${clause.position + 1}`}
-                </span>
-              </button>
-            ))}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleClauseDragEnd}
+            >
+              <SortableContext items={clauseIds} strategy={verticalListSortingStrategy}>
+                <div data-testid="matriz-clause-sortable-list" className="space-y-1">
+                  {matriz.clauses.map((clause) => (
+                    <SortableClauseItem
+                      key={clause.clause_key}
+                      clause={clause}
+                      selected={selectedClauseKey === clause.clause_key}
+                      disabled={!summary.canEdit}
+                      onSelect={() => setSelectedClauseKey(clause.clause_key)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
         </aside>
 
         <main className="min-w-0">
           {selectedClause ? (
-            <MatrizClauseEditor
+            <MatrizViewSwitch
               clause={selectedClause}
               tokens={matriz.resolution.tokens}
-              blocks={matriz.resolution.blocks}
-              readOnly={!summary.canEdit}
-              onChange={(content) => {
-                setDraftOverrides((current) => ({
-                  ...current,
-                  [selectedClause.clause_key]: { content_json: content },
-                }))
-              }}
-            />
+              projectId={matriz.project_id}
+              value={viewMode}
+              onValueChange={setViewMode}
+            >
+              <MatrizClauseEditor
+                clause={selectedClause}
+                tokens={matriz.resolution.tokens}
+                blocks={matriz.resolution.blocks}
+                readOnly={!summary.canEdit}
+                onChange={(content) => {
+                  setDraftOverrides((current) => ({
+                    ...current,
+                    [selectedClause.clause_key]: { content_json: content },
+                  }))
+                }}
+              />
+            </MatrizViewSwitch>
           ) : (
             <div className="rounded-lg border border-border p-6 text-sm text-muted-foreground">
               Selecciona una cláusula para editar.
@@ -252,6 +345,8 @@ export function MatrizBuilder({ caseId, initialData = null }: MatrizBuilderProps
         </main>
 
         <aside className="min-h-0 space-y-4">
+          <MatrizApprovalBar matriz={matriz} onWorkflowUpdate={setData} />
+
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="mb-3 flex items-center gap-2">
               <FileText className="size-4 text-muted-foreground" />
@@ -296,6 +391,27 @@ export function MatrizBuilder({ caseId, initialData = null }: MatrizBuilderProps
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <AlertTriangle className="size-4 text-muted-foreground" />
+              <p className="text-sm font-semibold">Alertas descartadas</p>
+            </div>
+            {matriz.dismissed_alerts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin alertas descartadas.</p>
+            ) : (
+              <ul data-testid="matriz-dismissed-alerts" className="space-y-2">
+                {matriz.dismissed_alerts.map((alert, index) => (
+                  <li key={`${alert.tipo}-${index}`} className="rounded-md bg-muted p-2 text-sm">
+                    <p className="font-medium">{alert.tipo}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {alert.reason || 'Sin razón registrada'}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4">
             <p className="mb-3 text-sm font-semibold">Tokens resueltos</p>
             <div className="max-h-64 space-y-2 overflow-auto">
               {matriz.resolution.tokens.slice(0, 12).map((token) => (
@@ -314,6 +430,75 @@ export function MatrizBuilder({ caseId, initialData = null }: MatrizBuilderProps
         </aside>
       </div>
     </section>
+  )
+}
+
+type SortableClauseItemProps = {
+  clause: MatrizClauseView
+  selected: boolean
+  disabled: boolean
+  onSelect: () => void
+}
+
+function SortableClauseItem({ clause, selected, disabled, onSelect }: SortableClauseItemProps) {
+  const sortableDisabled = disabled || clause.fixed_position
+  const {
+    attributes,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: clause.clause_key,
+    disabled: sortableDisabled,
+  })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-testid={`matriz-clause-sortable-${clause.clause_key}`}
+      className={cn(
+        'grid grid-cols-[2rem_minmax(0,1fr)] items-stretch rounded-md border text-sm transition-colors',
+        selected
+          ? 'border-primary bg-primary/10 text-foreground'
+          : 'border-transparent hover:bg-muted',
+        isDragging && 'z-10 opacity-70 shadow-sm'
+      )}
+    >
+      <Button
+        ref={setActivatorNodeRef}
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        disabled={sortableDisabled}
+        aria-label={clause.fixed_position ? 'Cláusula fija' : 'Reordenar cláusula'}
+        className="h-full rounded-md text-muted-foreground"
+        {...attributes}
+        {...listeners}
+      >
+        {clause.fixed_position ? <LockKeyhole /> : <GripVertical />}
+      </Button>
+      <button type="button" onClick={onSelect} className="min-w-0 px-2 py-2 text-left">
+        <span className="flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate font-medium">{clause.title}</span>
+          {clause.fixed_position ? (
+            <Badge variant="outline" className="shrink-0">
+              fija
+            </Badge>
+          ) : null}
+        </span>
+        <span className="mt-1 block text-xs text-muted-foreground">
+          {clause.disabled ? 'Deshabilitada' : `Posición ${clause.position + 1}`}
+        </span>
+      </button>
+    </div>
   )
 }
 

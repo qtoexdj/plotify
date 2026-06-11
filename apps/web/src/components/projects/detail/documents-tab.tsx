@@ -27,7 +27,6 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { DocumentViewer } from './document-viewer'
 import Image from 'next/image'
-import Link from 'next/link'
 import type { LotWithRecord } from './types'
 import {
   LEGAL_EXTRACTION_STATUS_LABELS,
@@ -75,7 +74,6 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
   const [legalDocuments, setLegalDocuments] = useState<LegalDocument[]>([])
   const supabase = createClient()
 
-  const reservedLots = lots.filter((l) => l.estado === 'reservado')
   const soldLots = lots.filter((l) => l.estado === 'vendido')
   const legalDocumentByField = useMemo(() => {
     const latest = new Map<string, LegalDocument>()
@@ -324,59 +322,6 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
 
   return (
     <div className="space-y-6">
-      {/* ── Documentos de Reserva ─────────────────────────────────── */}
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-indigo-600" />
-              Documentos de Reserva
-            </CardTitle>
-            <CardDescription>
-              Genera comprobantes de reserva (PDF/DOCX) para los lotes con estado{' '}
-              <span className="font-medium text-foreground">reservado</span> desde la plantilla
-              activa del proyecto.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {reservedLots.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg text-sm">
-                No hay lotes en estado <strong>reservado</strong> en este proyecto.
-              </div>
-            ) : (
-              <div className="divide-y rounded-lg border overflow-hidden">
-                {reservedLots.map((lot) => (
-                  <div
-                    key={lot.id}
-                    className="flex items-center justify-between px-4 py-3 bg-card hover:bg-accent/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className="text-amber-700 bg-amber-50 border-amber-200 text-xs"
-                      >
-                        Reservado
-                      </Badge>
-                      <span className="text-sm font-medium">{lot.numero_lote}</span>
-                    </div>
-                    <Link href={`/documentos/generar/${lot.id}`} id={`generate-doc-${lot.id}`}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                      >
-                        <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
-                        Generar documento
-                      </Button>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* ── Documentos de Escritura ── */}
       {isAdmin && (
         <Card>
@@ -386,8 +331,8 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
               Documentos de Escritura
             </CardTitle>
             <CardDescription>
-              Genera la escritura definitiva de compraventa (PDF/DOCX) para los lotes vendidos tras
-              completar la revisión de sus variables legales.
+              Revisa la preparación de los lotes vendidos. La minuta DOCX se genera desde una matriz
+              aprobada del caso de escritura.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -410,19 +355,10 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                         </Badge>
                         <span className="text-sm font-medium">{lot.numero_lote}</span>
                       </div>
-                      <Link
-                        href={`/documentos/generar/${lot.id}?type=escritura`}
-                        id={`generate-escritura-${lot.id}`}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-green-600 border-green-200 hover:bg-green-50"
-                        >
-                          <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
-                          Revisar y Generar
-                        </Button>
-                      </Link>
+                      <Button variant="outline" size="sm" disabled>
+                        <HugeiconsIcon icon={FileAttachmentIcon} className="w-4 h-4 mr-1.5" />
+                        Abrir caso legal
+                      </Button>
                     </div>
                     <EscrituraReadinessPanel projectId={project.id} lotId={lot.id} compact />
                   </div>

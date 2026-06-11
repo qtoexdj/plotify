@@ -6,6 +6,7 @@ type Scope = {
   organizationId: string
   projectId: string
   userId: string
+  role: string
 }
 
 type ScopeResult = Scope | { error: Response }
@@ -60,11 +61,18 @@ export async function resolveCaseScope(request: NextRequest, caseId: string): Pr
   ) {
     return { error: featureDisabledResponse() }
   }
+  const { data: membership } = await auth.supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', caseRow.organization_id)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
 
   return {
     organizationId: caseRow.organization_id,
     projectId: caseRow.project_id,
     userId: auth.user.id,
+    role: membership?.role || 'user',
   }
 }
 
@@ -95,10 +103,17 @@ export async function resolveMatrizScope(
   ) {
     return { error: featureDisabledResponse() }
   }
+  const { data: membership } = await auth.supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', matrizRow.organization_id)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
 
   return {
     organizationId: matrizRow.organization_id,
     projectId: matrizRow.project_id,
     userId: auth.user.id,
+    role: membership?.role || 'user',
   }
 }

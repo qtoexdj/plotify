@@ -55,3 +55,42 @@ pnpm test:api          # incluye test_matriz_*.py
 pnpm test:web          # incluye matriz-builder.test.ts
 pnpm typecheck:web && pnpm format:check && pnpm build:web
 ```
+
+## Resultado E2E Teno - 2026-06-11
+
+Pasada de consolidacion SDD 008 ejecutada sobre fixtures Teno y contratos
+generados:
+
+1. **Caso + puente operacional**: cubierto por `pnpm test:api`; las pruebas
+   `test_matriz_operational_*` y fixtures Teno validan staging operacional,
+   fuentes `system`/`geometry`/`derived`, faltantes y gates.
+2. **Snapshot**: cubierto por `test_matriz_endpoints.py`; GET/PUT/generate
+   consumen `variable_snapshot`, detectan `snapshot_hash` divergente y no leen
+   extraccion viva.
+3. **Plantilla**: cubierto por API/UI; template publicado queda inmutable,
+   clone/upsert valida catalogo y la ruta vigente es `/documentos/plantillas`.
+4. **Builder**: cubierto por `matriz-builder.test.ts` y `pnpm build:web`;
+   reordenamiento, anclas, estados y candado de aprobado compilan contra el
+   contrato actual.
+5. **Vistas**: cubierto por tests web de `matriz-view-switch`/builder;
+   template/resuelto/evidencia consumen el mismo `resolution_manifest`.
+6. **Blockers**: cubierto por `TestAlertClauseContract`; `clause_added`
+   bloquea submit/generate cuando falta la clausula activa y muestra la razon
+   de alertas descartadas.
+7. **Aprobacion + DOCX**: cubierto por `TestMatrizReviewWorkflow`,
+   `TestGenerateMinuta` y `test_matriz_docx.py`; warning sin ack falla 422,
+   matriz no aprobada falla, DOCX se genera con bytes ZIP validos y sin tokens
+   sin resolver. Queda pendiente solo revision visual humana en Word/LibreOffice
+   antes de entrega notarial.
+8. **Supersesion**: cubierto por `test_get_supersedes_approved_matrix_when_snapshot_hash_changes`
+   y `test_put_and_generate_detect_snapshot_divergence`; la matriz vuelve a
+   draft y el historial de generaciones permanece consultable.
+
+Verificaciones de la pasada:
+
+```bash
+pnpm test:api          # 493 passed, 2 skipped
+pnpm build:web         # OK; rutas MVP generar/bloques/builder legacy ausentes
+pnpm contracts:generate
+pnpm typecheck:web     # OK
+```

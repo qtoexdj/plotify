@@ -38,9 +38,9 @@ duplicadas). Se reemplaza por **un agente LangGraph con herramientas** que:
 ## Invariantes que NO cambian
 
 - **Extractores determinísticos SII / SAG / plano: intocables** (mandato
-  explícito del usuario). El agente solo *lee* `sii.rol_matriz` y la
+  explícito del usuario). El agente solo _lee_ `sii.rol_matriz` y la
   superficie del plano ya extraídos, para cruces.
-- **El verificador determinístico sigue siendo sagrado** y corre *fuera* del
+- **El verificador determinístico sigue siendo sagrado** y corre _fuera_ del
   agente como gate final, aunque el agente se haya auto-verificado. Ningún
   dato sin evidencia literal queda `proposed`.
 - El agente solo propone: aprobación humana en Centro de Control Legal,
@@ -115,16 +115,16 @@ Conservar como módulo de utilidades determinísticas (renombrar a
 
 ## Qué se CONSERVA (con ajustes menores)
 
-| Pieza | Estado | Ajuste |
-| --- | --- | --- |
-| `schemas/legal_titles.py` (`TitleAnalysis` + EvidencedValue) | Se conserva como contrato de salida del agente | Agregar a `PropietarioActual`: `nacionalidad` y `tratamiento` ("don"/"doña") como `EvidencedValue` — hoy se adivinaban; deben extraerse con evidencia o quedar en `manual_review` |
-| `legal_title_verification.py` | Sagrado, se conserva | Endurecer heurísticas (ver F3); además se expone como herramienta del agente |
-| `legal_title_analysis.py` (orquestador, idempotencia, supersede, staging, aprobación) | Se conserva | Cambiar la llamada de extracción al agente; registrar `token_usage`; pasar `plano_superficie` real; status según verificación (ver F2) |
-| Endpoints `legal_titles.py` + proxies web | Se conservan | Sin cambios de contrato |
-| `title-case-panel.tsx` y subcomponentes | Se conservan | Polling + razones de bloque + visor de evidencia (F4) |
-| Fixtures Teno (`teno_golden_chain.json`, `teno_golden_blocks.md`, páginas, alucinación) | Se conservan | Pasan a ser el gate de la eval en vivo y few-shot del prompt |
-| `titulo_live_eval.py` | Se conserva | Se extiende con fact-coverage de bloques y se convierte en gate de cierre |
-| Worker `legal_document_ingestion` (encolado/supersede) | Se conserva | Solo timeout |
+| Pieza                                                                                   | Estado                                         | Ajuste                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemas/legal_titles.py` (`TitleAnalysis` + EvidencedValue)                            | Se conserva como contrato de salida del agente | Agregar a `PropietarioActual`: `nacionalidad` y `tratamiento` ("don"/"doña") como `EvidencedValue` — hoy se adivinaban; deben extraerse con evidencia o quedar en `manual_review` |
+| `legal_title_verification.py`                                                           | Sagrado, se conserva                           | Endurecer heurísticas (ver F3); además se expone como herramienta del agente                                                                                                      |
+| `legal_title_analysis.py` (orquestador, idempotencia, supersede, staging, aprobación)   | Se conserva                                    | Cambiar la llamada de extracción al agente; registrar `token_usage`; pasar `plano_superficie` real; status según verificación (ver F2)                                            |
+| Endpoints `legal_titles.py` + proxies web                                               | Se conservan                                   | Sin cambios de contrato                                                                                                                                                           |
+| `title-case-panel.tsx` y subcomponentes                                                 | Se conservan                                   | Polling + razones de bloque + visor de evidencia (F4)                                                                                                                             |
+| Fixtures Teno (`teno_golden_chain.json`, `teno_golden_blocks.md`, páginas, alucinación) | Se conservan                                   | Pasan a ser el gate de la eval en vivo y few-shot del prompt                                                                                                                      |
+| `titulo_live_eval.py`                                                                   | Se conserva                                    | Se extiende con fact-coverage de bloques y se convierte en gate de cierre                                                                                                         |
+| Worker `legal_document_ingestion` (encolado/supersede)                                  | Se conserva                                    | Solo timeout                                                                                                                                                                      |
 
 ## Qué se IMPLEMENTA
 
@@ -170,7 +170,7 @@ no se toca el agente de ventas):
   (snippet literal de la página, jamás parafrasear), y few-shot compacto
   derivado del golden Teno (entrada resumida → salida esperada).
 - `runner.py`: `run_title_agent(source_documents, expediente, settings) ->
-  TitleAgentResult` + captura de `token_usage` (callback de usage de
+TitleAgentResult` + captura de `token_usage` (callback de usage de
   LangChain) y trazas (`notas_razonamiento`).
 
 Config (`core/config.py`):
@@ -193,7 +193,7 @@ Config (`core/config.py`):
    con `plano_superficie` real (leído de los datos de plano ya extraídos —
    hoy se pasa `None` siempre: bug).
 3. **Nuevo** `legal_title_block_check.py::check_block_facts(texto, analysis)
-   -> BlockCheckResult`: extrae del texto los números en palabras, fechas en
+-> BlockCheckResult`: extrae del texto los números en palabras, fechas en
    palabras, nombres propios y referencias registrales, y los calza contra
    los campos **verificados** de la cadena. Resultado: `ok` o lista de
    `{hecho, motivo}`. Bloque con calces fallidos → `manual_review` con

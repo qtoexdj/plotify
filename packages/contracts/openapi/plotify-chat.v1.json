@@ -89,6 +89,95 @@
         "title": "Antecesor",
         "type": "object"
       },
+      "ApprovalBlocker": {
+        "properties": {
+          "alert_tipo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Tipo"
+          },
+          "cause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cause"
+          },
+          "fix_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Url"
+          },
+          "gate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "kind": {
+            "enum": ["token_missing", "readiness_gate", "alert_clause_missing", "snapshot_stale"],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "required_clause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Clause"
+          }
+        },
+        "required": ["kind"],
+        "title": "ApprovalBlocker",
+        "type": "object"
+      },
       "ApprovalRequestDetailResponse": {
         "description": "Detalle completo de una solicitud de aprobación de reserva o venta.",
         "properties": {
@@ -160,6 +249,33 @@
         "title": "ApprovalRequestDetailResponse",
         "type": "object"
       },
+      "BlockResolution": {
+        "properties": {
+          "blockKey": {
+            "title": "Blockkey",
+            "type": "string"
+          },
+          "status": {
+            "enum": ["resolved", "missing", "blocked"],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": ["blockKey", "status"],
+        "title": "BlockResolution",
+        "type": "object"
+      },
       "BotResponse": {
         "properties": {
           "bot_username": {
@@ -173,6 +289,69 @@
         },
         "required": ["bot_username", "is_active"],
         "title": "BotResponse",
+        "type": "object"
+      },
+      "ClauseUpsertRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "alert_tipo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Tipo"
+          },
+          "condition_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition Key"
+          },
+          "condition_mode": {
+            "anyOf": [
+              {
+                "enum": ["omit", "block"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition Mode"
+          },
+          "content_json": {
+            "additionalProperties": true,
+            "title": "Content Json",
+            "type": "object"
+          },
+          "fixed_position": {
+            "default": false,
+            "title": "Fixed Position",
+            "type": "boolean"
+          },
+          "position": {
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["title", "position", "content_json"],
+        "title": "ClauseUpsertRequest",
         "type": "object"
       },
       "ConnectRequest": {
@@ -442,6 +621,28 @@
         "title": "DecisionResponse",
         "type": "object"
       },
+      "DismissedAlert": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": ["tipo"],
+        "title": "DismissedAlert",
+        "type": "object"
+      },
       "DocumentEvidenceResponse": {
         "properties": {
           "bbox": {
@@ -706,6 +907,129 @@
         "title": "EscrituraReadinessResponse",
         "type": "object"
       },
+      "EscrituraTemplateDetail": {
+        "properties": {
+          "clause_count": {
+            "default": 0,
+            "title": "Clause Count",
+            "type": "integer"
+          },
+          "clauses": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateClause"
+            },
+            "title": "Clauses",
+            "type": "array"
+          },
+          "document_type": {
+            "title": "Document Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "status": {
+            "enum": ["draft", "published", "retired"],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": ["id", "name", "document_type", "version", "status"],
+        "title": "EscrituraTemplateDetail",
+        "type": "object"
+      },
+      "EscrituraTemplateSummary": {
+        "properties": {
+          "clause_count": {
+            "default": 0,
+            "title": "Clause Count",
+            "type": "integer"
+          },
+          "document_type": {
+            "title": "Document Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "status": {
+            "enum": ["draft", "published", "retired"],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": ["id", "name", "document_type", "version", "status"],
+        "title": "EscrituraTemplateSummary",
+        "type": "object"
+      },
       "Evidence": {
         "additionalProperties": false,
         "properties": {
@@ -796,6 +1120,23 @@
           }
         },
         "title": "EvidencedValue",
+        "type": "object"
+      },
+      "GenerateMinutaRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "generated_by": {
+            "format": "uuid",
+            "title": "Generated By",
+            "type": "string"
+          },
+          "warning_acknowledged": {
+            "title": "Warning Acknowledged",
+            "type": "boolean"
+          }
+        },
+        "required": ["warning_acknowledged", "generated_by"],
+        "title": "GenerateMinutaRequest",
         "type": "object"
       },
       "GenerateRequest": {
@@ -1702,6 +2043,360 @@
         "title": "MarkReadResponse",
         "type": "object"
       },
+      "MatrizApproveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_by": {
+            "format": "uuid",
+            "title": "Approved By",
+            "type": "string"
+          }
+        },
+        "required": ["approved_by"],
+        "title": "MatrizApproveRequest",
+        "type": "object"
+      },
+      "MatrizCaseResponse": {
+        "properties": {
+          "matriz": {
+            "$ref": "#/components/schemas/MatrizView"
+          }
+        },
+        "required": ["matriz"],
+        "title": "MatrizCaseResponse",
+        "type": "object"
+      },
+      "MatrizClauseCondition": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "mode": {
+            "enum": ["omit", "block"],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": ["key", "mode", "active"],
+        "title": "MatrizClauseCondition",
+        "type": "object"
+      },
+      "MatrizClauseOverride": {
+        "additionalProperties": false,
+        "properties": {
+          "content_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Json"
+          },
+          "disabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "MatrizClauseOverride",
+        "type": "object"
+      },
+      "MatrizClauseView": {
+        "properties": {
+          "alert_tipo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Tipo"
+          },
+          "clause_key": {
+            "title": "Clause Key",
+            "type": "string"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatrizClauseCondition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content_json": {
+            "additionalProperties": true,
+            "title": "Content Json",
+            "type": "object"
+          },
+          "disabled": {
+            "default": false,
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "fixed_position": {
+            "title": "Fixed Position",
+            "type": "boolean"
+          },
+          "overridden": {
+            "default": false,
+            "title": "Overridden",
+            "type": "boolean"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "resolved_content": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Content"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["clause_key", "title", "position", "fixed_position", "content_json"],
+        "title": "MatrizClauseView",
+        "type": "object"
+      },
+      "MatrizEvidenceRef": {
+        "properties": {
+          "legal_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Document Id"
+          },
+          "legal_document_page_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Document Page Id"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet"
+          }
+        },
+        "title": "MatrizEvidenceRef",
+        "type": "object"
+      },
+      "MatrizRejectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "rejected_by": {
+            "format": "uuid",
+            "title": "Rejected By",
+            "type": "string"
+          }
+        },
+        "required": ["rejected_by", "reason"],
+        "title": "MatrizRejectRequest",
+        "type": "object"
+      },
+      "MatrizSaveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "clause_order": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Clause Order",
+            "type": "array"
+          },
+          "clause_overrides": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MatrizClauseOverride"
+            },
+            "title": "Clause Overrides",
+            "type": "object"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": ["version"],
+        "title": "MatrizSaveRequest",
+        "type": "object"
+      },
+      "MatrizSubmitRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "submitted_by": {
+            "format": "uuid",
+            "title": "Submitted By",
+            "type": "string"
+          }
+        },
+        "required": ["submitted_by"],
+        "title": "MatrizSubmitRequest",
+        "type": "object"
+      },
+      "MatrizTemplateRef": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": ["id", "name", "version"],
+        "title": "MatrizTemplateRef",
+        "type": "object"
+      },
+      "MatrizView": {
+        "properties": {
+          "approval_blockers": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalBlocker"
+            },
+            "title": "Approval Blockers",
+            "type": "array"
+          },
+          "clause_order": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Clause Order",
+            "type": "array"
+          },
+          "clauses": {
+            "items": {
+              "$ref": "#/components/schemas/MatrizClauseView"
+            },
+            "title": "Clauses",
+            "type": "array"
+          },
+          "dismissed_alerts": {
+            "items": {
+              "$ref": "#/components/schemas/DismissedAlert"
+            },
+            "title": "Dismissed Alerts",
+            "type": "array"
+          },
+          "escritura_case_id": {
+            "format": "uuid",
+            "title": "Escritura Case Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/ResolutionManifest"
+          },
+          "snapshot_stale": {
+            "default": false,
+            "title": "Snapshot Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": ["draft", "legal_review_pending", "approved", "superseded"],
+            "title": "Status",
+            "type": "string"
+          },
+          "template": {
+            "$ref": "#/components/schemas/MatrizTemplateRef"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": ["id", "escritura_case_id", "project_id", "status", "version", "template"],
+        "title": "MatrizView",
+        "type": "object"
+      },
       "MetaChange": {
         "properties": {
           "field": {
@@ -1871,6 +2566,112 @@
         },
         "required": ["object", "entry"],
         "title": "MetaWebhookPayload",
+        "type": "object"
+      },
+      "MinutaGeneration": {
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
+          "escritura_case_id": {
+            "format": "uuid",
+            "title": "Escritura Case Id",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "generated_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "matriz_id": {
+            "format": "uuid",
+            "title": "Matriz Id",
+            "type": "string"
+          },
+          "matriz_version": {
+            "title": "Matriz Version",
+            "type": "integer"
+          },
+          "snapshot_hash": {
+            "title": "Snapshot Hash",
+            "type": "string"
+          },
+          "storage_path": {
+            "title": "Storage Path",
+            "type": "string"
+          },
+          "template_id": {
+            "format": "uuid",
+            "title": "Template Id",
+            "type": "string"
+          },
+          "warning_acknowledged_at": {
+            "format": "date-time",
+            "title": "Warning Acknowledged At",
+            "type": "string"
+          },
+          "warning_acknowledged_by": {
+            "format": "uuid",
+            "title": "Warning Acknowledged By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "escritura_case_id",
+          "matriz_id",
+          "matriz_version",
+          "template_id",
+          "snapshot_hash",
+          "content_hash",
+          "storage_path",
+          "warning_acknowledged_by",
+          "warning_acknowledged_at",
+          "generated_at"
+        ],
+        "title": "MinutaGeneration",
+        "type": "object"
+      },
+      "MinutaGenerationListResponse": {
+        "properties": {
+          "generations": {
+            "items": {
+              "$ref": "#/components/schemas/MinutaGeneration"
+            },
+            "title": "Generations",
+            "type": "array"
+          }
+        },
+        "title": "MinutaGenerationListResponse",
         "type": "object"
       },
       "NotificationCounts": {
@@ -2252,6 +3053,16 @@
               }
             ]
           },
+          "nacionalidad": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "nombre": {
             "anyOf": [
               {
@@ -2284,6 +3095,16 @@
             "title": "Requiere Personeria"
           },
           "rut": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidencedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tratamiento": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EvidencedValue"
@@ -2451,6 +3272,31 @@
         },
         "required": ["approval_id"],
         "title": "ReservationResponse",
+        "type": "object"
+      },
+      "ResolutionManifest": {
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/BlockResolution"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "missing_count": {
+            "default": 0,
+            "title": "Missing Count",
+            "type": "integer"
+          },
+          "tokens": {
+            "items": {
+              "$ref": "#/components/schemas/TokenResolution"
+            },
+            "title": "Tokens",
+            "type": "array"
+          }
+        },
+        "title": "ResolutionManifest",
         "type": "object"
       },
       "RoleManualOverrideRequest": {
@@ -2844,6 +3690,47 @@
         "title": "SiiRoleCertificateSummary",
         "type": "object"
       },
+      "StageOperationalResult": {
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "proposed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Proposed",
+            "type": "array"
+          },
+          "protected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Protected",
+            "type": "array"
+          },
+          "skipped_same_hash": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped Same Hash",
+            "type": "array"
+          },
+          "superseded": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Superseded",
+            "type": "array"
+          }
+        },
+        "title": "StageOperationalResult",
+        "type": "object"
+      },
       "TelegramTokenRequest": {
         "properties": {
           "organization_id": {
@@ -2883,6 +3770,138 @@
         },
         "required": ["token", "bot_username", "deep_link"],
         "title": "TelegramTokenResponse",
+        "type": "object"
+      },
+      "TemplateClause": {
+        "properties": {
+          "alert_tipo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alert Tipo"
+          },
+          "clause_key": {
+            "title": "Clause Key",
+            "type": "string"
+          },
+          "condition_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition Key"
+          },
+          "condition_mode": {
+            "anyOf": [
+              {
+                "enum": ["omit", "block"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition Mode"
+          },
+          "content_json": {
+            "additionalProperties": true,
+            "title": "Content Json",
+            "type": "object"
+          },
+          "fixed_position": {
+            "default": false,
+            "title": "Fixed Position",
+            "type": "boolean"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": ["clause_key", "title", "position", "content_json"],
+        "title": "TemplateClause",
+        "type": "object"
+      },
+      "TemplateCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "clone_from_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clone From Template Id"
+          },
+          "document_type": {
+            "default": "compraventa",
+            "title": "Document Type",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "title": "TemplateCreateRequest",
+        "type": "object"
+      },
+      "TemplateListResponse": {
+        "properties": {
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/EscrituraTemplateSummary"
+            },
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "title": "TemplateListResponse",
+        "type": "object"
+      },
+      "TemplatePublishRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "published_by": {
+            "format": "uuid",
+            "title": "Published By",
+            "type": "string"
+          }
+        },
+        "required": ["published_by"],
+        "title": "TemplatePublishRequest",
         "type": "object"
       },
       "TitleAlert": {
@@ -3292,6 +4311,27 @@
       },
       "TitleAnalysisVerification": {
         "properties": {
+          "agent_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agent Notes",
+            "type": "array"
+          },
+          "block_checks": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/TitleBlockCheck"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Checks"
+          },
           "failures": {
             "items": {
               "$ref": "#/components/schemas/TitleAnalysisVerificationFailure"
@@ -3350,6 +4390,39 @@
         },
         "required": ["approved_by"],
         "title": "TitleApproveRequest",
+        "type": "object"
+      },
+      "TitleBlockCheck": {
+        "properties": {
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/TitleBlockCheckIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "ok": {
+            "default": false,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "title": "TitleBlockCheck",
+        "type": "object"
+      },
+      "TitleBlockCheckIssue": {
+        "properties": {
+          "hecho": {
+            "title": "Hecho",
+            "type": "string"
+          },
+          "motivo": {
+            "title": "Motivo",
+            "type": "string"
+          }
+        },
+        "required": ["hecho", "motivo"],
+        "title": "TitleBlockCheckIssue",
         "type": "object"
       },
       "TitleCaseResponse": {
@@ -3458,6 +4531,62 @@
         },
         "required": ["block", "edited_text", "reason", "edited_by"],
         "title": "TitleNarrativeUpdateRequest",
+        "type": "object"
+      },
+      "TokenResolution": {
+        "properties": {
+          "evidence_refs": {
+            "items": {
+              "$ref": "#/components/schemas/MatrizEvidenceRef"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "status": {
+            "enum": ["resolved", "missing", "blocked"],
+            "title": "Status",
+            "type": "string"
+          },
+          "value_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Text"
+          },
+          "variableKey": {
+            "title": "Variablekey",
+            "type": "string"
+          }
+        },
+        "required": ["variableKey", "status"],
+        "title": "TokenResolution",
         "type": "object"
       },
       "UpdateBlockRequest": {
@@ -5086,6 +6215,812 @@
         ],
         "summary": "Get Escritura Readiness",
         "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/escritura-cases/{escritura_case_id}/stage-operational": {
+      "post": {
+        "description": "Re-run the operational bridge for a case and refresh its snapshot.\n\nUS6/FR-021: changed sale or geometry rows supersede + re-propose; the\nrefreshed snapshot makes the matriz detect supersession (FR-014).",
+        "operationId": "stage_operational_variables_api_v1_escritura_cases__escritura_case_id__stage_operational_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escritura_case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escritura Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageOperationalResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Stage Operational Variables",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/case/{escritura_case_id}": {
+      "get": {
+        "operationId": "get_case_matriz_api_v1_escritura_matrices_case__escritura_case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escritura_case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escritura Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrizCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Case Matriz",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/case/{escritura_case_id}/generations": {
+      "get": {
+        "operationId": "list_case_generations_api_v1_escritura_matrices_case__escritura_case_id__generations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escritura_case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escritura Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinutaGenerationListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "List Case Generations",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/{matriz_id}": {
+      "put": {
+        "operationId": "save_matriz_api_v1_escritura_matrices__matriz_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "matriz_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Matriz Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatrizSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrizCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Save Matriz",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/{matriz_id}/approve": {
+      "post": {
+        "operationId": "approve_matriz_api_v1_escritura_matrices__matriz_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "matriz_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Matriz Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatrizApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrizCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Approve Matriz",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/{matriz_id}/generate": {
+      "post": {
+        "operationId": "generate_minuta_api_v1_escritura_matrices__matriz_id__generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "matriz_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Matriz Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateMinutaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MinutaGeneration"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Generate Minuta",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/{matriz_id}/reject": {
+      "post": {
+        "operationId": "reject_matriz_api_v1_escritura_matrices__matriz_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "matriz_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Matriz Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatrizRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrizCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Reject Matriz",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/{matriz_id}/submit": {
+      "post": {
+        "operationId": "submit_matriz_api_v1_escritura_matrices__matriz_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "matriz_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Matriz Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatrizSubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrizCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Submit Matriz",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-templates": {
+      "get": {
+        "operationId": "list_escritura_templates_api_v1_escritura_templates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "document_type",
+            "required": false,
+            "schema": {
+              "default": "compraventa",
+              "title": "Document Type",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "List Escritura Templates",
+        "tags": ["escritura-templates"]
+      },
+      "post": {
+        "operationId": "create_escritura_template_api_v1_escritura_templates_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraTemplateDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Create Escritura Template",
+        "tags": ["escritura-templates"]
+      }
+    },
+    "/api/v1/escritura-templates/{template_id}": {
+      "get": {
+        "operationId": "get_escritura_template_api_v1_escritura_templates__template_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraTemplateDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Escritura Template",
+        "tags": ["escritura-templates"]
+      }
+    },
+    "/api/v1/escritura-templates/{template_id}/clauses/{clause_key}": {
+      "put": {
+        "operationId": "upsert_escritura_template_clause_api_v1_escritura_templates__template_id__clauses__clause_key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "clause_key",
+            "required": true,
+            "schema": {
+              "title": "Clause Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClauseUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraTemplateDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Upsert Escritura Template Clause",
+        "tags": ["escritura-templates"]
+      }
+    },
+    "/api/v1/escritura-templates/{template_id}/publish": {
+      "post": {
+        "operationId": "publish_escritura_template_api_v1_escritura_templates__template_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplatePublishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraTemplateDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Publish Escritura Template",
+        "tags": ["escritura-templates"]
       }
     },
     "/api/v1/health": {

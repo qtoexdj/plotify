@@ -1,8 +1,14 @@
 import type {
   ClauseUpsertRequest,
   EscrituraTemplateDetail,
+  GenerateMinutaRequest,
+  MatrizApproveRequest,
   MatrizCaseResponse,
+  MatrizRejectRequest,
   MatrizSaveRequest,
+  MatrizSubmitRequest,
+  MinutaGeneration,
+  MinutaGenerationListResponse,
   TemplateCreateRequest,
   TemplateListResponse,
 } from './matriz-types'
@@ -80,6 +86,64 @@ export async function saveMatriz(
       method: 'PUT',
       body: payload,
     }
+  )
+}
+
+export async function submitMatriz(
+  matrizId: string,
+  payload: MatrizSubmitRequest = {}
+): Promise<MatrizCaseResponse> {
+  return requestJson<MatrizCaseResponse>(
+    `/api/escritura-matrices/${encodeURIComponent(matrizId)}/submit`,
+    {
+      method: 'POST',
+      body: payload,
+    }
+  )
+}
+
+export async function approveMatriz(
+  matrizId: string,
+  payload: MatrizApproveRequest = {}
+): Promise<MatrizCaseResponse> {
+  return requestJson<MatrizCaseResponse>(
+    `/api/escritura-matrices/${encodeURIComponent(matrizId)}/approve`,
+    {
+      method: 'POST',
+      body: payload,
+    }
+  )
+}
+
+export async function rejectMatriz(
+  matrizId: string,
+  payload: MatrizRejectRequest
+): Promise<MatrizCaseResponse> {
+  return requestJson<MatrizCaseResponse>(
+    `/api/escritura-matrices/${encodeURIComponent(matrizId)}/reject`,
+    {
+      method: 'POST',
+      body: payload,
+    }
+  )
+}
+
+export async function generateMinuta(
+  matrizId: string,
+  payload: GenerateMinutaRequest
+): Promise<MinutaGeneration> {
+  return requestJson<MinutaGeneration>(
+    `/api/escritura-matrices/${encodeURIComponent(matrizId)}/generate`,
+    {
+      method: 'POST',
+      body: payload,
+    }
+  )
+}
+
+export async function listMinutaGenerations(caseId: string): Promise<MinutaGenerationListResponse> {
+  return requestJson<MinutaGenerationListResponse>(
+    `/api/escritura-matrices/case/${encodeURIComponent(caseId)}/generations`
   )
 }
 
