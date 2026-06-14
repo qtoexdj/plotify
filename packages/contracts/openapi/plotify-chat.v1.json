@@ -7051,6 +7051,88 @@
         "tags": ["escritura-templates"]
       }
     },
+    "/api/v1/escritura-templates/{template_id}/clauses": {
+      "put": {
+        "operationId": "upsert_escritura_template_clause_api_v1_escritura_templates__template_id__clauses_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "clause_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Clause Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClauseUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraTemplateDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Upsert Escritura Template Clause",
+        "tags": ["escritura-templates"]
+      }
+    },
     "/api/v1/escritura-templates/{template_id}/clauses/{clause_key}": {
       "put": {
         "operationId": "upsert_escritura_template_clause_api_v1_escritura_templates__template_id__clauses__clause_key__put",
@@ -7070,8 +7152,15 @@
             "name": "clause_key",
             "required": true,
             "schema": {
-              "title": "Clause Key",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Clause Key"
             }
           },
           {

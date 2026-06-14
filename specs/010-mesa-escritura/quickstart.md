@@ -94,5 +94,77 @@ sin este gate).
 | Fecha       | Validacion             | Resultado       | Notas                                                                                                                                                                                                                                                                  |
 | ----------- | ---------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-06-11  | T007 Wireframes (gate) | Aprobados (5/5) | Aprobacion explicita del usuario ("apruebo las 5") sobre las pantallas: preparacion, mesa lectura, popover evidencia, edicion + picker, generacion. Pantallas 1 y 2 con doble proposito confirmado para SDD 011 (llegada post-venta y matriz del proyecto con huecos). |
-| _pendiente_ | A. E2E tecnico         | —               | —                                                                                                                                                                                                                                                                      |
+| 2026-06-11  | T021 SC-002 + FR-016   | PASS tecnico    | Checklist de vocabulario pantalla-por-pantalla completado en A10; auditoria de teclado/contraste documentada en A12; `pnpm test:web` en verde con lista vetada final y contraste AA de chips.                                                                          |
+| 2026-06-11  | A. E2E tecnico         | PASS tecnico    | Pasada de cierre T022 documentada abajo. Gates completos en verde: `pnpm test:api`, `pnpm test:web`, `pnpm typecheck:web`, `pnpm --filter web lint`, `pnpm format:check`, `pnpm build:web`.                                                                            |
 | _pendiente_ | B. Usabilidad          | —               | —                                                                                                                                                                                                                                                                      |
+
+## Resultado A — E2E tecnico Teno (T022, 2026-06-11)
+
+Pasada tecnica ejecutada sobre fixtures Teno, tests permanentes y build de
+produccion. El gate humano de usabilidad B sigue pendiente y bloquea el
+cierre del feature.
+
+| Paso | Validacion                  | Evidencia                                                                                                                                             | Resultado    |
+| ---- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| A1   | Llegada guiada              | `mesa-escritura.test.ts`: `decideMesaVista`, `EstadoPreparacion`, `PendientesList`, CTA al CCL y ausencia de jerga en componentes nuevos.             | PASS         |
+| A2   | Mesa en lectura             | `mesa-escritura.test.ts`: documento continuo, orden de clausulas, bloques de titulo y clausulas omitidas; `test_matriz_manifest_humanized.py`.        | PASS         |
+| A3   | Evidencia en 2 clicks       | `dato-popover.tsx` + tests de `evidenciaDocumental`, `urlCorreccion` y visor compacto heredado de SDD 007.                                            | PASS         |
+| A4   | Edicion in-place            | `clausula-editor-inline.tsx`, picker `@`, guardado CAS y conflicto humanizado cubiertos por `mesa-escritura.test.ts`.                                 | PASS         |
+| A5   | Bloque protegido            | `contieneBloquesTitulo`, ayuda al panel de titulo y bloqueo de edicion cubiertos por tests web.                                                       | PASS         |
+| A6   | Workflow                    | `workflow-acciones.tsx`, warning ADR-009, historial humano y endpoints de revision/generacion cubiertos por `pnpm test:api` + `pnpm test:web`.        | PASS         |
+| A7   | No regresion DOCX           | `test_matriz_docx.py`, `TestGenerateMinuta`, `test_matriz_endpoints.py` y fixture Teno validan orden, ZIP DOCX, PRIMERO verbatim y cero sin resolver. | PASS         |
+| A8   | Supersesion                 | Tests SDD 008/010 de `snapshot_stale`, aviso humano y bloqueo de guardado/generacion desde expediente no vigente.                                     | PASS         |
+| A9   | Plantillas sin JSON         | `template-library.test.ts` migrado a `PlantillaEditor`, `condicion-clausula-form.tsx`, errores humanizados y ruta `/documentos/plantillas`.           | PASS         |
+| A10  | Auditoria vocabulario       | `mesa-vocabulario.test.ts` con lista vetada final + checklist pantalla por pantalla T021.                                                             | PASS         |
+| A11  | Presupuesto de carga SC-007 | `pnpm build:web` compila la ruta `/documentos/matriz/[caseId]`; la mesa renderiza desde manifiesto ya persistido y sin dependencias nuevas.           | PASS tecnico |
+| A12  | Accesibilidad FR-016        | Checklist T021 + test de contraste AA de chips + componentes operables por boton, shadcn/Radix y sensores de teclado dnd-kit.                         | PASS         |
+
+Gates ejecutados:
+
+| Comando                  | Resultado                    |
+| ------------------------ | ---------------------------- |
+| `pnpm test:api`          | PASS — 525 passed, 2 skipped |
+| `pnpm test:web`          | PASS — 50 files, 670 tests   |
+| `pnpm typecheck:web`     | PASS                         |
+| `pnpm --filter web lint` | PASS                         |
+| `pnpm format:check`      | PASS                         |
+| `pnpm build:web`         | PASS                         |
+
+## Registro T021 — Auditoria SC-002 y FR-016
+
+### A10. Checklist de vocabulario pantalla por pantalla
+
+| Pantalla / superficie                         | Jerga tecnica | JSON visible | Claves crudas | Resultado |
+| --------------------------------------------- | ------------- | ------------ | ------------- | --------- |
+| `/documentos`                                 | 0             | 0            | 0             | PASS      |
+| `/documentos/matriz/[caseId]` preparacion     | 0             | 0            | 0             | PASS      |
+| `/documentos/matriz/[caseId]` mesa de lectura | 0             | 0            | 0             | PASS      |
+| Popover de evidencia de dato                  | 0             | 0            | 0             | PASS      |
+| Editor in-place + picker "Insertar dato"      | 0             | 0            | 0             | PASS      |
+| Panel lateral de datos y pendientes           | 0             | 0            | 0             | PASS      |
+| Workflow aprobar/generar                      | 0             | 0            | 0             | PASS      |
+| `/documentos/historial`                       | 0             | 0            | 0             | PASS      |
+| `/documentos/plantillas`                      | 0             | 0            | 0             | PASS      |
+
+Lista vetada final automatizada en `TERMINOS_PROHIBIDOS`: token, variable,
+blocker, snapshot, gate, resolved, missing, blocked, json, manifest,
+readiness, builder, template, payload, schema, endpoint, debug, developer,
+ProseMirror/ProseKit, condition_key, condition_mode, alert_tipo, dl_3516,
+derechos_aguas, fixed_position, content_json, block_token y variable_token.
+El test permanente tambien detecta claves crudas con puntos, por ejemplo
+`comprador.estado_civil` y `titulo.inscripciones[]`.
+
+### A12. Teclado y contraste
+
+| Superficie               | Revision FR-016                                                                                                       | Resultado |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------- | --------- |
+| Chips de dato            | Boton nativo; Enter/Espacio activan; foco visible; estado tambien en texto `sr-only`; contraste AA calculado en test. | PASS      |
+| Popover de evidencia     | `PopoverTrigger asChild`; Esc cierra y devuelve foco segun Radix/shadcn; CTA final es enlace con nombre visible.      | PASS      |
+| Picker "Insertar dato"   | Boton visible + atajo `@`; `Command` permite busqueda y seleccion por teclado; sin dependencia de color.              | PASS      |
+| Indice de clausulas      | `KeyboardSensor` + `sortableKeyboardCoordinates`; handle con texto accesible; posiciones fijas indicadas por texto.   | PASS      |
+| Workflow aprobar/generar | Botones y dialogos shadcn; acciones bloqueadas muestran pendientes en texto, no solo deshabilitado visual.            | PASS      |
+| Plantillas               | Editor, condicion y alerta usan controles etiquetados; lista de clausulas usa botones y DnD con sensor de teclado.    | PASS      |
+
+Contraste de chips (Tailwind 4): `emerald-900` sobre `emerald-50`,
+`sky-900` sobre `sky-50` y `amber-900` sobre `amber-50`; todos cumplen
+ratio AA >= 4.5:1 segun el test `mesa-vocabulario.test.ts`.

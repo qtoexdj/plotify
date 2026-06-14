@@ -1044,6 +1044,12 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["EscrituraTemplateDetail"]
   }
+  "upsert_escritura_template_clause_api_v1_escritura_templates__template_id__clauses_put": {
+    method: "PUT"
+    path: "/api/v1/escritura-templates/{template_id}/clauses"
+    requestBody: components["schemas"]["ClauseUpsertRequest"]
+    response: components["schemas"]["EscrituraTemplateDetail"]
+  }
   "upsert_escritura_template_clause_api_v1_escritura_templates__template_id__clauses__clause_key__put": {
     method: "PUT"
     path: "/api/v1/escritura-templates/{template_id}/clauses/{clause_key}"

@@ -4,7 +4,7 @@ aliases:
   - Gestor de Escrituras Productivo
   - Minuta DOCX de Compraventa
 date: 2026-06-03
-status: en validacion SDD 007
+status: mesa de escritura implementada tecnicamente
 tags:
   - producto
   - documentos
@@ -17,6 +17,9 @@ related:
   - "[[ADR-004 - Variables Documentales Canonicas Anidadas]]"
   - "[[ADR-009 - Generador de Escrituras como Minuta DOCX con Evidencia y Revision Legal]]"
   - "[[SDD 006 Escrituras Lab - Minuta DOCX y Readiness]]"
+  - "[[SDD 007 Escrituras Variable Resolution]]"
+  - "[[SDD 008 Creador de Matriz - Handoff]]"
+  - "[[SDD 010 Mesa de Escritura - Handoff]]"
   - "[[Rol de Avaluo en Tramite - Fuentes SII]]"
   - "[[Variables Escritura Compraventa - Fuentes de Obtencion]]"
   - "[[Plan Logica Productiva Generador Escrituras - Variables y Editor]]"
@@ -87,6 +90,20 @@ Para primera transferencia de un lote nacido de subdivision, `Rol de avaluo en
 tramite` es un estado/documento valido, no una variable faltante. Ver
 [[Rol de Avaluo en Tramite - Fuentes SII]].
 
+## Estado actual post-SDD 010
+
+La arquitectura de escrituras queda en tres capas:
+
+1. **Centro de Control Legal**: resuelve y aprueba datos del expediente.
+2. **Creador de matriz SDD 008**: mantiene motor, snapshots, revision legal y
+   DOCX server-side.
+3. **Mesa de Escritura SDD 010**: reemplaza la cabina tecnica por una
+   superficie legal legible, editable en contexto y sin JSON visible.
+
+El cierre de producto aun depende del gate humano de usabilidad de SDD 010
+(T023). El siguiente salto es SDD 011: matriz del proyecto antes de la venta y
+caso de escritura del lote al validar la venta.
+
 ## Flujo recomendado
 
 ```text
@@ -132,6 +149,7 @@ confiabilidad de los snapshots que consumira el creador de matriz.
 ## Conexiones
 
 - Respaldo completo: [[SDD 006 Escrituras Lab - Minuta DOCX y Readiness]]
+- Mesa UX actual: [[SDD 010 Mesa de Escritura - Handoff]]
 - Tabla operativa de variables: [[Variables Escritura Compraventa - Fuentes de Obtencion]]
 - Plan de flujo/editor: [[Plan Logica Productiva Generador Escrituras - Variables y Editor]]
 - Decision tecnica: [[ADR-009 - Generador de Escrituras como Minuta DOCX con Evidencia y Revision Legal]]

@@ -274,6 +274,31 @@ class TestClauseUpsert:
         clauses = response.json()["clauses"]
         assert [c["clause_key"] for c in clauses] == ["prueba"]
 
+    def test_upsert_without_clause_key_autogenerates_slug(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        client = _client(_build_app(store, monkeypatch))
+        response = client.put(
+            f"/api/v1/escritura-templates/{template['id']}/clauses",
+            params={"organization_id": ORG_ID},
+            json={**VALID_CLAUSE_BODY, "title": "CLÁUSULA DE PRUEBA"},
+        )
+        assert response.status_code == 200
+        clauses = response.json()["clauses"]
+        assert [c["clause_key"] for c in clauses] == ["clausula_de_prueba"]
+
+        response = client.put(
+            f"/api/v1/escritura-templates/{template['id']}/clauses",
+            params={"organization_id": ORG_ID},
+            json={**VALID_CLAUSE_BODY, "title": "CLÁUSULA DE PRUEBA"},
+        )
+        assert response.status_code == 200
+        clauses = response.json()["clauses"]
+        assert [c["clause_key"] for c in clauses] == [
+            "clausula_de_prueba",
+            "clausula_de_prueba_2",
+        ]
+
     def test_upsert_replaces_existing_clause(self, monkeypatch):
         store = FakeStore()
         template = _seed_template(store)
@@ -310,6 +335,7 @@ class TestClauseUpsert:
         detail = response.json()["detail"]
         assert detail["code"] == "invalid_keys"
         assert detail["invalid_keys"][0]["key"] == "clave.inexistente"
+        assert detail["invalid_keys"][0]["display_text"] == "Comprador"
 
     def test_removed_key_returns_suggested_migration(self, monkeypatch):
         store = FakeStore()
@@ -328,6 +354,8 @@ class TestClauseUpsert:
         invalid = response.json()["detail"]["invalid_keys"][0]
         assert invalid["reason"] == "removed_key"
         assert invalid["suggested_migration"] == "titulo.inscripciones[]"
+        assert invalid["display_text"] == "Comprador"
+        assert invalid["suggested_label"] == "Inscripciones del título"
 
     def test_upsert_on_published_template_conflicts(self, monkeypatch):
         store = FakeStore()

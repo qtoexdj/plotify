@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+import re
 from typing import Any
+import unicodedata
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -26,6 +28,7 @@ from schemas.escritura_matrices import (
     TemplatePublishRequest,
 )
 from schemas.legal_titles import TITLE_ALERT_TIPOS
+from services import legal_variable_catalog as catalog
 from services.matriz_template_validation import (
     validate_clause_condition,
     validate_clause_content,
@@ -97,6 +100,40 @@ def _detail(template: dict[str, Any], clauses: list[dict[str, Any]]) -> Escritur
     return EscrituraTemplateDetail.model_validate(
         {**template, "clause_count": len(clauses), "clauses": clauses}
     )
+
+
+def _slugify_title(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    ascii_text = normalized.encode("ascii", "ignore").decode("ascii").lower()
+    slug = re.sub(r"[^a-z0-9]+", "_", ascii_text).strip("_")
+    return slug or "clausula"
+
+
+def _available_clause_key(title: str, existing_keys: set[str]) -> str:
+    base = _slugify_title(title)
+    if base not in existing_keys:
+        return base
+    suffix = 2
+    while f"{base}_{suffix}" in existing_keys:
+        suffix += 1
+    return f"{base}_{suffix}"
+
+
+def _label_for_suggestion(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return catalog.variable_label_for_key(value)
+    except KeyError:
+        return None
+
+
+def _humanized_issue(issue: dict[str, Any]) -> dict[str, Any]:
+    display_text = issue.get("display_text") or "Dato de la cláusula"
+    suggested_label = issue.get("suggested_label") or _label_for_suggestion(
+        issue.get("suggested_migration")
+    )
+    return {**issue, "display_text": display_text, "suggested_label": suggested_label}
 
 
 @router.get("/escritura-templates", response_model=TemplateListResponse)
@@ -247,28 +284,34 @@ def _clause_validation_issues(
 ) -> list[dict[str, Any]]:
     issues = validate_clause_content(request.content_json)
     issues += validate_clause_condition(request.condition_key, request.condition_mode)
-    payload = [issue.to_dict() for issue in issues]
+    payload = [_humanized_issue(issue.to_dict()) for issue in issues]
     if request.alert_tipo and request.alert_tipo not in TITLE_ALERT_TIPOS:
         payload.append(
-            {
-                "key": request.alert_tipo,
-                "reason": "unknown_key",
-                "suggested_migration": (
-                    "alert_tipo must be one of the SDD 009 alert taxonomy values"
-                ),
-            }
+            _humanized_issue(
+                {
+                    "key": request.alert_tipo,
+                    "reason": "unknown_key",
+                    "suggested_migration": None,
+                    "display_text": "Alerta de la cláusula",
+                    "suggested_label": None,
+                }
+            )
         )
     return payload
 
 
+@router.put(
+    "/escritura-templates/{template_id}/clauses",
+    response_model=EscrituraTemplateDetail,
+)
 @router.put(
     "/escritura-templates/{template_id}/clauses/{clause_key}",
     response_model=EscrituraTemplateDetail,
 )
 async def upsert_escritura_template_clause(
     template_id: UUID,
-    clause_key: str,
     request: ClauseUpsertRequest,
+    clause_key: str | None = None,
     organization_id: UUID = Query(...),
 ) -> EscrituraTemplateDetail:
     client = get_supabase_client()
@@ -280,7 +323,12 @@ async def upsert_escritura_template_clause(
             detail="Published templates are immutable; clone to a new draft version.",
         )
 
-    invalid_keys = _clause_validation_issues(clause_key, request)
+    existing_clauses = await _fetch_clauses(client, str(template_id))
+    effective_clause_key = clause_key or _available_clause_key(
+        request.title, {str(clause["clause_key"]) for clause in existing_clauses}
+    )
+
+    invalid_keys = _clause_validation_issues(effective_clause_key, request)
     if invalid_keys:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -294,7 +342,7 @@ async def upsert_escritura_template_clause(
     payload = {
         "organization_id": org_id,
         "template_id": str(template_id),
-        "clause_key": clause_key,
+        "clause_key": effective_clause_key,
         "title": request.title,
         "position": request.position,
         "fixed_position": request.fixed_position,
@@ -308,7 +356,7 @@ async def upsert_escritura_template_clause(
             client.table("escritura_template_clauses")
             .select("id")
             .eq("template_id", str(template_id))
-            .eq("clause_key", clause_key)
+            .eq("clause_key", effective_clause_key)
             .maybe_single()
             .execute()
         )

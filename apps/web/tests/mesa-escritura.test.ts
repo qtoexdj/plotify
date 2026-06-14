@@ -32,6 +32,18 @@ import {
   atributosDeDato,
   insertablesAgrupados,
 } from '@/components/documents/mesa/insertar-dato-picker'
+import {
+  generationAuthor,
+  generationDescription,
+} from '@/components/documents/mesa/historial-generaciones'
+import {
+  mensajeDeAccion,
+  puedeEnviar,
+  puedeGenerarMinuta,
+  puedeRevisar,
+  resumenDeAccion,
+  tituloDeAccion,
+} from '@/components/documents/mesa/workflow-acciones'
 import { MatrizClientError } from '@/lib/documents/matriz-client'
 import {
   preparacionProgreso,
@@ -44,6 +56,7 @@ import type {
   ClauseContentJson,
   MatrizClauseView,
   MatrizView,
+  MinutaGeneration,
   ResolutionManifest,
   TokenResolution,
 } from '@/lib/documents/matriz-types'
@@ -736,6 +749,57 @@ describe('picker de inserción (T015, FR-009/research D6)', () => {
   })
 })
 
+// ─── T016/T017: workflow y generación con lenguaje humano ───────────────────
+
+describe('workflow de revisión y generación (T016, US4)', () => {
+  it('habilita cada acción solo en su estado humano del flujo', () => {
+    const borrador = matrizWith([])
+    const enRevision = { ...borrador, status: 'legal_review_pending' } satisfies MatrizView
+    const aprobada = { ...borrador, status: 'approved' } satisfies MatrizView
+
+    expect(puedeEnviar(borrador)).toBe(true)
+    expect(puedeRevisar(enRevision)).toBe(true)
+    expect(puedeGenerarMinuta(aprobada)).toBe(true)
+    expect(puedeEnviar({ ...borrador, snapshot_stale: true })).toBe(false)
+    expect(puedeGenerarMinuta(borrador)).toBe(false)
+  })
+
+  it('usa títulos, resúmenes y errores del diccionario visible', () => {
+    expect(tituloDeAccion('enviar')).toBe(MESA_TEXT.enviarRevision)
+    expect(tituloDeAccion('generar')).toBe(MESA_TEXT.tituloDeclaracionLegal)
+    expect(resumenDeAccion('generar')).toBe(MESA_TEXT.warningLegal)
+    expect(mensajeDeAccion('aprobar')).toBe(MESA_TEXT.noSePudoActualizarRevision)
+    expect(mensajeDeAccion('generar')).toBe(MESA_TEXT.noSePudoGenerarMinuta)
+  })
+})
+
+describe('historial de generaciones (T017, US4)', () => {
+  const GENERACION: MinutaGeneration = {
+    id: 'g1',
+    escritura_case_id: 'c1',
+    matriz_id: 'm1',
+    matriz_version: 3,
+    template_id: 't1',
+    snapshot_hash: 'abc',
+    content_hash: 'def',
+    storage_path: 'org/c1/minuta.docx',
+    warning_acknowledged_by: 'u1',
+    warning_acknowledged_at: '2026-06-11T10:00:00Z',
+    generated_by: 'u1',
+    generated_at: '2026-06-11T10:01:00Z',
+    download_url: '/download/minuta.docx',
+  }
+
+  it('describe quién, cuándo y desde qué versión sin claves técnicas visibles', () => {
+    const description = generationDescription(GENERACION)
+    expect(generationAuthor(GENERACION)).toBe('Usuario registrado')
+    expect(description).toContain('Usuario registrado generó la minuta')
+    expect(description).toContain('versión 3')
+    expect(description).not.toContain('abc')
+    expect(description).not.toContain('def')
+  })
+})
+
 describe('cableado de la ruta y los componentes', () => {
   const read = (relative: string) =>
     fs.readFileSync(path.resolve(__dirname, '..', relative), 'utf-8')
@@ -754,6 +818,7 @@ describe('cableado de la ruta y los componentes', () => {
     expect(source).toContain('MesaDocumento')
     expect(source).toContain('PanelDatos')
     expect(source).toContain('PendientesList')
+    expect(source).toContain('WorkflowAcciones')
     expect(source).not.toContain('MatrizBuilder')
   })
 
@@ -797,6 +862,12 @@ describe('cableado de la ruta y los componentes', () => {
     )
     expect(read('src/components/documents/mesa/mesa-documento.tsx')).toContain(
       'data-testid="mesa-documento"'
+    )
+    expect(read('src/components/documents/mesa/workflow-acciones.tsx')).toContain(
+      'data-testid="workflow-acciones"'
+    )
+    expect(read('src/components/documents/mesa/historial-generaciones.tsx')).toContain(
+      'data-testid="historial-generaciones"'
     )
   })
 
@@ -874,5 +945,12 @@ describe('cableado de la ruta y los componentes', () => {
     expect(popover).toContain('MESA_TEXT.corregirEnControlLegal')
     expect(popover).toContain('LegalEvidenceViewer')
     expect(popover).toContain('compact')
+  })
+
+  it('la página de historial usa descripciones humanas de la mesa (T017)', () => {
+    const page = read('src/app/(dashboard)/documentos/historial/page.tsx')
+    expect(page).toContain('HistorialGeneraciones')
+    expect(page).not.toContain('GenerationHistory')
+    expect(page).toContain('expedientes vigentes')
   })
 })

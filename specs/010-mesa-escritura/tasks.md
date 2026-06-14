@@ -49,18 +49,18 @@ tarea sin checkear por pasada salvo pedido explicito de mayor alcance.
 
 ## Phase 6: US4 — Workflow y generacion con lenguaje humano (P2)
 
-- [ ] T016 [US4] `workflow-acciones.tsx`: enviar/aprobar/rechazar/generar con resumen humano previo, dialogo warning ADR-009 intacto (logica migrada de `matriz-approval-bar.tsx`), bloqueos mostrando `pendientes-list`; Verify: `pnpm test:web`
-- [ ] T017 [P] [US4] `historial-generaciones.tsx` con descripciones humanas (quien/cuando/desde que version) + recableo de `documentos/historial/page.tsx`; Verify: `pnpm test:web`
+- [x] T016 [US4] `workflow-acciones.tsx`: enviar/aprobar/rechazar/generar con resumen humano previo, dialogo warning ADR-009 intacto (logica migrada de `matriz-approval-bar.tsx`), bloqueos mostrando `pendientes-list`; Verify: `pnpm test:web`
+- [x] T017 [P] [US4] `historial-generaciones.tsx` con descripciones humanas (quien/cuando/desde que version) + recableo de `documentos/historial/page.tsx`; Verify: `pnpm test:web`
 
 ## Phase 7: US5 — Plantillas sin JSON (P3)
 
-- [ ] T018 [US5] `plantilla-editor.tsx` + `condicion-clausula-form.tsx`: mismo editor de la mesa con picker, condiciones declarativas mapeadas a `condition_key`/`condition_mode`, alerta elegida de lista humana, posicion por arrastre; API acepta `clause_key` omitido y lo autogenera (slug + sufijo ante colision) en `apps/api/api/v1/endpoints/escritura_templates.py`; recablear `documentos/plantillas/page.tsx`; tests api+web; Verify: `pnpm test:api && pnpm test:web`
-- [ ] T019 [US5] Errores de catalogo humanizados: `invalid_keys` gana `display_text`/`suggested_label` en API y la UI los muestra con texto visible + sugerencia (FR-014); Verify: `pnpm test:api && pnpm test:web`
+- [x] T018 [US5] `plantilla-editor.tsx` + `condicion-clausula-form.tsx`: mismo editor de la mesa con picker, condiciones declarativas mapeadas a `condition_key`/`condition_mode`, alerta elegida de lista humana, posicion por arrastre; API acepta `clause_key` omitido y lo autogenera (slug + sufijo ante colision) en `apps/api/api/v1/endpoints/escritura_templates.py`; recablear `documentos/plantillas/page.tsx`; tests api+web; Verify: `pnpm test:api && pnpm test:web`
+- [x] T019 [US5] Errores de catalogo humanizados: `invalid_keys` gana `display_text`/`suggested_label` en API y la UI los muestra con texto visible + sugerencia (FR-014); Verify: `pnpm test:api && pnpm test:web`
 
 ## Phase 8: Polish & Gates de Cierre
 
-- [ ] T020 Retiro de la capa vieja (FR-018): eliminar `matriz-builder.tsx`, `matriz-view-switch.tsx`, `matriz-clause-editor.tsx`, `template-clause-form.tsx` y sus tests ya migrados; `apps/web/src/app/(dashboard)/documentos/page.tsx` con vocabulario nuevo; Verify: `pnpm build:web && pnpm test:web`
-- [ ] T021 [P] Auditoria SC-002 + accesibilidad FR-016: completar `mesa-vocabulario.test.ts` con la lista vetada final + checklist pantalla-por-pantalla documentado en `quickstart.md` (paso A10) + recorrido completo por teclado y verificacion de contraste AA de los estados de chip (quickstart paso A12); Verify: `pnpm test:web`
-- [ ] T022 Quickstart A completo (pasos 1-12: incluye no-regresion DOCX paso 7, medicion SC-007 paso 11 y accesibilidad paso 12) documentando resultados en `quickstart.md`; Verify: gates tecnicos completos (`pnpm test:api && pnpm test:web && pnpm typecheck:web && pnpm --filter web lint && pnpm format:check && pnpm build:web`)
+- [x] T020 Retiro de la capa vieja (FR-018): eliminar `matriz-builder.tsx`, `matriz-view-switch.tsx`, `matriz-clause-editor.tsx`, `template-clause-form.tsx` y sus tests ya migrados; `apps/web/src/app/(dashboard)/documentos/page.tsx` con vocabulario nuevo; Verify: `pnpm build:web && pnpm test:web`
+- [x] T021 [P] Auditoria SC-002 + accesibilidad FR-016: completar `mesa-vocabulario.test.ts` con la lista vetada final + checklist pantalla-por-pantalla documentado en `quickstart.md` (paso A10) + recorrido completo por teclado y verificacion de contraste AA de los estados de chip (quickstart paso A12); Verify: `pnpm test:web`
+- [x] T022 Quickstart A completo (pasos 1-12: incluye no-regresion DOCX paso 7, medicion SC-007 paso 11 y accesibilidad paso 12) documentando resultados en `quickstart.md`; Verify: gates tecnicos completos (`pnpm test:api && pnpm test:web && pnpm typecheck:web && pnpm --filter web lint && pnpm format:check && pnpm build:web`)
 - [ ] T023 **GATE (usuario)** Sesion de usabilidad observada (quickstart B): ≥ 4/5 en las tareas 1-5 sin ayuda y revision < 15 min, mas la tarea 6 de plantillas (SC-003) con perfil admin en la misma sesion o mini-sesion aparte tras T018; resultados registrados en `quickstart.md`; Verify: aprobacion del usuario (no automatizable) — **bloquea el cierre del feature**
-- [ ] T024 Memoria y handoff: actualizar `plotify_memori/50 - Implementaciones/` con "SDD 010 Mesa de Escritura - Handoff" (estado implementado + pendientes para el rediseno completo del CCL) y punteros de memoria; Verify: `pnpm format:check`
+- [x] T024 Memoria y handoff: actualizar `plotify_memori/50 - Implementaciones/` con "SDD 010 Mesa de Escritura - Handoff" (estado implementado + pendientes para el rediseno completo del CCL) y punteros de memoria; Verify: `pnpm format:check`

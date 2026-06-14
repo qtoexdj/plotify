@@ -17,6 +17,7 @@ import { MesaEncabezado } from './mesa-encabezado'
 import { MesaIndice } from './mesa-indice'
 import { PanelDatos } from './panel-datos'
 import { PendientesList } from './pendientes-list'
+import { WorkflowAcciones } from './workflow-acciones'
 
 /**
  * Orquestador de la mesa de escritura (SDD 010, research D7): decide entre
@@ -151,6 +152,13 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
     }
   }
 
+  function handleWorkflowUpdate(response: MatrizCaseResponse) {
+    setData(response)
+    setBorradores({})
+    setClausulaActiva(null)
+    setAviso(null)
+  }
+
   if (isLoading) {
     return (
       <div data-testid="mesa-escritura" className="space-y-4">
@@ -217,6 +225,10 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
         />
 
         <aside className="space-y-4">
+          <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
+            <WorkflowAcciones matriz={matriz} onWorkflowUpdate={handleWorkflowUpdate} />
+          </section>
+
           {matriz.approval_blockers.length > 0 ? (
             <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
               <h3 className="mb-3 text-sm font-semibold">{MESA_TEXT.pendientesTitle}</h3>

@@ -143,6 +143,8 @@ export interface InvalidTemplateKey {
   key: string
   reason: 'unknown_key' | 'removed_key' | 'invalid_node'
   suggested_migration: string | null
+  display_text?: string | null
+  suggested_label?: string | null
 }
 
 // ─── Matriz por caso ─────────────────────────────────────────────────────────

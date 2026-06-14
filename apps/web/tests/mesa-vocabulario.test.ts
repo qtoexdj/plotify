@@ -27,9 +27,22 @@ import {
 
 const MESA_DIR = path.resolve(__dirname, '../src/components/documents/mesa')
 
-const FORBIDDEN_RE = new RegExp(`\\b(${TERMINOS_PROHIBIDOS.join('|')})\\b`, 'i')
-/** Claves crudas tipo `comprador.estado_civil` visibles en pantalla. */
-const RAW_KEY_RE = /\b[a-z]+\.[a-z]+(_[a-z]+)+\b/
+function escapeRegExp(term: string): string {
+  return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+const FORBIDDEN_RE = new RegExp(`\\b(${TERMINOS_PROHIBIDOS.map(escapeRegExp).join('|')})\\b`, 'i')
+/** Claves crudas tipo `comprador.estado_civil` o `titulo.inscripciones[]`. */
+const RAW_KEY_RE = /\b[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*(?:\[\])?)+\b/
+
+const TAILWIND_COLOR_HEX = {
+  'emerald-50': '#ecfdf5',
+  'emerald-900': '#064e3b',
+  'sky-50': '#f0f9ff',
+  'sky-900': '#0c4a6e',
+  'amber-50': '#fffbeb',
+  'amber-900': '#78350f',
+} as const
 
 function assertHuman(text: string, origin: string) {
   expect(FORBIDDEN_RE.test(text), `Jerga vetada en ${origin}: ${JSON.stringify(text)}`).toBe(false)
@@ -49,13 +62,32 @@ function visibleStrings(source: string): string[] {
   const strings: string[] = []
   for (const match of source.matchAll(/>([^<>{}]+)</g)) {
     const text = match[1].trim()
+    if (text.includes('\n')) continue
+    if (/[=(){};]/.test(text)) continue
     if (text) strings.push(text)
   }
   for (const match of source.matchAll(/(['"`])((?:(?!\1)[^\\\n]|\\.)+)\1/g)) {
     const text = match[2].trim()
+    if (text.includes('${')) continue
+    if (text.includes('\n')) continue
+    if (text.includes('\\n')) continue
     if (text.includes(' ')) strings.push(text)
   }
   return strings
+}
+
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map((start) => {
+    const channel = Number.parseInt(hex.slice(start, start + 2), 16) / 255
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const lighter = Math.max(luminance(foreground), luminance(background))
+  const darker = Math.min(luminance(foreground), luminance(background))
+  return (lighter + 0.05) / (darker + 0.05)
 }
 
 describe('SDD 010 — vocabulario de la mesa de escritura', () => {
@@ -88,5 +120,48 @@ describe('SDD 010 — vocabulario de la mesa de escritura', () => {
         assertHuman(text, path.basename(file))
       }
     }
+  })
+
+  it('la lista vetada final cubre jerga de API, claves y autoria técnica', () => {
+    expect(TERMINOS_PROHIBIDOS).toEqual(
+      expect.arrayContaining([
+        'token',
+        'blocker',
+        'snapshot',
+        'gate',
+        'json',
+        'variable',
+        'template',
+        'payload',
+        'schema',
+        'condition_key',
+        'alert_tipo',
+        'dl_3516',
+        'content_json',
+      ])
+    )
+  })
+
+  it('los chips de dato declaran contraste AA y estado textual', () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../src/components/documents/mesa/dato-chip.tsx'),
+      'utf-8'
+    )
+    const estados = [
+      ['emerald-900', 'emerald-50'],
+      ['sky-900', 'sky-50'],
+      ['amber-900', 'amber-50'],
+    ] as const
+
+    for (const [text, background] of estados) {
+      expect(source).toContain(`text-${text}`)
+      expect(source).toContain(`bg-${background}`)
+      expect(
+        contrastRatio(TAILWIND_COLOR_HEX[text], TAILWIND_COLOR_HEX[background])
+      ).toBeGreaterThanOrEqual(4.5)
+    }
+
+    expect(source).toContain('sr-only')
+    expect(source).toContain('focus-visible:outline')
   })
 })

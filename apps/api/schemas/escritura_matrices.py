@@ -90,6 +90,8 @@ class InvalidTemplateKey(MatrizResponseModel):
     key: str
     reason: Literal["unknown_key", "removed_key", "invalid_node"]
     suggested_migration: str | None = None
+    display_text: str | None = None
+    suggested_label: str | None = None
 
 
 class TemplateValidationErrorResponse(MatrizResponseModel):

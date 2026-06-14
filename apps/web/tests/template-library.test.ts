@@ -1,5 +1,5 @@
 /**
- * SDD 008 T023 — Template library structural tests.
+ * SDD 010 T018/T019 — Plantillas sin JSON.
  *
  * The repo test environment is node-only; these assertions cover exported
  * helpers and source wiring for the client UI.
@@ -11,17 +11,18 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canEditTemplate,
+  extractInvalidTemplateKeys as extractMesaInvalidTemplateKeys,
+  formatInvalidTemplateIssue,
   formatTemplateVersion,
   mergeTemplateDetailIntoList,
-  summarizeTemplateLibrary,
-  TEMPLATE_STATUS_LABELS,
-} from '@/components/documents/matriz/template-library'
+  reordenarTemplateClauses,
+  sanitizeClauseContent,
+  TEMPLATE_INSERTABLE_VARIABLES,
+} from '@/components/documents/mesa/plantilla-editor'
 import {
-  buildClausePayload,
-  extractInvalidTemplateKeys,
-  formatInvalidTemplateKey,
-  parseClauseContentInput,
-} from '@/components/documents/matriz/template-clause-form'
+  condicionDesdeCampos,
+  condicionPorId,
+} from '@/components/documents/mesa/condicion-clausula-form'
 import type {
   EscrituraTemplateDetail,
   EscrituraTemplateSummary,
@@ -63,19 +64,14 @@ const templateDetail: EscrituraTemplateDetail = {
   ],
 }
 
-describe('T023 — template library helpers', () => {
+describe('SDD 010 T018/T019 — plantillas sin JSON', () => {
   it('labels template statuses and editable state', () => {
-    expect(TEMPLATE_STATUS_LABELS).toEqual({
-      draft: 'Borrador',
-      published: 'Publicado',
-      retired: 'Retirado',
-    })
     expect(canEditTemplate({ status: 'draft' })).toBe(true)
     expect(canEditTemplate({ status: 'published' })).toBe(false)
     expect(formatTemplateVersion({ version: 3 })).toBe('v3')
   })
 
-  it('summarizes and merges template details into the list', () => {
+  it('mergea detalles de plantilla en la lista', () => {
     const published: EscrituraTemplateSummary = {
       ...templateSummary,
       id: 'tpl-2',
@@ -83,40 +79,69 @@ describe('T023 — template library helpers', () => {
       status: 'published',
       clause_count: 4,
     }
-    expect(summarizeTemplateLibrary([templateSummary, published])).toEqual({
-      totalCount: 2,
-      draftCount: 1,
-      publishedCount: 1,
-      totalClauseCount: 5,
-    })
     const merged = mergeTemplateDetailIntoList([published], templateDetail)
     expect(merged.find((template) => template.id === 'tpl-1')).toMatchObject({
       id: 'tpl-1',
       clause_count: 1,
     })
   })
-})
 
-describe('T023 — template clause form helpers', () => {
-  it('validates ProseMirror JSON before sending the upsert request', () => {
-    expect(parseClauseContentInput('{ nope')).toEqual({
-      ok: false,
-      message: 'El contenido debe ser JSON válido.',
-    })
-    const built = buildClausePayload({
-      title: 'COMPARECENCIA',
-      position: '0',
-      fixedPosition: true,
-      contentInput: JSON.stringify(templateDetail.clauses[0].content_json),
-      conditionKey: '',
-      conditionMode: '',
-      alertTipo: '',
-    })
-    expect(built.ok).toBe(true)
+  it('reordena cláusulas por arrastre actualizando posiciones', () => {
+    const [first] = templateDetail.clauses
+    const clauses = [
+      first,
+      { ...first, id: 'clause-2', clause_key: 'precio', title: 'PRECIO', position: 1 },
+      { ...first, id: 'clause-3', clause_key: 'firma', title: 'FIRMA', position: 2 },
+    ]
+    expect(
+      reordenarTemplateClauses(clauses, 'firma', 'comparecencia').map((clause) => clause.clause_key)
+    ).toEqual(['firma', 'comparecencia', 'precio'])
+    expect(
+      reordenarTemplateClauses(clauses, 'firma', 'comparecencia').map((clause) => clause.position)
+    ).toEqual([0, 1, 2])
   })
 
-  it('extracts invalid_keys from the proxied API error payload', () => {
-    const invalidKeys = extractInvalidTemplateKeys({
+  it('mapea condiciones declarativas a campos persistidos', () => {
+    const condition = condicionPorId('servidumbre')
+    expect(condition).toMatchObject({
+      condition_key: 'servidumbre.aplica',
+      condition_mode: 'omit',
+    })
+    expect(condicionDesdeCampos('servidumbre.aplica', 'omit')).toBe('servidumbre')
+    expect(condicionDesdeCampos(null, null)).toBe('sin-seleccion')
+  })
+
+  it('usa el catálogo humano para insertar datos', () => {
+    expect(TEMPLATE_INSERTABLE_VARIABLES.map((variable) => variable.label)).toContain(
+      'Nombre de la compradora'
+    )
+    expect(TEMPLATE_INSERTABLE_VARIABLES.some((variable) => variable.label.includes('.'))).toBe(
+      false
+    )
+  })
+
+  it('elimina nodos de texto vacíos antes de montar el editor', () => {
+    const sanitized = sanitizeClauseContent({
+      schema_version: 1,
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: '' },
+            { type: 'text', text: 'Texto válido' },
+          ],
+        },
+      ],
+    })
+    expect(sanitized.content[0]).toEqual({
+      type: 'paragraph',
+      content: [{ type: 'text', text: 'Texto válido' }],
+    })
+  })
+
+  it('muestra errores de catálogo con texto visible y sugerencia humana', () => {
+    const invalidKeys = extractMesaInvalidTemplateKeys({
       error: {
         code: 'invalid_keys',
         invalid_keys: [
@@ -124,29 +149,32 @@ describe('T023 — template clause form helpers', () => {
             key: 'matriz.inscripcion_fojas',
             reason: 'removed_key',
             suggested_migration: 'titulo.inscripciones[]',
+            display_text: 'Inscripción antigua',
+            suggested_label: 'Inscripciones del título',
           },
         ],
       },
     })
-    expect(invalidKeys).toHaveLength(1)
-    expect(formatInvalidTemplateKey(invalidKeys[0])).toBe(
-      'matriz.inscripcion_fojas: Clave removida. Migrar a titulo.inscripciones[]'
+    expect(formatInvalidTemplateIssue(invalidKeys[0])).toBe(
+      'Inscripción antigua. Usa la sugerencia del catálogo: Inscripciones del título'
     )
+    expect(formatInvalidTemplateIssue(invalidKeys[0])).not.toContain('matriz.inscripcion_fojas')
   })
-})
 
-describe('T023 — source wiring', () => {
-  it('wires template APIs, inline invalid key rendering and the plantillas route', () => {
-    const librarySource = readSource('../src/components/documents/matriz/template-library.tsx')
-    const formSource = readSource('../src/components/documents/matriz/template-clause-form.tsx')
+  it('recablea la ruta y conserva componentes nuevos bajo mesa', () => {
     const pageSource = readSource('../src/app/(dashboard)/documentos/plantillas/page.tsx')
+    const editorSource = readSource('../src/components/documents/mesa/plantilla-editor.tsx')
+    const conditionSource = readSource(
+      '../src/components/documents/mesa/condicion-clausula-form.tsx'
+    )
 
-    expect(librarySource).toContain('listEscrituraTemplates')
-    expect(librarySource).toContain('createEscrituraTemplate')
-    expect(librarySource).toContain('publishEscrituraTemplate')
-    expect(formSource).toContain('upsertEscrituraTemplateClause')
-    expect(formSource).toContain('data-testid="template-invalid-keys"')
-    expect(formSource).toContain('suggested_migration')
-    expect(pageSource).toContain('<TemplateLibrary />')
+    expect(pageSource).toContain('PlantillaEditor')
+    expect(pageSource).not.toContain('TemplateLibrary')
+    expect(editorSource).toContain('data-testid="plantilla-editor"')
+    expect(editorSource).toContain('DndContext')
+    expect(editorSource).toContain('InsertarDatoPicker')
+    expect(editorSource).toContain('upsertEscrituraTemplateClause')
+    expect(editorSource).toContain('data-testid="template-invalid-keys"')
+    expect(conditionSource).toContain('data-testid="condicion-clausula-form"')
   })
 })
