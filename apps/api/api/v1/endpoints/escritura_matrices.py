@@ -43,9 +43,9 @@ from services.legal_microcopy import (
     token_blocked_microcopy,
     token_missing_microcopy,
 )
-from services.legal_variable_catalog import VARIABLE_KEYS
 from services.matriz_token_resolution import (
     UnknownNodeError,
+    insertable_variables_catalog,
     resolve_matriz_clauses,
     token_category,
     token_label,
@@ -94,23 +94,24 @@ GENERATION_COLUMNS = (
 MINUTA_STORAGE_BUCKET = "documents"
 
 # SDD 010 (research D6): catalogo humanizado para el picker "Insertar dato",
-# construido una vez desde el catalogo canonico (claves removidas jamas
-# aparecen porque VARIABLE_KEYS es el catalogo vigente).
-INSERTABLE_VARIABLES: list[dict[str, str]] = [
-    {
-        "key": key,
-        "label": token_label(key),
-        "category": token_category(key)[0],
-        "category_label": token_category(key)[1],
-    }
-    for key in VARIABLE_KEYS
-]
+# construido una vez desde la fuente unica (matriz_token_resolution).
+INSERTABLE_VARIABLES: list[dict[str, str]] = insertable_variables_catalog()
 
 
 def _first_row(data: Any) -> dict[str, Any] | None:
     if isinstance(data, list):
         return data[0] if data else None
     return data if isinstance(data, dict) else None
+
+
+def _single_row(result: Any) -> dict[str, Any] | None:
+    """Fila de un `.maybe_single()` tolerando el None que PostgREST devuelve
+    para 0 filas. Sin esto, `result.data` revienta en el primer open de la mesa
+    (caso sin matriz aún) — comportamiento real que los fakes de test no
+    reproducen, así que la suite lo dejaba pasar."""
+    if result is None:
+        return None
+    return _first_row(result.data)
 
 
 def _rows(data: Any) -> list[dict[str, Any]]:
@@ -171,7 +172,7 @@ async def _fetch_case(
             .execute()
         )
     )
-    row = _first_row(result.data)
+    row = _single_row(result)
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -186,14 +187,18 @@ async def _fetch_project_context(client: Any, case_row: dict[str, Any]) -> dict[
     result = await asyncio.to_thread(
         lambda: (
             client.table("projects")
-            .select("id, organization_id, name, nombre")
+            # `projects` solo tiene `name` (no `nombre`): seleccionar una
+            # columna inexistente hace que PostgREST devuelva 204 y reviente
+            # la mesa. El fallback a `nombre` se conserva por si otro entorno
+            # la tuviera, pero no se pide en el select.
+            .select("id, organization_id, name")
             .eq("id", project_id)
             .eq("organization_id", organization_id)
             .maybe_single()
             .execute()
         )
     )
-    row = _first_row(result.data) or {}
+    row = _single_row(result) or {}
     project_name = row.get("name") or row.get("nombre")
     return {"proyecto_nombre": project_name} if project_name else {}
 
@@ -237,7 +242,7 @@ async def _fetch_template(client: Any, template_id: str, organization_id: str) -
             .execute()
         )
     )
-    template = _first_row(result.data)
+    template = _single_row(result)
     if not template:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -277,7 +282,7 @@ async def _fetch_active_matrix(
             .execute()
         )
     )
-    return _first_row(result.data)
+    return _single_row(result)
 
 
 async def _fetch_matrix_by_id(
@@ -293,7 +298,7 @@ async def _fetch_matrix_by_id(
             .execute()
         )
     )
-    row = _first_row(result.data)
+    row = _single_row(result)
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1437,7 +1442,7 @@ async def stage_operational_variables(
             .execute()
         )
     )
-    case_row = case_result.data if isinstance(case_result.data, dict) else None
+    case_row = _single_row(case_result)
     if not case_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

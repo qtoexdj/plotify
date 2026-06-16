@@ -140,6 +140,18 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
   }, [analysis?.status, projectId])
 
   const handleReanalyze = useCallback(async () => {
+    // Reanalizar descarta el análisis vigente y empieza de cero (supersede):
+    // en modo manual produce un análisis vacío y se pierden los datos ya
+    // ingresados. Se confirma antes para evitar la pérdida accidental.
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        'Reanalizar descarta el análisis de título actual y vuelve a empezar. ' +
+          'Si ingresaste datos a mano, se perderán. ¿Quieres continuar?'
+      )
+    ) {
+      return
+    }
     setReanalyzing(true)
     setActionError(null)
     const { error } = await reanalyzeProjectTitle(projectId)

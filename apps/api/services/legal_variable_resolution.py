@@ -1157,13 +1157,15 @@ async def _update_variable_resolution_row(
     variable_resolution_id: str,
     update_payload: dict[str, Any],
 ) -> dict[str, Any]:
+    # PostgREST devuelve la representación de las filas actualizadas por
+    # defecto (Prefer: return=representation); `.select()`/`.single()` no son
+    # encadenables tras `.eq()` en un update (SyncFilterRequestBuilder no los
+    # expone) y provocaban un 500 al guardar cualquier variable.
     result = await asyncio.to_thread(
         lambda: (
             supabase.table("variable_resolutions")
             .update(update_payload)
             .eq("id", variable_resolution_id)
-            .select("*")
-            .single()
             .execute()
         )
     )
