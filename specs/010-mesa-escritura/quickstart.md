@@ -91,18 +91,18 @@ sin este gate).
 
 ## Registro de resultados
 
-| Fecha       | Validacion             | Resultado       | Notas                                                                                                                                                                                                                                                                  |
-| ----------- | ---------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-06-11  | T007 Wireframes (gate) | Aprobados (5/5) | Aprobacion explicita del usuario ("apruebo las 5") sobre las pantallas: preparacion, mesa lectura, popover evidencia, edicion + picker, generacion. Pantallas 1 y 2 con doble proposito confirmado para SDD 011 (llegada post-venta y matriz del proyecto con huecos). |
-| 2026-06-11  | T021 SC-002 + FR-016   | PASS tecnico    | Checklist de vocabulario pantalla-por-pantalla completado en A10; auditoria de teclado/contraste documentada en A12; `pnpm test:web` en verde con lista vetada final y contraste AA de chips.                                                                          |
-| 2026-06-11  | A. E2E tecnico         | PASS tecnico    | Pasada de cierre T022 documentada abajo. Gates completos en verde: `pnpm test:api`, `pnpm test:web`, `pnpm typecheck:web`, `pnpm --filter web lint`, `pnpm format:check`, `pnpm build:web`.                                                                            |
-| _pendiente_ | B. Usabilidad          | —               | —                                                                                                                                                                                                                                                                      |
+| Fecha      | Validacion             | Resultado       | Notas                                                                                                                                                                                                                                                                  |
+| ---------- | ---------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-11 | T007 Wireframes (gate) | Aprobados (5/5) | Aprobacion explicita del usuario ("apruebo las 5") sobre las pantallas: preparacion, mesa lectura, popover evidencia, edicion + picker, generacion. Pantallas 1 y 2 con doble proposito confirmado para SDD 011 (llegada post-venta y matriz del proyecto con huecos). |
+| 2026-06-11 | T021 SC-002 + FR-016   | PASS tecnico    | Checklist de vocabulario pantalla-por-pantalla completado en A10; auditoria de teclado/contraste documentada en A12; `pnpm test:web` en verde con lista vetada final y contraste AA de chips.                                                                          |
+| 2026-06-11 | A. E2E tecnico         | PASS tecnico    | Pasada de cierre T022 documentada abajo. Gates completos en verde: `pnpm test:api`, `pnpm test:web`, `pnpm typecheck:web`, `pnpm --filter web lint`, `pnpm format:check`, `pnpm build:web`.                                                                            |
+| 2026-06-16 | B. Usabilidad (gate)   | Aprobada        | El usuario ejecuto la sesion de usabilidad observada y la da por aprobada; con esto SDD 010 queda cerrado. Resultados por tarea registrables a pedido.                                                                                                                 |
 
 ## Resultado A — E2E tecnico Teno (T022, 2026-06-11)
 
 Pasada tecnica ejecutada sobre fixtures Teno, tests permanentes y build de
-produccion. El gate humano de usabilidad B sigue pendiente y bloquea el
-cierre del feature.
+produccion. El gate humano de usabilidad B fue aprobado por el usuario el 2026-06-16;
+SDD 010 queda cerrado.
 
 | Paso | Validacion                  | Evidencia                                                                                                                                             | Resultado    |
 | ---- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
