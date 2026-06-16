@@ -657,6 +657,7 @@ export interface components {
       "name": string
     }
     "TemplateListResponse": {
+      "insertable_variables"?: Array<components["schemas"]["InsertableVariable"]>
       "templates"?: Array<components["schemas"]["EscrituraTemplateSummary"]>
     }
     "TemplatePublishRequest": {

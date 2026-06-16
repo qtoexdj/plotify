@@ -116,6 +116,10 @@ export interface EscrituraTemplateDetail extends EscrituraTemplateSummary {
 
 export interface TemplateListResponse {
   templates: EscrituraTemplateSummary[]
+  // SDD 010 FR-014: catalogo canonico para el picker del editor de plantillas,
+  // servido para no derivar de una copia hardcodeada. Opcional para tolerar
+  // respuestas previas a la extension.
+  insertable_variables?: InsertableVariable[]
 }
 
 export interface TemplateCreateRequest {

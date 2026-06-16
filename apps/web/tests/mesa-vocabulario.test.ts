@@ -1,16 +1,15 @@
 /**
  * SDD 010 T006 — Test permanente de vocabulario prohibido (FR-006/SC-002).
  *
- * Busca jerga técnica en los textos visibles de la mesa de escritura:
+ * Busca jerga técnica en los textos visibles de los documentos:
  * (a) los valores del diccionario estático `matriz-microcopy.ts`, y
- * (b) los strings de pantalla de `components/documents/mesa/` — nodos de
+ * (b) los strings de pantalla de TODO `components/documents/` — nodos de
  * texto JSX y literales con aspecto de oración (contienen espacio).
  * Los identificadores de código (`token.status === 'resolved'`,
  * `snapshot_stale`) no cuentan: solo el texto que un usuario puede leer.
  *
- * La carpeta `mesa/` aún no existe en la fase Foundational: el test queda
- * en verde y se vuelve efectivo desde la fase 3 (remediación I2 del
- * speckit-analyze).
+ * Escanea el árbol completo (no solo `mesa/`) para que ningún componente
+ * hermano con jerga vetada — p. ej. capas viejas huérfanas — escape el gate.
  */
 
 import { describe, expect, it } from 'vitest'
@@ -25,7 +24,7 @@ import {
   TERMINOS_PROHIBIDOS,
 } from '@/lib/documents/matriz-microcopy'
 
-const MESA_DIR = path.resolve(__dirname, '../src/components/documents/mesa')
+const DOCUMENTS_DIR = path.resolve(__dirname, '../src/components/documents')
 
 function escapeRegExp(term: string): string {
   return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -49,12 +48,12 @@ function assertHuman(text: string, origin: string) {
   expect(RAW_KEY_RE.test(text), `Clave cruda en ${origin}: ${JSON.stringify(text)}`).toBe(false)
 }
 
-function mesaFiles(): string[] {
-  if (!fs.existsSync(MESA_DIR)) return []
+function documentFiles(): string[] {
+  if (!fs.existsSync(DOCUMENTS_DIR)) return []
   return fs
-    .readdirSync(MESA_DIR, { recursive: true, encoding: 'utf-8' })
+    .readdirSync(DOCUMENTS_DIR, { recursive: true, encoding: 'utf-8' })
     .filter((name) => name.endsWith('.tsx') || name.endsWith('.ts'))
-    .map((name) => path.join(MESA_DIR, name))
+    .map((name) => path.join(DOCUMENTS_DIR, name))
 }
 
 /** Texto visible: nodos de texto JSX y literales multi-palabra. */
@@ -113,8 +112,10 @@ describe('SDD 010 — vocabulario de la mesa de escritura', () => {
     })
   })
 
-  it('los componentes de la mesa no muestran jerga vetada', () => {
-    for (const file of mesaFiles()) {
+  it('los componentes de documentos no muestran jerga vetada', () => {
+    const files = documentFiles()
+    expect(files.length).toBeGreaterThan(0)
+    for (const file of files) {
       const source = fs.readFileSync(file, 'utf-8')
       for (const text of visibleStrings(source)) {
         assertHuman(text, path.basename(file))

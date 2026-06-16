@@ -29,6 +29,7 @@ from schemas.escritura_matrices import (
 )
 from schemas.legal_titles import TITLE_ALERT_TIPOS
 from services import legal_variable_catalog as catalog
+from services.matriz_token_resolution import insertable_variables_catalog
 from services.matriz_template_validation import (
     validate_clause_condition,
     validate_clause_content,
@@ -171,7 +172,8 @@ async def list_escritura_templates(
         templates=[
             {**template, "clause_count": clause_counts.get(str(template["id"]), 0)}
             for template in templates
-        ]
+        ],
+        insertable_variables=insertable_variables_catalog(),
     )
 
 

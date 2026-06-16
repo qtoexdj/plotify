@@ -130,6 +130,31 @@ Gates ejecutados:
 | `pnpm format:check`      | PASS                         |
 | `pnpm build:web`         | PASS                         |
 
+## Endurecimiento 2026-06-15 — capa de tests de render + correcciones
+
+Tras una revisión de calidad se cerraron flancos que la pasada del 06-11 no
+cubría (la validación corría solo en node sobre helpers puros; ningún test
+montaba la UI):
+
+- **Capa de tests de render (jsdom + Testing Library)**: se monta la UI real
+  y se afirma comportamiento + accesibilidad —
+  `tests/render/dato-chip.render.test.tsx` (estado en texto, no solo color;
+  operable por teclado), `mesa-escritura.render.test.tsx` (branching
+  preparación vs mesa), `insertar-dato-picker.render.test.tsx` (catálogo
+  humano agrupado) y `dato-popover.render.test.tsx` (evidencia + salida de
+  corrección al CCL). Refuerza A1, A3 y A12 con cobertura automatizada de
+  render, antes solo manual.
+- **Correcciones**: retiro de la ruta pública temporal `/preview-mesa` (datos
+  de fixture expuestos sin auth); editor de plantillas dejaba de remontar
+  ProseKit en cada tecla (pérdida de cursor); el picker de plantillas pasó a
+  consumir el catálogo canónico servido por la API (antes 7 variables
+  hardcodeadas vs 86); retiro de componentes huérfanos con jerga vetada y
+  ampliación del test de vocabulario a todo `components/documents/`.
+
+Gates re-ejecutados en verde: `pnpm test:api` (526 passed), `pnpm test:web`
+(54 files, 678 tests), `pnpm typecheck:web`, `pnpm --filter web lint`,
+`pnpm format:check`, `pnpm build:web`, `pnpm contracts:generate`.
+
 ## Registro T021 — Auditoria SC-002 y FR-016
 
 ### A10. Checklist de vocabulario pantalla por pantalla

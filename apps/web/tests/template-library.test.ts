@@ -17,7 +17,6 @@ import {
   mergeTemplateDetailIntoList,
   reordenarTemplateClauses,
   sanitizeClauseContent,
-  TEMPLATE_INSERTABLE_VARIABLES,
 } from '@/components/documents/mesa/plantilla-editor'
 import {
   condicionDesdeCampos,
@@ -111,13 +110,13 @@ describe('SDD 010 T018/T019 — plantillas sin JSON', () => {
     expect(condicionDesdeCampos(null, null)).toBe('sin-seleccion')
   })
 
-  it('usa el catálogo humano para insertar datos', () => {
-    expect(TEMPLATE_INSERTABLE_VARIABLES.map((variable) => variable.label)).toContain(
-      'Nombre de la compradora'
-    )
-    expect(TEMPLATE_INSERTABLE_VARIABLES.some((variable) => variable.label.includes('.'))).toBe(
-      false
-    )
+  it('sirve el catálogo de datos desde la API, sin lista hardcodeada', () => {
+    const editorSource = readSource('../src/components/documents/mesa/plantilla-editor.tsx')
+    // El picker se alimenta del catálogo servido (insertable_variables), no de
+    // una copia local que derive del catálogo canónico (SDD 010 FR-014).
+    expect(editorSource).toContain('response.insertable_variables')
+    expect(editorSource).toContain('variables={insertables}')
+    expect(editorSource).not.toContain('TEMPLATE_INSERTABLE_VARIABLES')
   })
 
   it('elimina nodos de texto vacíos antes de montar el editor', () => {

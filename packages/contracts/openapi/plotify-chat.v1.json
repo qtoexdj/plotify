@@ -4005,6 +4005,13 @@
       },
       "TemplateListResponse": {
         "properties": {
+          "insertable_variables": {
+            "items": {
+              "$ref": "#/components/schemas/InsertableVariable"
+            },
+            "title": "Insertable Variables",
+            "type": "array"
+          },
           "templates": {
             "items": {
               "$ref": "#/components/schemas/EscrituraTemplateSummary"

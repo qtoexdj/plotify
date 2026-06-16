@@ -86,51 +86,6 @@ export function sanitizeClauseContent(content: ClauseContentJson): ClauseContent
   }
 }
 
-export const TEMPLATE_INSERTABLE_VARIABLES: InsertableVariable[] = [
-  {
-    key: 'comprador.nombre',
-    label: 'Nombre de la compradora',
-    category: 'comprador',
-    category_label: 'Compradora',
-  },
-  {
-    key: 'comprador.rut',
-    label: 'RUT de la compradora',
-    category: 'comprador',
-    category_label: 'Compradora',
-  },
-  {
-    key: 'comprador.estado_civil',
-    label: 'Estado civil de la compradora',
-    category: 'comprador',
-    category_label: 'Compradora',
-  },
-  {
-    key: 'vendedor.nombre',
-    label: 'Nombre del vendedor',
-    category: 'vendedor',
-    category_label: 'Vendedor',
-  },
-  {
-    key: 'lote.numero_nombre',
-    label: 'Nombre del lote',
-    category: 'lote',
-    category_label: 'Lote',
-  },
-  {
-    key: 'lote.superficie_texto',
-    label: 'Superficie del lote en palabras',
-    category: 'lote',
-    category_label: 'Lote',
-  },
-  {
-    key: 'transaccion.precio_total_palabras',
-    label: 'Precio en palabras',
-    category: 'precio',
-    category_label: 'Precio',
-  },
-]
-
 export function formatTemplateVersion(template: Pick<EscrituraTemplateSummary, 'version'>): string {
   return `v${template.version}`
 }
@@ -203,6 +158,9 @@ type PlantillaEditorProps = {
 
 export function PlantillaEditor({ initialTemplates = [] }: PlantillaEditorProps) {
   const [templates, setTemplates] = useState<EscrituraTemplateSummary[]>(initialTemplates)
+  // Catálogo de datos insertables servido por la API (SDD 010 FR-014): fuente
+  // única, jamás una copia hardcodeada que derive del catálogo canónico.
+  const [insertables, setInsertables] = useState<InsertableVariable[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     initialTemplates[0]?.id ?? null
   )
@@ -228,6 +186,7 @@ export function PlantillaEditor({ initialTemplates = [] }: PlantillaEditorProps)
       .then((response) => {
         if (!active) return
         setTemplates(response.templates)
+        setInsertables(response.insertable_variables ?? [])
         setSelectedTemplateId(response.templates[0]?.id ?? null)
       })
       .catch((err) => {
@@ -497,6 +456,7 @@ export function PlantillaEditor({ initialTemplates = [] }: PlantillaEditorProps)
                   clause={selectedClause}
                   nextPosition={visibleTemplate.clauses.length}
                   editable={editable}
+                  insertables={insertables}
                   onSaved={handleSaved}
                 />
               </div>
@@ -644,6 +604,7 @@ type TemplateClauseComposerProps = {
   clause: TemplateClause | null
   nextPosition: number
   editable: boolean
+  insertables: InsertableVariable[]
   onSaved: (template: EscrituraTemplateDetail) => void
 }
 
@@ -652,6 +613,7 @@ function TemplateClauseComposer({
   clause,
   nextPosition,
   editable,
+  insertables,
   onSaved,
 }: TemplateClauseComposerProps) {
   const [title, setTitle] = useState(clause?.title ?? '')
@@ -787,6 +749,7 @@ function TemplateClauseComposer({
       <TemplateProseEditor
         content={content}
         editable={editable}
+        insertables={insertables}
         pickerAbierto={pickerAbierto}
         onPickerAbiertoChange={setPickerAbierto}
         onChange={setContent}
@@ -805,22 +768,30 @@ function TemplateClauseComposer({
 function TemplateProseEditor({
   content,
   editable,
+  insertables,
   pickerAbierto,
   onPickerAbiertoChange,
   onChange,
 }: {
   content: ClauseContentJson
   editable: boolean
+  insertables: InsertableVariable[]
   pickerAbierto: boolean
   onPickerAbiertoChange: (open: boolean) => void
   onChange: (content: ClauseContentJson) => void
 }) {
   const mountRef = useRef<HTMLDivElement>(null)
+  // El editor se crea una sola vez por cláusula con su contenido inicial. El
+  // composer padre se remonta vía `key` al cambiar de cláusula o plantilla
+  // (ver TemplateClauseComposer), así que el contenido inicial alcanza.
+  // Depender de `content` lo recreaba en cada tecla (onChange → setContent →
+  // nueva dep), reiniciando el documento y perdiendo el cursor al escribir.
   const editor = useMemo(() => {
     const instance = createEditor({ extension: defineMatrizClauseExtension() })
     instance.setContent(clauseDocFromContent(sanitizeClauseContent(content)))
     return instance
-  }, [content])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!mountRef.current) return
@@ -852,7 +823,7 @@ function TemplateProseEditor({
         <div className="flex justify-end border-b border-border px-3 py-2">
           {editable ? (
             <InsertarDatoPicker
-              variables={TEMPLATE_INSERTABLE_VARIABLES}
+              variables={insertables}
               abierto={pickerAbierto}
               onAbiertoChange={onPickerAbiertoChange}
               onInsertar={insertarDato}

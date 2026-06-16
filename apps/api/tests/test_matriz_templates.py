@@ -209,6 +209,24 @@ class TestTemplateLibrary:
         assert len(templates) == 1
         assert templates[0]["clause_count"] == 3
 
+    def test_list_serves_full_insertable_catalog(self, monkeypatch):
+        # FR-014: el editor de plantillas recibe el catalogo canonico completo
+        # desde la API, no una copia hardcodeada que derive del catalogo.
+        from services.legal_variable_catalog import VARIABLE_KEYS
+
+        store = FakeStore()
+        _seed_template(store)
+        client = _client(_build_app(store, monkeypatch))
+        response = client.get(
+            "/api/v1/escritura-templates", params={"organization_id": ORG_ID}
+        )
+        assert response.status_code == 200
+        insertables = response.json()["insertable_variables"]
+        assert {item["key"] for item in insertables} == set(VARIABLE_KEYS)
+        for item in insertables:
+            assert item["label"] and "." not in item["label"]
+            assert item["category"] and item["category_label"]
+
     def test_list_is_tenant_scoped(self, monkeypatch):
         store = FakeStore()
         _seed_template(store, org_id=OTHER_ORG_ID)

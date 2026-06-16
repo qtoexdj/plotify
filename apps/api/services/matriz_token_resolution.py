@@ -39,6 +39,7 @@ from services.legal_title_words import (
 )
 from services.legal_variable_catalog import (
     VARIABLE_GROUP_LABELS,
+    VARIABLE_KEYS,
     variable_group_for_key,
     variable_label_for_key,
 )
@@ -101,6 +102,27 @@ def token_category(variable_key: str) -> tuple[str, str]:
     if group is None:
         return _FALLBACK_CATEGORY
     return group, VARIABLE_GROUP_LABELS[group]
+
+
+def insertable_variables_catalog() -> list[dict[str, str]]:
+    """Catalogo humanizado para el picker "Insertar dato" (SDD 010 FR-014).
+
+    Fuente unica: el catalogo canonico (``VARIABLE_KEYS``) etiquetado. Lo
+    consumen la mesa (manifiesto del caso) y el editor de plantillas, para que
+    ninguna copia hardcodeada derive del catalogo.
+    """
+    catalogo: list[dict[str, str]] = []
+    for key in VARIABLE_KEYS:
+        category, category_label = token_category(key)
+        catalogo.append(
+            {
+                "key": key,
+                "label": token_label(key),
+                "category": category,
+                "category_label": category_label,
+            }
+        )
+    return catalogo
 
 MATRIZ_SCHEMA_VERSION = 1
 

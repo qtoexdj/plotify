@@ -32,6 +32,15 @@ class MatrizResponseModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
+# SDD 010 (research D6): catalogo humanizado para el picker "Insertar dato".
+# Fuente unica para la mesa (manifiesto) y el editor de plantillas.
+class InsertableVariable(MatrizResponseModel):
+    key: str
+    label: str
+    category: str
+    category_label: str
+
+
 # ─── Biblioteca de plantillas ────────────────────────────────────────────────
 
 
@@ -64,6 +73,9 @@ class EscrituraTemplateDetail(EscrituraTemplateSummary):
 
 class TemplateListResponse(MatrizResponseModel):
     templates: list[EscrituraTemplateSummary] = Field(default_factory=list)
+    # Catalogo canonico para el picker del editor de plantillas (FR-014): el
+    # mismo que la mesa, servido para evitar una copia que derive del catalogo.
+    insertable_variables: list[InsertableVariable] = Field(default_factory=list)
 
 
 class TemplateCreateRequest(MatrizBaseModel):
@@ -210,14 +222,6 @@ class MatrizView(MatrizResponseModel):
     resolution: ResolutionManifest = Field(default_factory=ResolutionManifest)
     approval_blockers: list[ApprovalBlocker] = Field(default_factory=list)
     dismissed_alerts: list[DismissedAlert] = Field(default_factory=list)
-
-
-# SDD 010 (research D6): catalogo humanizado para el picker "Insertar dato".
-class InsertableVariable(MatrizResponseModel):
-    key: str
-    label: str
-    category: str
-    category_label: str
 
 
 class MatrizCaseResponse(MatrizResponseModel):
