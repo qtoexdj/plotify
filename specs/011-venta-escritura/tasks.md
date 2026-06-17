@@ -102,7 +102,11 @@ clausula y aprobarla → estado "esperando ventas" sin ningun caso de lote.
       nueva version); Verify: `pnpm test:api`
 - [ ] T009 [US1] Seccion Documentos por proyecto en
       `apps/web/src/app/(dashboard)/documentos/page.tsx` (elegir proyecto →
-      matriz de escritura + matriz de variables) + sub-items del sidebar en
+      acceso a la **matriz de escritura del proyecto** y a la **matriz de
+      variables**; esta ultima NO es una entidad nueva: es la revision de
+      variables legales del proyecto que ya existe en el CCL
+      —`variable_resolutions`, `legal-variable-editor` SDD 007— solo expuesta
+      aqui) + sub-items del sidebar en
       `apps/web/src/components/app-sidebar.tsx`; reusa la mesa de SDD 010;
       tests web; Verify: `pnpm test:web`
 - [ ] T010 [P] [US1] Editar la matriz del proyecto en la mesa (texto y
@@ -184,8 +188,11 @@ vendedores es visible.
 - [ ] T017 [US4] Vista web "mis documentos del vendedor" en
       `apps/web/src/app/(dashboard)/mis-documentos/` aislada por vendedor
       asignado (FR-011): lista solo los borradores de SUS ventas, con
-      descarga, compartir y renovar enlace vencido; tests web; Verify:
-      `pnpm test:web`
+      descarga, compartir y renovar enlace vencido; **mas test de aislamiento
+      a nivel API (SC-005, estandar de regresion tenant SDD 007/008): la
+      consulta de entregas filtra por vendedor asignado y jamas devuelve
+      documentos de ventas ajenas**; tests web + api; Verify:
+      `pnpm test:web && pnpm test:api`
 - [ ] T018 [P] [US4] Notificacion al vendedor al aceptar/entregar + fallback a
       "mis documentos" + notificacion interna cuando Telegram no esta
       vinculado (jamas falla en silencio — edge case); Verify: `pnpm test:api`
@@ -221,7 +228,7 @@ de cierre.
       (version/aprobador), venta (validador), borrador (generacion e inputs),
       aceptacion (quien/cuando) y entregas — consultable desde la mesa y el
       historial; Verify: `pnpm test:api`
-- [ ] T021 [P] Historial de documentos filtrado por proyecto en
+- [ ] T021 [P] Historial de documentos filtrado por proyecto (FR-015) en
       `apps/web/src/app/(dashboard)/documentos/historial/page.tsx` (lo ejercido
       por lote, agrupado/filtrable por proyecto); Verify: `pnpm test:web`
 - [ ] T022 [P] Capa de tests de render para las superficies nuevas (Documentos

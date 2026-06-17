@@ -108,6 +108,10 @@ CREATE INDEX IF NOT EXISTS escritura_deliveries_recipient_idx
   ON public.escritura_deliveries (recipient_user_id, status);
 ```
 
+- **Vencimiento del enlace** (FR-010, decision B1): `link_expires_at` =
+  creacion + **7 dias**. Vencido (`status='expired'`) el vendedor lo renueva
+  desde "mis documentos" sin intervencion del administrador (re-emite token y
+  resetea `link_expires_at`).
 - **Auditoria** (FR-010/FR-012): quien, a quien, canal, enlace,
   vencimiento, estado, cuando. Telegram no vinculado → fila con
   `status='unavailable'` + caida a web (jamas falla en silencio).

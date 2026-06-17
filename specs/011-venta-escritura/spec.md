@@ -290,10 +290,10 @@ mesa y documentos del vendedor.
   su borrador fue aceptado/entregado — todo con el vocabulario del
   diccionario unico y deep links a la superficie correcta.
 - **FR-010**: System MUST entregar el borrador aceptado al vendedor por
-  Telegram (enlace seguro con vencimiento como minimo; archivo adjunto si
-  el canal lo soporta) y en una vista web "documentos del vendedor" con
-  descarga y compartir; cada entrega auditada (quien, a quien, canal,
-  cuando).
+  Telegram (enlace seguro con vencimiento de 7 dias, renovable desde "mis
+  documentos"; archivo adjunto si el canal lo soporta) y en una vista web
+  "documentos del vendedor" con descarga y compartir; cada entrega auditada
+  (quien, a quien, canal, cuando).
 - **FR-011**: System MUST aislar por vendedor la vista de documentos: cada
   vendedor ve exclusivamente los borradores de sus ventas en proyectos
   asignados (regla de asignacion constitucional V).
@@ -309,6 +309,12 @@ mesa y documentos del vendedor.
   toda superficie nueva (matriz del proyecto, validacion con borrador,
   documentos del vendedor, notificaciones): cero jerga tecnica, cero JSON,
   estados identicos entre superficies.
+- **FR-015**: System MUST permitir consultar el historial de documentos
+  generados filtrable por proyecto: las escrituras ejercidas por lote
+  (quien, cuando, desde que version de la matriz) agrupadas/filtrables por
+  proyecto, para que el administrador vea de un vistazo lo ejercido en cada
+  loteo. Reutiliza el historial existente; solo agrega el filtro por
+  proyecto.
 
 ### Key Entities _(include if feature involves data)_
 
