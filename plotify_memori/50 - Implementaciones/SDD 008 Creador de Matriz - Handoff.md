@@ -14,6 +14,7 @@ tags:
   - ux
 related:
   - "[[SDD 007 Escrituras Variable Resolution]]"
+  - "[[SDD 010 Mesa de Escritura - Handoff]]"
   - "[[Generador de Escrituras de Compraventa]]"
   - "[[Variables Escritura Compraventa - Fuentes de Obtencion]]"
   - "[[ADR-009 - Generador de Escrituras como Minuta DOCX con Evidencia y Revision Legal]]"
@@ -65,9 +66,10 @@ Cambio de catalogo a tener presente: las claves `matriz.inscripcion_*` y
 `titulo.clausula_primero_texto` aprobados. La clausula SEXTO (servidumbre)
 renderiza sus referencias registrales desde `titulo.inscripciones[]`.
 
-Despues de SDD 008 queda la consolidacion UX legal en proyectos: redisenar el
-Centro de Control Legal conociendo el flujo proyecto -> caso de escritura ->
-matriz -> aprobacion -> generacion DOCX.
+La consolidacion UX legal por caso quedo implementada tecnicamente en
+[[SDD 010 Mesa de Escritura - Handoff]]. El siguiente pendiente de producto es
+el rediseno completo del Centro de Control Legal y la matriz del proyecto en
+SDD 011.
 
 ## Regla de arquitectura
 
@@ -95,7 +97,8 @@ Si una variable esta mal, el usuario vuelve al Centro de Control Legal del SDD
 
 ## Handoff de consolidacion UX legal
 
-La siguiente iteracion deberia unir las superficies legales en una sola ruta
+SDD 010 ya reemplazo la cabina de matriz por la mesa de escritura. Lo que queda
+para SDD 011 y posteriores es unir las superficies legales en una sola ruta
 operativa por proyecto/lote:
 
 - Desde el Centro de Control Legal, mostrar el caso de escritura activo y un

@@ -614,6 +614,13 @@ export interface EscrituraReadinessGate {
   warnings?: string[]
 }
 
+/** SDD 010 T009: caso activo del lote con su estado redactado server-side. */
+export interface EscrituraActiveCase {
+  escritura_case_id: UUID
+  case_status: EscrituraCaseStatus
+  case_status_label: string
+}
+
 export interface EscrituraReadinessResponse {
   organization_id: UUID
   lot_id: UUID
@@ -622,6 +629,7 @@ export interface EscrituraReadinessResponse {
   gates: EscrituraReadinessGate[]
   variable_snapshot: Record<string, unknown>
   evidence_snapshot: Record<string, unknown>
+  active_case?: EscrituraActiveCase | null
 }
 
 export interface VariableSnapshotValue {

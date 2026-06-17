@@ -53,12 +53,16 @@ class InvalidKey:
     key: str
     reason: str  # unknown_key | removed_key | invalid_node
     suggested_migration: str | None = None
+    display_text: str | None = None
+    suggested_label: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "key": self.key,
             "reason": self.reason,
             "suggested_migration": self.suggested_migration,
+            "display_text": self.display_text,
+            "suggested_label": self.suggested_label,
         }
 
 
@@ -128,7 +132,14 @@ def _walk(node: dict[str, Any], *, inside_repeat: bool, issues: list[InvalidKey]
         key = str(attrs.get("variableKey") or "")
         issue = _validate_scalar_key(key, inside_repeat=inside_repeat)
         if issue:
-            issues.append(issue)
+            issues.append(
+                InvalidKey(
+                    key=issue.key,
+                    reason=issue.reason,
+                    suggested_migration=issue.suggested_migration,
+                    display_text=str(attrs.get("label") or "") or None,
+                )
+            )
         token_format = attrs.get("format")
         if token_format is not None and token_format not in TOKEN_FORMATS:
             issues.append(
@@ -141,7 +152,14 @@ def _walk(node: dict[str, Any], *, inside_repeat: bool, issues: list[InvalidKey]
     elif node_type == "block_token":
         issue = _validate_block_key(str(attrs.get("blockKey") or ""))
         if issue:
-            issues.append(issue)
+            issues.append(
+                InvalidKey(
+                    key=issue.key,
+                    reason=issue.reason,
+                    suggested_migration=issue.suggested_migration,
+                    display_text=str(attrs.get("label") or "") or None,
+                )
+            )
     elif node_type == "repeat_section":
         issue = _validate_array_key(str(attrs.get("arrayKey") or ""))
         if issue:

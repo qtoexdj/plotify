@@ -209,6 +209,24 @@ class TestTemplateLibrary:
         assert len(templates) == 1
         assert templates[0]["clause_count"] == 3
 
+    def test_list_serves_full_insertable_catalog(self, monkeypatch):
+        # FR-014: el editor de plantillas recibe el catalogo canonico completo
+        # desde la API, no una copia hardcodeada que derive del catalogo.
+        from services.legal_variable_catalog import VARIABLE_KEYS
+
+        store = FakeStore()
+        _seed_template(store)
+        client = _client(_build_app(store, monkeypatch))
+        response = client.get(
+            "/api/v1/escritura-templates", params={"organization_id": ORG_ID}
+        )
+        assert response.status_code == 200
+        insertables = response.json()["insertable_variables"]
+        assert {item["key"] for item in insertables} == set(VARIABLE_KEYS)
+        for item in insertables:
+            assert item["label"] and "." not in item["label"]
+            assert item["category"] and item["category_label"]
+
     def test_list_is_tenant_scoped(self, monkeypatch):
         store = FakeStore()
         _seed_template(store, org_id=OTHER_ORG_ID)
@@ -274,6 +292,31 @@ class TestClauseUpsert:
         clauses = response.json()["clauses"]
         assert [c["clause_key"] for c in clauses] == ["prueba"]
 
+    def test_upsert_without_clause_key_autogenerates_slug(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        client = _client(_build_app(store, monkeypatch))
+        response = client.put(
+            f"/api/v1/escritura-templates/{template['id']}/clauses",
+            params={"organization_id": ORG_ID},
+            json={**VALID_CLAUSE_BODY, "title": "CLÁUSULA DE PRUEBA"},
+        )
+        assert response.status_code == 200
+        clauses = response.json()["clauses"]
+        assert [c["clause_key"] for c in clauses] == ["clausula_de_prueba"]
+
+        response = client.put(
+            f"/api/v1/escritura-templates/{template['id']}/clauses",
+            params={"organization_id": ORG_ID},
+            json={**VALID_CLAUSE_BODY, "title": "CLÁUSULA DE PRUEBA"},
+        )
+        assert response.status_code == 200
+        clauses = response.json()["clauses"]
+        assert [c["clause_key"] for c in clauses] == [
+            "clausula_de_prueba",
+            "clausula_de_prueba_2",
+        ]
+
     def test_upsert_replaces_existing_clause(self, monkeypatch):
         store = FakeStore()
         template = _seed_template(store)
@@ -310,6 +353,7 @@ class TestClauseUpsert:
         detail = response.json()["detail"]
         assert detail["code"] == "invalid_keys"
         assert detail["invalid_keys"][0]["key"] == "clave.inexistente"
+        assert detail["invalid_keys"][0]["display_text"] == "Comprador"
 
     def test_removed_key_returns_suggested_migration(self, monkeypatch):
         store = FakeStore()
@@ -328,6 +372,8 @@ class TestClauseUpsert:
         invalid = response.json()["detail"]["invalid_keys"][0]
         assert invalid["reason"] == "removed_key"
         assert invalid["suggested_migration"] == "titulo.inscripciones[]"
+        assert invalid["display_text"] == "Comprador"
+        assert invalid["suggested_label"] == "Inscripciones del título"
 
     def test_upsert_on_published_template_conflicts(self, monkeypatch):
         store = FakeStore()

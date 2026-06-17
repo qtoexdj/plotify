@@ -169,6 +169,14 @@ export function defineMatrizClauseExtension() {
   ])
 }
 
+/**
+ * Estilos Tailwind de los nodos custom dentro del editor (acoplados a las
+ * clases que emite `toDOM`). Viven aquí junto al schema; la superficie de la
+ * mesa los aplica sobre su contenedor montado.
+ */
+export const CLASES_NODOS_EDITOR =
+  '[&_.matriz-block-token]:my-2 [&_.matriz-block-token]:rounded-r-md [&_.matriz-block-token]:border-l-4 [&_.matriz-block-token]:border-purple-300 [&_.matriz-block-token]:bg-purple-50/60 [&_.matriz-block-token]:px-3 [&_.matriz-block-token]:py-2 [&_.matriz-block-token]:font-sans [&_.matriz-block-token]:text-sm [&_.matriz-block-token]:text-purple-900 [&_.matriz-variable-token]:rounded [&_.matriz-variable-token]:bg-sky-50 [&_.matriz-variable-token]:px-1 [&_.matriz-variable-token]:py-0.5 [&_.matriz-variable-token]:font-sans [&_.matriz-variable-token]:text-[0.85em] [&_.matriz-variable-token]:text-sky-900 [&_.matriz-variable-token]:ring-1 [&_.matriz-variable-token]:ring-sky-300'
+
 /** Doc ProseMirror puro (sin schema_version) para `Node.fromJSON`. */
 export function clauseDocFromContent(content: ClauseContentJson): {
   type: 'doc'

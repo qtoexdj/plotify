@@ -9,7 +9,7 @@ import { BentoGrid, BentoPanel } from '@/components/dashboard/bento-grid'
 const ACCESOS = [
   {
     title: 'Plantillas',
-    description: 'Crea y administra las plantillas de escrituras con sus artículos.',
+    description: 'Redacta cláusulas, condiciones y alertas con nombres claros.',
     href: '/documentos/plantillas',
     icon: LayoutLeftIcon,
     color: 'text-blue-600',
@@ -17,7 +17,7 @@ const ACCESOS = [
   },
   {
     title: 'Historial',
-    description: 'Minutas DOCX generadas desde matrices aprobadas.',
+    description: 'Revisa las minutas generadas desde escrituras aprobadas.',
     href: '/documentos/historial',
     icon: FileAttachmentIcon,
     color: 'text-emerald-600',
@@ -29,8 +29,8 @@ export default function DocumentosPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Documentos Legales"
-        description="Orquestador de escrituras y contratos para tus lotes."
+        title="Documentos legales"
+        description="Mesa de escritura, plantillas y minutas para tus lotes."
       />
 
       {/* ── Acceso rápido ────────────────────────────────────────────── */}
@@ -54,9 +54,9 @@ export default function DocumentosPage() {
         {/* ── Acción principal ─────────────────────────────────────────── */}
         <div className="xl:col-span-12 border border-border rounded-xl p-6 bg-card text-card-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2">
           <div>
-            <p className="font-semibold text-foreground">¿Necesitas componer una matriz?</p>
+            <p className="font-semibold text-foreground">¿Necesitas revisar una escritura?</p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Abre el caso de escritura desde el Centro de Control Legal y revisa su matriz.
+              Abre el caso desde el Centro de Control Legal y continúa en la mesa de escritura.
             </p>
           </div>
           <Link

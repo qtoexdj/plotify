@@ -177,11 +177,12 @@ export async function upsertEscrituraTemplateClause({
   payload,
 }: {
   templateId: string
-  clauseKey: string
+  clauseKey?: string | null
   payload: ClauseUpsertRequest
 }): Promise<EscrituraTemplateDetail> {
+  const clausePath = clauseKey ? `/clauses/${encodeURIComponent(clauseKey)}` : '/clauses'
   return requestJson<EscrituraTemplateDetail>(
-    `/api/escritura-templates/${encodeURIComponent(templateId)}/clauses/${encodeURIComponent(clauseKey)}`,
+    `/api/escritura-templates/${encodeURIComponent(templateId)}${clausePath}`,
     {
       method: 'PUT',
       body: payload,

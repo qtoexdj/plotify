@@ -77,6 +77,7 @@ Generación de documentos legales (escrituras, deslindes, servidumbres).
 - [[Variables Escritura Compraventa - Fuentes de Obtencion]]
 - [[SDD 007 Escrituras Variable Resolution]]
 - [[SDD 008 Creador de Matriz - Handoff]]
+- [[SDD 010 Mesa de Escritura - Handoff]]
 - [[Texto de Deslinde]]
 - [[Servidumbres Legal]]
 
@@ -134,6 +135,9 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[Implementacion SDD 001 Fase 2 - Foundation MVP]]
 - [[SDD 006 Escrituras Lab - Minuta DOCX y Readiness]]
 - [[SDD 007 Escrituras Variable Resolution]]
+- [[SDD 008 Creador de Matriz - Handoff]]
+- [[SDD 009 Titulo Dominio Vigente]]
+- [[SDD 010 Mesa de Escritura - Handoff]]
 
 ---
 
@@ -163,3 +167,4 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[Implementacion Punto 4 - Consolidacion Operativa Monorepo]] - Documentacion centralizada, `.gitignore` monorepo, scripts de arranque y endpoint del visor restaurado.
 - [[Implementacion SDD 001 Fase 1 - Setup MVP]] - Setup de `001-stabilize-plotify-mvp` cerrado: scope, plan, contratos API y contratos DB revisados antes de foundation.
 - [[Implementacion SDD 001 Fase 2 - Foundation MVP]] - Foundation de `001-stabilize-plotify-mvp` cerrada: migracion de templates/documentos, versionado, contratos OpenAPI, fixtures multi-tenant, tests MVP y quickstart de piloto 20 lotes.
+- [[SDD 010 Mesa de Escritura - Handoff]] - Mesa legal implementada tecnicamente: documento continuo, evidencia, edicion in-place, plantillas sin JSON y retiro de la capa vieja; queda pendiente el gate humano de usabilidad.

@@ -91,6 +91,28 @@
       },
       "ApprovalBlocker": {
         "properties": {
+          "action_href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Href"
+          },
+          "action_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Label"
+          },
           "alert_tipo": {
             "anyOf": [
               {
@@ -112,6 +134,17 @@
               }
             ],
             "title": "Cause"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "fix_url": {
             "anyOf": [
@@ -172,6 +205,17 @@
               }
             ],
             "title": "Required Clause"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": ["kind"],
@@ -254,6 +298,17 @@
           "blockKey": {
             "title": "Blockkey",
             "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
           },
           "status": {
             "enum": ["resolved", "missing", "blocked"],
@@ -802,6 +857,25 @@
         "title": "DocumentVariablesGroup",
         "type": "object"
       },
+      "EscrituraActiveCase": {
+        "properties": {
+          "case_status": {
+            "title": "Case Status",
+            "type": "string"
+          },
+          "case_status_label": {
+            "title": "Case Status Label",
+            "type": "string"
+          },
+          "escritura_case_id": {
+            "title": "Escritura Case Id",
+            "type": "string"
+          }
+        },
+        "required": ["escritura_case_id", "case_status", "case_status_label"],
+        "title": "EscrituraActiveCase",
+        "type": "object"
+      },
       "EscrituraCaseCreateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -869,6 +943,16 @@
       },
       "EscrituraReadinessResponse": {
         "properties": {
+          "active_case": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EscrituraActiveCase"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "evidence_snapshot": {
             "additionalProperties": true,
             "title": "Evidence Snapshot",
@@ -1419,6 +1503,29 @@
           }
         },
         "title": "InscriptionRectificatoria",
+        "type": "object"
+      },
+      "InsertableVariable": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "category_label": {
+            "title": "Category Label",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": ["key", "label", "category", "category_label"],
+        "title": "InsertableVariable",
         "type": "object"
       },
       "InvalidateCacheRequest": {
@@ -2058,6 +2165,13 @@
       },
       "MatrizCaseResponse": {
         "properties": {
+          "insertable_variables": {
+            "items": {
+              "$ref": "#/components/schemas/InsertableVariable"
+            },
+            "title": "Insertable Variables",
+            "type": "array"
+          },
           "matriz": {
             "$ref": "#/components/schemas/MatrizView"
           }
@@ -2167,6 +2281,17 @@
           "fixed_position": {
             "title": "Fixed Position",
             "type": "boolean"
+          },
+          "omitted_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Omitted Reason"
           },
           "overridden": {
             "default": false,
@@ -3880,6 +4005,13 @@
       },
       "TemplateListResponse": {
         "properties": {
+          "insertable_variables": {
+            "items": {
+              "$ref": "#/components/schemas/InsertableVariable"
+            },
+            "title": "Insertable Variables",
+            "type": "array"
+          },
           "templates": {
             "items": {
               "$ref": "#/components/schemas/EscrituraTemplateSummary"
@@ -4535,12 +4667,56 @@
       },
       "TokenResolution": {
         "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "category_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Label"
+          },
           "evidence_refs": {
             "items": {
               "$ref": "#/components/schemas/MatrizEvidenceRef"
             },
             "title": "Evidence Refs",
             "type": "array"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
           },
           "source_type": {
             "anyOf": [
@@ -6882,6 +7058,88 @@
         "tags": ["escritura-templates"]
       }
     },
+    "/api/v1/escritura-templates/{template_id}/clauses": {
+      "put": {
+        "operationId": "upsert_escritura_template_clause_api_v1_escritura_templates__template_id__clauses_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "clause_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Clause Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClauseUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraTemplateDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Upsert Escritura Template Clause",
+        "tags": ["escritura-templates"]
+      }
+    },
     "/api/v1/escritura-templates/{template_id}/clauses/{clause_key}": {
       "put": {
         "operationId": "upsert_escritura_template_clause_api_v1_escritura_templates__template_id__clauses__clause_key__put",
@@ -6901,8 +7159,15 @@
             "name": "clause_key",
             "required": true,
             "schema": {
-              "title": "Clause Key",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Clause Key"
             }
           },
           {

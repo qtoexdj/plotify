@@ -343,6 +343,14 @@ class ReadinessGateResponse(LegalVariableResponseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+# SDD 010 T009: caso activo del lote para el CTA y el estado unificado del
+# CCL; el label viene redactado del diccionario server-side (FR-015).
+class EscrituraActiveCase(LegalVariableResponseModel):
+    escritura_case_id: str
+    case_status: str
+    case_status_label: str
+
+
 class EscrituraReadinessResponse(LegalVariableResponseModel):
     organization_id: str
     project_id: str
@@ -351,6 +359,7 @@ class EscrituraReadinessResponse(LegalVariableResponseModel):
     gates: list[ReadinessGateResponse] = Field(default_factory=list)
     variable_snapshot: dict[str, Any] = Field(default_factory=dict)
     evidence_snapshot: dict[str, Any] = Field(default_factory=dict)
+    active_case: EscrituraActiveCase | None = None
 
 
 class EscrituraCaseCreateRequest(LegalVariableBaseModel):

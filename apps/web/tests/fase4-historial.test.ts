@@ -503,14 +503,15 @@ describe('F-v2-4.15 — navItems: estructura global del sidebar', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('F-v2-4.14 — /documentos accesos rápidos: rutas correctas', () => {
+  // Réplica de ACCESOS en documentos/page.tsx. Bloques se retiró en
+  // SDD 008 T034; esta copia quedó desactualizada y se corrigió en SDD 010.
   const ACCESOS = [
     { title: 'Plantillas', href: '/documentos/plantillas' },
-    { title: 'Bloques', href: '/documentos/bloques' },
     { title: 'Historial', href: '/documentos/historial' },
   ]
 
-  it('hay exactamente 3 accesos rápidos definidos', () => {
-    expect(ACCESOS).toHaveLength(3)
+  it('hay exactamente 2 accesos rápidos definidos', () => {
+    expect(ACCESOS).toHaveLength(2)
   })
 
   it.each(ACCESOS)('acceso "$title" tiene la href "$href"', ({ title, href }) => {

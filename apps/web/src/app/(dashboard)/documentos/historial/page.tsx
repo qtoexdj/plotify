@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { getActiveWorkspace } from '@/lib/services/workspace.service'
 import { listOrganizationMinutaGenerations } from '@/lib/documents/matriz-history'
-import { GenerationHistory } from '@/components/documents/matriz/generation-history'
+import { HistorialGeneraciones } from '@/components/documents/mesa/historial-generaciones'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function DocumentsHistoryPage() {
@@ -34,13 +34,13 @@ export default async function DocumentsHistoryPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Historial de Minutas</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Historial de minutas</h1>
         <p className="text-muted-foreground mt-1">
-          Minutas DOCX generadas desde matrices aprobadas y snapshots vigentes.
+          Minutas generadas desde escrituras aprobadas y expedientes vigentes.
         </p>
       </div>
 
-      <GenerationHistory generations={generations} />
+      <HistorialGeneraciones generations={generations} />
     </div>
   )
 }

@@ -116,6 +116,10 @@ export interface EscrituraTemplateDetail extends EscrituraTemplateSummary {
 
 export interface TemplateListResponse {
   templates: EscrituraTemplateSummary[]
+  // SDD 010 FR-014: catalogo canonico para el picker del editor de plantillas,
+  // servido para no derivar de una copia hardcodeada. Opcional para tolerar
+  // respuestas previas a la extension.
+  insertable_variables?: InsertableVariable[]
 }
 
 export interface TemplateCreateRequest {
@@ -143,6 +147,8 @@ export interface InvalidTemplateKey {
   key: string
   reason: 'unknown_key' | 'removed_key' | 'invalid_node'
   suggested_migration: string | null
+  display_text?: string | null
+  suggested_label?: string | null
 }
 
 // ─── Matriz por caso ─────────────────────────────────────────────────────────
@@ -173,12 +179,19 @@ export interface TokenResolution {
   state: SnapshotVariableState | null
   source_type: string | null
   evidence_refs: MatrizEvidenceRef[]
+  /** SDD 010: campos humanos del manifiesto (opcionales en manifiestos pre-010). */
+  label?: string | null
+  category?: string | null
+  category_label?: string | null
+  /** Origen operacional descrito; solo cuando no hay evidencia documental. */
+  source_label?: string | null
 }
 
 export interface BlockResolution {
   blockKey: string
   status: TokenResolutionStatus
   text: string | null
+  label?: string | null
 }
 
 /** Manifiesto del resolutor único server-side (research D6). */
@@ -188,30 +201,40 @@ export interface ResolutionManifest {
   missing_count: number
 }
 
-export type ApprovalBlocker =
-  | {
-      kind: 'token_missing'
-      key: string
-      fix_url: string
-      message?: string | null
-    }
-  | {
-      kind: 'readiness_gate'
-      gate: string
-      cause: string | null
-      fix_url: string
-      message?: string | null
-    }
-  | {
-      kind: 'alert_clause_missing'
-      alert_tipo: AlertTipo
-      required_clause: string
-    }
-  | {
-      kind: 'snapshot_stale'
-      message: string
-      fix_url?: string | null
-    }
+/** SDD 010 (FR-005): pendiente redactado server-side; la UI no traduce códigos. */
+export interface BlockerMicrocopyFields {
+  title?: string | null
+  description?: string | null
+  action_label?: string | null
+  action_href?: string | null
+}
+
+export type ApprovalBlocker = BlockerMicrocopyFields &
+  (
+    | {
+        kind: 'token_missing'
+        key: string
+        fix_url: string
+        message?: string | null
+      }
+    | {
+        kind: 'readiness_gate'
+        gate: string
+        cause: string | null
+        fix_url: string
+        message?: string | null
+      }
+    | {
+        kind: 'alert_clause_missing'
+        alert_tipo: AlertTipo
+        required_clause: string
+      }
+    | {
+        kind: 'snapshot_stale'
+        message: string
+        fix_url?: string | null
+      }
+  )
 
 /** Razón visible de alertas descartadas (sidebar de revisión, FR-008). */
 export interface DismissedAlert {
@@ -236,6 +259,8 @@ export interface MatrizClauseView {
   disabled: boolean
   condition: MatrizClauseCondition | null
   alert_tipo: AlertTipo | null
+  /** SDD 010 (FR-010): explicación humana cuando la condición no se cumple. */
+  omitted_reason?: string | null
 }
 
 /** Override local por cláusula dentro de `escritura_matrices.clause_overrides`. */
@@ -266,8 +291,17 @@ export interface MatrizView {
   dismissed_alerts: DismissedAlert[]
 }
 
+/** SDD 010 (research D6): catálogo humanizado para el picker "Insertar dato". */
+export interface InsertableVariable {
+  key: string
+  label: string
+  category: string
+  category_label: string
+}
+
 export interface MatrizCaseResponse {
   matriz: MatrizView
+  insertable_variables?: InsertableVariable[]
 }
 
 export interface MatrizSaveRequest {
