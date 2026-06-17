@@ -1435,12 +1435,15 @@ async def _insert_legal_review_decision(
     supabase: Any,
     decision_payload: dict[str, Any],
 ) -> dict[str, Any]:
+    # PostgREST devuelve la representación de las filas insertadas por defecto
+    # (Prefer: return=representation). `.select()/.single()` NO son encadenables
+    # tras `.insert()` (SyncQueryRequestBuilder no los expone) y provocaban un
+    # 500 al persistir la auditoría de la primera revisión real (los fakes de
+    # test sí los aceptan, así que la suite lo dejaba pasar).
     result = await asyncio.to_thread(
         lambda: (
             supabase.table("legal_review_decisions")
             .insert(decision_payload)
-            .select("*")
-            .single()
             .execute()
         )
     )
