@@ -16,6 +16,7 @@ from typing import Any
 from core.logger import get_logger
 from schemas.legal_variables import (
     DocumentEvidenceResponse,
+    VariableBulkApproveResponse,
     VariableInventoryResponse,
     VariableResolutionResponse,
     VariableReviewResponse,
@@ -1239,6 +1240,94 @@ async def upsert_project_variable(
         reviewed_at=inserted.get("reviewed_at") or now.isoformat(),
         audit_event_id=str(audit_row["id"]),
     )
+
+
+BULK_APPROVABLE_STATES = frozenset(("proposed", "manual_review"))
+
+
+async def bulk_approve_project_variables(
+    *,
+    organization_id: str,
+    project_id: str,
+    reviewed_by: str,
+    group: str | None = None,
+    variable_keys: list[str] | None = None,
+    supabase: Any | None = None,
+) -> VariableBulkApproveResponse:
+    """SDD 011 (A5): aprueba en bloque las variables de proyecto revisables
+    (``proposed``/``manual_review`` con valor), reusando el flujo auditado de
+    aprobación por variable. Acota por grupo o claves si se piden. Devuelve qué
+    se aprobó y qué se saltó (sin valor o en conflicto, que requieren atención
+    manual)."""
+    client = supabase or _get_supabase_client()
+    if not reviewed_by:
+        raise LegalVariableResolutionError("reviewed_by is required for bulk approve.")
+    keys_filter = set(variable_keys or [])
+    rows = await _fetch_project_variables_for_review(
+        supabase=client, organization_id=organization_id, project_id=project_id
+    )
+    approved: list[str] = []
+    skipped: list[str] = []
+    for row in rows:
+        key = str(row.get("variable_key") or "")
+        if group and row.get("variable_group") != group:
+            continue
+        if keys_filter and key not in keys_filter:
+            continue
+        state = str(row.get("state") or "")
+        if state == "conflict":
+            skipped.append(key)
+            continue
+        if state not in BULK_APPROVABLE_STATES:
+            continue
+        if not _has_review_value(row.get("value_text"), row.get("value_json")):
+            skipped.append(key)
+            continue
+        await update_legal_variable(
+            variable_resolution_id=str(row["id"]),
+            organization_id=organization_id,
+            project_id=project_id,
+            payload=VariableUpdateRequest(
+                action="approve", state="approved", reviewed_by=reviewed_by
+            ),
+            supabase=client,
+        )
+        approved.append(key)
+    logger.info(
+        "legal_variables_bulk_approved",
+        organization_id=organization_id,
+        project_id=project_id,
+        group=group,
+        approved_count=len(approved),
+        skipped_count=len(skipped),
+    )
+    return VariableBulkApproveResponse(
+        approved_count=len(approved),
+        approved_keys=approved,
+        skipped_keys=skipped,
+    )
+
+
+async def _fetch_project_variables_for_review(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+) -> list[dict[str, Any]]:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .select("*")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .is_("lot_id", "null")
+            .is_("escritura_case_id", "null")
+            .neq("state", "superseded")
+            .execute()
+        )
+    )
+    data = getattr(result, "data", None)
+    return data if isinstance(data, list) else []
 
 
 async def _fetch_project_variable_by_key(

@@ -175,3 +175,88 @@ async def test_upsert_creates_missing_manual_variable():
     assert row["source_type"] == "manual"
     assert row["lot_id"] is None and row["escritura_case_id"] is None
     assert len(fake._store["legal_review_decisions"]) == 1
+
+
+def test_bulk_approve_endpoint_delegates_to_service(monkeypatch):
+    import api.v1.endpoints.legal_variables as endpoint
+    from schemas.legal_variables import VariableBulkApproveResponse
+
+    svc = AsyncMock(
+        return_value=VariableBulkApproveResponse(
+            approved_count=2,
+            approved_keys=["sag.certificado_numero", "vendedor.nombre"],
+            skipped_keys=["titulo.inscripciones[]"],
+        )
+    )
+    monkeypatch.setattr(endpoint, "bulk_approve_project_variables_service", svc)
+
+    client = _client()
+    response = client.post(
+        "/api/v1/legal-variables/bulk-approve",
+        params={"organization_id": ORG_ID, "project_id": PROJECT_ID},
+        json={"reviewed_by": USER_ID, "group": "sag"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["approved_count"] == 2
+    svc.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_bulk_approve_approves_proposed_and_skips_conflict_or_empty(monkeypatch):
+    import services.legal_variable_resolution as svc
+
+    rows = [
+        {"id": "1", "variable_key": "sag.certificado_numero", "variable_group": "sag", "state": "proposed", "value_text": "1468"},
+        {"id": "2", "variable_key": "vendedor.nombre", "variable_group": "vendedor", "state": "proposed", "value_text": "Juan"},
+        {"id": "3", "variable_key": "titulo.inscripciones[]", "variable_group": "titulo", "state": "conflict", "value_text": None, "value_json": [{}]},
+        {"id": "4", "variable_key": "sag.oficina_sectorial", "variable_group": "sag", "state": "missing", "value_text": None},
+        {"id": "5", "variable_key": "clausulas.rnda_declaracion", "variable_group": "clausulas", "state": "proposed", "value_text": None},
+    ]
+
+    async def fake_fetch(**_kw):
+        return rows
+
+    approve_mock = AsyncMock()
+    monkeypatch.setattr(svc, "_fetch_project_variables_for_review", fake_fetch)
+    monkeypatch.setattr(svc, "update_legal_variable", approve_mock)
+
+    result = await svc.bulk_approve_project_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        reviewed_by=USER_ID,
+        supabase=object(),
+    )
+
+    assert set(result.approved_keys) == {"sag.certificado_numero", "vendedor.nombre"}
+    assert result.approved_count == 2
+    assert "titulo.inscripciones[]" in result.skipped_keys  # conflicto: atención manual
+    assert "clausulas.rnda_declaracion" in result.skipped_keys  # sin valor
+    assert "sag.oficina_sectorial" not in result.skipped_keys  # missing: no es candidato
+    assert approve_mock.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_bulk_approve_respects_group_filter(monkeypatch):
+    import services.legal_variable_resolution as svc
+
+    rows = [
+        {"id": "1", "variable_key": "sag.certificado_numero", "variable_group": "sag", "state": "proposed", "value_text": "1468"},
+        {"id": "2", "variable_key": "vendedor.nombre", "variable_group": "vendedor", "state": "proposed", "value_text": "Juan"},
+    ]
+
+    async def fake_fetch(**_kw):
+        return rows
+
+    monkeypatch.setattr(svc, "_fetch_project_variables_for_review", fake_fetch)
+    monkeypatch.setattr(svc, "update_legal_variable", AsyncMock())
+
+    result = await svc.bulk_approve_project_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        reviewed_by=USER_ID,
+        group="sag",
+        supabase=object(),
+    )
+
+    assert result.approved_keys == ["sag.certificado_numero"]

@@ -23,6 +23,8 @@ from schemas.legal_variables import (
     LotLegalDataResponse,
     RoleManualOverrideRequest,
     RoleMatchingInventoryResponse,
+    VariableBulkApproveRequest,
+    VariableBulkApproveResponse,
     VariableInventoryResponse,
     VariableReviewResponse,
     VariableUpdateRequest,
@@ -42,6 +44,7 @@ from services.legal_variable_resolution import (
     LegalVariableInventoryNotFoundError,
     LegalVariableInventoryScopeError,
     LegalVariableResolutionError,
+    bulk_approve_project_variables as bulk_approve_project_variables_service,
     get_project_variable_inventory as get_project_variable_inventory_service,
     update_legal_variable as update_legal_variable_service,
     upsert_project_variable as upsert_project_variable_service,
@@ -435,6 +438,41 @@ async def upsert_legal_variable(
     except LegalVariableAuditError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/legal-variables/bulk-approve",
+    response_model=VariableBulkApproveResponse,
+)
+async def bulk_approve_legal_variables(
+    payload: VariableBulkApproveRequest,
+    organization_id: str = Query(...),
+    project_id: str = Query(...),
+) -> VariableBulkApproveResponse:
+    """SDD 011 (A5): aprueba en bloque las variables revisables del proyecto
+    (proposed/manual_review con valor), opcionalmente por grupo o claves."""
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
+    try:
+        return await bulk_approve_project_variables_service(
+            organization_id=organization_id,
+            project_id=project_id,
+            reviewed_by=payload.reviewed_by,
+            group=payload.group,
+            variable_keys=payload.variable_keys or None,
+        )
+    except LegalVariableResolutionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except LegalVariableInventoryScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from exc
 

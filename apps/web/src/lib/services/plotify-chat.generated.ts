@@ -837,6 +837,16 @@ export interface components {
       "msg": string
       "type": string
     }
+    "VariableBulkApproveRequest": {
+      "group"?: string | null
+      "reviewed_by": string
+      "variable_keys"?: Array<string>
+    }
+    "VariableBulkApproveResponse": {
+      "approved_count": number
+      "approved_keys"?: Array<string>
+      "skipped_keys"?: Array<string>
+    }
     "VariableInventoryResponse": {
       "groups"?: Record<string, Array<components["schemas"]["VariableResolutionResponse"]>>
       "lot_id"?: string | null
@@ -1231,6 +1241,12 @@ export interface operations {
     path: "/api/v1/legal-titles/{analysis_id}/narrative"
     requestBody: components["schemas"]["TitleNarrativeUpdateRequest"]
     response: components["schemas"]["TitleAnalysisNarrative"]
+  }
+  "bulk_approve_legal_variables_api_v1_legal_variables_bulk_approve_post": {
+    method: "POST"
+    path: "/api/v1/legal-variables/bulk-approve"
+    requestBody: components["schemas"]["VariableBulkApproveRequest"]
+    response: components["schemas"]["VariableBulkApproveResponse"]
   }
   "upsert_legal_variable_api_v1_legal_variables_by_key_put": {
     method: "PUT"

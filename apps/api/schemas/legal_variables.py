@@ -264,6 +264,29 @@ class VariableReviewResponse(LegalVariableResponseModel):
     audit_event_id: str
 
 
+class VariableBulkApproveRequest(LegalVariableBaseModel):
+    """SDD 011 (A5): aprueba en bloque las variables revisables del proyecto
+    (proposed/manual_review con valor), opcionalmente acotado a un grupo o a un
+    set de claves. Limpia los 'por revisar' sin clic-por-clic."""
+
+    reviewed_by: str
+    group: str | None = None
+    variable_keys: list[str] = Field(default_factory=list)
+
+    @field_validator("group")
+    @classmethod
+    def validate_group(cls, value: str | None) -> str | None:
+        if value is not None and not catalog.is_variable_group(value):
+            raise ValueError(f"Unknown variable group: {value}")
+        return value
+
+
+class VariableBulkApproveResponse(LegalVariableResponseModel):
+    approved_count: int
+    approved_keys: list[str] = Field(default_factory=list)
+    skipped_keys: list[str] = Field(default_factory=list)
+
+
 class RoleMatchingRequest(LegalVariableBaseModel):
     organization_id: str
     project_id: str

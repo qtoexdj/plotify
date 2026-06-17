@@ -5221,6 +5221,62 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VariableBulkApproveRequest": {
+        "additionalProperties": false,
+        "description": "SDD 011 (A5): aprueba en bloque las variables revisables del proyecto\n(proposed/manual_review con valor), opcionalmente acotado a un grupo o a un\nset de claves. Limpia los 'por revisar' sin clic-por-clic.",
+        "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
+          "reviewed_by": {
+            "title": "Reviewed By",
+            "type": "string"
+          },
+          "variable_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Variable Keys",
+            "type": "array"
+          }
+        },
+        "required": ["reviewed_by"],
+        "title": "VariableBulkApproveRequest",
+        "type": "object"
+      },
+      "VariableBulkApproveResponse": {
+        "properties": {
+          "approved_count": {
+            "title": "Approved Count",
+            "type": "integer"
+          },
+          "approved_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Approved Keys",
+            "type": "array"
+          },
+          "skipped_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped Keys",
+            "type": "array"
+          }
+        },
+        "required": ["approved_count"],
+        "title": "VariableBulkApproveResponse",
+        "type": "object"
+      },
       "VariableInventoryResponse": {
         "properties": {
           "groups": {
@@ -8850,6 +8906,71 @@
         ],
         "summary": "Update Title Narrative",
         "tags": ["legal-titles"]
+      }
+    },
+    "/api/v1/legal-variables/bulk-approve": {
+      "post": {
+        "description": "SDD 011 (A5): aprueba en bloque las variables revisables del proyecto\n(proposed/manual_review con valor), opcionalmente por grupo o claves.",
+        "operationId": "bulk_approve_legal_variables_api_v1_legal_variables_bulk_approve_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "title": "Organization Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableBulkApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariableBulkApproveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Bulk Approve Legal Variables",
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-variables/by-key": {
