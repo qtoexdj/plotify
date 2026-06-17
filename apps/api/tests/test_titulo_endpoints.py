@@ -333,9 +333,14 @@ class TestGetProjectTitleCase:
 
 
 class TestReanalyzeProjectTitle:
-    def test_idempotent_returns_existing_analysis(
+    def test_reanalyze_forces_rerun_even_with_existing_same_hash(
         self, monkeypatch, title_documents, redis_mock
     ):
+        """SDD 011: 'Reanalizar' explícito SIEMPRE re-corre. El usuario pudo
+        cambiar el modelo o el nivel de razonamiento (que no entran en el hash
+        de contenido), así que no debe ser un no-op aunque exista un análisis
+        con el mismo hash. La idempotencia por contenido queda para el camino
+        automático (run_title_analysis)."""
         existing = _analysis_row(source_content_hash=_source_hash(title_documents))
         fake = FakeSupabase(
             seed_documents=title_documents,
@@ -348,9 +353,10 @@ class TestReanalyzeProjectTitle:
         )
         assert response.status_code == 202
         payload = response.json()
-        assert payload["analysis_id"] == existing["id"]
-        assert payload["queued"] is False
-        redis_mock.enqueue_job.assert_not_called()
+        assert payload["queued"] is True
+        assert payload["status"] == "processing"
+        assert payload["analysis_id"] != existing["id"]
+        redis_mock.enqueue_job.assert_awaited_once()
 
     def test_409_when_analysis_already_processing(
         self, monkeypatch, title_documents, redis_mock

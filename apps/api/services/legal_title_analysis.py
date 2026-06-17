@@ -1274,20 +1274,11 @@ async def request_title_reanalysis(
         )
 
     source_content_hash = compute_source_content_hash(source_documents)
-    existing = await check_idempotency(
-        project_id=project_id,
-        source_content_hash=source_content_hash,
-        extractor_name=EXTRACTOR_NAME,
-        prompt_version=PROMPT_VERSION,
-        supabase=client,
-    )
-    if existing is not None and str(existing.get("status")) != "processing":
-        return str(existing["id"]), str(existing.get("status")), False
-
-    if existing is not None:
-        # Same-hash placeholder already queued: report it without re-queueing.
-        return str(existing["id"]), "processing", False
-
+    # "Reanalizar" explícito SIEMPRE re-corre: el usuario lo pidió y pudo haber
+    # cambiado el modelo o el nivel de razonamiento, que NO entran en el hash de
+    # contenido. La idempotencia por contenido sigue protegiendo el camino
+    # automático (run_title_analysis en el worker). Aquí solo bloqueamos si ya
+    # hay una corrida en proceso, para no encolar dos a la vez.
     if hasattr(client, "table"):
         processing_result = await _run_supabase(
             lambda: (
