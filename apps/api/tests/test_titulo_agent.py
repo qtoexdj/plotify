@@ -350,20 +350,23 @@ class TestLlmClientReasoningEffort:
             ),
         )
 
-    def test_gpt5_uses_reasoning_effort_and_no_temperature(self, monkeypatch):
+    def test_gpt5_uses_reasoning_effort_responses_api_no_temperature(self, monkeypatch):
         import agent_titulo.runner as runner_module
 
         self._patch_settings(monkeypatch, "high")
         client = runner_module._get_llm_client("openai", "gpt-5.5", 300)
         assert getattr(client, "reasoning_effort", None) == "high"
         assert getattr(client, "temperature", None) is None
+        # OpenAI exige la Responses API para tools + reasoning_effort en gpt-5.
+        assert getattr(client, "use_responses_api", None) is True
 
-    def test_gpt5_without_effort_omits_reasoning_effort(self, monkeypatch):
+    def test_gpt5_without_effort_stays_on_completions(self, monkeypatch):
         import agent_titulo.runner as runner_module
 
         self._patch_settings(monkeypatch, "")
         client = runner_module._get_llm_client("openai", "gpt-5.5", 300)
         assert not getattr(client, "reasoning_effort", None)
+        assert not getattr(client, "use_responses_api", None)
 
     def test_non_reasoning_model_keeps_temperature(self, monkeypatch):
         import agent_titulo.runner as runner_module

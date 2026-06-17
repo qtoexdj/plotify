@@ -80,6 +80,10 @@ def _get_llm_client(provider: str, model: str, timeout: int) -> Any:
             effort = (settings.LEGAL_TITLE_AGENT_REASONING_EFFORT or "").strip()
             if effort:
                 client_kwargs["reasoning_effort"] = effort
+                # OpenAI rechaza `reasoning_effort` + function tools en Chat
+                # Completions (400: "use /v1/responses instead"). El agente usa
+                # tools, así que con razonamiento hay que ir por la Responses API.
+                client_kwargs["use_responses_api"] = True
         else:
             client_kwargs["temperature"] = 0.0
         return ChatOpenAI(**client_kwargs)
