@@ -155,6 +155,10 @@ export interface InvalidTemplateKey {
 
 export type MatrizStatus = 'draft' | 'legal_review_pending' | 'approved' | 'superseded'
 
+/** SDD 011 (data-model §1): scope de la matriz. `project` => escritura_case_id
+ * null ("esperando ventas"); `lot` => borrador instanciado al validar la venta. */
+export type MatrizScope = 'project' | 'lot'
+
 /** Estados de variable del snapshot (SDD 007). */
 export type SnapshotVariableState =
   | 'proposed'
@@ -278,10 +282,18 @@ export interface MatrizTemplateRef {
 
 export interface MatrizView {
   id: string
-  escritura_case_id: string
+  /** SDD 011: null => matriz de la escritura del PROYECTO (esperando ventas);
+   * presente => borrador del lote. */
+  escritura_case_id: string | null
   project_id: string
   status: MatrizStatus
   version: number
+  /** SDD 011: discriminador de scope (deriva de escritura_case_id; expuesto
+   * para no inferir desde null en la mesa/web). */
+  scope: MatrizScope
+  /** SDD 011 (FR-012): matriz de proyecto desde la que se instanció este
+   * borrador del lote (solo en scope `lot`). */
+  source_project_matriz_id: string | null
   template: MatrizTemplateRef
   snapshot_stale: boolean
   clause_order: string[]
@@ -322,6 +334,10 @@ export interface MatrizRejectRequest {
 
 export interface MinutaGeneration {
   id: string
+  project_id?: string | null
+  project_name?: string | null
+  lot_id?: string | null
+  lot_label?: string | null
   escritura_case_id: string
   matriz_id: string
   matriz_version: number
@@ -353,4 +369,43 @@ export interface StageOperationalResult {
   missing: string[]
   /** Claves con estado revisado (approved/resolved/not_applicable): el puente no las toca. */
   protected: string[]
+}
+
+// ─── Entrega del borrador al vendedor (SDD 011, data-model §4) ────────────────
+
+export type DeliveryChannel = 'telegram' | 'web'
+
+export type DeliveryStatus = 'pending' | 'sent' | 'failed' | 'unavailable' | 'expired'
+
+/** Entrega auditada del borrador aceptado. El `link_token` crudo NUNCA viaja
+ * al cliente (el contrato server-side lo descarta): solo la URL firmada lista
+ * para descargar y la frase de estado del diccionario único (FR-010/FR-014). */
+export interface EscrituraDeliveryView {
+  id: string
+  escritura_case_id: string
+  generation_id: string
+  recipient_user_id: string | null
+  channel: DeliveryChannel
+  status: DeliveryStatus
+  link_expires_at: string | null
+  sent_at: string | null
+  created_at: string
+  download_url: string | null
+  status_label: string | null
+}
+
+export interface EscrituraDeliveryListResponse {
+  deliveries: EscrituraDeliveryView[]
+}
+
+/** Disparo de entrega al aceptar el borrador (US4): destinatario por defecto el
+ * vendedor asignado; `channels` controla Telegram/web. */
+export interface DeliverDraftRequest {
+  recipient_user_id?: string | null
+  channels?: DeliveryChannel[]
+}
+
+/** El vendedor renueva el enlace vencido desde "mis documentos" (FR-010). */
+export interface RenewDeliveryLinkRequest {
+  requested_by: string
 }

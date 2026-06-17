@@ -45,7 +45,7 @@ export function puedeRevisar(matriz: MatrizView): boolean {
 
 /** Migrado de SDD 008: solo escritura aprobada con expediente vigente. */
 export function puedeGenerarMinuta(matriz: MatrizView): boolean {
-  return matriz.status === 'approved' && !matriz.snapshot_stale
+  return matriz.scope === 'lot' && matriz.status === 'approved' && !matriz.snapshot_stale
 }
 
 export function resumenDeAccion(accion: AccionWorkflow): string {
@@ -158,7 +158,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
         </>
       ) : null}
 
-      {matriz.status === 'approved' ? (
+      {matriz.status === 'approved' && matriz.scope === 'lot' ? (
         <>
           {generacion?.download_url ? (
             <Button type="button" variant="outline" size="sm" asChild>

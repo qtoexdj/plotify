@@ -941,6 +941,114 @@
         "title": "EscrituraCaseSnapshotResponse",
         "type": "object"
       },
+      "EscrituraDeliveryListResponse": {
+        "properties": {
+          "deliveries": {
+            "items": {
+              "$ref": "#/components/schemas/EscrituraDeliveryView"
+            },
+            "title": "Deliveries",
+            "type": "array"
+          }
+        },
+        "title": "EscrituraDeliveryListResponse",
+        "type": "object"
+      },
+      "EscrituraDeliveryView": {
+        "properties": {
+          "channel": {
+            "enum": ["telegram", "web"],
+            "title": "Channel",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
+          "escritura_case_id": {
+            "format": "uuid",
+            "title": "Escritura Case Id",
+            "type": "string"
+          },
+          "generation_id": {
+            "format": "uuid",
+            "title": "Generation Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "link_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Expires At"
+          },
+          "recipient_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient User Id"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "enum": ["pending", "sent", "failed", "unavailable", "expired"],
+            "title": "Status",
+            "type": "string"
+          },
+          "status_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Label"
+          }
+        },
+        "required": ["id", "escritura_case_id", "generation_id", "channel", "status", "created_at"],
+        "title": "EscrituraDeliveryView",
+        "type": "object"
+      },
       "EscrituraReadinessResponse": {
         "properties": {
           "active_case": {
@@ -1112,6 +1220,149 @@
         },
         "required": ["id", "name", "document_type", "version", "status"],
         "title": "EscrituraTemplateSummary",
+        "type": "object"
+      },
+      "EscrituraTraceEvent": {
+        "properties": {
+          "actor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "approval_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Id"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "enum": ["telegram", "web"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "input_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Input Keys",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "project_matriz_approved",
+              "sale_validated",
+              "draft_generated",
+              "draft_accepted",
+              "delivered"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "matriz_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matriz Version"
+          },
+          "recipient_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient User Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": ["pending", "sent", "failed", "unavailable", "expired"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": ["kind", "label"],
+        "title": "EscrituraTraceEvent",
+        "type": "object"
+      },
+      "EscrituraTraceResponse": {
+        "properties": {
+          "escritura_case_id": {
+            "format": "uuid",
+            "title": "Escritura Case Id",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EscrituraTraceEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "source_project_matriz_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Project Matriz Id"
+          }
+        },
+        "required": ["escritura_case_id"],
+        "title": "EscrituraTraceResponse",
         "type": "object"
       },
       "Evidence": {
@@ -2483,9 +2734,16 @@
             "type": "array"
           },
           "escritura_case_id": {
-            "format": "uuid",
-            "title": "Escritura Case Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escritura Case Id"
           },
           "id": {
             "format": "uuid",
@@ -2500,10 +2758,28 @@
           "resolution": {
             "$ref": "#/components/schemas/ResolutionManifest"
           },
+          "scope": {
+            "default": "lot",
+            "enum": ["project", "lot"],
+            "title": "Scope",
+            "type": "string"
+          },
           "snapshot_stale": {
             "default": false,
             "title": "Snapshot Stale",
             "type": "boolean"
+          },
+          "source_project_matriz_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Project Matriz Id"
           },
           "status": {
             "enum": ["draft", "legal_review_pending", "approved", "superseded"],
@@ -2518,7 +2794,7 @@
             "type": "integer"
           }
         },
-        "required": ["id", "escritura_case_id", "project_id", "status", "version", "template"],
+        "required": ["id", "project_id", "status", "version", "template"],
         "title": "MatrizView",
         "type": "object"
       },
@@ -2884,6 +3160,17 @@
       },
       "NotificationItem": {
         "properties": {
+          "action_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Label"
+          },
           "approval_id": {
             "title": "Approval Id",
             "type": "string"
@@ -2911,6 +3198,39 @@
             ],
             "title": "Decided At"
           },
+          "deep_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deep Link"
+          },
+          "flow_state_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow State Description"
+          },
+          "flow_state_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow State Label"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2918,6 +3238,17 @@
           "lot_label": {
             "title": "Lot Label",
             "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
           },
           "project_name": {
             "title": "Project Name",
@@ -2942,6 +3273,17 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           },
           "vendor_name": {
             "title": "Vendor Name",
@@ -6450,6 +6792,124 @@
         "tags": ["escritura-matrices"]
       }
     },
+    "/api/v1/escritura-deliveries/mine": {
+      "get": {
+        "operationId": "list_my_deliveries_api_v1_escritura_deliveries_mine_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Organization-Id",
+            "required": true,
+            "schema": {
+              "title": "X-Organization-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraDeliveryListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "List My Deliveries",
+        "tags": ["escritura-deliveries"]
+      }
+    },
+    "/api/v1/escritura-deliveries/{delivery_id}/renew": {
+      "post": {
+        "operationId": "renew_my_delivery_link_api_v1_escritura_deliveries__delivery_id__renew_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delivery Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": true,
+            "schema": {
+              "title": "X-User-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Organization-Id",
+            "required": true,
+            "schema": {
+              "title": "X-Organization-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraDeliveryView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Renew My Delivery Link",
+        "tags": ["escritura-deliveries"]
+      }
+    },
     "/api/v1/escritura-matrices/case/{escritura_case_id}": {
       "get": {
         "operationId": "get_case_matriz_api_v1_escritura_matrices_case__escritura_case_id__get",
@@ -6559,6 +7019,119 @@
           }
         ],
         "summary": "List Case Generations",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/case/{escritura_case_id}/trace": {
+      "get": {
+        "description": "Trazabilidad completa de la escritura (FR-012), consultable desde la\nmesa y el historial.",
+        "operationId": "get_escritura_trace_api_v1_escritura_matrices_case__escritura_case_id__trace_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escritura_case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escritura Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscrituraTraceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Escritura Trace",
+        "tags": ["escritura-matrices"]
+      }
+    },
+    "/api/v1/escritura-matrices/project/{project_id}": {
+      "get": {
+        "operationId": "get_project_matriz_api_v1_escritura_matrices_project__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrizCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get Project Matriz",
         "tags": ["escritura-matrices"]
       }
     },

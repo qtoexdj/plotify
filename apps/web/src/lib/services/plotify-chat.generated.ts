@@ -153,6 +153,22 @@ export interface components {
       "readiness_status": string
       "variable_snapshot_count": number
     }
+    "EscrituraDeliveryListResponse": {
+      "deliveries"?: Array<components["schemas"]["EscrituraDeliveryView"]>
+    }
+    "EscrituraDeliveryView": {
+      "channel": "telegram" | "web"
+      "created_at": string
+      "download_url"?: string | null
+      "escritura_case_id": string
+      "generation_id": string
+      "id": string
+      "link_expires_at"?: string | null
+      "recipient_user_id"?: string | null
+      "sent_at"?: string | null
+      "status": "pending" | "sent" | "failed" | "unavailable" | "expired"
+      "status_label"?: string | null
+    }
     "EscrituraReadinessResponse": {
       "active_case"?: components["schemas"]["EscrituraActiveCase"] | null
       "evidence_snapshot"?: Record<string, unknown>
@@ -183,6 +199,23 @@ export interface components {
       "status": "draft" | "published" | "retired"
       "updated_at"?: string | null
       "version": number
+    }
+    "EscrituraTraceEvent": {
+      "actor_id"?: string | null
+      "approval_id"?: string | null
+      "at"?: string | null
+      "channel"?: "telegram" | "web" | null
+      "input_keys"?: Array<string>
+      "kind": "project_matriz_approved" | "sale_validated" | "draft_generated" | "draft_accepted" | "delivered"
+      "label": string
+      "matriz_version"?: number | null
+      "recipient_user_id"?: string | null
+      "status"?: "pending" | "sent" | "failed" | "unavailable" | "expired" | null
+    }
+    "EscrituraTraceResponse": {
+      "escritura_case_id": string
+      "events"?: Array<components["schemas"]["EscrituraTraceEvent"]>
+      "source_project_matriz_id"?: string | null
     }
     "Evidence": {
       "legal_document_id"?: string | null
@@ -400,11 +433,13 @@ export interface components {
       "clause_order"?: Array<string>
       "clauses"?: Array<components["schemas"]["MatrizClauseView"]>
       "dismissed_alerts"?: Array<components["schemas"]["DismissedAlert"]>
-      "escritura_case_id": string
+      "escritura_case_id"?: string | null
       "id": string
       "project_id": string
       "resolution"?: components["schemas"]["ResolutionManifest"]
+      "scope"?: "project" | "lot"
       "snapshot_stale"?: boolean
+      "source_project_matriz_id"?: string | null
       "status": "draft" | "legal_review_pending" | "approved" | "superseded"
       "template": components["schemas"]["MatrizTemplateRef"]
       "version": number
@@ -477,17 +512,23 @@ export interface components {
       "success": boolean
     }
     "NotificationItem": {
+      "action_label"?: string | null
       "approval_id": string
       "can_decide": boolean
       "client_name": string
       "created_at": string
       "decided_at"?: string | null
+      "deep_link"?: string | null
+      "flow_state_description"?: string | null
+      "flow_state_label"?: string | null
       "id": string
       "lot_label": string
+      "message"?: string | null
       "project_name": string
       "read_at"?: string | null
       "request_type": string
       "status": string
+      "title"?: string | null
       "vendor_name": string
     }
     "NotificationListResponse": {
@@ -985,6 +1026,18 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["StageOperationalResult"]
   }
+  "list_my_deliveries_api_v1_escritura_deliveries_mine_get": {
+    method: "GET"
+    path: "/api/v1/escritura-deliveries/mine"
+    requestBody: never
+    response: components["schemas"]["EscrituraDeliveryListResponse"]
+  }
+  "renew_my_delivery_link_api_v1_escritura_deliveries__delivery_id__renew_post": {
+    method: "POST"
+    path: "/api/v1/escritura-deliveries/{delivery_id}/renew"
+    requestBody: never
+    response: components["schemas"]["EscrituraDeliveryView"]
+  }
   "get_case_matriz_api_v1_escritura_matrices_case__escritura_case_id__get": {
     method: "GET"
     path: "/api/v1/escritura-matrices/case/{escritura_case_id}"
@@ -996,6 +1049,18 @@ export interface operations {
     path: "/api/v1/escritura-matrices/case/{escritura_case_id}/generations"
     requestBody: never
     response: components["schemas"]["MinutaGenerationListResponse"]
+  }
+  "get_escritura_trace_api_v1_escritura_matrices_case__escritura_case_id__trace_get": {
+    method: "GET"
+    path: "/api/v1/escritura-matrices/case/{escritura_case_id}/trace"
+    requestBody: never
+    response: components["schemas"]["EscrituraTraceResponse"]
+  }
+  "get_project_matriz_api_v1_escritura_matrices_project__project_id__get": {
+    method: "GET"
+    path: "/api/v1/escritura-matrices/project/{project_id}"
+    requestBody: never
+    response: components["schemas"]["MatrizCaseResponse"]
   }
   "save_matriz_api_v1_escritura_matrices__matriz_id__put": {
     method: "PUT"

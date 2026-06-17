@@ -31,6 +31,17 @@ def _snapshot_fixture() -> dict[str, Any]:
     return _load_fixture("teno_case_snapshot.json")
 
 
+def _project_snapshot_fixture() -> dict[str, Any]:
+    snapshot = json.loads(json.dumps(_snapshot_fixture()["variable_snapshot"]))
+    for key in escritura_matrices.PROJECT_MATRIZ_GAP_KEYS:
+        snapshot.pop(key, None)
+    return snapshot
+
+
+def _project_evidence_snapshot_fixture() -> dict[str, Any]:
+    return json.loads(json.dumps(_snapshot_fixture()["evidence_snapshot"]))
+
+
 def _variable_snapshot_with_alerts(alerts: list[dict[str, Any]]) -> dict[str, Any]:
     snapshot = json.loads(json.dumps(_snapshot_fixture()["variable_snapshot"]))
     titulo = snapshot.setdefault("titulo", {})
@@ -74,6 +85,10 @@ class FakeQuery:
         self.filters.append((column, ("__neq__", value)))
         return self
 
+    def is_(self, column, value):
+        self.filters.append((column, ("__is__", value)))
+        return self
+
     def in_(self, column, values):
         self.filters.append((column, ("__in__", {str(value) for value in values})))
         return self
@@ -98,6 +113,12 @@ class FakeQuery:
                     return False
             elif isinstance(expected, tuple) and expected[0] == "__in__":
                 if str(actual) not in expected[1]:
+                    return False
+            elif isinstance(expected, tuple) and expected[0] == "__is__":
+                normalized = str(expected[1]).lower()
+                if normalized == "null" and actual is not None:
+                    return False
+                if normalized != "null" and str(actual) != str(expected[1]):
                     return False
             elif str(actual) != str(expected):
                 return False
@@ -191,6 +212,46 @@ def _client(app: FastAPI) -> TestClient:
     return TestClient(app, headers={"X-Internal-Secret": "test-secret"})
 
 
+def _seed_project(
+    store: FakeStore,
+    *,
+    project_id: str = PROJECT_ID,
+    organization_id: str = ORG_ID,
+    name: str = "Parcelación El Cóndor de Teno",
+) -> dict[str, Any]:
+    row = {
+        "id": project_id,
+        "organization_id": organization_id,
+        "name": name,
+    }
+    store.tables.setdefault("projects", []).append(row)
+    return row
+
+
+def _patch_project_snapshot(
+    monkeypatch,
+    *,
+    variable_snapshot: dict[str, Any] | None = None,
+    evidence_snapshot: dict[str, Any] | None = None,
+) -> None:
+    async def fake_fetch_project_matriz_snapshot(
+        *,
+        organization_id: str,
+        project_id: str,
+        supabase=None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        return (
+            variable_snapshot or _project_snapshot_fixture(),
+            evidence_snapshot or _project_evidence_snapshot_fixture(),
+        )
+
+    monkeypatch.setattr(
+        escritura_matrices,
+        "fetch_project_matriz_snapshot",
+        fake_fetch_project_matriz_snapshot,
+    )
+
+
 def _seed_case(
     store: FakeStore,
     *,
@@ -218,13 +279,7 @@ def _seed_case(
         "evidence_snapshot": snapshot["evidence_snapshot"],
     }
     store.tables.setdefault("escritura_cases", []).append(row)
-    store.tables.setdefault("projects", []).append(
-        {
-            "id": PROJECT_ID,
-            "organization_id": ORG_ID,
-            "name": "Parcelación El Cóndor de Teno",
-        }
-    )
+    _seed_project(store)
     return row
 
 
@@ -304,19 +359,198 @@ def _seed_matrix(
     return row
 
 
-class TestGetCaseMatriz:
-    def test_get_lazy_creates_matrix_from_published_template(self, monkeypatch):
+def _seed_project_matrix(
+    store: FakeStore,
+    *,
+    template: dict[str, Any],
+    variable_snapshot: dict[str, Any] | None = None,
+    snapshot_hash: str | None = None,
+    version: int = 1,
+    status: str = "draft",
+    clause_order: list[str] | None = None,
+    clause_overrides: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    snapshot = variable_snapshot or _project_snapshot_fixture()
+    order = clause_order or [
+        clause["clause_key"] for clause in store.tables["escritura_template_clauses"]
+    ]
+    row = {
+        "id": str(uuid.uuid4()),
+        "organization_id": ORG_ID,
+        "project_id": PROJECT_ID,
+        "escritura_case_id": None,
+        "template_id": template["id"],
+        "snapshot_case_status": "project",
+        "snapshot_hash": snapshot_hash or escritura_matrices._json_hash(snapshot),
+        "clause_order": order,
+        "clause_overrides": clause_overrides or {},
+        "status": status,
+        "version": version,
+        "submitted_by": None,
+        "submitted_at": None,
+        "approved_by": None,
+        "approved_at": None,
+        "created_at": "2026-06-10T00:00:00Z",
+        "updated_at": "2026-06-10T00:00:00Z",
+    }
+    store.tables.setdefault("escritura_matrices", []).append(row)
+    return row
+
+
+class TestGetProjectMatriz:
+    def test_get_project_matriz_lazy_creates_project_scope_matrix(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        _seed_project(store)
+        project_snapshot = _project_snapshot_fixture()
+        _patch_project_snapshot(monkeypatch, variable_snapshot=project_snapshot)
+
+        response = _client(_build_app(store, monkeypatch)).get(
+            f"/api/v1/escritura-matrices/project/{PROJECT_ID}",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()["matriz"]
+        assert len(store.tables["escritura_matrices"]) == 1
+        inserted = store.tables["escritura_matrices"][0]
+        assert inserted["project_id"] == PROJECT_ID
+        assert inserted["escritura_case_id"] is None
+        assert inserted["template_id"] == template["id"]
+        assert inserted["snapshot_case_status"] == "project"
+        assert inserted["snapshot_hash"] == escritura_matrices._json_hash(
+            project_snapshot
+        )
+        assert body["project_id"] == PROJECT_ID
+        assert body["escritura_case_id"] is None
+        assert body["scope"] == "project"
+        assert body["source_project_matriz_id"] is None
+        assert body["status"] == "draft"
+        assert body["version"] == 1
+        assert body["snapshot_stale"] is False
+        tokens = {
+            token["variableKey"]: token for token in body["resolution"]["tokens"]
+        }
+        assert tokens["proyecto.nombre"]["status"] == "resolved"
+        assert (
+            tokens["proyecto.nombre"]["value_text"]
+            == "Parcelación El Cóndor de Teno"
+        )
+        assert tokens["comprador.nombre"]["status"] == "missing"
+        assert tokens["transaccion.precio_numeros"]["status"] == "missing"
+        assert tokens["lote.numero"]["status"] == "missing"
+        blocker_keys = {
+            blocker.get("key")
+            for blocker in body["approval_blockers"]
+            if blocker.get("key")
+        }
+        assert "comprador.nombre" not in blocker_keys
+        assert "transaccion.precio_numeros" not in blocker_keys
+        assert "lote.numero" not in blocker_keys
+
+    def test_get_project_matriz_reuses_existing_active_project_matrix(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        _seed_project(store)
+        project_snapshot = _project_snapshot_fixture()
+        existing = _seed_project_matrix(
+            store, template=template, variable_snapshot=project_snapshot, version=3
+        )
+        _patch_project_snapshot(monkeypatch, variable_snapshot=project_snapshot)
+
+        response = _client(_build_app(store, monkeypatch)).get(
+            f"/api/v1/escritura-matrices/project/{PROJECT_ID}",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()["matriz"]
+        assert body["id"] == existing["id"]
+        assert body["version"] == 3
+        assert len(store.tables["escritura_matrices"]) == 1
+
+    def test_get_project_matriz_supersedes_approved_when_snapshot_changes(
+        self, monkeypatch
+    ):
+        store = FakeStore()
+        template = _seed_template(store)
+        _seed_project(store)
+        project_snapshot = _project_snapshot_fixture()
+        matrix = _seed_project_matrix(
+            store,
+            template=template,
+            variable_snapshot=project_snapshot,
+            status="approved",
+            snapshot_hash="old",
+        )
+        matrix["approved_by"] = "00000000-0000-4000-8000-000000000021"
+        matrix["approved_at"] = "2026-06-10T00:00:00Z"
+        _patch_project_snapshot(monkeypatch, variable_snapshot=project_snapshot)
+
+        response = _client(_build_app(store, monkeypatch)).get(
+            f"/api/v1/escritura-matrices/project/{PROJECT_ID}",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()["matriz"]
+        assert body["id"] == matrix["id"]
+        assert body["scope"] == "project"
+        assert body["status"] == "draft"
+        assert body["snapshot_stale"] is False
+        assert body["version"] == 2
+        updated = store.tables["escritura_matrices"][0]
+        assert updated["snapshot_hash"] == escritura_matrices._json_hash(
+            project_snapshot
+        )
+        assert updated["approved_by"] is None
+        assert updated["approved_at"] is None
+
+    def test_get_project_matriz_is_scoped_to_organization(self, monkeypatch):
         store = FakeStore()
         _seed_template(store)
-        _seed_case(store)
+        _seed_project(store)
+        _patch_project_snapshot(monkeypatch)
+
+        response = _client(_build_app(store, monkeypatch)).get(
+            f"/api/v1/escritura-matrices/project/{PROJECT_ID}",
+            params={"organization_id": OTHER_ORG_ID},
+        )
+
+        assert response.status_code == 404
+        assert store.tables.get("escritura_matrices") is None
+
+
+class TestGetCaseMatriz:
+    def test_get_lazy_instantiates_matrix_from_approved_project_matrix(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        project_matrix = _seed_project_matrix(
+            store,
+            template=template,
+            status="approved",
+            clause_order=["compraventa", "comparecencia"],
+            clause_overrides={"comparecencia": {"title": "Comparecencia Teno"}},
+        )
         response = _client(_build_app(store, monkeypatch)).get(
             f"/api/v1/escritura-matrices/case/{CASE_ID}",
             params={"organization_id": ORG_ID},
         )
         assert response.status_code == 200
         body = response.json()["matriz"]
-        assert len(store.tables["escritura_matrices"]) == 1
+        assert len(store.tables["escritura_matrices"]) == 2
+        inserted = next(
+            row
+            for row in store.tables["escritura_matrices"]
+            if row.get("escritura_case_id") == case_row["id"]
+        )
+        assert inserted["source_project_matriz_id"] == project_matrix["id"]
+        assert inserted["template_id"] == template["id"]
+        assert inserted["clause_order"] == ["compraventa", "comparecencia"]
+        assert inserted["clause_overrides"]["comparecencia"]["title"] == "Comparecencia Teno"
         assert body["project_id"] == PROJECT_ID
+        assert body["source_project_matriz_id"] == project_matrix["id"]
         assert body["template"]["name"] == "Compraventa predio rustico"
         assert body["snapshot_stale"] is False
         assert body["version"] == 1
@@ -329,6 +563,32 @@ class TestGetCaseMatriz:
             if token["variableKey"] == "comprador.nombre"
         )
         assert token["status"] == "resolved"
+
+    def test_get_case_without_approved_project_matrix_returns_actionable_pending(
+        self, monkeypatch
+    ):
+        store = FakeStore()
+        _seed_template(store)
+        _seed_case(store)
+
+        response = _client(_build_app(store, monkeypatch)).get(
+            f"/api/v1/escritura-matrices/case/{CASE_ID}",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 409
+        detail = response.json()["detail"]
+        assert detail["code"] == "project_matriz_approval_missing"
+        assert detail["flow_state_label"] == "Esperando matriz del proyecto"
+        assert detail["message"] == "Falta aprobar la matriz del proyecto."
+        assert detail["blocking"][0]["title"] == (
+            "Verificación pendiente: matriz del proyecto aprobada"
+        )
+        assert detail["blocking"][0]["action_label"] == "Abrir matriz del proyecto"
+        assert detail["blocking"][0]["action_href"] == (
+            f"/documentos/matriz/proyecto/{PROJECT_ID}"
+        )
+        assert store.tables.get("escritura_matrices", []) == []
 
     def test_get_marks_snapshot_stale_without_mutating_matrix(self, monkeypatch):
         store = FakeStore()
@@ -570,6 +830,95 @@ class TestMatrizReviewWorkflow:
         updated = store.tables["escritura_matrices"][0]
         assert updated["submitted_by"] == "00000000-0000-4000-8000-000000000020"
         assert store.tables["legal_review_decisions"][0]["decision_type"] == "matriz_submitted"
+
+    def test_project_matriz_submit_and_approve_waiting_for_sales(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        _seed_project(store)
+        project_snapshot = _project_snapshot_fixture()
+        matrix = _seed_project_matrix(
+            store, template=template, variable_snapshot=project_snapshot
+        )
+        _patch_project_snapshot(monkeypatch, variable_snapshot=project_snapshot)
+        client = _client(_build_app(store, monkeypatch))
+
+        submitted = client.post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/submit",
+            params={"organization_id": ORG_ID},
+            json={"submitted_by": "00000000-0000-4000-8000-000000000020"},
+        )
+
+        assert submitted.status_code == 200
+        submitted_body = submitted.json()["matriz"]
+        assert submitted_body["scope"] == "project"
+        assert submitted_body["escritura_case_id"] is None
+        assert submitted_body["status"] == "legal_review_pending"
+        assert submitted_body["version"] == 2
+        submitted_audit = store.tables["legal_review_decisions"][0]
+        assert submitted_audit["decision_type"] == "matriz_submitted"
+        assert submitted_audit["project_id"] == PROJECT_ID
+        assert submitted_audit["lot_id"] is None
+        assert submitted_audit["escritura_case_id"] is None
+
+        approved = client.post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/approve",
+            params={"organization_id": ORG_ID},
+            json={"approved_by": "00000000-0000-4000-8000-000000000021"},
+        )
+
+        assert approved.status_code == 200
+        approved_body = approved.json()["matriz"]
+        assert approved_body["scope"] == "project"
+        assert approved_body["status"] == "approved"
+        assert approved_body["version"] == 3
+        assert approved_body["approval_blockers"] == []
+        assert store.tables["escritura_matrices"][0]["approved_by"] == (
+            "00000000-0000-4000-8000-000000000021"
+        )
+        approved_audit = store.tables["legal_review_decisions"][1]
+        assert approved_audit["decision_type"] == "matriz_approved"
+        assert approved_audit["decision_status"] == "approved"
+        assert approved_audit["escritura_case_id"] is None
+
+    def test_project_matriz_approval_blocks_project_pending_variable(
+        self, monkeypatch
+    ):
+        store = FakeStore()
+        template = _seed_template(store)
+        _seed_project(store)
+        project_snapshot = _project_snapshot_fixture()
+        project_snapshot.pop("vendedor.nombre", None)
+        matrix = _seed_project_matrix(
+            store,
+            template=template,
+            variable_snapshot=project_snapshot,
+            status="legal_review_pending",
+        )
+        matrix["submitted_by"] = "00000000-0000-4000-8000-000000000020"
+        _patch_project_snapshot(monkeypatch, variable_snapshot=project_snapshot)
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/approve",
+            params={"organization_id": ORG_ID},
+            json={"approved_by": "00000000-0000-4000-8000-000000000021"},
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "approval_blocked"
+        blocker = next(
+            blocker
+            for blocker in detail["blocking"]
+            if blocker.get("key") == "vendedor.nombre"
+        )
+        assert blocker["kind"] == "token_missing"
+        assert blocker["action_href"] == (
+            f"/projects/{PROJECT_ID}?tab=legal&variable=vendedor.nombre"
+        )
+        assert store.tables.get("legal_review_decisions") is None
+        assert store.tables["escritura_matrices"][0]["status"] == (
+            "legal_review_pending"
+        )
 
     def test_approve_requires_pending_status_and_distinct_reviewer(self, monkeypatch):
         store = FakeStore()

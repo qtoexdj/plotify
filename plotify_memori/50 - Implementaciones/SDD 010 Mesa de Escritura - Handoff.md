@@ -16,6 +16,7 @@ related:
   - "[[SDD 007 Escrituras Variable Resolution]]"
   - "[[SDD 008 Creador de Matriz - Handoff]]"
   - "[[SDD 009 Titulo Dominio Vigente]]"
+  - "[[SDD 011 Venta-Escritura - Handoff]]"
   - "[[Generador de Escrituras de Compraventa]]"
   - "[[ADR-009 - Generador de Escrituras como Minuta DOCX con Evidencia y Revision Legal]]"
 ---
@@ -94,10 +95,10 @@ debe evolucionar en SDD 011 y posteriores:
 - Medir SC-007 con navegador y datos reales de ambiente piloto, no solo con
   build y pruebas de fixtures.
 
-## Handoff a SDD 011
+## Continuidad en SDD 011
 
-SDD 011 (`specs/011-venta-escritura/`) debe reutilizar la mesa como superficie
-comun para dos niveles:
+SDD 011 (`specs/011-venta-escritura/`) reutiliza la mesa como superficie comun
+para dos niveles:
 
 1. **Matriz del proyecto**: redactada y aprobada antes de vender lotes, con
    datos de venta como huecos claros.
@@ -107,10 +108,14 @@ comun para dos niveles:
 La regla de oro se mantiene: ningun flujo de venta debe saltarse la revision
 legal ni generar DOCX desde un expediente no vigente.
 
+Ver [[SDD 011 Venta-Escritura - Handoff]] para el estado tecnico del cierre
+venta -> borrador -> entrega.
+
 ## Relacionado
 
 - [[SDD 007 Escrituras Variable Resolution]]
 - [[SDD 008 Creador de Matriz - Handoff]]
 - [[SDD 009 Titulo Dominio Vigente]]
+- [[SDD 011 Venta-Escritura - Handoff]]
 - [[Generador de Escrituras de Compraventa]]
 - [[ADR-009 - Generador de Escrituras como Minuta DOCX con Evidencia y Revision Legal]]

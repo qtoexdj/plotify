@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Supabase Dashboard > Vault > Secrets (nombre: plotify_encryption_key).
     # Este valor local se usa solo para inicializar vault en dev/staging.
     DB_ENCRYPTION_KEY: str = "plotify-dev-key-CHANGE-IN-PRODUCTION"
+    # URL pública expuesta por ngrok/tunnel para webhooks de Telegram.
+    API_PUBLIC_URL: str = "https://api.plotify.demo"
+
 
     # Redis Configuration
     REDIS_URL: str = "redis://localhost:6379/0"

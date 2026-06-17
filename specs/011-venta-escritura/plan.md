@@ -52,9 +52,9 @@ test:web` (seccion Documentos por proyecto, "mis documentos del vendedor",
 estados unificados, vocabulario prohibido extendido), `pnpm typecheck:web`,
 `pnpm --filter web lint`, `pnpm format:check`, `pnpm build:web`, `pnpm
 contracts:generate`, `pnpm verify:migrations`. Gates humanos heredados de
-SDD 010: wireframes aprobados (matriz del proyecto con huecos `______` +
-"mis documentos del vendedor") y sesion de usabilidad incluyendo el journey
-vendedor→entrega.
+SDD 010: wireframes aprobados (matriz del proyecto con huecos `______`,
+matriz de variables del proyecto como CCL existente + "mis documentos del
+vendedor") y sesion de usabilidad incluyendo el journey vendedor→entrega.
 
 **Target Platform**: web desktop-first (oficina legal/administracion) +
 entrega Telegram para el vendedor en movil.
@@ -150,7 +150,8 @@ renderer y el puente operacional se reutilizan.
   resueltos.
 - **Fase 1 — Diseño**: data-model ([data-model.md](./data-model.md)),
   contratos aditivos, quickstart (E2E + usabilidad), **gate de wireframes**
-  (matriz del proyecto con huecos + "mis documentos").
+  (matriz del proyecto con huecos + matriz de variables del proyecto +
+  "mis documentos").
 - **Fase 2 — US1 (P1)**: matriz del proyecto (modelo + generar/editar en la
   mesa/aprobar con bloqueo por pendientes) + **seccion Documentos por
   proyecto**. Desbloquea al abogado para revisar antes de la primera venta.

@@ -860,6 +860,132 @@ async def fetch_readiness_inputs(
     return variables, lot_legal_data, project_legal_data, title_analysis, has_title_documents
 
 
+async def fetch_project_matriz_snapshot(
+    *,
+    organization_id: str,
+    project_id: str,
+    supabase: Any | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Build the PROJECT-scope variable + evidence snapshot (SDD 011, T007).
+
+    La matriz del proyecto resuelve contra las variables a scope proyecto
+    (``lot_id`` y ``escritura_case_id`` NULL), los datos legales del proyecto y
+    el estudio de titulo. **Sin** ``lot_legal_data``: los datos de la venta
+    (comprador/precio/lote) quedan ausentes y se renderizan como huecos en la
+    mesa (FR-002).
+    """
+    if supabase is None:
+        from core.database import get_supabase_client
+
+        supabase = get_supabase_client()
+
+    (
+        variables_result,
+        project_legal_data,
+        title_analysis,
+        has_title_documents,
+    ) = await asyncio.gather(
+        asyncio.to_thread(
+            lambda: (
+                supabase.table("variable_resolutions")
+                .select("*")
+                .eq("organization_id", organization_id)
+                .eq("project_id", project_id)
+                .is_("lot_id", "null")
+                .is_("escritura_case_id", "null")
+                .neq("state", "superseded")
+                .execute()
+            )
+        ),
+        _fetch_project_sii_common_data(
+            supabase=supabase,
+            organization_id=organization_id,
+            project_id=project_id,
+        ),
+        _fetch_current_title_analysis(
+            supabase=supabase,
+            organization_id=organization_id,
+            project_id=project_id,
+        ),
+        _fetch_has_title_documents(
+            supabase=supabase,
+            organization_id=organization_id,
+            project_id=project_id,
+        ),
+    )
+    if title_analysis is None and has_title_documents:
+        from core.config import get_settings
+
+        if not get_settings().LEGAL_TITLE_AGENT_ENABLED:
+            title_analysis = {"status": "llm_disabled"}
+
+    variables = variables_result.data if isinstance(variables_result.data, list) else []
+
+    variable_ids = [
+        variable["id"]
+        for variable in variables
+        if isinstance(variable.get("id"), str) and variable.get("id")
+    ]
+    evidence_by_variable: dict[str, list[dict[str, Any]]] = {}
+    if variable_ids:
+        evidence_result = await asyncio.to_thread(
+            lambda: (
+                supabase.table("document_evidence")
+                .select("*")
+                .eq("organization_id", organization_id)
+                .eq("project_id", project_id)
+                .in_("variable_resolution_id", variable_ids)
+                .execute()
+            )
+        )
+        if isinstance(evidence_result.data, list):
+            for evidence in evidence_result.data:
+                variable_id = evidence.get("variable_resolution_id")
+                if isinstance(variable_id, str):
+                    evidence_by_variable.setdefault(variable_id, []).append(evidence)
+    for variable in variables:
+        variable_id = variable.get("id")
+        if isinstance(variable_id, str):
+            variable["evidence"] = evidence_by_variable.get(
+                variable_id,
+                variable.get("evidence")
+                if isinstance(variable.get("evidence"), list)
+                else [],
+            )
+
+    variable_snapshot = build_variable_snapshot(
+        variables, None, project_legal_data, title_analysis
+    )
+    # `build_variable_snapshot` inyecta los SII de proyecto (rol_matriz/comuna)
+    # SOLO cuando hay lot_legal_data. A scope proyecto no hay lote, asi que se
+    # inyectan aqui desde project_legal_data (son de proyecto, aprobados) sin
+    # tocar el motor compartido (SC-007: cero regresion del flujo por caso).
+    if project_legal_data:
+        rol_matriz = project_legal_data.get("sii_role_matrix")
+        if rol_matriz and "sii.rol_matriz" not in variable_snapshot:
+            variable_snapshot["sii.rol_matriz"] = {
+                "value_text": rol_matriz,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document",
+                "source_ref": {"source": "project_legal_data"},
+                "confidence": 1.0,
+            }
+        comuna = project_legal_data.get("sii_comuna")
+        if comuna and "sii.comuna" not in variable_snapshot:
+            variable_snapshot["sii.comuna"] = {
+                "value_text": comuna,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "document",
+                "source_ref": {"source": "project_legal_data"},
+                "confidence": 1.0,
+            }
+
+    evidence_snapshot = build_evidence_snapshot(variables)
+    return variable_snapshot, evidence_snapshot
+
+
 async def get_escritura_readiness(
     *,
     organization_id: str,
@@ -1012,7 +1138,9 @@ async def create_escritura_case_snapshot(
             .execute()
         )
     )
-    existing_row = _first_row(existing_result.data)
+    existing_row = (
+        _first_row(existing_result.data) if existing_result is not None else None
+    )
     if existing_row:
         result = await asyncio.to_thread(
             lambda: (

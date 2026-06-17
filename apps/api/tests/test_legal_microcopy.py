@@ -10,15 +10,22 @@ from schemas.legal_titles import TITLE_ALERT_TIPOS
 from services.legal_microcopy import (
     ALERT_REQUIRED_CLAUSE_TEXTS,
     ALERT_TIPO_LABELS,
+    ADMIN_NOTIFICATION_LABELS,
     ESCRITURA_CASE_STATUS_LABELS,
+    FLOW_STATE_DESCRIPTIONS,
+    FLOW_STATE_LABELS,
+    FLOW_STATES,
     MATRIZ_STATUS_LABELS,
     READINESS_GATE_ACTION_LABELS,
     READINESS_GATE_LABELS,
     READINESS_GATE_PENDING_DESCRIPTIONS,
     alert_clause_missing_microcopy,
     alert_tipo_label,
+    admin_notification_label,
     blocker_microcopy,
     escritura_case_status_label,
+    flow_state_description,
+    flow_state_label,
     matriz_status_label,
     readiness_gate_label,
     readiness_gate_microcopy,
@@ -105,6 +112,15 @@ def test_readiness_gate_translates_known_cause_and_omits_unknown() -> None:
     _assert_human(technical.description)
 
 
+def test_project_matriz_missing_gate_is_actionable() -> None:
+    copy = readiness_gate_microcopy("project_matriz_approved")
+    assert copy.title == "Verificación pendiente: matriz del proyecto aprobada"
+    assert copy.action_label == "Abrir matriz del proyecto"
+    assert "Falta aprobar la matriz del proyecto" in copy.description
+    for text in (copy.title, copy.description, copy.action_label):
+        _assert_human(text)
+
+
 def test_snapshot_stale_redaction() -> None:
     copy = snapshot_stale_microcopy()
     assert copy.title == "El expediente cambió"
@@ -141,3 +157,52 @@ def test_blocker_dispatcher_covers_all_kinds() -> None:
     assert blocker_microcopy("snapshot_stale").action_label == "Recargar"
     with pytest.raises(ValueError):
         blocker_microcopy("kind_desconocido")
+
+
+# ─── SDD 011 T004: estados del flujo venta → escritura (FR-014) ──────────────
+
+
+def test_flow_state_labels_cover_the_five_states() -> None:
+    """Los cinco estados del data-model §5, con su frase humana canonica."""
+    assert set(FLOW_STATE_LABELS) == set(FLOW_STATES)
+    assert FLOW_STATE_LABELS == {
+        "waiting_project_matriz": "Esperando matriz del proyecto",
+        "in_preparation": "En preparación",
+        "draft_for_review": "Borrador por revisar",
+        "accepted": "Aceptada",
+        "delivered": "Entregada",
+    }
+
+
+def test_flow_state_text_is_human_and_jargon_free() -> None:
+    """Etiquetas y descripciones sin jerga, codigos ni underscores."""
+    assert set(FLOW_STATE_DESCRIPTIONS) == set(FLOW_STATES)
+    for state in FLOW_STATES:
+        _assert_human(flow_state_label(state))
+        _assert_human(flow_state_description(state))
+
+
+def test_flow_state_label_raises_on_unknown_state() -> None:
+    with pytest.raises(KeyError):
+        flow_state_label("entregada")  # solo claves canonicas, no la frase
+    with pytest.raises(KeyError):
+        flow_state_description("estado_fantasma")
+
+
+def test_admin_notification_labels_reuse_flow_vocabulary() -> None:
+    assert ADMIN_NOTIFICATION_LABELS == {
+        "sale_pending_validation": "Venta por validar",
+        "draft_ready_for_review": "Borrador por revisar",
+        "waiting_project_matriz": "Esperando matriz del proyecto",
+        "draft_delivered_to_vendor": "Entregada",
+    }
+    for label in ADMIN_NOTIFICATION_LABELS.values():
+        _assert_human(label)
+    assert admin_notification_label("draft_ready_for_review") == flow_state_label(
+        "draft_for_review"
+    )
+    assert admin_notification_label("draft_delivered_to_vendor") == flow_state_label(
+        "delivered"
+    )
+    with pytest.raises(KeyError):
+        admin_notification_label("evento_fantasma")

@@ -154,6 +154,17 @@ def render_minuta_docx(
         run = heading.add_run(title.upper())
         run.bold = True
 
+        # SDD 011 (FR-008 / ADR-009): marca visible de borrador. Opt-in via
+        # metadata (el endpoint la pasa siempre); ausente => DOCX sin cambios
+        # (no-regresion del renderer).
+        draft_notice = metadata.get("draft_notice")
+        if draft_notice:
+            notice = document.add_paragraph()
+            notice.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            notice_run = notice.add_run(str(draft_notice).upper())
+            notice_run.bold = True
+            notice_run.italic = True
+
     next_ordinal_index = 0
     for clause in clauses:
         content = clause.get("resolved_content") or clause.get("content_json") or {}

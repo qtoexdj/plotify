@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useCallback, useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GeometryViewer } from '@/components/projects/geometry-viewer'
 import { ProjectHeader } from '@/components/projects/detail/project-header'
@@ -24,6 +24,7 @@ const deletedProjects = new Set<string>()
 export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { projectId } = use(params)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   // Data State
   const [project, setProject] = useState<ProjectWithMetrics | null>(null)
@@ -159,10 +160,15 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     }
   }
 
-  const [activeTab, setActiveTab] = useState('overview')
+  const requestedTab = searchParams.get('tab')
+  const [selectedTab, setSelectedTab] = useState('overview')
+  const activeTab = requestedTab === 'legal' ? 'legal' : selectedTab
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value)
+    setSelectedTab(value)
+    if (requestedTab) {
+      router.replace(`/projects/${projectId}`, { scroll: false })
+    }
     if (value === 'legal') {
       fetchLots()
     }

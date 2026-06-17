@@ -117,3 +117,46 @@ export async function resolveMatrizScope(
     role: membership?.role || 'user',
   }
 }
+
+export async function resolveProjectScope(
+  request: NextRequest,
+  projectId: string
+): Promise<ScopeResult> {
+  const auth = await resolveUser(request)
+  if ('error' in auth) return { error: auth.error }
+
+  const { data: projectRow, error } = await auth.supabase
+    .from('projects')
+    .select('id, organization_id')
+    .eq('id', projectId)
+    .maybeSingle()
+
+  if (error || !projectRow) {
+    return { error: Response.json({ error: 'Proyecto no encontrado' }, { status: 404 }) }
+  }
+  if (!projectRow.organization_id) {
+    return { error: Response.json({ error: 'Proyecto sin organización' }, { status: 422 }) }
+  }
+  if (
+    !isLegalDocumentsFeatureEnabled({
+      organizationId: projectRow.organization_id,
+      projectId: projectRow.id,
+    })
+  ) {
+    return { error: featureDisabledResponse() }
+  }
+
+  const { data: membership } = await auth.supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', projectRow.organization_id)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
+
+  return {
+    organizationId: projectRow.organization_id,
+    projectId: projectRow.id,
+    userId: auth.user.id,
+    role: membership?.role || 'user',
+  }
+}

@@ -6,6 +6,12 @@ class NotificationItem(BaseModel):
     approval_id: str
     request_type: str = Field(..., pattern=r"^(reservation|sale)$")
     status: str
+    title: Optional[str] = None
+    message: Optional[str] = None
+    action_label: Optional[str] = None
+    deep_link: Optional[str] = None
+    flow_state_label: Optional[str] = None
+    flow_state_description: Optional[str] = None
     project_name: str
     lot_label: str
     client_name: str

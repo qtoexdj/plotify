@@ -68,12 +68,16 @@ export const navItems = [
     icon: File02Icon,
     items: [
       {
-        title: 'Plantillas',
-        url: '/documentos/plantillas',
+        title: 'Escrituras',
+        url: '/documentos',
       },
       {
         title: 'Historial',
         url: '/documentos/historial',
+      },
+      {
+        title: 'Plantillas',
+        url: '/documentos/plantillas',
       },
     ],
   },

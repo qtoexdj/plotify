@@ -699,6 +699,80 @@ export type Database = {
           },
         ]
       }
+      escritura_deliveries: {
+        Row: {
+          channel: string
+          created_at: string
+          escritura_case_id: string
+          generation_id: string
+          id: string
+          link_expires_at: string | null
+          link_token: string | null
+          organization_id: string
+          project_id: string
+          recipient_user_id: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          escritura_case_id: string
+          generation_id: string
+          id?: string
+          link_expires_at?: string | null
+          link_token?: string | null
+          organization_id: string
+          project_id: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          escritura_case_id?: string
+          generation_id?: string
+          id?: string
+          link_expires_at?: string | null
+          link_token?: string | null
+          organization_id?: string
+          project_id?: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_deliveries_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_deliveries_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_minuta_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_deliveries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       escritura_matrices: {
         Row: {
           approved_at: string | null
@@ -706,12 +780,13 @@ export type Database = {
           clause_order: Json
           clause_overrides: Json
           created_at: string
-          escritura_case_id: string
+          escritura_case_id: string | null
           id: string
           organization_id: string
           project_id: string
           snapshot_case_status: string
           snapshot_hash: string
+          source_project_matriz_id: string | null
           status: string
           submitted_at: string | null
           submitted_by: string | null
@@ -725,12 +800,13 @@ export type Database = {
           clause_order?: Json
           clause_overrides?: Json
           created_at?: string
-          escritura_case_id: string
+          escritura_case_id?: string | null
           id?: string
           organization_id: string
           project_id: string
           snapshot_case_status: string
           snapshot_hash: string
+          source_project_matriz_id?: string | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -744,12 +820,13 @@ export type Database = {
           clause_order?: Json
           clause_overrides?: Json
           created_at?: string
-          escritura_case_id?: string
+          escritura_case_id?: string | null
           id?: string
           organization_id?: string
           project_id?: string
           snapshot_case_status?: string
           snapshot_hash?: string
+          source_project_matriz_id?: string | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -777,6 +854,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_matrices_source_project_matriz_id_fkey"
+            columns: ["source_project_matriz_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_matrices"
             referencedColumns: ["id"]
           },
           {

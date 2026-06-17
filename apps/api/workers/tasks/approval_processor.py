@@ -3,6 +3,11 @@ from core.logger import get_logger
 from core.database import get_supabase_client
 from integrations.telegram_client import get_telegram_client_for_org
 from integrations.meta_client import meta_client
+from services.escritura_notifications import (
+    absolute_frontend_link,
+    draft_ready_for_review_copy,
+    waiting_project_matriz_copy,
+)
 from utils.audit import (
     log_agent_action,
     EVENT_RESERVATION_APPROVED,
@@ -73,8 +78,32 @@ async def execute_admin_decision_db(
         error_msg = rpc_data.get("error", "already_processed") if rpc_data else "already_processed"
         raise HTTPException(status_code=409, detail=error_msg)
 
-    # 3. Registrar en auditoría de forma segura
+    # 3. Tras validar una venta, enganchar el flujo legal SDD 011.
     lot_id = rpc_data.get("lot_id")
+    escritura_hook_result = None
+    escritura_hook_error = None
+    if request_type == "sale" and action == "approve" and lot_id:
+        from services.escritura_sale_hook import handle_sale_validated_for_escritura
+
+        try:
+            hook_result = await handle_sale_validated_for_escritura(
+                organization_id=org_id,
+                lot_id=str(lot_id),
+                validated_by=admin_id,
+                supabase=supabase,
+            )
+            escritura_hook_result = hook_result.to_dict()
+        except Exception as exc:  # pragma: no cover - defensive non-blocking path
+            escritura_hook_error = str(exc)
+            logger.error(
+                "sale_escritura_hook_failed",
+                organization_id=org_id,
+                approval_id=approval_id,
+                lot_id=str(lot_id),
+                error=escritura_hook_error,
+            )
+
+    # 4. Registrar en auditoría de forma segura
     if request_type == "sale":
         audit_action = EVENT_SALE_APPROVED if action == "approve" else EVENT_SALE_REJECTED
     else:
@@ -95,6 +124,8 @@ async def execute_admin_decision_db(
             "channel": channel,
             "sale_mode": request_info.get("sale_mode"),
             "previous_lot_state": request_info.get("previous_lot_state"),
+            "escritura_hook": escritura_hook_result,
+            "escritura_hook_error": escritura_hook_error,
         }
     )
 
@@ -103,6 +134,8 @@ async def execute_admin_decision_db(
         "request_type": request_type,
         "sale_mode": request_info.get("sale_mode"),
         "previous_lot_state": request_info.get("previous_lot_state"),
+        "escritura_hook": escritura_hook_result,
+        "escritura_hook_error": escritura_hook_error,
     }
 
 
@@ -149,7 +182,35 @@ async def send_decision_notifications(
         if request_type == "sale":
             if action == "approve":
                 vendor_msg = f"✅ ¡Buenas noticias, {vendor_name}! Tu venta del *{lot_label}* fue *aprobada* por el administrador."
-                admin_msg = f"✅ *Venta Aprobada*\nSe ha aprobado la venta del *{lot_label}* y se ha notificado a {vendor_name} exitosamente."
+                hook_result = db_result.get("escritura_hook") or {}
+                if hook_result.get("ready_for_borrador") and hook_result.get(
+                    "escritura_case_id"
+                ):
+                    notification_copy = draft_ready_for_review_copy(
+                        escritura_case_id=str(hook_result["escritura_case_id"]),
+                        lot_label=lot_label,
+                    )
+                    admin_msg = (
+                        f"✅ *{notification_copy.title}*\n"
+                        f"Se aprobó la venta del *{lot_label}*. "
+                        f"{notification_copy.message}\n"
+                        f"{notification_copy.action_label}: "
+                        f"{absolute_frontend_link(notification_copy.deep_link)}"
+                    )
+                elif hook_result.get("project_id"):
+                    notification_copy = waiting_project_matriz_copy(
+                        project_id=str(hook_result["project_id"]),
+                        lot_label=lot_label,
+                    )
+                    admin_msg = (
+                        f"✅ *{notification_copy.title}*\n"
+                        f"Se aprobó la venta del *{lot_label}*. "
+                        f"{notification_copy.message}\n"
+                        f"{notification_copy.action_label}: "
+                        f"{absolute_frontend_link(notification_copy.deep_link)}"
+                    )
+                else:
+                    admin_msg = f"✅ *Venta Aprobada*\nSe ha aprobado la venta del *{lot_label}* y se ha notificado a {vendor_name} exitosamente."
             else:
                 vendor_msg = f"❌ Lamentamos informarte, {vendor_name}, que tu venta del *{lot_label}* fue *rechazada* por el administrador."
                 admin_msg = f"❌ *Venta Rechazada*\nSe ha rechazado la venta del *{lot_label}* y se ha notificado a {vendor_name}."
@@ -369,4 +430,3 @@ async def process_admin_decision(
             approval_id=approval_id,
         )
         return str(e)
-

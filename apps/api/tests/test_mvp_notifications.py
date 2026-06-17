@@ -1,4 +1,5 @@
 import pytest
+from types import SimpleNamespace
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from api.v1.endpoints.notifications import decide_notification_approval
@@ -45,6 +46,31 @@ class MockSupabaseClient:
     def execute(self):
         # Mocks simplificados para simular respuestas rápidas de base de datos
         return self
+
+
+class StaticQuery:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def select(self, *_args):
+        return self
+
+    def eq(self, *_args):
+        return self
+
+    def limit(self, *_args):
+        return self
+
+    def execute(self):
+        return SimpleNamespace(data=self.rows)
+
+
+class StaticSupabase:
+    def __init__(self, tables):
+        self.tables = tables
+
+    def table(self, table_name):
+        return StaticQuery(self.tables.get(table_name, []))
 
 @pytest.mark.asyncio
 async def test_admin_decision_success(tenant_pair_fixtures):
@@ -147,4 +173,49 @@ async def test_telegram_webhook_authenticity_check():
     # El webhook debe ignorar/rechazar payloads si no es auténtico
     assert is_valid_webhook is False
 
+
+def test_sale_notification_list_copy_points_to_ready_draft():
+    """
+    T013: una venta aprobada con borrador instanciado expone el link directo
+    a la mesa usando el vocabulario único de escritura.
+    """
+    from api.v1.endpoints.notifications import _notification_copy_for_item
+
+    fake_supabase = StaticSupabase(
+        {
+            "escritura_cases": [
+                {
+                    "id": "00000000-0000-4000-8000-000000000004",
+                    "case_status": "variables_pending",
+                    "readiness_status": "needs_review",
+                    "readiness_gates": {},
+                }
+            ],
+            "escritura_matrices": [
+                {
+                    "id": "00000000-0000-4000-8000-000000000008",
+                    "status": "draft",
+                    "source_project_matriz_id": "00000000-0000-4000-8000-000000000005",
+                }
+            ],
+        }
+    )
+
+    copy = _notification_copy_for_item(
+        supabase=fake_supabase,
+        organization_id="00000000-0000-4000-8000-000000000001",
+        request_type="sale",
+        status_val="approved",
+        project_id="00000000-0000-4000-8000-000000000002",
+        lot_id="00000000-0000-4000-8000-000000000003",
+        lot_label="Lote 12",
+        project_name="Teno - El Condor",
+        client_name="Ana Perez",
+    )
+
+    assert copy is not None
+    assert copy.title == "Borrador por revisar"
+    assert copy.action_label == "Abrir borrador"
+    assert copy.deep_link == "/documentos/matriz/00000000-0000-4000-8000-000000000004"
+    assert copy.flow_state_label == "Borrador por revisar"
 

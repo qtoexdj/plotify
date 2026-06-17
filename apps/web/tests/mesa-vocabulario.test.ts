@@ -18,6 +18,8 @@ import path from 'path'
 
 import {
   DATO_STATUS_LABELS,
+  FLOW_STATE_DESCRIPTIONS,
+  FLOW_STATE_LABELS,
   MESA_STATUS_LABELS,
   MESA_TEXT,
   PLANTILLA_STATUS_LABELS,
@@ -25,6 +27,12 @@ import {
 } from '@/lib/documents/matriz-microcopy'
 
 const DOCUMENTS_DIR = path.resolve(__dirname, '../src/components/documents')
+const SDD_011_SCREEN_FILES = [
+  '../src/app/(dashboard)/documentos/page.tsx',
+  '../src/app/(dashboard)/documentos/historial/page.tsx',
+  '../src/app/(dashboard)/mis-documentos/page.tsx',
+  '../src/lib/documents/mis-documentos.ts',
+] as const
 
 function escapeRegExp(term: string): string {
   return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -33,6 +41,13 @@ function escapeRegExp(term: string): string {
 const FORBIDDEN_RE = new RegExp(`\\b(${TERMINOS_PROHIBIDOS.map(escapeRegExp).join('|')})\\b`, 'i')
 /** Claves crudas tipo `comprador.estado_civil` o `titulo.inscripciones[]`. */
 const RAW_KEY_RE = /\b[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*(?:\[\])?)+\b/
+
+const SDD_011_ALLOWED_PRODUCT_TEXT = new Set([
+  'Matrices, variables legales e historial documental por proyecto.',
+  'Crea un proyecto para preparar su matriz de escritura y revisar sus variables legales.',
+  'Matriz de variables del proyecto',
+  'Abrir variables',
+])
 
 const TAILWIND_COLOR_HEX = {
   'emerald-50': '#ecfdf5',
@@ -44,7 +59,11 @@ const TAILWIND_COLOR_HEX = {
 } as const
 
 function assertHuman(text: string, origin: string) {
-  expect(FORBIDDEN_RE.test(text), `Jerga vetada en ${origin}: ${JSON.stringify(text)}`).toBe(false)
+  const isAllowedProductText = SDD_011_ALLOWED_PRODUCT_TEXT.has(text)
+  expect(
+    isAllowedProductText || !FORBIDDEN_RE.test(text),
+    `Jerga vetada en ${origin}: ${JSON.stringify(text)}`
+  ).toBe(true)
   expect(RAW_KEY_RE.test(text), `Clave cruda en ${origin}: ${JSON.stringify(text)}`).toBe(false)
 }
 
@@ -54,6 +73,12 @@ function documentFiles(): string[] {
     .readdirSync(DOCUMENTS_DIR, { recursive: true, encoding: 'utf-8' })
     .filter((name) => name.endsWith('.tsx') || name.endsWith('.ts'))
     .map((name) => path.join(DOCUMENTS_DIR, name))
+}
+
+function sdd011ScreenFiles(): string[] {
+  return SDD_011_SCREEN_FILES.map((relative) => path.resolve(__dirname, relative)).filter((file) =>
+    fs.existsSync(file)
+  )
 }
 
 /** Texto visible: nodos de texto JSX y literales multi-palabra. */
@@ -96,6 +121,8 @@ describe('SDD 010 — vocabulario de la mesa de escritura', () => {
       ...Object.values(MESA_STATUS_LABELS),
       ...Object.values(PLANTILLA_STATUS_LABELS),
       ...Object.values(MESA_TEXT),
+      ...Object.values(FLOW_STATE_LABELS),
+      ...Object.values(FLOW_STATE_DESCRIPTIONS),
     ]
     expect(values.length).toBeGreaterThan(20)
     for (const value of values) {
@@ -112,8 +139,20 @@ describe('SDD 010 — vocabulario de la mesa de escritura', () => {
     })
   })
 
+  it('los estados del flujo venta → escritura usan el vocabulario único (FR-014)', () => {
+    // Frases idénticas, palabra por palabra, a FLOW_STATE_LABELS de
+    // legal_microcopy.py: un solo vocabulario en todas las superficies.
+    expect(FLOW_STATE_LABELS).toEqual({
+      waiting_project_matriz: 'Esperando matriz del proyecto',
+      in_preparation: 'En preparación',
+      draft_for_review: 'Borrador por revisar',
+      accepted: 'Aceptada',
+      delivered: 'Entregada',
+    })
+  })
+
   it('los componentes de documentos no muestran jerga vetada', () => {
-    const files = documentFiles()
+    const files = [...documentFiles(), ...sdd011ScreenFiles()]
     expect(files.length).toBeGreaterThan(0)
     for (const file of files) {
       const source = fs.readFileSync(file, 'utf-8')

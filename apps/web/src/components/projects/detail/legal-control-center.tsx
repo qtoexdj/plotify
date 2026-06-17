@@ -536,7 +536,7 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
   }
 
   return (
-    <section className="space-y-6" aria-label="Centro de Control Legal">
+    <section id="variables-legales" className="space-y-6" aria-label="Centro de Control Legal">
       {/* Cabecera Premium Limpia */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between border-b border-border pb-4">
         <div>

@@ -76,6 +76,12 @@ export async function getMatrizCase(caseId: string): Promise<MatrizCaseResponse>
   )
 }
 
+export async function getMatrizProject(projectId: string): Promise<MatrizCaseResponse> {
+  return requestJson<MatrizCaseResponse>(
+    `/api/escritura-matrices/project/${encodeURIComponent(projectId)}`
+  )
+}
+
 export async function saveMatriz(
   matrizId: string,
   payload: MatrizSaveRequest

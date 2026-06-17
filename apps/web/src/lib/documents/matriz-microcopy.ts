@@ -30,6 +30,42 @@ export const PLANTILLA_STATUS_LABELS = {
   retired: 'Retirada',
 } as const satisfies Record<TemplateStatus, string>
 
+/**
+ * Estados del flujo venta → escritura (SDD 011, data-model §5, FR-014).
+ *
+ * Frases humanas ÚNICAS del ciclo proyecto → matriz aprobada → venta →
+ * borrador → entrega. DEBEN coincidir, palabra por palabra, con
+ * `FLOW_STATE_LABELS` / `FLOW_STATE_DESCRIPTIONS` de `legal_microcopy.py`: el
+ * mismo vocabulario en notificaciones, Centro de Control Legal, mesa y "mis
+ * documentos del vendedor".
+ */
+export type FlowState =
+  | 'waiting_project_matriz'
+  | 'in_preparation'
+  | 'draft_for_review'
+  | 'accepted'
+  | 'delivered'
+
+export const FLOW_STATE_LABELS = {
+  waiting_project_matriz: 'Esperando matriz del proyecto',
+  in_preparation: 'En preparación',
+  draft_for_review: 'Borrador por revisar',
+  accepted: 'Aceptada',
+  delivered: 'Entregada',
+} as const satisfies Record<FlowState, string>
+
+export const FLOW_STATE_DESCRIPTIONS = {
+  waiting_project_matriz:
+    'La venta está validada, pero el abogado aún no aprueba la matriz de la escritura del proyecto. El borrador se genera apenas se apruebe.',
+  in_preparation:
+    'La escritura se está preparando: faltan datos de la venta para completar el borrador.',
+  draft_for_review:
+    'El borrador está listo y espera la revisión del administrador antes de aceptarlo.',
+  accepted:
+    'El administrador aceptó el borrador; el documento se generó con la marca de borrador sujeto a revisión legal.',
+  delivered: 'El borrador se entregó al vendedor; ya puede descargarlo o compartirlo.',
+} as const satisfies Record<FlowState, string>
+
 /** Textos estáticos de la mesa (ui-contracts §3). */
 export const MESA_TEXT = {
   pendientesTitle: 'Para aprobar falta',
@@ -119,6 +155,7 @@ export const MESA_TEXT = {
   sinPendientes: 'No hay pendientes. La escritura está lista para revisión.',
   abrirMesa: 'Abrir mesa de escritura',
   noSePudoCargar: 'No se pudo cargar la escritura. Recarga para intentarlo de nuevo.',
+  esperandoVentas: 'Esperando ventas',
 } as const
 
 /**
@@ -170,4 +207,8 @@ export function datoStatusLabel(status: TokenResolutionStatus): string {
 
 export function mesaStatusLabel(status: MatrizStatus): string {
   return MESA_STATUS_LABELS[status]
+}
+
+export function flowStateLabel(state: FlowState): string {
+  return FLOW_STATE_LABELS[state]
 }
