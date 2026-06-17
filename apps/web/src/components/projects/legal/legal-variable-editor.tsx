@@ -125,7 +125,9 @@ function LegalVariableEditorContent({
     [trimmedReason, trimmedValue]
   )
 
-  const requiresReason = valueText !== formatValue(variable) || variable.state === 'conflict'
+  // SDD 011: el motivo es opcional para ingresar/corregir un valor; solo se
+  // sugiere al resolver un conflicto entre extracciones.
+  const requiresReason = variable.state === 'conflict'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -177,17 +179,17 @@ function LegalVariableEditorContent({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="legal-variable-reason">Motivo de correccion o decision</Label>
+              <Label htmlFor="legal-variable-reason">Motivo o nota (opcional)</Label>
               <Textarea
                 id="legal-variable-reason"
                 value={correctionReason}
                 onChange={(event) => setCorrectionReason(event.target.value)}
-                placeholder="Ej: corregido segun dominio vigente pagina 2"
-                rows={4}
+                placeholder="Ej: del plano del Conservador"
+                rows={3}
               />
               {requiresReason && !trimmedReason ? (
                 <p className="text-xs text-amber-700">
-                  Las correcciones y conflictos deben registrar un motivo auditable.
+                  Al resolver un conflicto conviene dejar una nota del motivo.
                 </p>
               ) : null}
             </div>
@@ -210,15 +212,15 @@ function LegalVariableEditorContent({
             <Button
               type="button"
               variant="outline"
-              disabled={isSaving || (requiresReason && !trimmedReason)}
+              disabled={isSaving || !trimmedValue || (requiresReason && !trimmedReason)}
               onClick={() => onSave(variable, basePayload)}
             >
-              Guardar correccion
+              Guardar
             </Button>
             <Button
               type="button"
               variant="secondary"
-              disabled={isSaving}
+              disabled={isSaving || !trimmedValue || (requiresReason && !trimmedReason)}
               onClick={() =>
                 onApprove(variable, {
                   ...basePayload,

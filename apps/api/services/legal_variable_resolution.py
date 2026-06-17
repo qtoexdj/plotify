@@ -82,6 +82,9 @@ CRITICAL_VARIABLE_KEYS = frozenset(
 )
 EDIT_TARGET_STATES = frozenset(("resolved", "manual_review"))
 APPROVABLE_STATES = frozenset(("proposed", "resolved", "manual_review", "derived"))
+# Estados desde los que NO se puede aprobar (terminales): aprobar desde
+# `missing`/`conflict` sí vale cuando el revisor aporta un valor (SDD 011).
+APPROVE_TERMINAL_STATES = frozenset(("approved", "not_applicable", "superseded"))
 NOT_APPLICABLE_SOURCE_STATES = frozenset(
     ("missing", "proposed", "resolved", "manual_review", "conflict", "derived")
 )
@@ -1545,7 +1548,11 @@ def _build_approve_mutation(
     current_state = str(variable.get("state") or "")
     if payload.state is not None and payload.state != "approved":
         raise LegalVariableResolutionError("Approve action must target approved state.")
-    if current_state not in APPROVABLE_STATES:
+    # SDD 011: aprobar también vale como "entrar + aprobar" cuando el revisor
+    # aporta un valor (p. ej. datos manuales del Conservador en estado `missing`,
+    # o resolver un `conflict` eligiendo el valor). Solo se bloquean los estados
+    # terminales (`superseded` ya se rechazó antes en el dispatcher).
+    if current_state in APPROVE_TERMINAL_STATES:
         raise LegalVariableResolutionError(
             f"Cannot approve variable from state {current_state}."
         )
