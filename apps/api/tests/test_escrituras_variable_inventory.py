@@ -57,7 +57,7 @@ def _inventory_response():
             "id": VARIABLE_ID,
             "organization_id": ORG_ID,
             "project_id": PROJECT_ID,
-            "variable_key": "matriz.inscripcion_fojas",
+            "variable_key": "matriz.rol_avaluo",
             "variable_group": "matriz",
             "value_text": "4699",
             "state": "proposed",
@@ -105,7 +105,7 @@ def test_get_project_legal_variables_endpoint_returns_inventory(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["project_id"] == PROJECT_ID
-    assert payload["groups"]["matriz"][0]["variable_key"] == "matriz.inscripcion_fojas"
+    assert payload["groups"]["matriz"][0]["variable_key"] == "matriz.rol_avaluo"
     assert payload["groups"]["matriz"][0]["evidence"][0]["legal_document_page_id"] == PAGE_ID
     assert payload["summary"]["proposed"] == 1
     get_inventory.assert_awaited_once_with(
@@ -166,7 +166,7 @@ class FakeSupabase:
                     "id": VARIABLE_ID,
                     "organization_id": ORG_ID,
                     "project_id": PROJECT_ID,
-                    "variable_key": "matriz.inscripcion_fojas",
+                    "variable_key": "matriz.rol_avaluo",
                     "variable_group": "matriz",
                     "value_text": "4699",
                     "state": "proposed",
@@ -241,7 +241,7 @@ async def test_get_project_variable_inventory_groups_summary_and_evidence():
 
     assert set(inventory.groups) == {"matriz"}
     assert [item.variable_key for item in inventory.groups["matriz"]] == [
-        "matriz.inscripcion_fojas",
+        "matriz.rol_avaluo",
         "matriz.nombre_predio",
     ]
     assert inventory.summary == {

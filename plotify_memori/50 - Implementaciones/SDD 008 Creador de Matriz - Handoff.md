@@ -3,8 +3,8 @@ title: SDD 008 Creador de Matriz - Handoff
 aliases:
   - SDD 008 Creador de Matriz
   - Creador de Matriz Escrituras
-date: 2026-06-03
-status: futuro
+date: 2026-06-11
+status: implementado
 tags:
   - implementacion
   - sdd
@@ -23,14 +23,51 @@ related:
 
 ## Estado
 
-Futuro SDD. No es el feature activo. El feature activo sigue siendo
-`specs/007-escrituras-variable-resolution`.
+Implementado en `specs/008-creador-matriz`. La matriz consume los contratos
+cerrados de SDD 007/009, opera desde snapshots del caso de escritura y genera
+minutas DOCX solo desde matrices aprobadas con warning legal aceptado.
+
+La consolidacion del 2026-06-11 cerro el polish cross-cutting:
+
+- Rutas MVP retiradas del build web: `/documentos/generar`,
+  `/documentos/bloques` y el builder legacy
+  `/documentos/plantillas/[templateId]/builder`.
+- `document_engine.py` y `document_generator.py` marcados como deprecated y
+  sin superficies web nuevas.
+- Regresion tenant agregada para `escritura_templates`,
+  `escritura_template_clauses`, `escritura_matrices` y
+  `escritura_minuta_generations`.
+- OpenAPI y cliente TypeScript regenerados desde FastAPI.
+- Quickstart E2E Teno documentado en
+  `specs/008-creador-matriz/quickstart.md`.
+
+Verificaciones de cierre:
+
+```bash
+pnpm test:api          # 493 passed, 2 skipped
+pnpm build:web         # OK
+pnpm contracts:generate
+pnpm typecheck:web     # OK
+```
 
 ## Punto de partida
 
-SDD 008 debe partir desde el contrato:
+SDD 008 debe partir desde ambos contratos:
 
-- `specs/007-escrituras-variable-resolution/handoff-sdd-008.md`
+- `specs/007-escrituras-variable-resolution/handoff-sdd-008.md` (contrato base)
+- `specs/009-titulo-dominio-vigente/handoff-sdd-008-addendum.md` (tokens de
+  titulo, bloques narrativos, reglas de clausulas por alertas y lista de los 7
+  entregables para cerrar la generacion de documentos)
+
+Cambio de catalogo a tener presente: las claves `matriz.inscripcion_*` y
+`matriz.adquisicion_*` ya no existen; todo template debe usar
+`titulo.inscripciones[]` y los bloques `titulo.comparecencia_vendedor_texto` /
+`titulo.clausula_primero_texto` aprobados. La clausula SEXTO (servidumbre)
+renderiza sus referencias registrales desde `titulo.inscripciones[]`.
+
+Despues de SDD 008 queda la consolidacion UX legal en proyectos: redisenar el
+Centro de Control Legal conociendo el flujo proyecto -> caso de escritura ->
+matriz -> aprobacion -> generacion DOCX.
 
 ## Regla de arquitectura
 
@@ -45,7 +82,7 @@ El creador de matriz no resuelve variables desde documentos fuente. Consume:
 Si una variable esta mal, el usuario vuelve al Centro de Control Legal del SDD
 007, corrige la variable y crea un nuevo snapshot.
 
-## Alcance esperado
+## Alcance implementado
 
 - Interfaz profesional nueva de matriz/minuta DOCX, construida desde cero.
 - Bloques y clausulas versionadas.
@@ -55,6 +92,21 @@ Si una variable esta mal, el usuario vuelve al Centro de Control Legal del SDD
 - Vistas de template, resuelto y evidencia.
 - Generacion DOCX desde snapshot aprobado.
 - Flujo de revision juridica antes de uso externo.
+
+## Handoff de consolidacion UX legal
+
+La siguiente iteracion deberia unir las superficies legales en una sola ruta
+operativa por proyecto/lote:
+
+- Desde el Centro de Control Legal, mostrar el caso de escritura activo y un
+  CTA directo a `/documentos/matriz/[caseId]`.
+- Reemplazar botones deshabilitados de "Documento legal desde caso" por enlaces
+  al caso real cuando el frontend tenga `escritura_case_id` en el contexto del
+  lote.
+- Unificar estados visibles: readiness gates, titulo aprobado, matriz draft /
+  pending / approved, snapshot stale y ultima generacion DOCX.
+- Mantener la regla snapshot-only: cualquier correccion de datos vuelve al CCL;
+  la matriz solo re-renderiza desde el snapshot vigente.
 
 ## No alcance
 
@@ -75,13 +127,8 @@ evidencia dentro de la matriz, pero consume snapshots y no debe mutar
 Si en la matriz se detecta un dato malo, se vuelve al SDD 007, se corrige la
 variable y se crea un nuevo snapshot del caso de escritura.
 
-## Primera decision tecnica del SDD 008
+## Decision tecnica principal del SDD 008
 
-Definir el formato fuente de la matriz:
-
-1. ProseMirror JSON como fuente canonica y export HTML/Jinja/DOCX.
-2. HTML/Jinja como fuente canonica con edicion visual.
-3. Representacion dual normalizada.
-
-Recomendacion: ProseMirror JSON como fuente canonica, porque los tokens de
-variables y la evidencia requieren atributos estructurados.
+ProseMirror JSON quedo como fuente canonica de clausulas y matriz. El export
+DOCX es server-side, deterministico y pasa por `matriz_token_resolution` y
+`matriz_docx_renderer`; no hay HTML/Jinja nuevo para escrituras.

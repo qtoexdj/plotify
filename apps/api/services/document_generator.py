@@ -1,5 +1,9 @@
 """
-Generador de documentos legales en PDF (WeasyPrint) y DOCX (python-docx).
+DEPRECATED: generador MVP de documentos legales en PDF/DOCX.
+
+SDD 008 usa `matriz_docx_renderer.py` + `escritura_minuta_generations` para
+minutas de escritura. Este modulo queda solo para compatibilidad del router
+legacy `/documents/*`; no debe conectarse a rutas nuevas.
 
 Responsabilidades:
     - generate_pdf: renderiza template → HTML → PDF usando WeasyPrint.

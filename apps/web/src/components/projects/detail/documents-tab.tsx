@@ -27,11 +27,12 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { DocumentViewer } from './document-viewer'
 import Image from 'next/image'
-import Link from 'next/link'
 import type { LotWithRecord } from './types'
 import {
   LEGAL_EXTRACTION_STATUS_LABELS,
+  isMultiActiveLegalDocumentType,
   type LegalDocument,
+  type LegalDocumentType,
   type LegalExtractionStatus,
 } from '@/lib/legal/variable-resolution-types'
 import { EscrituraReadinessPanel } from '@/components/projects/legal/escritura-readiness-panel'
@@ -42,13 +43,29 @@ interface DocumentsTabProps {
   lots?: LotWithRecord[]
 }
 
-const DOCUMENT_TYPES = [
-  { id: 'doc_dominio_vigente', label: 'Dominio Vigente' },
-  { id: 'doc_hipoteca_gravamen', label: 'Certificado Hipoteca y Gravamen' },
-  { id: 'doc_roles', label: 'Certificado de Roles' },
-  { id: 'doc_subdivision', label: 'Certificado de Subdivisión' },
-  { id: 'doc_plano_oficial', label: 'Plano Oficial' },
-  { id: 'doc_otros', label: 'Otros Documentos' },
+// FR-031/FR-033: los tipos multi-documento (dominios, personerías, hipotecas,
+// planos multi-lámina, otros) listan todos los documentos activos y permiten
+// agregar o reemplazar uno específico; el resto mantiene slot único por tipo.
+const DOCUMENT_TYPES: { id: string; label: string; documentType: LegalDocumentType }[] = [
+  { id: 'doc_dominio_vigente', label: 'Dominio Vigente', documentType: 'dominio_vigente' },
+  {
+    id: 'doc_hipoteca_gravamen',
+    label: 'Certificado Hipoteca y Gravamen',
+    documentType: 'hipoteca_gravamen',
+  },
+  {
+    id: 'doc_personeria',
+    label: 'Personerías / Representación',
+    documentType: 'personeria',
+  },
+  { id: 'doc_roles', label: 'Certificado de Roles', documentType: 'certificado_roles_sii' },
+  {
+    id: 'doc_subdivision',
+    label: 'Certificado de Subdivisión',
+    documentType: 'certificado_sag',
+  },
+  { id: 'doc_plano_oficial', label: 'Plano Oficial', documentType: 'plano_oficial' },
+  { id: 'doc_otros', label: 'Otros Documentos', documentType: 'otro' },
 ]
 
 export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: DocumentsTabProps) {
@@ -57,7 +74,6 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
   const [legalDocuments, setLegalDocuments] = useState<LegalDocument[]>([])
   const supabase = createClient()
 
-  const reservedLots = lots.filter((l) => l.estado === 'reservado')
   const soldLots = lots.filter((l) => l.estado === 'vendido')
   const legalDocumentByField = useMemo(() => {
     const latest = new Map<string, LegalDocument>()
@@ -69,6 +85,20 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
       }
     }
     return latest
+  }, [legalDocuments])
+
+  const activeLegalDocumentsByType = useMemo(() => {
+    const byType = new Map<LegalDocumentType, LegalDocument[]>()
+    for (const document of legalDocuments) {
+      if (document.extraction_status === 'superseded') continue
+      const list = byType.get(document.document_type) ?? []
+      list.push(document)
+      byType.set(document.document_type, list)
+    }
+    for (const list of byType.values()) {
+      list.sort((a, b) => a.version_number - b.version_number)
+    }
+    return byType
   }, [legalDocuments])
 
   useEffect(() => {
@@ -150,16 +180,23 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
     }
   }
 
-  const handleFileUpload = async (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    type: string,
+    e: React.ChangeEvent<HTMLInputElement>,
+    replacesLegalDocumentId?: string
+  ) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setIsUploading(type)
+    setIsUploading(replacesLegalDocumentId ? `replace-${replacesLegalDocumentId}` : type)
     try {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('projectId', project.id)
       formData.append('type', type)
+      if (replacesLegalDocumentId) {
+        formData.append('replacesLegalDocumentId', replacesLegalDocumentId)
+      }
 
       const response = await fetch('/api/uploads/project-files', {
         method: 'POST',
@@ -188,6 +225,25 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
     }
   }
 
+  const refreshLegalDocuments = async () => {
+    const response = await fetch(`/api/projects/${project.id}/legal-documents`)
+    if (response.ok) {
+      const result = (await response.json()) as { documents?: LegalDocument[] }
+      setLegalDocuments(result.documents ?? [])
+    }
+  }
+
+  const archiveLegalDocument = async (legalDocumentId: string) => {
+    const response = await fetch(
+      `/api/projects/${project.id}/legal-documents?legalDocumentId=${encodeURIComponent(legalDocumentId)}`,
+      { method: 'DELETE' }
+    )
+    if (!response.ok) {
+      const result = (await response.json().catch(() => ({}))) as { error?: string }
+      throw new Error(result.error || 'Error al eliminar el documento legal')
+    }
+  }
+
   const handleDelete = async (type: string, path: string) => {
     if (!confirm('¿Estás seguro de eliminar este archivo?')) return
 
@@ -212,6 +268,18 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
 
       if (dbError) throw dbError
 
+      // Archiva tambien el registro legal asociado para que el estado de
+      // extraccion no quede activo apuntando a un archivo eliminado.
+      const registeredDocument = legalDocumentByField.get(type)
+      if (registeredDocument) {
+        try {
+          await archiveLegalDocument(registeredDocument.id)
+          await refreshLegalDocuments()
+        } catch (archiveError) {
+          console.error('Error archiving legal document:', archiveError)
+        }
+      }
+
       setProject(updatedProject)
       toast.success('Archivo eliminado')
     } catch (error) {
@@ -220,61 +288,40 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
     }
   }
 
+  const handleDeleteLegalDocument = async (legalDocument: LegalDocument) => {
+    if (!confirm(`¿Eliminar "${legalDocument.original_filename}"?`)) return
+
+    try {
+      await archiveLegalDocument(legalDocument.id)
+      // Si la columna legacy del proyecto apunta a este archivo, limpiarla para
+      // que no quede un "Cargado" colgante.
+      const legacyField = legalDocument.source_field
+      if (legacyField) {
+        const legacyPath = (project as ProjectWithMetrics)[
+          legacyField as keyof ProjectWithMetrics
+        ] as string | null
+        if (legacyPath && legacyPath === legalDocument.storage_path) {
+          const { data: updatedProject } = await supabase
+            .from('projects')
+            .update({ [legacyField]: null })
+            .eq('id', project.id)
+            .select()
+            .single()
+          if (updatedProject) setProject(updatedProject)
+        }
+      }
+      await refreshLegalDocuments()
+      toast.success('Documento eliminado')
+    } catch (error) {
+      console.error('Error deleting legal document:', error)
+      const message =
+        error instanceof Error ? error.message : 'Error al eliminar el documento legal'
+      toast.error(message)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* ── Documentos de Reserva ─────────────────────────────────── */}
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-indigo-600" />
-              Documentos de Reserva
-            </CardTitle>
-            <CardDescription>
-              Genera comprobantes de reserva (PDF/DOCX) para los lotes con estado{' '}
-              <span className="font-medium text-foreground">reservado</span> desde la plantilla
-              activa del proyecto.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {reservedLots.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg text-sm">
-                No hay lotes en estado <strong>reservado</strong> en este proyecto.
-              </div>
-            ) : (
-              <div className="divide-y rounded-lg border overflow-hidden">
-                {reservedLots.map((lot) => (
-                  <div
-                    key={lot.id}
-                    className="flex items-center justify-between px-4 py-3 bg-card hover:bg-accent/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className="text-amber-700 bg-amber-50 border-amber-200 text-xs"
-                      >
-                        Reservado
-                      </Badge>
-                      <span className="text-sm font-medium">{lot.numero_lote}</span>
-                    </div>
-                    <Link href={`/documentos/generar/${lot.id}`} id={`generate-doc-${lot.id}`}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                      >
-                        <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
-                        Generar documento
-                      </Button>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* ── Documentos de Escritura ── */}
       {isAdmin && (
         <Card>
@@ -284,8 +331,8 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
               Documentos de Escritura
             </CardTitle>
             <CardDescription>
-              Genera la escritura definitiva de compraventa (PDF/DOCX) para los lotes vendidos tras
-              completar la revisión de sus variables legales.
+              Revisa la preparación de los lotes vendidos. La minuta DOCX se genera desde una matriz
+              aprobada del caso de escritura.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -308,19 +355,10 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                         </Badge>
                         <span className="text-sm font-medium">{lot.numero_lote}</span>
                       </div>
-                      <Link
-                        href={`/documentos/generar/${lot.id}?type=escritura`}
-                        id={`generate-escritura-${lot.id}`}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-green-600 border-green-200 hover:bg-green-50"
-                        >
-                          <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-1.5" />
-                          Revisar y Generar
-                        </Button>
-                      </Link>
+                      <Button variant="outline" size="sm" disabled>
+                        <HugeiconsIcon icon={FileAttachmentIcon} className="w-4 h-4 mr-1.5" />
+                        Abrir caso legal
+                      </Button>
                     </div>
                     <EscrituraReadinessPanel projectId={project.id} lotId={lot.id} compact />
                   </div>
@@ -456,6 +494,184 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
               const extractionStatus = legalDocument?.extraction_status as
                 | LegalExtractionStatus
                 | undefined
+              if (isMultiActiveLegalDocumentType(doc.documentType)) {
+                const activeDocuments = activeLegalDocumentsByType.get(doc.documentType) ?? []
+                return (
+                  <div
+                    key={doc.id}
+                    className="p-4 border rounded-lg space-y-3 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600">
+                          <HugeiconsIcon icon={FileUploadIcon} className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{doc.label}</p>
+                          {activeDocuments.length > 0 ? (
+                            <Badge
+                              variant="outline"
+                              className="text-green-600 bg-green-50 border-green-200"
+                            >
+                              {activeDocuments.length}{' '}
+                              {activeDocuments.length === 1
+                                ? 'documento activo'
+                                : 'documentos activos'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-400 bg-slate-50">
+                              Pendiente
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {isAdmin && (
+                        <div className="relative">
+                          <input
+                            type="file"
+                            id={`upload-${doc.id}`}
+                            accept=".pdf"
+                            className="hidden"
+                            onChange={(e) => handleFileUpload(doc.id, e)}
+                            disabled={isUploading === doc.id}
+                          />
+                          <Button size="sm" asChild disabled={isUploading === doc.id}>
+                            <label htmlFor={`upload-${doc.id}`} className="cursor-pointer">
+                              {isUploading === doc.id ? (
+                                <HugeiconsIcon
+                                  icon={Loading02Icon}
+                                  className="w-4 h-4 mr-2 animate-spin"
+                                />
+                              ) : (
+                                <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-2" />
+                              )}
+                              Agregar
+                            </label>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    {activeDocuments.length > 0 && (
+                      <div className="divide-y rounded-lg border overflow-hidden">
+                        {activeDocuments.map((activeDocument) => (
+                          <div
+                            key={activeDocument.id}
+                            className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between bg-card"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">
+                                {activeDocument.original_filename}
+                              </p>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  v{activeDocument.version_number}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="text-blue-600 bg-blue-50 border-blue-200 text-xs"
+                                >
+                                  {LEGAL_EXTRACTION_STATUS_LABELS[activeDocument.extraction_status]}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                              <DocumentViewer
+                                url={getFullUrl(activeDocument.storage_path)}
+                                title={activeDocument.original_filename}
+                              />
+                              <Button variant="outline" size="sm" asChild>
+                                <a
+                                  href={getFullUrl(activeDocument.storage_path)}
+                                  download={activeDocument.original_filename}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <HugeiconsIcon icon={Download01Icon} className="w-4 h-4" />
+                                </a>
+                              </Button>
+                              {isAdmin && (
+                                <div className="relative">
+                                  <input
+                                    type="file"
+                                    id={`replace-${activeDocument.id}`}
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={(e) => handleFileUpload(doc.id, e, activeDocument.id)}
+                                    disabled={isUploading === `replace-${activeDocument.id}`}
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                    disabled={isUploading === `replace-${activeDocument.id}`}
+                                  >
+                                    <label
+                                      htmlFor={`replace-${activeDocument.id}`}
+                                      className="cursor-pointer"
+                                    >
+                                      {isUploading === `replace-${activeDocument.id}` ? (
+                                        <HugeiconsIcon
+                                          icon={Loading02Icon}
+                                          className="w-4 h-4 animate-spin"
+                                        />
+                                      ) : (
+                                        'Reemplazar'
+                                      )}
+                                    </label>
+                                  </Button>
+                                </div>
+                              )}
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-red-500"
+                                  onClick={() => handleDeleteLegalDocument(activeDocument)}
+                                >
+                                  <HugeiconsIcon icon={Trash01Icon} className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {activeDocuments.length === 0 && path && (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg border">
+                        <Badge
+                          variant="outline"
+                          className="text-green-600 bg-green-50 border-green-200"
+                        >
+                          Cargado (sin registro legal)
+                        </Badge>
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <DocumentViewer url={getFullUrl(path)} title={doc.label} />
+                          <Button variant="outline" size="sm" asChild>
+                            <a
+                              href={getFullUrl(path)}
+                              download={`${doc.label}.pdf`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <HugeiconsIcon icon={Download01Icon} className="w-4 h-4" />
+                            </a>
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-500"
+                              onClick={() => handleDelete(doc.id, path)}
+                            >
+                              <HugeiconsIcon icon={Trash01Icon} className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
               return (
                 <div
                   key={doc.id}

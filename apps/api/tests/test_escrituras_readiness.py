@@ -69,6 +69,21 @@ def _matched_lot_legal_data() -> dict[str, object]:
     }
 
 
+def _approved_title_analysis() -> dict[str, object]:
+    return {
+        "id": "00000000-0000-4000-8000-000000000050",
+        "status": "approved",
+        "structure_type": "compra_derechos",
+        "analysis_json": {},
+        "alerts": [],
+        "narrative_comparecencia_generated": "comparecencia",
+        "narrative_comparecencia_edited": None,
+        "narrative_primero_generated": "PRIMERO",
+        "narrative_primero_edited": None,
+        "created_at": "2026-06-10T12:00:00Z",
+    }
+
+
 def test_readiness_blocks_missing_required_variables_and_explains_gate():
     variables = [
         variable
@@ -82,6 +97,8 @@ def test_readiness_blocks_missing_required_variables_and_explains_gate():
         lot_id=LOT_ID,
         variables=variables,
         lot_legal_data=_matched_lot_legal_data(),
+        title_analysis=_approved_title_analysis(),
+        has_title_documents=True,
         warning_acknowledged=True,
     )
     gates = {gate.gate: gate for gate in readiness.gates}
@@ -99,6 +116,8 @@ def test_readiness_allows_supported_rol_en_tramite_and_requires_warning_review()
         lot_id=LOT_ID,
         variables=_ready_variables(),
         lot_legal_data=_matched_lot_legal_data(),
+        title_analysis=_approved_title_analysis(),
+        has_title_documents=True,
         warning_acknowledged=False,
     )
     gates = {gate.gate: gate for gate in readiness.gates}
@@ -118,14 +137,20 @@ def test_readiness_creates_ready_snapshot_when_all_gates_pass():
         lot_id=LOT_ID,
         variables=variables,
         lot_legal_data=_matched_lot_legal_data(),
+        title_analysis=_approved_title_analysis(),
+        has_title_documents=True,
         warning_acknowledged=True,
     )
 
     assert readiness.readiness_status == "ready"
     assert all(gate.status == "ready" for gate in readiness.gates)
-    assert set(readiness.variable_snapshot) == {
-        variable["variable_key"] for variable in variables
-    }
+    # SDD 009: raw titulo.* rows are replaced by the cleaned "titulo" group.
+    expected_snapshot_keys = {
+        variable["variable_key"]
+        for variable in variables
+        if not str(variable["variable_key"]).startswith("titulo.")
+    } | {"titulo"}
+    assert set(readiness.variable_snapshot) == expected_snapshot_keys
     assert set(readiness.evidence_snapshot) == {
         variable["variable_key"] for variable in variables
     }
@@ -154,6 +179,12 @@ class FakeSupabaseTable:
         return self
 
     def neq(self, *_args):
+        return self
+
+    def order(self, *_args, **_kwargs):
+        return self
+
+    def limit(self, *_args):
         return self
 
     def maybe_single(self):
@@ -213,6 +244,7 @@ class FakeSupabase:
             "project_id": PROJECT_ID,
             "projects": {"organization_id": ORG_ID},
         }
+        self.title_analyses: list[dict[str, object]] = [_approved_title_analysis()]
         self.existing_case: dict[str, object] | None = None
         self.inserted_cases: list[dict[str, object]] = []
         self.updated_cases: list[dict[str, object]] = []
@@ -233,6 +265,8 @@ class FakeSupabase:
             return SimpleNamespace(data=self.legal_documents)
         if table.name == "document_evidence":
             return SimpleNamespace(data=self.evidence_rows)
+        if table.name == "title_analyses":
+            return SimpleNamespace(data=self.title_analyses)
         if table.name == "escritura_cases":
             if table.insert_payload is not None:
                 row = {

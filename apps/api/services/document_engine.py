@@ -1,5 +1,10 @@
 """
-Motor de plantillas Jinja2 para generación de documentos legales.
+DEPRECATED: motor MVP de plantillas Jinja2 para documentos legales.
+
+SDD 008 retira las rutas web MVP de documentos y mueve la generacion de
+minutas de escritura al pipeline server-side de matriz aprobada
+(`matriz_docx_renderer.py`). Este modulo queda solo para compatibilidad del
+router legacy `/documents/*`; no debe conectarse a superficies nuevas.
 
 Responsabilidades:
     - resolve_variables: carga datos de lot, lot_record, project, organization

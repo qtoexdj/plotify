@@ -12,6 +12,11 @@ import {
   type EscrituraReadinessResponse,
   type ReadinessGateStatus,
 } from '@/lib/legal/variable-resolution-types'
+import {
+  TITLE_CASE_PANEL_ANCHOR,
+  TITLE_VERIFIED_BLOCKING_CAUSE_LABELS,
+  isTitleVerifiedBlockingCause,
+} from '@/lib/legal/title-types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -42,6 +47,26 @@ const gateStatusClassName = {
     'border-emerald-200 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
 } as const satisfies Record<ReadinessGateStatus, string>
 
+function GateBlockingItem({ gate, item }: { gate: EscrituraReadinessGate; item: string }) {
+  if (gate.gate === 'title_verified' && isTitleVerifiedBlockingCause(item)) {
+    return (
+      <a href={`#${TITLE_CASE_PANEL_ANCHOR}`} className="inline-flex">
+        <Badge
+          variant="outline"
+          className="max-w-full truncate text-[9px] px-1 py-0 underline decoration-dotted underline-offset-2 hover:text-primary"
+        >
+          {TITLE_VERIFIED_BLOCKING_CAUSE_LABELS[item]}
+        </Badge>
+      </a>
+    )
+  }
+  return (
+    <Badge variant="outline" className="max-w-full truncate font-mono text-[9px] px-1 py-0">
+      {item}
+    </Badge>
+  )
+}
+
 function GateRow({ gate }: { gate: EscrituraReadinessGate }) {
   const blockers = gate.blocking_variables ?? []
   const warnings = gate.warnings ?? []
@@ -55,13 +80,7 @@ function GateRow({ gate }: { gate: EscrituraReadinessGate }) {
         {(blockers.length > 0 || warnings.length > 0) && (
           <div className="mt-1.5 flex flex-wrap gap-1">
             {[...blockers, ...warnings].slice(0, 4).map((item) => (
-              <Badge
-                key={item}
-                variant="outline"
-                className="max-w-full truncate font-mono text-[9px] px-1 py-0"
-              >
-                {item}
-              </Badge>
+              <GateBlockingItem key={item} gate={gate} item={item} />
             ))}
           </div>
         )}

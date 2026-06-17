@@ -1,0 +1,982 @@
+{
+  "_comment": "SDD 008 T005: snapshot completo del caso Teno (lote 3, rol matriz 67-23). Estado post-puente-operacional y post-aprobacion CCL: titulo aprobado (SDD 009, corpus teno_golden_chain), operacionales aprobadas. Los valores derivados en palabras (precio_letras, superficies, montos del detalle de pago) DEBEN calzar con services/legal_title_words.py; test_matriz_fixtures.py lo verifica.",
+  "organization_id": "00000000-0000-4000-8000-000000000001",
+  "project_id": "00000000-0000-4000-8000-000000000002",
+  "lot_id": "00000000-0000-4000-8000-000000000003",
+  "escritura_case_id": "00000000-0000-4000-8000-000000000004",
+  "case_status": "ready_for_minuta",
+  "readiness_status": "ready",
+  "variable_snapshot": {
+    "documento.ciudad_otorgamiento": {
+      "value_text": "Curicó",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "documento.fecha_otorgamiento": {
+      "value_text": "2026-07-15",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "documento.notario.nombre": {
+      "value_text": "Patricio Navarro Riveros",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "documento.notaria.jurisdiccion": {
+      "value_text": "Curicó",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "documento.notaria.direccion": {
+      "value_text": "calle Prat número trescientos diez, Curicó",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "documento.abogado_redactor.nombre": {
+      "value_text": "Carolina Pérez Lagos",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "documento.abogado_redactor.rut": {
+      "value_text": "10.456.789-3",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "revision_juridica.estado": {
+      "value_text": "aprobada",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_review_decisions" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-09T09:00:00Z"
+    },
+    "vendedor.tipo": {
+      "value_text": "persona natural",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "vendedor.nombre": {
+      "value_text": "JUAN DE DIOS GALAZ ABARCA",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "vendedor.rut": {
+      "value_text": "4.606.955-2",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "vendedor.domicilio": {
+      "value_text": "Camino a Melipilla Kilómetro 27, Peñaflor",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "vendedor.profesion_giro": {
+      "value_text": "rentista",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "vendedor.representantes[]": {
+      "value_text": null,
+      "value_json": [],
+      "state": "not_applicable",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "comprador.nombre": {
+      "value_text": "María Fernanda Soto Pérez",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "comprador.rut": {
+      "value_text": "16.358.742-5",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "comprador.domicilio": {
+      "value_text": "Avenida Manquehue Sur número mil doscientos, departamento quinientos tres, Las Condes, Santiago",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "comprador.estado_civil": {
+      "value_text": "soltera",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "comprador.profesion_giro": {
+      "value_text": "ingeniera comercial",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "comprador.nacionalidad": {
+      "value_text": "chilena",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "personeria.aplica": {
+      "value_text": "false",
+      "value_json": false,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "personeria.constitucion_texto": {
+      "value_text": null,
+      "value_json": null,
+      "state": "not_applicable",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "personeria.poder_texto": {
+      "value_text": null,
+      "value_json": null,
+      "state": "not_applicable",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "personeria.estado_revision": {
+      "value_text": "no_aplica",
+      "value_json": null,
+      "state": "not_applicable",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "personeria.delegacion_facultades": {
+      "value_text": null,
+      "value_json": null,
+      "state": "not_applicable",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.nombre_predio": {
+      "value_text": "LOTE N°3 (del plano de subdivisión) de la Hijuela N°6 del ex fundo El Cóndor",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.ubicacion": {
+      "value_text": "sector de El Cóndor",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.comuna": {
+      "value_text": "Teno",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.provincia": {
+      "value_text": "Curicó",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.region": {
+      "value_text": "Región del Maule",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.superficie_total": {
+      "value_text": "26,82 hectáreas",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.deslindes.norte": {
+      "value_text": "Lote N°2",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.deslindes.sur": {
+      "value_text": "Fundo El Escudo",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.deslindes.oriente": {
+      "value_text": "Hijuela N°2",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.deslindes.poniente": {
+      "value_text": "Fundo La Puerta, hoy San Francisco",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000102" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "matriz.rol_avaluo": {
+      "value_text": "67-23",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000103" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sag.certificado_numero": {
+      "value_text": "1532",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000104" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sag.certificado_fecha": {
+      "value_text": "2025-11-28",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000104" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sag.region_oficina": {
+      "value_text": "Región del Maule",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000104" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sag.oficina_sectorial": {
+      "value_text": "Oficina Sectorial SAG Curicó",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000104" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sag.plano_cbr_numero": {
+      "value_text": "812",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000105" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sag.plano_cbr_anio": {
+      "value_text": "2025",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000105" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sag.plano_cbr_registro": {
+      "value_text": "el Registro de Documentos del Conservador de Bienes Raíces de Curicó",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000105" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sii.rol_matriz": {
+      "value_text": "67-23",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "source": "project_legal_data" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sii.pre_rol_lote": {
+      "value_text": "67-103",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": {
+        "source": "lot_legal_data",
+        "lot_id": "00000000-0000-4000-8000-000000000003"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sii.rol_avaluo_en_tramite_texto": {
+      "value_text": "rol de avalúo en trámite de asignación número 67-103 de la comuna de Teno",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": {
+        "source": "lot_legal_data",
+        "lot_id": "00000000-0000-4000-8000-000000000003"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sii.rol_avaluo_definitivo": {
+      "value_text": null,
+      "value_json": null,
+      "state": "not_applicable",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "sii.unidad_nombre": {
+      "value_text": "Lote 3",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": {
+        "source": "lot_legal_data",
+        "lot_id": "00000000-0000-4000-8000-000000000003"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "lote.numero": {
+      "value_text": "3",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lots",
+        "row_id": "00000000-0000-4000-8000-000000000003",
+        "source_row_hash": "fixture-hash-lot-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "lote.numero_nombre": {
+      "value_text": "Lote N°3",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lots",
+        "row_id": "00000000-0000-4000-8000-000000000003",
+        "source_row_hash": "fixture-hash-lot-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "lote.superficie_m2": {
+      "value_text": "5100",
+      "value_json": 5100,
+      "state": "approved",
+      "source_type": "geometry",
+      "source_ref": {
+        "source": "lots",
+        "row_id": "00000000-0000-4000-8000-000000000003",
+        "source_row_hash": "fixture-hash-lot-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "lote.superficie_texto": {
+      "value_text": "cinco mil cien metros cuadrados",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "derived",
+      "source_ref": { "derived_from": "lote.superficie_m2" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "lote.superficie_ha_texto": {
+      "value_text": "cero coma cincuenta y uno hectáreas",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "derived",
+      "source_ref": { "derived_from": "lote.superficie_m2" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "lote.boundaries_official": {
+      "value_text": null,
+      "value_json": [
+        {
+          "label": "Norte",
+          "description": "",
+          "distance": 60,
+          "colinda": "Lote N°2 de la misma subdivisión"
+        },
+        {
+          "label": "Sur",
+          "description": "",
+          "distance": 60,
+          "colinda": "Fundo El Escudo"
+        },
+        {
+          "label": "Oriente",
+          "description": "",
+          "distance": 85,
+          "colinda": "camino interior de la subdivisión",
+          "es_servidumbre": true
+        },
+        {
+          "label": "Poniente",
+          "description": "",
+          "distance": 85,
+          "colinda": "Lote N°4 de la misma subdivisión"
+        }
+      ],
+      "state": "approved",
+      "source_type": "geometry",
+      "source_ref": {
+        "source": "lots",
+        "row_id": "00000000-0000-4000-8000-000000000003",
+        "source_row_hash": "fixture-hash-lot-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "lote.deslindes": {
+      "value_text": "al Norte, en sesenta metros, con Lote N°2 de la misma subdivisión; al Sur, en sesenta metros, con Fundo El Escudo; al Oriente, en ochenta y cinco metros, con camino interior de la subdivisión; y al Poniente, en ochenta y cinco metros, con Lote N°4 de la misma subdivisión",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "geometry",
+      "source_ref": {
+        "source": "lots",
+        "row_id": "00000000-0000-4000-8000-000000000003",
+        "source_row_hash": "fixture-hash-lot-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "lote.rol_tramite": {
+      "value_text": "67-103",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "source": "lot_legal_data" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "servidumbre.aplica": {
+      "value_text": "true",
+      "value_json": true,
+      "state": "approved",
+      "source_type": "geometry",
+      "source_ref": {
+        "source": "lots",
+        "row_id": "00000000-0000-4000-8000-000000000003",
+        "source_row_hash": "fixture-hash-lot-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "servidumbre.superficie_m2": {
+      "value_text": "385,5",
+      "value_json": 385.5,
+      "state": "approved",
+      "source_type": "geometry",
+      "source_ref": {
+        "source": "lots",
+        "row_id": "00000000-0000-4000-8000-000000000003",
+        "source_row_hash": "fixture-hash-lot-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "servidumbre.superficie_texto": {
+      "value_text": "trescientos ochenta y cinco coma cinco metros cuadrados",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "derived",
+      "source_ref": { "derived_from": "servidumbre.superficie_m2" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "servidumbre.deslindes_tramo": {
+      "value_text": "franja de ocho metros de ancho a lo largo del deslinde Oriente del Lote N°3, según el trazado que consta en el plano archivado",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "geometry",
+      "source_ref": {
+        "source": "lots",
+        "row_id": "00000000-0000-4000-8000-000000000003",
+        "source_row_hash": "fixture-hash-lot-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "servidumbre.predio_sirviente": {
+      "value_text": "Lote N°3",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "geometry",
+      "source_ref": { "source": "lots" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "servidumbre.predios_dominantes": {
+      "value_text": "los Lotes N°1, N°2 y N°4 de la misma subdivisión",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "transaccion.precio_numeros": {
+      "value_text": "45.000.000",
+      "value_json": 45000000,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "transaccion.precio_letras": {
+      "value_text": "cuarenta y cinco millones de pesos",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "derived",
+      "source_ref": { "derived_from": "transaccion.precio_numeros" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "transaccion.moneda": {
+      "value_text": "$",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": { "source": "lot_records" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "transaccion.forma_pago": {
+      "value_text": "una parte al contado en este acto y el saldo contra la inscripción del inmueble a nombre del comprador, según se detalla a continuación",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "transaccion.detalle_pago[]": {
+      "value_text": null,
+      "value_json": [
+        {
+          "concepto": "Abono inicial pagado a la firma de la promesa",
+          "monto_numeros": 15000000,
+          "monto_letras": "quince millones de pesos",
+          "medio": "transferencia electrónica a la cuenta corriente del vendedor"
+        },
+        {
+          "concepto": "Saldo de precio pagadero contra inscripción",
+          "monto_numeros": 30000000,
+          "monto_letras": "treinta millones de pesos",
+          "medio": "instrucciones notariales irrevocables dejadas en la notaría que autoriza"
+        }
+      ],
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "transaccion.saldo_pendiente": {
+      "value_text": "el saldo de treinta millones de pesos pagadero contra inscripción, garantizado mediante instrucciones notariales irrevocables",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "system",
+      "source_ref": {
+        "source": "lot_records",
+        "row_id": "00000000-0000-4000-8000-000000000005",
+        "source_row_hash": "fixture-hash-lot-record-v1"
+      },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.saneamiento_eviccion": {
+      "value_text": "El vendedor responderá del saneamiento de la evicción y de los vicios redhibitorios conforme a las reglas generales del Código Civil.",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.exencion_eviccion_aprobada": {
+      "value_text": "false",
+      "value_json": false,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.exencion_eviccion_texto": {
+      "value_text": null,
+      "value_json": null,
+      "state": "not_applicable",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.ocupantes_excepciones": {
+      "value_text": "la servidumbre de tránsito descrita en esta escritura",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.entrega_fecha": {
+      "value_text": "esta misma fecha",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.entrega_material": {
+      "value_text": "La entrega se realiza sin ocupantes ni moradores, con los cierres, accesos y mejoras existentes que el comprador declara conocer.",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.gastos_cargo": {
+      "value_text": "del comprador",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.gastos_excepciones": {
+      "value_text": "los derechos notariales del otorgamiento, que serán pagados por mitades",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.domicilio_contractual": {
+      "value_text": "Curicó",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.lguc_destino_suelo": {
+      "value_text": "Las partes declaran conocer las limitaciones del artículo 55 de la Ley General de Urbanismo y Construcciones y del Decreto Ley 3.516 sobre subdivisión de predios rústicos.",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "clausulas.rnda_declaracion": {
+      "value_text": "agregada al final del registro de esta escritura",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "mandato.rectificacion_nombre": {
+      "value_text": "Carolina Pérez Lagos",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "mandato.rectificacion_rut": {
+      "value_text": "10.456.789-3",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "manual",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "mandato.facultades": {
+      "value_text": "El mandato comprende la facultad de suscribir minutas rectificatorias y de requerir y firmar las inscripciones y subinscripciones que procedan.",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "evidencia.gravamenes_excepciones": {
+      "value_text": "la servidumbre de tránsito constituida en esta misma escritura",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "legal_review",
+      "source_ref": { "source": "legal_control_center" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "evidencia.certificado_gp_referencia": {
+      "value_text": "Según Certificado de Hipotecas, Gravámenes y Prohibiciones otorgado por el Conservador de Bienes Raíces de Curicó con fecha quince de mayo de dos mil veintiséis, el inmueble no registra gravámenes ni prohibiciones vigentes.",
+      "value_json": null,
+      "state": "approved",
+      "source_type": "document",
+      "source_ref": { "legal_document_id": "00000000-0000-4000-8000-000000000106" },
+      "confidence": 1.0,
+      "reviewed_at": "2026-06-08T12:00:00Z"
+    },
+    "titulo": {
+      "estructura": "compra_derechos",
+      "inscripciones": [
+        {
+          "orden": 1,
+          "tipo_adquisicion": "compra",
+          "fojas": "1338",
+          "numero": "1322",
+          "anio": "1996",
+          "cbr": "Curicó",
+          "escritura_fecha": "1996-05-17",
+          "notario": "Iván Torrealba Acevedo",
+          "repertorio": null,
+          "adquirentes": [
+            { "nombre": "JUAN DE DIOS GALAZ ABARCA", "cuota": "50%" },
+            { "nombre": "ERNESTO CLAUDIO HERRMANN FRANK", "cuota": "50%" }
+          ],
+          "antecesor": "LUIS ARMANDO MINGHEL BALLADARES"
+        },
+        {
+          "orden": 2,
+          "tipo_adquisicion": "compra_derechos",
+          "fojas": "4699",
+          "numero": "2781",
+          "anio": "2023",
+          "cbr": "Curicó",
+          "escritura_fecha": "2022-02-02",
+          "notario": "Luis Enrique Espinoza Garrido",
+          "repertorio": "365",
+          "adquirentes": [{ "nombre": "JUAN DE DIOS GALAZ ABARCA", "cuota": "50%" }],
+          "antecesor": "ERNESTO CLAUDIO HERRMANN FRANK"
+        }
+      ],
+      "propietarios": [
+        {
+          "nombre": "JUAN DE DIOS GALAZ ABARCA",
+          "rut": "4.606.955-2",
+          "estado_civil": "divorciado",
+          "profesion": "rentista",
+          "domicilio": "Camino a Melipilla Kilómetro 27, Peñaflor",
+          "cuota": "100%",
+          "requiere_personeria": false
+        }
+      ],
+      "comparecencia_vendedor_texto": "Don JUAN DE DIOS GALAZ ABARCA, chileno, divorciado, rentista, cédula nacional de identidad número cuatro millones seiscientos seis mil novecientos cincuenta y cinco guion dos, domiciliado en Camino a Melipilla, kilómetro veintisiete, comuna de Peñaflor, en adelante también \"el vendedor\" o \"la parte vendedora\".",
+      "clausula_primero_texto": "PRIMERO: Don JUAN DE DIOS GALAZ ABARCA es dueño del inmueble denominado \"LOTE N°3\" (del plano de subdivisión) de la Hijuela N°6 del ex Fundo El Cóndor, ubicado en el sector El Cóndor, comuna de Teno, provincia de Curicó, que según su título tiene una superficie de veintiséis coma ochenta y dos hectáreas, la que se indica como dato meramente informativo, y los siguientes deslindes: NORTE, Lote número dos; SUR, Fundo El Escudo; ORIENTE, Hijuela número dos; y PONIENTE, Fundo La Puerta, hoy San Francisco. Adquirió el dominio de la siguiente forma: Uno) Por compra que, en común y por iguales partes con don Ernesto Claudio Herrmann Frank, hicieron a don Luis Armando Minghel Balladares, según consta de escritura pública otorgada con fecha diecisiete de mayo de mil novecientos noventa y seis ante don Iván Torrealba Acevedo, Notario de Santiago, cuyo título se inscribió a fojas mil trescientos treinta y ocho, número mil trescientos veintidós, del Registro de Propiedad del Conservador de Bienes Raíces de Curicó del año mil novecientos noventa y seis. Dos) Por compra de las acciones y derechos que sobre el inmueble correspondían a don Ernesto Claudio Herrmann Frank, según consta de escritura pública de fecha dos de febrero de dos mil veintidós, repertorio número trescientos sesenta y cinco, otorgada ante don Luis Enrique Espinoza Garrido, Notario Público Titular de Pucón, y escritura rectificatoria de fecha diecinueve de agosto de dos mil veintidós, repertorio número cuatro mil doscientos treinta, otorgada ante doña Linda Scarlett Bosch Jiménez, Notario Público Titular de la Vigésima Notaría de Santiago, cuyo título se inscribió a fojas cuatro mil seiscientos noventa y nueve, número dos mil setecientos ochenta y uno, del Registro de Propiedad del Conservador de Bienes Raíces de Curicó del año dos mil veintitrés. El inmueble figura en el rol de avalúo número sesenta y siete guion veintitrés de la comuna de Teno.",
+      "alertas_resueltas": [
+        { "tipo": "dl_3516", "resolution": "clause_added" },
+        { "tipo": "derechos_aguas", "resolution": "acknowledged" },
+        {
+          "tipo": "vigente_en_el_resto",
+          "resolution": "dismissed_with_reason",
+          "reason": "La inscripción de 1996 queda vigente en el resto por la venta de derechos de 2023; no afecta al Lote N°3 transferido."
+        },
+        { "tipo": "multi_inmueble", "resolution": "acknowledged" }
+      ]
+    }
+  },
+  "evidence_snapshot": {
+    "vendedor.nombre": [
+      {
+        "legal_document_id": "00000000-0000-4000-8000-000000000102",
+        "legal_document_page_id": "00000000-0000-4000-8000-000000000201",
+        "page_number": 1,
+        "snippet": "JUAN DE DIOS GALAZ ABARCA, cédula nacional de identidad número 4.606.955-2"
+      }
+    ],
+    "matriz.rol_avaluo": [
+      {
+        "legal_document_id": "00000000-0000-4000-8000-000000000103",
+        "legal_document_page_id": "00000000-0000-4000-8000-000000000202",
+        "page_number": 2,
+        "snippet": "rol de avalúo número 67-23 de la comuna de Teno"
+      }
+    ],
+    "sag.certificado_numero": [
+      {
+        "legal_document_id": "00000000-0000-4000-8000-000000000104",
+        "legal_document_page_id": "00000000-0000-4000-8000-000000000203",
+        "page_number": 1,
+        "snippet": "Certificado N°1532 — Servicio Agrícola y Ganadero, Oficina Sectorial Curicó"
+      }
+    ],
+    "sag.plano_cbr_numero": [
+      {
+        "legal_document_id": "00000000-0000-4000-8000-000000000105",
+        "legal_document_page_id": "00000000-0000-4000-8000-000000000204",
+        "page_number": 1,
+        "snippet": "plano archivado bajo el N°812 del año 2025"
+      }
+    ],
+    "evidencia.certificado_gp_referencia": [
+      {
+        "legal_document_id": "00000000-0000-4000-8000-000000000106",
+        "legal_document_page_id": "00000000-0000-4000-8000-000000000205",
+        "page_number": 1,
+        "snippet": "no registra hipotecas, gravámenes ni prohibiciones vigentes"
+      }
+    ]
+  }
+}

@@ -15,6 +15,7 @@ from schemas.legal_variables import (
     EscrituraCaseResponse,
     EscrituraCaseSnapshotResponse,
     EscrituraReadinessResponse,
+    LegalDocumentArchiveResponse,
     LegalDocumentListResponse,
     LegalDocumentRegisterRequest,
     LegalDocumentRegistrationQueuedResponse,
@@ -30,6 +31,7 @@ from services.legal_document_ingestion import (
     LegalDocumentNotFoundError,
     LegalDocumentScopeError,
     LegalDocumentValidationError,
+    archive_legal_document as archive_legal_document_service,
     list_project_legal_documents as list_project_legal_documents_service,
     queue_retry_for_legal_document as queue_retry_for_legal_document_service,
     register_legal_document as register_legal_document_service,
@@ -241,6 +243,71 @@ async def retry_legal_document_ingestion(
         ingestion_job_id=result.ingestion_job.id,
         extraction_status=result.legal_document.extraction_status,
         attempt_number=result.ingestion_job.attempt_number,
+    )
+
+
+@router.post(
+    "/legal-documents/{legal_document_id}/archive",
+    response_model=LegalDocumentArchiveResponse,
+)
+async def archive_legal_document(
+    legal_document_id: str,
+    organization_id: str = Query(...),
+    project_id: str = Query(...),
+    redis: Any | None = Depends(get_optional_arq_pool),
+) -> LegalDocumentArchiveResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
+    try:
+        result = await archive_legal_document_service(
+            legal_document_id=legal_document_id,
+            organization_id=organization_id,
+            project_id=project_id,
+        )
+    except LegalDocumentValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except LegalDocumentScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except LegalDocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    reanalysis_queued = False
+    if result.title_reanalysis_recommended and redis is not None:
+        try:
+            await redis.enqueue_job(
+                "analyze_project_title",
+                {
+                    "organization_id": organization_id,
+                    "project_id": project_id,
+                    "trigger": "document_archived",
+                },
+            )
+            reanalysis_queued = True
+        except Exception as exc:
+            logger.error(
+                "title_reanalysis_enqueue_failed_on_archive",
+                legal_document_id=legal_document_id,
+                project_id=project_id,
+                error=str(exc),
+            )
+
+    return LegalDocumentArchiveResponse(
+        legal_document_id=result.legal_document.id,
+        extraction_status=result.legal_document.extraction_status,
+        title_analysis_superseded=result.title_analysis_superseded,
+        title_reanalysis_recommended=result.title_reanalysis_recommended,
+        reanalysis_queued=reanalysis_queued,
     )
 
 

@@ -32,6 +32,9 @@ class LegalDocumentRegisterRequest(LegalVariableBaseModel):
     sha256_hash: str = Field(min_length=64, max_length=64)
     upload_source: str = "api"
     uploaded_by: str | None = None
+    # FR-032: multi-active document types distinguish add (None) from replace
+    # (supersede only the referenced document). Rejected for single-active types.
+    replaces_legal_document_id: str | None = None
 
     @field_validator("document_type")
     @classmethod
@@ -90,6 +93,14 @@ class LegalDocumentRetryResponse(LegalVariableResponseModel):
     ingestion_job_id: str
     extraction_status: str
     attempt_number: int
+
+
+class LegalDocumentArchiveResponse(LegalVariableResponseModel):
+    legal_document_id: str
+    extraction_status: str
+    title_analysis_superseded: bool
+    title_reanalysis_recommended: bool
+    reanalysis_queued: bool
 
 
 class LegalDocumentListResponse(LegalVariableResponseModel):

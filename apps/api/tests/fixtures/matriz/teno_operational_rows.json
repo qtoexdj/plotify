@@ -1,0 +1,92 @@
+{
+  "_comment": "SDD 008 T005: filas operacionales de prueba para el puente escritura_operational_bridge (research D3). Shapes reales de produccion: lots.boundaries_official es OfficialBoundary[] ({label, description, distance?, colinda?, es_servidumbre?}), lot_records lleva cliente_* y valor/abono/saldo, organization_payment_info la instruccion de pago de la org.",
+  "organization_id": "00000000-0000-4000-8000-000000000001",
+  "project": {
+    "id": "00000000-0000-4000-8000-000000000002",
+    "nombre": "Parcelación El Cóndor de Teno"
+  },
+  "lot": {
+    "id": "00000000-0000-4000-8000-000000000003",
+    "project_id": "00000000-0000-4000-8000-000000000002",
+    "numero_lote": "3",
+    "estado": "vendido",
+    "m2": 5180,
+    "area_official_m2": 5100,
+    "superficie_neta_m2": 4714.5,
+    "perimeter_official_m": 290,
+    "precio": 45000000,
+    "verified_status": "verified",
+    "boundaries_official": [
+      {
+        "label": "Norte",
+        "description": "",
+        "distance": 60,
+        "colinda": "Lote N°2 de la misma subdivisión"
+      },
+      {
+        "label": "Sur",
+        "description": "",
+        "distance": 60,
+        "colinda": "Fundo El Escudo"
+      },
+      {
+        "label": "Oriente",
+        "description": "",
+        "distance": 85,
+        "colinda": "camino interior de la subdivisión",
+        "es_servidumbre": true
+      },
+      {
+        "label": "Poniente",
+        "description": "",
+        "distance": 85,
+        "colinda": "Lote N°4 de la misma subdivisión"
+      }
+    ],
+    "servidumbre_m2": 385.5,
+    "servidumbre_ancho_m": 8
+  },
+  "lot_record": {
+    "id": "00000000-0000-4000-8000-000000000005",
+    "lot_id": "00000000-0000-4000-8000-000000000003",
+    "etapa_proceso": "escrituracion",
+    "cliente_nombre": "María Fernanda Soto Pérez",
+    "cliente_run": "16.358.742-5",
+    "cliente_run_normalizado": "16358742-5",
+    "cliente_direccion": "Avenida Manquehue Sur número mil doscientos, departamento quinientos tres, Las Condes, Santiago",
+    "cliente_estado_civil": "soltera",
+    "cliente_ocupacion": "ingeniera comercial",
+    "cliente_email": "mfsoto@example.cl",
+    "cliente_telefono": "+56998765432",
+    "valor": 45000000,
+    "abono": 15000000,
+    "saldo": 30000000
+  },
+  "lot_record_incomplete": {
+    "_comment": "Variante para el escenario US6-3: sin estado civil ni domicilio => comprador.estado_civil y comprador.domicilio quedan missing y el gate party_verified los lista.",
+    "id": "00000000-0000-4000-8000-000000000007",
+    "lot_id": "00000000-0000-4000-8000-000000000003",
+    "etapa_proceso": "escrituracion",
+    "cliente_nombre": "Pedro Antonio Rojas Fuentes",
+    "cliente_run": "9.876.543-2",
+    "cliente_run_normalizado": "9876543-2",
+    "cliente_direccion": null,
+    "cliente_estado_civil": null,
+    "cliente_ocupacion": null,
+    "cliente_email": null,
+    "cliente_telefono": null,
+    "valor": 45000000,
+    "abono": null,
+    "saldo": null
+  },
+  "organization_payment_info": {
+    "id": "00000000-0000-4000-8000-000000000006",
+    "organization_id": "00000000-0000-4000-8000-000000000001",
+    "razon_social": "Inversiones El Cóndor SpA",
+    "rut": "76.543.210-K",
+    "banco": "Banco de Chile",
+    "tipo_cuenta": "cuenta corriente",
+    "numero_cuenta": "123-45678-90",
+    "email_transferencia": "pagos@condorteno.cl"
+  }
+}

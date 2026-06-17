@@ -13,6 +13,10 @@ from typing import Any, Literal
 
 from core.logger import get_logger
 from services import legal_variable_catalog as catalog
+from services.legal_title_analysis import (
+    ACTIVE_TITLE_DOCUMENT_STATUSES as ACTIVE_TITLE_DOCUMENT_EXTRACTION_STATUSES,
+    TITLE_DOCUMENT_TYPES,
+)
 
 
 logger = get_logger(__name__)
@@ -36,6 +40,22 @@ ACTIVE_SII_DOCUMENT_STATUSES = frozenset(
     )
 )
 PROJECT_SII_COMMON_COLUMNS = "sii_comuna, sii_role_matrix"
+TITLE_ANALYSIS_READINESS_COLUMNS = (
+    "id, status, structure_type, analysis_json, alerts, "
+    "narrative_comparecencia_generated, narrative_comparecencia_edited, "
+    "narrative_primero_generated, narrative_primero_edited, created_at"
+)
+# SDD 009 blocking causes for the title_verified gate (data-model.md).
+TITLE_ANALYSIS_STATUS_BLOCKING_CAUSES = {
+    "processing": "analysis_processing",
+    "proposed": "analysis_needs_review",
+    "needs_review": "analysis_needs_review",
+    "failed": "analysis_failed",
+    "llm_disabled": "llm_disabled",
+    "superseded": "analysis_superseded",
+}
+TITLE_VARIABLE_PREFIX = "titulo."
+PENDING_TITLE_VARIABLE_STATES = frozenset(("manual_review", "conflict"))
 LEGAL_REVIEW_WARNING = (
     "La minuta generada automaticamente debe ser revisada y aprobada por "
     "abogado antes de usarse en notaria o como instrumento final."
@@ -172,6 +192,71 @@ def _evaluate_variable_gate(
     return ReadinessGate(gate=gate, status="ready")
 
 
+def _title_analysis_blocking_causes(
+    title_analysis: dict[str, Any] | None,
+    has_title_documents: bool,
+    variables: list[dict[str, Any]],
+) -> list[str]:
+    causes: list[str] = []
+    if title_analysis is None:
+        if has_title_documents:
+            # Title documents exist but no run was recorded; the lawyer must
+            # (re)launch the analysis from the title panel.
+            causes.append("analysis_needs_review")
+        else:
+            causes.append("no_title_documents")
+        return causes
+
+    status = str(title_analysis.get("status") or "")
+    status_cause = TITLE_ANALYSIS_STATUS_BLOCKING_CAUSES.get(status)
+    if status_cause:
+        causes.append(status_cause)
+    elif status != "approved":
+        causes.append("analysis_needs_review")
+
+    alerts = title_analysis.get("alerts")
+    if isinstance(alerts, list) and any(
+        isinstance(alert, dict) and alert.get("resolution", "pending") == "pending"
+        for alert in alerts
+    ):
+        causes.append("unresolved_alerts")
+
+    if any(
+        str(variable.get("variable_key") or "").startswith(TITLE_VARIABLE_PREFIX)
+        and variable.get("state") in PENDING_TITLE_VARIABLE_STATES
+        for variable in variables
+    ):
+        causes.append("pending_manual_review")
+    return causes
+
+
+def _evaluate_title_gate(
+    variables: list[dict[str, Any]],
+    variables_by_key: dict[str, dict[str, Any]],
+    title_analysis: dict[str, Any] | None,
+    has_title_documents: bool,
+) -> ReadinessGate:
+    base_gate = _evaluate_variable_gate("title_verified", variables_by_key)
+    causes = _title_analysis_blocking_causes(
+        title_analysis, has_title_documents, variables
+    )
+    blocking = tuple(dict.fromkeys([*causes, *base_gate.blocking_variables]))
+    if blocking:
+        return ReadinessGate(
+            gate="title_verified",
+            status="blocked",
+            blocking_variables=blocking,
+            warnings=base_gate.warnings,
+        )
+    if base_gate.warnings:
+        return ReadinessGate(
+            gate="title_verified",
+            status="needs_review",
+            warnings=base_gate.warnings,
+        )
+    return ReadinessGate(gate="title_verified", status="ready")
+
+
 def _evaluate_sii_gate(
     variables_by_key: dict[str, dict[str, Any]],
     lot_legal_data: dict[str, Any] | None,
@@ -248,10 +333,97 @@ def _overall_status(gates: tuple[ReadinessGate, ...]) -> ReadinessStatus:
     return "ready"
 
 
+def _plain_value(evidenced: Any) -> Any:
+    """Unwrap an EvidencedValue payload to its bare domain value."""
+    if isinstance(evidenced, dict):
+        return evidenced.get("value")
+    return evidenced
+
+
+def _plain_title_inscription(inscription: dict[str, Any]) -> dict[str, Any]:
+    escritura = inscription.get("escritura") or {}
+    detalle = inscription.get("inscripcion") or {}
+    antecesor = inscription.get("antecesor") or {}
+    return {
+        "orden": inscription.get("orden"),
+        "tipo_adquisicion": inscription.get("tipo_adquisicion"),
+        "fojas": _plain_value(detalle.get("fojas")),
+        "numero": _plain_value(detalle.get("numero")),
+        "anio": _plain_value(detalle.get("anio")),
+        "cbr": _plain_value(detalle.get("cbr")),
+        "escritura_fecha": _plain_value(escritura.get("fecha")),
+        "notario": _plain_value(escritura.get("notario")),
+        "repertorio": _plain_value(escritura.get("repertorio")),
+        "adquirentes": [
+            {
+                "nombre": _plain_value(adquirente.get("nombre")),
+                "cuota": adquirente.get("cuota"),
+            }
+            for adquirente in inscription.get("adquirentes") or []
+            if isinstance(adquirente, dict)
+        ],
+        "antecesor": _plain_value(antecesor.get("nombre")),
+    }
+
+
+def _plain_title_owner(owner: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "nombre": _plain_value(owner.get("nombre")),
+        "rut": _plain_value(owner.get("rut")),
+        "estado_civil": _plain_value(owner.get("estado_civil")),
+        "profesion": _plain_value(owner.get("profesion")),
+        "domicilio": _plain_value(owner.get("domicilio")),
+        "cuota": owner.get("cuota"),
+        "requiere_personeria": owner.get("requiere_personeria"),
+    }
+
+
+def build_title_snapshot_values(
+    title_analysis: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """SDD 009 contract: an approved title contributes domain values only —
+    no evidence/verified/parser metadata inside the snapshot values."""
+    if not title_analysis or str(title_analysis.get("status")) != "approved":
+        return None
+    analysis_json = title_analysis.get("analysis_json")
+    analysis_json = analysis_json if isinstance(analysis_json, dict) else {}
+    alerts = title_analysis.get("alerts")
+    alerts = alerts if isinstance(alerts, list) else []
+    return {
+        "estructura": (
+            title_analysis.get("structure_type") or analysis_json.get("structure_type")
+        ),
+        "inscripciones": [
+            _plain_title_inscription(inscription)
+            for inscription in analysis_json.get("inscripciones") or []
+            if isinstance(inscription, dict)
+        ],
+        "propietarios": [
+            _plain_title_owner(owner)
+            for owner in analysis_json.get("propietarios_actuales") or []
+            if isinstance(owner, dict)
+        ],
+        "comparecencia_vendedor_texto": (
+            title_analysis.get("narrative_comparecencia_edited")
+            or title_analysis.get("narrative_comparecencia_generated")
+        ),
+        "clausula_primero_texto": (
+            title_analysis.get("narrative_primero_edited")
+            or title_analysis.get("narrative_primero_generated")
+        ),
+        "alertas_resueltas": [
+            {"tipo": alert.get("tipo"), "resolution": alert.get("resolution")}
+            for alert in alerts
+            if isinstance(alert, dict) and alert.get("resolution", "pending") != "pending"
+        ],
+    }
+
+
 def build_variable_snapshot(
     variables: list[dict[str, Any]],
     lot_legal_data: dict[str, Any] | None = None,
     project_legal_data: dict[str, Any] | None = None,
+    title_analysis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the stable placeholder snapshot consumed by future minuta builders."""
     snapshot: dict[str, Any] = {}
@@ -261,6 +433,11 @@ def build_variable_snapshot(
         if not isinstance(key, str) or state in BLOCKING_VARIABLE_STATES:
             continue
         if state == "superseded":
+            continue
+        if key.startswith(TITLE_VARIABLE_PREFIX):
+            # Raw titulo.* rows carry EvidencedValue payloads (evidence,
+            # verified, confidence); the approved analysis contributes the
+            # cleaned "titulo" domain group below instead.
             continue
         snapshot[key] = {
             "value_text": variable.get("value_text"),
@@ -370,6 +547,10 @@ def build_variable_snapshot(
                 "confidence": 1.0,
             }
 
+    titulo_values = build_title_snapshot_values(title_analysis)
+    if titulo_values is not None:
+        snapshot["titulo"] = titulo_values
+
     return snapshot
 
 
@@ -439,6 +620,48 @@ def _is_missing_project_sii_columns_error(exc: Exception) -> bool:
     )
 
 
+async def _fetch_current_title_analysis(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+) -> dict[str, Any] | None:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("title_analyses")
+            .select(TITLE_ANALYSIS_READINESS_COLUMNS)
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    return _first_row(result.data)
+
+
+async def _fetch_has_title_documents(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+) -> bool:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("legal_documents")
+            .select("id")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .in_("document_type", sorted(TITLE_DOCUMENT_TYPES))
+            .in_("extraction_status", list(ACTIVE_TITLE_DOCUMENT_EXTRACTION_STATUSES))
+            .limit(1)
+            .execute()
+        )
+    )
+    rows = result.data if isinstance(result.data, list) else []
+    return bool(rows)
+
+
 def build_evidence_snapshot(variables: list[dict[str, Any]]) -> dict[str, Any]:
     """Collect evidence already embedded on variable rows without querying OCR text."""
     snapshot: dict[str, Any] = {}
@@ -467,6 +690,8 @@ def calculate_escritura_readiness(
     variables: list[dict[str, Any]],
     lot_legal_data: dict[str, Any] | None = None,
     project_legal_data: dict[str, Any] | None = None,
+    title_analysis: dict[str, Any] | None = None,
+    has_title_documents: bool = False,
     warning_acknowledged: bool = False,
 ) -> EscrituraReadiness:
     """Evaluate SDD 007 readiness gates from canonical variables and lot legal data."""
@@ -474,7 +699,13 @@ def calculate_escritura_readiness(
     gates: list[ReadinessGate] = []
 
     for gate in catalog.READINESS_GATES:
-        if gate == "sii_verified":
+        if gate == "title_verified":
+            gates.append(
+                _evaluate_title_gate(
+                    variables, variables_by_key, title_analysis, has_title_documents
+                )
+            )
+        elif gate == "sii_verified":
             gates.append(_evaluate_sii_gate(variables_by_key, lot_legal_data))
         elif gate == "warning_acknowledged":
             gates.append(_evaluate_warning_gate(warning_acknowledged))
@@ -488,7 +719,9 @@ def calculate_escritura_readiness(
         lot_id=lot_id,
         readiness_status=_overall_status(gate_tuple),
         gates=gate_tuple,
-        variable_snapshot=build_variable_snapshot(variables, lot_legal_data, project_legal_data),
+        variable_snapshot=build_variable_snapshot(
+            variables, lot_legal_data, project_legal_data, title_analysis
+        ),
         evidence_snapshot=build_evidence_snapshot(variables),
     )
 
@@ -499,8 +732,14 @@ async def fetch_readiness_inputs(
     project_id: str,
     lot_id: str,
     supabase: Any | None = None,
-) -> tuple[list[dict[str, Any]], dict[str, Any] | None, dict[str, Any] | None]:
-    """Load active variable rows and lot legal data needed by readiness calculation."""
+) -> tuple[
+    list[dict[str, Any]],
+    dict[str, Any] | None,
+    dict[str, Any] | None,
+    dict[str, Any] | None,
+    bool,
+]:
+    """Load active variable rows, lot legal data and the current title analysis."""
     if supabase is None:
         from core.database import get_supabase_client
 
@@ -513,7 +752,14 @@ async def fetch_readiness_inputs(
         lot_id=lot_id,
     )
 
-    variables_result, lot_legal_result, project_legal_data, active_sii_certificate_ids = await asyncio.gather(
+    (
+        variables_result,
+        lot_legal_result,
+        project_legal_data,
+        active_sii_certificate_ids,
+        title_analysis,
+        has_title_documents,
+    ) = await asyncio.gather(
         asyncio.to_thread(
             lambda: (
                 supabase.table("variable_resolutions")
@@ -547,7 +793,25 @@ async def fetch_readiness_inputs(
             organization_id=organization_id,
             project_id=project_id,
         ),
+        _fetch_current_title_analysis(
+            supabase=supabase,
+            organization_id=organization_id,
+            project_id=project_id,
+        ),
+        _fetch_has_title_documents(
+            supabase=supabase,
+            organization_id=organization_id,
+            project_id=project_id,
+        ),
     )
+    if title_analysis is None and has_title_documents:
+        # Mirror get_project_title_case: documents without a recorded run mean
+        # the agent is disabled (SC-007) when the feature flag is off.
+        from core.config import get_settings
+
+        if not get_settings().LEGAL_TITLE_AGENT_ENABLED:
+            title_analysis = {"status": "llm_disabled"}
+
     variables = variables_result.data if isinstance(variables_result.data, list) else []
     lot_legal_data = _first_row(lot_legal_result.data)
     if lot_legal_data:
@@ -593,7 +857,7 @@ async def fetch_readiness_inputs(
                 variable_id,
                 variable.get("evidence") if isinstance(variable.get("evidence"), list) else [],
             )
-    return variables, lot_legal_data, project_legal_data
+    return variables, lot_legal_data, project_legal_data, title_analysis, has_title_documents
 
 
 async def get_escritura_readiness(
@@ -604,7 +868,13 @@ async def get_escritura_readiness(
     warning_acknowledged: bool = False,
     supabase: Any | None = None,
 ) -> EscrituraReadiness:
-    variables, lot_legal_data, project_legal_data = await fetch_readiness_inputs(
+    (
+        variables,
+        lot_legal_data,
+        project_legal_data,
+        title_analysis,
+        has_title_documents,
+    ) = await fetch_readiness_inputs(
         organization_id=organization_id,
         project_id=project_id,
         lot_id=lot_id,
@@ -617,6 +887,8 @@ async def get_escritura_readiness(
         variables=variables,
         lot_legal_data=lot_legal_data,
         project_legal_data=project_legal_data,
+        title_analysis=title_analysis,
+        has_title_documents=has_title_documents,
         warning_acknowledged=warning_acknowledged,
     )
     logger.info(
@@ -640,6 +912,7 @@ async def create_escritura_case_snapshot(
     lot_id: str,
     created_by: str | None = None,
     warning_acknowledged: bool = False,
+    stage_operational: bool = True,
     supabase: Any | None = None,
 ) -> dict[str, Any]:
     """Create a draft escritura case row with deterministic readiness snapshots."""
@@ -647,6 +920,29 @@ async def create_escritura_case_snapshot(
         from core.database import get_supabase_client
 
         supabase = get_supabase_client()
+
+    if stage_operational:
+        # SDD 008 US6: stage comprador/transaccion/lote/servidumbre proposals
+        # from operational rows before snapshotting, so the party/price/
+        # geometry gates see them. A bridge failure must not block the case:
+        # the affected keys simply stay missing and the gates surface them.
+        from services.escritura_operational_bridge import stage_operational_variables
+
+        try:
+            await stage_operational_variables(
+                organization_id=organization_id,
+                project_id=project_id,
+                lot_id=lot_id,
+                supabase=supabase,
+            )
+        except Exception as exc:  # pragma: no cover - defensive logging path
+            logger.warning(
+                "operational_bridge_staging_failed",
+                organization_id=organization_id,
+                project_id=project_id,
+                lot_id=lot_id,
+                error=str(exc),
+            )
 
     readiness = await get_escritura_readiness(
         organization_id=organization_id,

@@ -19,6 +19,14 @@ interface LegalDocumentRetryResponse {
   attempt_number: number
 }
 
+interface LegalDocumentArchiveResponse {
+  legal_document_id: string
+  extraction_status: string
+  title_analysis_superseded: boolean
+  title_reanalysis_recommended: boolean
+  reanalysis_queued: boolean
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -125,5 +133,67 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     console.error('Error in POST /api/projects/[id]/legal-documents:', error)
     return Response.json({ error: 'Error al reintentar extracción legal' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const legalDocumentId = request.nextUrl.searchParams.get('legalDocumentId')
+    if (!legalDocumentId) {
+      return Response.json({ error: 'legalDocumentId es requerido' }, { status: 400 })
+    }
+
+    const supabase = createRouteHandlerClient(request)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const project = await getProjectById(id, user.id, supabase)
+    if (!project) {
+      return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+    }
+    if (!project.organization_id) {
+      return Response.json({ error: 'Proyecto sin organización asociada' }, { status: 422 })
+    }
+    if (
+      !isLegalDocumentsFeatureEnabled({
+        organizationId: project.organization_id,
+        projectId: id,
+      })
+    ) {
+      return Response.json(
+        { error: 'Los documentos legales no están habilitados para este proyecto' },
+        { status: 403 }
+      )
+    }
+
+    const upstreamParams = new URLSearchParams({
+      organization_id: project.organization_id,
+      project_id: id,
+    })
+
+    const { data, error, status } = await microserviceFetch<LegalDocumentArchiveResponse>(
+      `/api/v1/legal-documents/${encodeURIComponent(
+        legalDocumentId
+      )}/archive?${upstreamParams.toString()}`,
+      { method: 'POST' }
+    )
+
+    if (error || !data) {
+      return Response.json({ error: error || 'Error al eliminar el documento legal' }, { status })
+    }
+
+    return Response.json(data)
+  } catch (error) {
+    console.error('Error in DELETE /api/projects/[id]/legal-documents:', error)
+    return Response.json({ error: 'Error al eliminar el documento legal' }, { status: 500 })
   }
 }

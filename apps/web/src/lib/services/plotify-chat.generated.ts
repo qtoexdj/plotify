@@ -11,6 +11,23 @@ export interface components {
       "overrides"?: Record<string, unknown> | null
       "position": number
     }
+    "Adquirente": {
+      "cuota"?: string | null
+      "nombre"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "Antecesor": {
+      "nombre"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "ApprovalBlocker": {
+      "alert_tipo"?: string | null
+      "cause"?: string | null
+      "fix_url"?: string | null
+      "gate"?: string | null
+      "key"?: string | null
+      "kind": "token_missing" | "readiness_gate" | "alert_clause_missing" | "snapshot_stale"
+      "message"?: string | null
+      "required_clause"?: string | null
+    }
     "ApprovalRequestDetailResponse": {
       "created_at": string
       "id": string
@@ -24,9 +41,23 @@ export interface components {
       "vendor_phone"?: string | null
       "vendor_platform": string
     }
+    "BlockResolution": {
+      "blockKey": string
+      "status": "resolved" | "missing" | "blocked"
+      "text"?: string | null
+    }
     "BotResponse": {
       "bot_username": string
       "is_active": boolean
+    }
+    "ClauseUpsertRequest": {
+      "alert_tipo"?: string | null
+      "condition_key"?: string | null
+      "condition_mode"?: "omit" | "block" | null
+      "content_json": Record<string, unknown>
+      "fixed_position"?: boolean
+      "position": number
+      "title": string
     }
     "ConnectRequest": {
       "credentials": string
@@ -69,6 +100,10 @@ export interface components {
     "DecisionResponse": {
       "error"?: string | null
       "success": boolean
+    }
+    "DismissedAlert": {
+      "reason"?: string | null
+      "tipo": string
     }
     "DocumentEvidenceResponse": {
       "bbox"?: Record<string, unknown> | null
@@ -117,6 +152,42 @@ export interface components {
       "readiness_status": string
       "variable_snapshot"?: Record<string, unknown>
     }
+    "EscrituraTemplateDetail": {
+      "clause_count"?: number
+      "clauses"?: Array<components["schemas"]["TemplateClause"]>
+      "document_type": string
+      "id": string
+      "name": string
+      "published_at"?: string | null
+      "status": "draft" | "published" | "retired"
+      "updated_at"?: string | null
+      "version": number
+    }
+    "EscrituraTemplateSummary": {
+      "clause_count"?: number
+      "document_type": string
+      "id": string
+      "name": string
+      "published_at"?: string | null
+      "status": "draft" | "published" | "retired"
+      "updated_at"?: string | null
+      "version": number
+    }
+    "Evidence": {
+      "legal_document_id"?: string | null
+      "page_number"?: number | null
+      "snippet"?: string | null
+    }
+    "EvidencedValue": {
+      "confidence"?: number | null
+      "evidence"?: components["schemas"]["Evidence"] | null
+      "value"?: string | null
+      "verified"?: boolean | null
+    }
+    "GenerateMinutaRequest": {
+      "generated_by": string
+      "warning_acknowledged": boolean
+    }
     "GenerateRequest": {
       "document_type"?: string
       "format"?: "pdf" | "docx"
@@ -141,8 +212,36 @@ export interface components {
     "HTTPValidationError": {
       "detail"?: Array<components["schemas"]["ValidationError"]>
     }
+    "InscriptionDetalle": {
+      "anio"?: components["schemas"]["EvidencedValue"] | null
+      "cbr"?: components["schemas"]["EvidencedValue"] | null
+      "fojas"?: components["schemas"]["EvidencedValue"] | null
+      "numero"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "InscriptionEscritura": {
+      "fecha"?: components["schemas"]["EvidencedValue"] | null
+      "notaria_ciudad"?: components["schemas"]["EvidencedValue"] | null
+      "notario"?: components["schemas"]["EvidencedValue"] | null
+      "repertorio"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "InscriptionObservacion": {
+      "evidence"?: components["schemas"]["Evidence"] | null
+      "tipo"?: string | null
+    }
+    "InscriptionRectificatoria": {
+      "fecha"?: components["schemas"]["EvidencedValue"] | null
+      "notario"?: components["schemas"]["EvidencedValue"] | null
+      "repertorio"?: components["schemas"]["EvidencedValue"] | null
+    }
     "InvalidateCacheRequest": {
       "organization_id": string
+    }
+    "LegalDocumentArchiveResponse": {
+      "extraction_status": string
+      "legal_document_id": string
+      "reanalysis_queued": boolean
+      "title_analysis_superseded": boolean
+      "title_reanalysis_recommended": boolean
     }
     "LegalDocumentListResponse": {
       "documents"?: Array<components["schemas"]["LegalDocumentResponse"]>
@@ -156,6 +255,7 @@ export interface components {
       "organization_id": string
       "original_filename": string
       "project_id": string
+      "replaces_legal_document_id"?: string | null
       "sha256_hash": string
       "source_field"?: string | null
       "storage_bucket"?: string
@@ -225,6 +325,71 @@ export interface components {
       "read_at": string
       "success": boolean
     }
+    "MatrizApproveRequest": {
+      "approved_by": string
+    }
+    "MatrizCaseResponse": {
+      "matriz": components["schemas"]["MatrizView"]
+    }
+    "MatrizClauseCondition": {
+      "active": boolean
+      "key": string
+      "mode": "omit" | "block"
+    }
+    "MatrizClauseOverride": {
+      "content_json"?: Record<string, unknown> | null
+      "disabled"?: boolean | null
+      "title"?: string | null
+    }
+    "MatrizClauseView": {
+      "alert_tipo"?: string | null
+      "clause_key": string
+      "condition"?: components["schemas"]["MatrizClauseCondition"] | null
+      "content_json": Record<string, unknown>
+      "disabled"?: boolean
+      "fixed_position": boolean
+      "overridden"?: boolean
+      "position": number
+      "resolved_content"?: Record<string, unknown> | null
+      "title": string
+    }
+    "MatrizEvidenceRef": {
+      "legal_document_id"?: string | null
+      "legal_document_page_id"?: string | null
+      "page_number"?: number | null
+      "snippet"?: string | null
+    }
+    "MatrizRejectRequest": {
+      "reason": string
+      "rejected_by": string
+    }
+    "MatrizSaveRequest": {
+      "clause_order"?: Array<string>
+      "clause_overrides"?: Record<string, components["schemas"]["MatrizClauseOverride"]>
+      "version": number
+    }
+    "MatrizSubmitRequest": {
+      "submitted_by": string
+    }
+    "MatrizTemplateRef": {
+      "id": string
+      "name": string
+      "version": number
+    }
+    "MatrizView": {
+      "approval_blockers"?: Array<components["schemas"]["ApprovalBlocker"]>
+      "clause_order"?: Array<string>
+      "clauses"?: Array<components["schemas"]["MatrizClauseView"]>
+      "dismissed_alerts"?: Array<components["schemas"]["DismissedAlert"]>
+      "escritura_case_id": string
+      "id": string
+      "project_id": string
+      "resolution"?: components["schemas"]["ResolutionManifest"]
+      "snapshot_stale"?: boolean
+      "status": "draft" | "legal_review_pending" | "approved" | "superseded"
+      "template": components["schemas"]["MatrizTemplateRef"]
+      "version": number
+    }
     "MetaChange": {
       "field": string
       "value": components["schemas"]["MetaValue"]
@@ -257,6 +422,24 @@ export interface components {
     "MetaWebhookPayload": {
       "entry": Array<components["schemas"]["MetaEntry"]>
       "object": string
+    }
+    "MinutaGeneration": {
+      "content_hash": string
+      "download_url"?: string | null
+      "escritura_case_id": string
+      "generated_at": string
+      "generated_by"?: string | null
+      "id": string
+      "matriz_id": string
+      "matriz_version": number
+      "snapshot_hash": string
+      "storage_path": string
+      "template_id": string
+      "warning_acknowledged_at": string
+      "warning_acknowledged_by": string
+    }
+    "MinutaGenerationListResponse": {
+      "generations"?: Array<components["schemas"]["MinutaGeneration"]>
     }
     "NotificationCounts": {
       "approved": number
@@ -300,6 +483,33 @@ export interface components {
     "PreviewResponse": {
       "html": string
     }
+    "PropertyDeslindes": {
+      "norte"?: components["schemas"]["EvidencedValue"] | null
+      "oriente"?: components["schemas"]["EvidencedValue"] | null
+      "poniente"?: components["schemas"]["EvidencedValue"] | null
+      "sur"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "PropertyIdentity": {
+      "comuna"?: components["schemas"]["EvidencedValue"] | null
+      "deslindes"?: components["schemas"]["PropertyDeslindes"] | null
+      "nombre_predio"?: components["schemas"]["EvidencedValue"] | null
+      "provincia"?: components["schemas"]["EvidencedValue"] | null
+      "region"?: components["schemas"]["EvidencedValue"] | null
+      "rol_avaluo"?: components["schemas"]["EvidencedValue"] | null
+      "superficie_texto"?: components["schemas"]["EvidencedValue"] | null
+      "ubicacion"?: components["schemas"]["EvidencedValue"] | null
+    }
+    "PropietarioActual": {
+      "cuota"?: string | null
+      "domicilio"?: components["schemas"]["EvidencedValue"] | null
+      "estado_civil"?: components["schemas"]["EvidencedValue"] | null
+      "nacionalidad"?: components["schemas"]["EvidencedValue"] | null
+      "nombre"?: components["schemas"]["EvidencedValue"] | null
+      "profesion"?: components["schemas"]["EvidencedValue"] | null
+      "requiere_personeria"?: boolean | null
+      "rut"?: components["schemas"]["EvidencedValue"] | null
+      "tratamiento"?: components["schemas"]["EvidencedValue"] | null
+    }
     "ReadinessGateResponse": {
       "blocking_variables"?: Array<string>
       "gate": string
@@ -330,6 +540,11 @@ export interface components {
       "approval_id": string
       "message"?: string
       "status"?: string
+    }
+    "ResolutionManifest": {
+      "blocks"?: Array<components["schemas"]["BlockResolution"]>
+      "missing_count"?: number
+      "tokens"?: Array<components["schemas"]["TokenResolution"]>
     }
     "RoleManualOverrideRequest": {
       "matching_status"?: string
@@ -390,6 +605,13 @@ export interface components {
       "superseded_certificate_count"?: number
       "text_source"?: string | null
     }
+    "StageOperationalResult": {
+      "missing"?: Array<string>
+      "proposed"?: Array<string>
+      "protected"?: Array<string>
+      "skipped_same_hash"?: Array<string>
+      "superseded"?: Array<string>
+    }
     "TelegramTokenRequest": {
       "organization_id"?: string | null
       "profile_id": string
@@ -398,6 +620,142 @@ export interface components {
       "bot_username": string
       "deep_link": string
       "token": string
+    }
+    "TemplateClause": {
+      "alert_tipo"?: string | null
+      "clause_key": string
+      "condition_key"?: string | null
+      "condition_mode"?: "omit" | "block" | null
+      "content_json": Record<string, unknown>
+      "fixed_position"?: boolean
+      "id"?: string | null
+      "position": number
+      "title": string
+    }
+    "TemplateCreateRequest": {
+      "clone_from_template_id"?: string | null
+      "document_type"?: string
+      "name": string
+    }
+    "TemplateListResponse": {
+      "templates"?: Array<components["schemas"]["EscrituraTemplateSummary"]>
+    }
+    "TemplatePublishRequest": {
+      "published_by": string
+    }
+    "TitleAlert": {
+      "detalle"?: string | null
+      "evidence"?: components["schemas"]["Evidence"] | null
+      "reason"?: string | null
+      "resolution"?: string
+      "tipo": string
+    }
+    "TitleAlertResolveRequest": {
+      "reason": string
+      "resolution": string
+      "resolved_by": string
+    }
+    "TitleAnalysis": {
+      "alertas"?: Array<components["schemas"]["TitleAlert"]>
+      "inscripciones"?: Array<components["schemas"]["TitleInscription"]>
+      "property_identity"?: components["schemas"]["PropertyIdentity"] | null
+      "propietarios_actuales"?: Array<components["schemas"]["PropietarioActual"]>
+      "structure_type"?: string | null
+    }
+    "TitleAnalysisNarrative": {
+      "comparecencia"?: components["schemas"]["TitleAnalysisNarrativeBlock"] | null
+      "primero"?: components["schemas"]["TitleAnalysisNarrativeBlock"] | null
+    }
+    "TitleAnalysisNarrativeBlock": {
+      "edited"?: string | null
+      "effective"?: string | null
+      "generated"?: string | null
+    }
+    "TitleAnalysisPendingReview": {
+      "path": string
+      "state"?: string
+    }
+    "TitleAnalysisReanalyzeResponse": {
+      "analysis_id": string
+      "queued": boolean
+      "status": string
+    }
+    "TitleAnalysisResponseData": {
+      "alerts"?: Array<components["schemas"]["TitleAlert"]>
+      "analysis"?: components["schemas"]["TitleAnalysis"] | null
+      "approved_at"?: string | null
+      "approved_by"?: string | null
+      "id": string
+      "narrative"?: components["schemas"]["TitleAnalysisNarrative"] | null
+      "pending_review"?: Array<components["schemas"]["TitleAnalysisPendingReview"]>
+      "run"?: components["schemas"]["TitleAnalysisRunDetails"] | null
+      "source_documents"?: Array<components["schemas"]["TitleAnalysisSourceDocument"]>
+      "status": string
+      "structure_type"?: string | null
+      "verification"?: components["schemas"]["TitleAnalysisVerification"] | null
+    }
+    "TitleAnalysisRunDetails": {
+      "created_at"?: string | null
+      "duration_ms"?: number | null
+      "extractor_name": string
+      "model_name": string
+      "prompt_version": string
+    }
+    "TitleAnalysisSourceDocument": {
+      "document_type": string
+      "filename"?: string | null
+      "legal_document_id": string
+      "version"?: number
+    }
+    "TitleAnalysisVerification": {
+      "agent_notes"?: Array<string>
+      "block_checks"?: Record<string, components["schemas"]["TitleBlockCheck"]> | null
+      "failures"?: Array<components["schemas"]["TitleAnalysisVerificationFailure"]>
+      "unverified_count"?: number
+      "verified_count"?: number
+    }
+    "TitleAnalysisVerificationFailure": {
+      "path": string
+      "proposed_snippet"?: string | null
+      "reason": string
+    }
+    "TitleApproveRequest": {
+      "approved_by": string
+    }
+    "TitleBlockCheck": {
+      "issues"?: Array<components["schemas"]["TitleBlockCheckIssue"]>
+      "ok"?: boolean
+    }
+    "TitleBlockCheckIssue": {
+      "hecho": string
+      "motivo": string
+    }
+    "TitleCaseResponse": {
+      "analysis"?: components["schemas"]["TitleAnalysisResponseData"] | null
+    }
+    "TitleInscription": {
+      "adquirentes"?: Array<components["schemas"]["Adquirente"]>
+      "antecesor"?: components["schemas"]["Antecesor"] | null
+      "escritura"?: components["schemas"]["InscriptionEscritura"] | null
+      "inscripcion"?: components["schemas"]["InscriptionDetalle"] | null
+      "observaciones"?: Array<components["schemas"]["InscriptionObservacion"]>
+      "orden": number
+      "rectificatorias"?: Array<components["schemas"]["InscriptionRectificatoria"]>
+      "tipo_adquisicion": string
+    }
+    "TitleNarrativeUpdateRequest": {
+      "block": string
+      "edited_by": string
+      "edited_text": string
+      "reason": string
+    }
+    "TokenResolution": {
+      "evidence_refs"?: Array<components["schemas"]["MatrizEvidenceRef"]>
+      "source_type"?: string | null
+      "state"?: string | null
+      "status": "resolved" | "missing" | "blocked"
+      "value_text"?: string | null
+      "variableKey": string
     }
     "UpdateBlockRequest": {
       "category"?: string | null
@@ -597,6 +955,84 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["EscrituraReadinessResponse"]
   }
+  "stage_operational_variables_api_v1_escritura_cases__escritura_case_id__stage_operational_post": {
+    method: "POST"
+    path: "/api/v1/escritura-cases/{escritura_case_id}/stage-operational"
+    requestBody: never
+    response: components["schemas"]["StageOperationalResult"]
+  }
+  "get_case_matriz_api_v1_escritura_matrices_case__escritura_case_id__get": {
+    method: "GET"
+    path: "/api/v1/escritura-matrices/case/{escritura_case_id}"
+    requestBody: never
+    response: components["schemas"]["MatrizCaseResponse"]
+  }
+  "list_case_generations_api_v1_escritura_matrices_case__escritura_case_id__generations_get": {
+    method: "GET"
+    path: "/api/v1/escritura-matrices/case/{escritura_case_id}/generations"
+    requestBody: never
+    response: components["schemas"]["MinutaGenerationListResponse"]
+  }
+  "save_matriz_api_v1_escritura_matrices__matriz_id__put": {
+    method: "PUT"
+    path: "/api/v1/escritura-matrices/{matriz_id}"
+    requestBody: components["schemas"]["MatrizSaveRequest"]
+    response: components["schemas"]["MatrizCaseResponse"]
+  }
+  "approve_matriz_api_v1_escritura_matrices__matriz_id__approve_post": {
+    method: "POST"
+    path: "/api/v1/escritura-matrices/{matriz_id}/approve"
+    requestBody: components["schemas"]["MatrizApproveRequest"]
+    response: components["schemas"]["MatrizCaseResponse"]
+  }
+  "generate_minuta_api_v1_escritura_matrices__matriz_id__generate_post": {
+    method: "POST"
+    path: "/api/v1/escritura-matrices/{matriz_id}/generate"
+    requestBody: components["schemas"]["GenerateMinutaRequest"]
+    response: components["schemas"]["MinutaGeneration"]
+  }
+  "reject_matriz_api_v1_escritura_matrices__matriz_id__reject_post": {
+    method: "POST"
+    path: "/api/v1/escritura-matrices/{matriz_id}/reject"
+    requestBody: components["schemas"]["MatrizRejectRequest"]
+    response: components["schemas"]["MatrizCaseResponse"]
+  }
+  "submit_matriz_api_v1_escritura_matrices__matriz_id__submit_post": {
+    method: "POST"
+    path: "/api/v1/escritura-matrices/{matriz_id}/submit"
+    requestBody: components["schemas"]["MatrizSubmitRequest"]
+    response: components["schemas"]["MatrizCaseResponse"]
+  }
+  "list_escritura_templates_api_v1_escritura_templates_get": {
+    method: "GET"
+    path: "/api/v1/escritura-templates"
+    requestBody: never
+    response: components["schemas"]["TemplateListResponse"]
+  }
+  "create_escritura_template_api_v1_escritura_templates_post": {
+    method: "POST"
+    path: "/api/v1/escritura-templates"
+    requestBody: components["schemas"]["TemplateCreateRequest"]
+    response: components["schemas"]["EscrituraTemplateDetail"]
+  }
+  "get_escritura_template_api_v1_escritura_templates__template_id__get": {
+    method: "GET"
+    path: "/api/v1/escritura-templates/{template_id}"
+    requestBody: never
+    response: components["schemas"]["EscrituraTemplateDetail"]
+  }
+  "upsert_escritura_template_clause_api_v1_escritura_templates__template_id__clauses__clause_key__put": {
+    method: "PUT"
+    path: "/api/v1/escritura-templates/{template_id}/clauses/{clause_key}"
+    requestBody: components["schemas"]["ClauseUpsertRequest"]
+    response: components["schemas"]["EscrituraTemplateDetail"]
+  }
+  "publish_escritura_template_api_v1_escritura_templates__template_id__publish_post": {
+    method: "POST"
+    path: "/api/v1/escritura-templates/{template_id}/publish"
+    requestBody: components["schemas"]["TemplatePublishRequest"]
+    response: components["schemas"]["EscrituraTemplateDetail"]
+  }
   "health_check_api_v1_health_get": {
     method: "GET"
     path: "/api/v1/health"
@@ -639,6 +1075,12 @@ export interface operations {
     requestBody: components["schemas"]["LegalDocumentRegisterRequest"]
     response: components["schemas"]["LegalDocumentRegistrationQueuedResponse"]
   }
+  "archive_legal_document_api_v1_legal_documents__legal_document_id__archive_post": {
+    method: "POST"
+    path: "/api/v1/legal-documents/{legal_document_id}/archive"
+    requestBody: never
+    response: components["schemas"]["LegalDocumentArchiveResponse"]
+  }
   "retry_legal_document_ingestion_api_v1_legal_documents__legal_document_id__retry_post": {
     method: "POST"
     path: "/api/v1/legal-documents/{legal_document_id}/retry"
@@ -656,6 +1098,36 @@ export interface operations {
     path: "/api/v1/legal-roles/project/{project_id}/matches"
     requestBody: never
     response: components["schemas"]["RoleMatchingInventoryResponse"]
+  }
+  "get_project_title_case_api_v1_legal_titles_project__project_id__get": {
+    method: "GET"
+    path: "/api/v1/legal-titles/project/{project_id}"
+    requestBody: never
+    response: components["schemas"]["TitleCaseResponse"]
+  }
+  "reanalyze_project_title_api_v1_legal_titles_project__project_id__reanalyze_post": {
+    method: "POST"
+    path: "/api/v1/legal-titles/project/{project_id}/reanalyze"
+    requestBody: never
+    response: components["schemas"]["TitleAnalysisReanalyzeResponse"]
+  }
+  "resolve_title_alert_api_v1_legal_titles__analysis_id__alerts__alert_index__resolve_post": {
+    method: "POST"
+    path: "/api/v1/legal-titles/{analysis_id}/alerts/{alert_index}/resolve"
+    requestBody: components["schemas"]["TitleAlertResolveRequest"]
+    response: components["schemas"]["TitleAlert"]
+  }
+  "approve_title_case_api_v1_legal_titles__analysis_id__approve_post": {
+    method: "POST"
+    path: "/api/v1/legal-titles/{analysis_id}/approve"
+    requestBody: components["schemas"]["TitleApproveRequest"]
+    response: components["schemas"]["TitleAnalysisResponseData"]
+  }
+  "update_title_narrative_api_v1_legal_titles__analysis_id__narrative_patch": {
+    method: "PATCH"
+    path: "/api/v1/legal-titles/{analysis_id}/narrative"
+    requestBody: components["schemas"]["TitleNarrativeUpdateRequest"]
+    response: components["schemas"]["TitleAnalysisNarrative"]
   }
   "get_project_legal_variables_api_v1_legal_variables_project__project_id__get": {
     method: "GET"

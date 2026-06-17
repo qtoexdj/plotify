@@ -1,0 +1,498 @@
+{
+  "structure_type": "compra_derechos",
+  "property_identity": {
+    "nombre_predio": {
+      "value": "LOTE N°3 (del plano de subdivisión) de la Hijuela N°6 del ex fundo El Cóndor",
+      "evidence": {
+        "legal_document_id": "doc_2023_id",
+        "page_number": 3,
+        "snippet": "LOTE N°3 (del plano de subdivisión) de la Hijuela N°6 del ex fundo El Cóndor"
+      },
+      "confidence": 0.96,
+      "verified": null
+    },
+    "ubicacion": {
+      "value": "sector de El Cóndor",
+      "evidence": {
+        "legal_document_id": "doc_2023_id",
+        "page_number": 3,
+        "snippet": "ubicado en el sector de El Cóndor"
+      },
+      "confidence": 0.95,
+      "verified": null
+    },
+    "comuna": {
+      "value": "Teno",
+      "evidence": {
+        "legal_document_id": "doc_2023_id",
+        "page_number": 3,
+        "snippet": "de la comuna de TENO"
+      },
+      "confidence": 0.96,
+      "verified": null
+    },
+    "provincia": {
+      "value": "Curicó",
+      "evidence": {
+        "legal_document_id": "doc_2023_id",
+        "page_number": 3,
+        "snippet": "provincia de CURICÓ"
+      },
+      "confidence": 0.95,
+      "verified": null
+    },
+    "region": {
+      "value": null,
+      "evidence": null,
+      "confidence": null,
+      "verified": null
+    },
+    "superficie_texto": {
+      "value": "26,82 hectáreas",
+      "evidence": {
+        "legal_document_id": "doc_2023_id",
+        "page_number": 3,
+        "snippet": "tiene una superficie de 26,82 HECTÁREAS"
+      },
+      "confidence": 0.95,
+      "verified": null
+    },
+    "deslindes": {
+      "norte": {
+        "value": "Lote N°2",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 3,
+          "snippet": "NORTE, lote N°2"
+        },
+        "confidence": 0.95,
+        "verified": null
+      },
+      "sur": {
+        "value": "Fundo El Escudo",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 3,
+          "snippet": "SUR, Fundo El Escudo"
+        },
+        "confidence": 0.95,
+        "verified": null
+      },
+      "oriente": {
+        "value": "Hijuela N°2",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 3,
+          "snippet": "ORIENTE, Hijuela N°2"
+        },
+        "confidence": 0.95,
+        "verified": null
+      },
+      "poniente": {
+        "value": "Fundo La Puerta, hoy San Francisco",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 3,
+          "snippet": "PONIENTE, Fundo La Puerta, hoy San Francisco"
+        },
+        "confidence": 0.95,
+        "verified": null
+      }
+    },
+    "rol_avaluo": {
+      "value": "67-23",
+      "evidence": {
+        "legal_document_id": "doc_2023_id",
+        "page_number": 3,
+        "snippet": "Figura en el Rol de avalúo N°67-23 de la citada comuna"
+      },
+      "confidence": 0.95,
+      "verified": null
+    }
+  },
+  "inscripciones": [
+    {
+      "orden": 1,
+      "tipo_adquisicion": "compra",
+      "adquirentes": [
+        {
+          "nombre": {
+            "value": "JUAN DE DIOS GALAZ ABARCA",
+            "evidence": {
+              "legal_document_id": "doc_1996_id",
+              "page_number": 1,
+              "snippet": "GALAZ ABARCA, don JUAN DE DIOS"
+            },
+            "confidence": 0.96,
+            "verified": null
+          },
+          "cuota": "50%"
+        },
+        {
+          "nombre": {
+            "value": "ERNESTO CLAUDIO HERRMANN FRANK",
+            "evidence": {
+              "legal_document_id": "doc_1996_id",
+              "page_number": 1,
+              "snippet": "don ERNESTO CLAUDIO HERRMANN FRANK"
+            },
+            "confidence": 0.96,
+            "verified": null
+          },
+          "cuota": "50%"
+        }
+      ],
+      "antecesor": {
+        "nombre": {
+          "value": "LUIS ARMANDO MINGHEL BALLADARES",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "por compra que hicieron a don LUIS ARMANDO MINGHEL BALLADARES"
+          },
+          "confidence": 0.9,
+          "verified": null
+        }
+      },
+      "escritura": {
+        "fecha": {
+          "value": "1996-05-17",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "a 17 de Mayo de 1996"
+          },
+          "confidence": 0.95,
+          "verified": null
+        },
+        "notario": {
+          "value": "Iván Torrealba Acevedo",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "ante el Notario de Santiago, don Iván Torrealba Acevedo"
+          },
+          "confidence": 0.95,
+          "verified": null
+        },
+        "notaria_ciudad": {
+          "value": "Santiago",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "Notario de Santiago"
+          },
+          "confidence": 0.95,
+          "verified": null
+        },
+        "repertorio": {
+          "value": null,
+          "evidence": null,
+          "confidence": null,
+          "verified": null
+        }
+      },
+      "rectificatorias": [],
+      "inscripcion": {
+        "fojas": {
+          "value": "1338",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "Foja 1338 Número 1322 del año 1996"
+          },
+          "confidence": 0.96,
+          "verified": null
+        },
+        "numero": {
+          "value": "1322",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "Foja 1338 Número 1322 del año 1996"
+          },
+          "confidence": 0.96,
+          "verified": null
+        },
+        "anio": {
+          "value": "1996",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "Foja 1338 Número 1322 del año 1996"
+          },
+          "confidence": 0.96,
+          "verified": null
+        },
+        "cbr": {
+          "value": "Curicó",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "Conservador de Bienes Raices de Curicó"
+          },
+          "confidence": 0.95,
+          "verified": null
+        }
+      },
+      "observaciones": [
+        {
+          "tipo": "vigente_en_el_resto",
+          "evidence": {
+            "legal_document_id": "doc_1996_id",
+            "page_number": 1,
+            "snippet": "VIGENTE EN EL RESTO A LA FECHA"
+          }
+        }
+      ]
+    },
+    {
+      "orden": 2,
+      "tipo_adquisicion": "compra_derechos",
+      "adquirentes": [
+        {
+          "nombre": {
+            "value": "JUAN DE DIOS GALAZ ABARCA",
+            "evidence": {
+              "legal_document_id": "doc_2023_id",
+              "page_number": 2,
+              "snippet": "GALAZ ABARCA don JUAN DE DIOS"
+            },
+            "confidence": 0.96,
+            "verified": null
+          },
+          "cuota": "50%"
+        }
+      ],
+      "antecesor": {
+        "nombre": {
+          "value": "ERNESTO CLAUDIO HERRMANN FRANK",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 2,
+            "snippet": "por compra que hizo para sí, a don ERNESTO CLAUDIO HERRMANN FRANK"
+          },
+          "confidence": 0.96,
+          "verified": null
+        }
+      },
+      "escritura": {
+        "fecha": {
+          "value": "2022-02-02",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 2,
+            "snippet": "escritura de fecha dos de febrero del dos mil veintidós"
+          },
+          "confidence": 0.95,
+          "verified": null
+        },
+        "notario": {
+          "value": "Luis Enrique Espinoza Garrido",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 2,
+            "snippet": "ante don Luis Enrique Espinoza Garrido, Notario Público Titular de Pucón"
+          },
+          "confidence": 0.95,
+          "verified": null
+        },
+        "notaria_ciudad": {
+          "value": "Pucón",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 2,
+            "snippet": "Notario Público Titular de Pucón"
+          },
+          "confidence": 0.95,
+          "verified": null
+        },
+        "repertorio": {
+          "value": "365",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 2,
+            "snippet": "Repto. N°365"
+          },
+          "confidence": 0.95,
+          "verified": null
+        }
+      },
+      "rectificatorias": [
+        {
+          "fecha": {
+            "value": "2022-08-19",
+            "evidence": {
+              "legal_document_id": "doc_2023_id",
+              "page_number": 2,
+              "snippet": "rectificatoria de fecha diecinueve de agosto del dos mil veintidós"
+            },
+            "confidence": 0.95,
+            "verified": null
+          },
+          "notario": {
+            "value": "Linda Scarlett Bosch Jiménez",
+            "evidence": {
+              "legal_document_id": "doc_2023_id",
+              "page_number": 2,
+              "snippet": "ante doña Linda Scarlett Bosch Jiménez, Notario Público Titular de la Vigésima Notaría de Santiago"
+            },
+            "confidence": 0.95,
+            "verified": null
+          },
+          "repertorio": {
+            "value": "4230",
+            "evidence": {
+              "legal_document_id": "doc_2023_id",
+              "page_number": 2,
+              "snippet": "Repto 4.230"
+            },
+            "confidence": 0.95,
+            "verified": null
+          }
+        }
+      ],
+      "inscripcion": {
+        "fojas": {
+          "value": "4699",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 2,
+            "snippet": "Foja 4699 Número 2781 del año 2023"
+          },
+          "confidence": 0.96,
+          "verified": null
+        },
+        "numero": {
+          "value": "2781",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 2,
+            "snippet": "Foja 4699 Número 2781 del año 2023"
+          },
+          "confidence": 0.96,
+          "verified": null
+        },
+        "anio": {
+          "value": "2023",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 2,
+            "snippet": "Foja 4699 Número 2781 del año 2023"
+          },
+          "confidence": 0.96,
+          "verified": null
+        },
+        "cbr": {
+          "value": "Curicó",
+          "evidence": {
+            "legal_document_id": "doc_2023_id",
+            "page_number": 1,
+            "snippet": "Conservador de Bienes Raices de Curicó"
+          },
+          "confidence": 0.95,
+          "verified": null
+        }
+      },
+      "observaciones": []
+    }
+  ],
+  "propietarios_actuales": [
+    {
+      "nombre": {
+        "value": "JUAN DE DIOS GALAZ ABARCA",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 2,
+          "snippet": "GALAZ ABARCA don JUAN DE DIOS"
+        },
+        "confidence": 0.96,
+        "verified": null
+      },
+      "rut": {
+        "value": "4.606.955-2",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 2,
+          "snippet": "cédula de identidad N°4.606.955-2"
+        },
+        "confidence": 0.96,
+        "verified": null
+      },
+      "estado_civil": {
+        "value": "divorciado",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 2,
+          "snippet": "divorciado, rentista"
+        },
+        "confidence": 0.95,
+        "verified": null
+      },
+      "profesion": {
+        "value": "rentista",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 2,
+          "snippet": "divorciado, rentista"
+        },
+        "confidence": 0.9,
+        "verified": null
+      },
+      "domicilio": {
+        "value": "Camino a Melipilla Kilómetro 27, Peñaflor",
+        "evidence": {
+          "legal_document_id": "doc_2023_id",
+          "page_number": 2,
+          "snippet": "con domicilio en Camino a Melipilla Kilómetro 27, Peñaflor"
+        },
+        "confidence": 0.95,
+        "verified": null
+      },
+      "cuota": "100%",
+      "requiere_personeria": false
+    }
+  ],
+  "alertas": [
+    {
+      "tipo": "dl_3516",
+      "detalle": "El titulo 2023 declara la prohibicion de cambiar el destino del predio conforme al DL 3.516 y los articulos 55 y 56 de la LGUC; la escritura debe incluir la clausula correspondiente.",
+      "evidence": {
+        "legal_document_id": "doc_2023_id",
+        "page_number": 3,
+        "snippet": "Conforme al Decreto Ley 3.516 la propiedad queda sujeta a la prohibición de cambiar su destino"
+      },
+      "resolution": "pending"
+    },
+    {
+      "tipo": "derechos_aguas",
+      "detalle": "La compra de 1996 incluyo expresamente derechos de aprovechamiento de aguas; el abogado debe decidir si la nueva venta los incluye o reserva.",
+      "evidence": {
+        "legal_document_id": "doc_1996_id",
+        "page_number": 3,
+        "snippet": "Se incluyen en la venta y su precio los derechos de aprovechamiento de aguas que le corresponden a ambas propiedades"
+      },
+      "resolution": "pending"
+    },
+    {
+      "tipo": "vigente_en_el_resto",
+      "detalle": "El titulo de 1996 esta certificado vigente solo en el resto: las acciones y derechos de Herrmann Frank fueron transferidas en 2023 segun notas marginales.",
+      "evidence": {
+        "legal_document_id": "doc_1996_id",
+        "page_number": 1,
+        "snippet": "VIGENTE EN EL RESTO A LA FECHA"
+      },
+      "resolution": "pending"
+    },
+    {
+      "tipo": "multi_inmueble",
+      "detalle": "La inscripcion de 1996 cubre dos inmuebles (HIJUELA N°3, rol 67-17, y LOTE N°3, rol 67-23); solo el LOTE N°3 corresponde al proyecto. Confirmar exclusion de la Hijuela N°3.",
+      "evidence": {
+        "legal_document_id": "doc_1996_id",
+        "page_number": 1,
+        "snippet": "de las siguientes propiedades raices"
+      },
+      "resolution": "pending"
+    }
+  ]
+}

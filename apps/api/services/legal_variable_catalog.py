@@ -22,6 +22,20 @@ LEGAL_DOCUMENT_TYPES: Final[tuple[str, ...]] = (
 )
 LEGAL_DOCUMENT_TYPE_SET: Final = frozenset(LEGAL_DOCUMENT_TYPES)
 
+# FR-031 (SDD 009 correccion 2026-06-10): types where several active
+# documents coexist per project. Every other type keeps replace-by-type
+# semantics (a new upload supersedes all previous versions).
+MULTI_ACTIVE_LEGAL_DOCUMENT_TYPES: Final[tuple[str, ...]] = (
+    "dominio_vigente",
+    "personeria",
+    "hipoteca_gravamen",
+    "plano_oficial",
+    "otro",
+)
+MULTI_ACTIVE_LEGAL_DOCUMENT_TYPE_SET: Final = frozenset(
+    MULTI_ACTIVE_LEGAL_DOCUMENT_TYPES
+)
+
 LEGAL_DOCUMENT_UPLOAD_SOURCES: Final[tuple[str, ...]] = (
     "onboarding",
     "project_documents",
@@ -107,6 +121,7 @@ VARIABLE_GROUPS: Final[tuple[str, ...]] = (
     "clausulas",
     "mandato",
     "evidencia",
+    "titulo",
 )
 VARIABLE_GROUP_SET: Final = frozenset(VARIABLE_GROUPS)
 
@@ -118,6 +133,9 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "documento.repertorio_numero",
         "documento.notario.nombre",
         "documento.notaria.direccion",
+        # SDD 008 (research D11): jurisdiccion de la notaria usada por la
+        # clausula de comparecencia del template golden.
+        "documento.notaria.jurisdiccion",
         "documento.abogado_redactor.nombre",
         "documento.abogado_redactor.rut",
         "documento.abogado_redactor.email",
@@ -141,12 +159,18 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "comprador.domicilio",
         "comprador.estado_civil",
         "comprador.profesion_giro",
+        # SDD 008 (research D11): hecho juridico independiente; no existe en
+        # lot_records, entra manual via CCL. Nunca se infiere del nombre.
+        "comprador.nacionalidad",
     ),
     "personeria": (
         "personeria.aplica",
         "personeria.constitucion_texto",
         "personeria.poder_texto",
         "personeria.estado_revision",
+        # SDD 008 (research D11): delegacion de facultades citada por la
+        # clausula de personeria del template golden.
+        "personeria.delegacion_facultades",
     ),
     "matriz": (
         "matriz.nombre_predio",
@@ -156,14 +180,6 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "matriz.region",
         "matriz.superficie_total",
         "matriz.deslindes.*",
-        "matriz.adquisicion_modo",
-        "matriz.adquisicion_notaria",
-        "matriz.adquisicion_fecha",
-        "matriz.adquisicion_repertorio",
-        "matriz.inscripcion_fojas",
-        "matriz.inscripcion_numero",
-        "matriz.inscripcion_anio",
-        "matriz.inscripcion_cbr",
         "matriz.rol_avaluo",
     ),
     "sag": (
@@ -215,8 +231,18 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "clausulas.cuerpo_cierto",
         "clausulas.saneamiento_eviccion",
         "clausulas.exencion_eviccion_aprobada",
+        # SDD 008 (research D11): texto aprobado de la exencion de eviccion
+        # citado por el template golden cuando la exencion aplica.
+        "clausulas.exencion_eviccion_texto",
         "clausulas.entrega_material",
+        # SDD 008 (research D11): fecha pactada de entrega material y
+        # excepciones de ocupantes declaradas en la clausula de entrega.
+        "clausulas.entrega_fecha",
+        "clausulas.ocupantes_excepciones",
         "clausulas.gastos_cargo",
+        # SDD 008 (research D11): excepciones al reparto de gastos del
+        # template golden (p. ej. derechos de inscripcion del comprador).
+        "clausulas.gastos_excepciones",
         "clausulas.domicilio_contractual",
         "clausulas.tribunales_competentes",
         "clausulas.promesa_finiquito",
@@ -232,6 +258,19 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
     "evidencia": (
         "evidencia.documentos_fuente[]",
         "evidencia.estado",
+        # SDD 008 (research D11): excepciones de gravamenes citadas por la
+        # clausula de dominio y referencia al certificado de gravamenes y
+        # prohibiciones del template golden.
+        "evidencia.gravamenes_excepciones",
+        "evidencia.certificado_gp_referencia",
+    ),
+    "titulo": (
+        "titulo.estructura",
+        "titulo.inscripciones[]",
+        "titulo.propietarios[]",
+        "titulo.comparecencia_vendedor_texto",
+        "titulo.clausula_primero_texto",
+        "titulo.alertas[]",
     ),
 }
 VARIABLE_KEYS: Final[tuple[str, ...]] = tuple(
@@ -289,12 +328,12 @@ READINESS_GATE_SET: Final = frozenset(READINESS_GATES)
 
 READINESS_REQUIRED_VARIABLES_BY_GATE: Final[dict[str, tuple[str, ...]]] = {
     "title_verified": (
+        "titulo.estructura",
+        "titulo.inscripciones[]",
+        "titulo.comparecencia_vendedor_texto",
+        "titulo.clausula_primero_texto",
         "matriz.nombre_predio",
         "matriz.ubicacion",
-        "matriz.inscripcion_fojas",
-        "matriz.inscripcion_numero",
-        "matriz.inscripcion_anio",
-        "matriz.inscripcion_cbr",
     ),
     "sii_verified": (
         "matriz.rol_avaluo",
@@ -340,6 +379,10 @@ def is_legal_document_type(value: str) -> bool:
     return value in LEGAL_DOCUMENT_TYPE_SET
 
 
+def is_multi_active_legal_document_type(value: str) -> bool:
+    return value in MULTI_ACTIVE_LEGAL_DOCUMENT_TYPE_SET
+
+
 def is_extraction_status(value: str) -> bool:
     return value in EXTRACTION_STATUS_SET
 
@@ -365,7 +408,11 @@ def is_variable_group(value: str) -> bool:
 
 
 def is_variable_key(value: str) -> bool:
-    return value in VARIABLE_KEY_SET
+    if value in VARIABLE_KEY_SET:
+        return True
+    if value.startswith("matriz.deslindes."):
+        return True
+    return False
 
 
 def is_role_status(value: str) -> bool:
@@ -393,4 +440,6 @@ def variable_keys_for_group(group: str) -> tuple[str, ...]:
 
 
 def variable_group_for_key(variable_key: str) -> str | None:
+    if variable_key.startswith("matriz.deslindes."):
+        return "matriz"
     return VARIABLE_GROUP_BY_KEY.get(variable_key)

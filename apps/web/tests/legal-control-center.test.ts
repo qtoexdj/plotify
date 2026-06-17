@@ -32,7 +32,7 @@ describe('T034 - Centro de Control Legal frontend structure', () => {
           id: 'variable-1',
           lot_id: null,
           escritura_case_id: null,
-          variable_key: 'matriz.inscripcion_fojas',
+          variable_key: 'matriz.rol_avaluo',
           variable_group: 'matriz',
           value_text: '4699',
           value_json: null,
@@ -68,7 +68,7 @@ describe('T034 - Centro de Control Legal frontend structure', () => {
     } satisfies VariableInventoryGroups
 
     expect(flattenVariableGroups(groups).map((variable) => variable.variable_key)).toEqual([
-      'matriz.inscripcion_fojas',
+      'matriz.rol_avaluo',
       'sii.pre_rol_lote',
     ])
   })

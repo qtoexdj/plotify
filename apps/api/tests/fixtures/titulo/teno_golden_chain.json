@@ -1,0 +1,75 @@
+{
+  "_comment": "Valores esperados post-verificacion para asserts de tests. Fuente de verdad: los dos titulos CBR Curico del corpus Teno. Las fechas de escritura del tramo 2 son 2022 (la inscripcion es 2023); el apellido del antecesor es MINGHEL tal como consta en la inscripcion de 1996.",
+  "structure_type": "compra_derechos",
+  "inscripciones": [
+    {
+      "orden": 1,
+      "tipo_adquisicion": "compra",
+      "fojas": "1338",
+      "numero": "1322",
+      "anio": "1996",
+      "cbr": "Curicó",
+      "escritura_fecha": "1996-05-17",
+      "notario": "Iván Torrealba Acevedo",
+      "notaria_ciudad": "Santiago",
+      "repertorio": null,
+      "adquirentes": [
+        { "nombre": "JUAN DE DIOS GALAZ ABARCA", "cuota": "50%" },
+        { "nombre": "ERNESTO CLAUDIO HERRMANN FRANK", "cuota": "50%" }
+      ],
+      "antecesor": "LUIS ARMANDO MINGHEL BALLADARES",
+      "observaciones": ["vigente_en_el_resto"]
+    },
+    {
+      "orden": 2,
+      "tipo_adquisicion": "compra_derechos",
+      "fojas": "4699",
+      "numero": "2781",
+      "anio": "2023",
+      "cbr": "Curicó",
+      "escritura_fecha": "2022-02-02",
+      "notario": "Luis Enrique Espinoza Garrido",
+      "notaria_ciudad": "Pucón",
+      "repertorio": "365",
+      "rectificatoria_fecha": "2022-08-19",
+      "rectificatoria_notario": "Linda Scarlett Bosch Jiménez",
+      "rectificatoria_repertorio": "4230",
+      "adquirentes": [{ "nombre": "JUAN DE DIOS GALAZ ABARCA", "cuota": "50%" }],
+      "antecesor": "ERNESTO CLAUDIO HERRMANN FRANK",
+      "observaciones": []
+    }
+  ],
+  "propietario_actual": {
+    "nombre": "JUAN DE DIOS GALAZ ABARCA",
+    "rut": "4.606.955-2",
+    "estado_civil": "divorciado",
+    "profesion": "rentista",
+    "domicilio": "Camino a Melipilla Kilómetro 27, Peñaflor",
+    "cuota": "100%",
+    "requiere_personeria": false
+  },
+  "property_identity": {
+    "nombre_predio": "LOTE N°3 (del plano de subdivisión) de la Hijuela N°6 del ex fundo El Cóndor",
+    "ubicacion": "sector de El Cóndor",
+    "comuna": "Teno",
+    "provincia": "Curicó",
+    "region": null,
+    "superficie_texto": "26,82 hectáreas",
+    "deslindes": {
+      "norte": "Lote N°2",
+      "sur": "Fundo El Escudo",
+      "oriente": "Hijuela N°2",
+      "poniente": "Fundo La Puerta, hoy San Francisco"
+    },
+    "rol_avaluo": "67-23"
+  },
+  "alert_tipos_esperados": ["dl_3516", "derechos_aguas", "vigente_en_el_resto", "multi_inmueble"],
+  "hallucination_regression": {
+    "_comment": "llm_response_hallucinated.json altera estos tres valores manteniendo citas verdaderas; el verificador debe degradarlos a manual_review por inconsistencia valor-cita.",
+    "expected_manual_review_paths": [
+      "inscripciones[0].antecesor.nombre",
+      "inscripciones[1].escritura.fecha",
+      "inscripciones[1].rectificatorias[0].fecha"
+    ]
+  }
+}

@@ -272,8 +272,17 @@ async def test_extract_and_persist_document_marks_failed_for_unwired_docx_conver
 
 
 class FakeStorageBucket:
+    def __init__(self, document_type: str = "dominio_vigente") -> None:
+        self.document_type = document_type
+
     def download(self, storage_path: str) -> bytes:
-        assert storage_path == f"{PROJECT_ID}/legal/dominio-vigente.txt"
+        if self.document_type == "certificado_roles_sii":
+            return (
+                b"Certificado de Asignacion de Roles numero CAR-2026-001. "
+                b"Fecha de emision 04-06-2026. Solicitud F2118 998877. "
+                b"Comuna TENO. "
+                b"Rol matriz 123-45. Unidad Lote 29 Rol de avaluo en tramite 08179-00029."
+            )
         return (
             b"Inscrita a fojas 4699 numero 3784 del ano 2020 en el Conservador "
             b"de Bienes Raices de Puerto Varas. Rol de avaluo 1234-56."
@@ -281,9 +290,12 @@ class FakeStorageBucket:
 
 
 class FakeStorage:
+    def __init__(self, document_type: str = "dominio_vigente") -> None:
+        self.document_type = document_type
+
     def from_(self, bucket: str) -> FakeStorageBucket:
         assert bucket == "project-files"
-        return FakeStorageBucket()
+        return FakeStorageBucket(document_type=self.document_type)
 
 
 class FakeSupabaseTable:
@@ -334,8 +346,9 @@ class FakeSupabaseTable:
 
 
 class FakeSupabase:
-    def __init__(self) -> None:
-        self.storage = FakeStorage()
+    def __init__(self, document_type: str = "dominio_vigente") -> None:
+        self.document_type = document_type
+        self.storage = FakeStorage(document_type=document_type)
         self.inserted_variables = []
         self.inserted_evidence = []
         self.document_updates = []
@@ -354,7 +367,7 @@ class FakeSupabase:
                     "id": LEGAL_DOCUMENT_ID,
                     "organization_id": ORG_ID,
                     "project_id": PROJECT_ID,
-                    "document_type": "dominio_vigente",
+                    "document_type": self.document_type,
                     "source_field": "doc_dominio_vigente",
                     "storage_bucket": "project-files",
                     "storage_path": f"{PROJECT_ID}/legal/dominio-vigente.txt",
@@ -397,7 +410,7 @@ class FakeSupabase:
 async def test_ingestion_job_persists_variable_proposals_and_document_evidence():
     from services.legal_document_ingestion import run_document_ingestion_job
 
-    supabase = FakeSupabase()
+    supabase = FakeSupabase(document_type="certificado_roles_sii")
 
     result = await run_document_ingestion_job(
         legal_document_id=LEGAL_DOCUMENT_ID,
@@ -407,25 +420,22 @@ async def test_ingestion_job_persists_variable_proposals_and_document_evidence()
         supabase=supabase,
     )
 
-    assert result.status == "needs_review"
-    assert supabase.document_updates[-1] == {"extraction_status": "needs_review"}
+    assert result.status == "variables_proposed"
+    assert supabase.document_updates[-1] == {"extraction_status": "variables_proposed"}
     assert supabase.job_updates[-1] == {"status": "variables_proposed"}
     variable_by_key = {
         row["variable_key"]: row for row in supabase.inserted_variables
     }
-    assert variable_by_key["matriz.inscripcion_fojas"]["value_text"] == "4699"
-    assert variable_by_key["matriz.inscripcion_numero"]["value_text"] == "3784"
-    assert variable_by_key["matriz.inscripcion_anio"]["value_text"] == "2020"
-    assert variable_by_key["matriz.inscripcion_cbr"]["value_text"] == "Puerto Varas"
-    assert variable_by_key["matriz.rol_avaluo"]["value_text"] == "1234-56"
-    assert variable_by_key["matriz.nombre_predio"]["state"] == "missing"
-    evidence_for_fojas = [
+    assert variable_by_key["sii.rol_matriz"]["value_text"] == "123-45"
+    assert variable_by_key["sii.pre_rol_lote"]["value_text"] == "08179-00029"
+    assert variable_by_key["sii.unidad_nombre"]["value_text"] == "Unidad Lote 29"
+    evidence_for_rol = [
         row for row in supabase.inserted_evidence
-        if row["variable_resolution_id"] == variable_by_key["matriz.inscripcion_fojas"]["id"]
+        if row["variable_resolution_id"] == variable_by_key["sii.rol_matriz"]["id"]
     ]
-    assert evidence_for_fojas[0]["legal_document_id"] == LEGAL_DOCUMENT_ID
-    assert evidence_for_fojas[0]["legal_document_page_id"] == PAGE_ID
-    assert evidence_for_fojas[0]["snippet_hash"]
+    assert evidence_for_rol[0]["legal_document_id"] == LEGAL_DOCUMENT_ID
+    assert evidence_for_rol[0]["legal_document_page_id"] == PAGE_ID
+    assert evidence_for_rol[0]["snippet_hash"]
 
 
 async def test_mark_variables_resolved_maps_needs_review_document_status_to_job_terminal_status():
@@ -637,4 +647,30 @@ async def test_ocr_timeout_expired_raises_error(monkeypatch):
     assert "tesseract" in str(exc_info.value).lower() or "timeout" in str(exc_info.value).lower()
     # En T093 capturaremos el error y asignaremos "ocr_timeout" al job
     assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == "ocr_timeout"
+
+
+async def test_ingestion_job_queues_title_analysis_for_title_document():
+    from services.legal_document_ingestion import run_document_ingestion_job
+
+    supabase = FakeSupabase()
+    mock_redis = AsyncMock()
+
+    result = await run_document_ingestion_job(
+        legal_document_id=LEGAL_DOCUMENT_ID,
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        ingestion_job_id=INGESTION_JOB_ID,
+        supabase=supabase,
+        redis=mock_redis,
+    )
+
+    assert result.status == "variables_proposed"
+    mock_redis.enqueue_job.assert_awaited_once_with(
+        "analyze_project_title",
+        {
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+        }
+    )
+
 

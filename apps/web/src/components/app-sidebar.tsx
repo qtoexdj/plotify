@@ -72,10 +72,6 @@ export const navItems = [
         url: '/documentos/plantillas',
       },
       {
-        title: 'Bloques',
-        url: '/documentos/bloques',
-      },
-      {
         title: 'Historial',
         url: '/documentos/historial',
       },

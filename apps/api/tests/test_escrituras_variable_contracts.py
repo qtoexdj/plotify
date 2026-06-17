@@ -41,7 +41,7 @@ def test_variable_inventory_response_matches_grouped_contract_shape():
             "id": VARIABLE_ID,
             "organization_id": ORG_ID,
             "project_id": PROJECT_ID,
-            "variable_key": "matriz.inscripcion_fojas",
+            "variable_key": "matriz.rol_avaluo",
             "variable_group": "matriz",
             "value_text": "4699",
             "value_json": None,
@@ -77,7 +77,7 @@ def test_variable_inventory_response_matches_grouped_contract_shape():
     assert payload["project_id"] == PROJECT_ID
     assert payload["lot_id"] is None
     assert payload["summary"] == {"total": 1, **{state: 0 for state in VARIABLE_STATES}, "proposed": 1}
-    assert payload["groups"]["matriz"][0]["variable_key"] == "matriz.inscripcion_fojas"
+    assert payload["groups"]["matriz"][0]["variable_key"] == "matriz.rol_avaluo"
     assert payload["groups"]["matriz"][0]["state"] == "proposed"
     assert payload["groups"]["matriz"][0]["source_type"] == "document"
     assert payload["groups"]["matriz"][0]["confidence"] == 0.92
@@ -120,7 +120,7 @@ def test_variable_inventory_response_matches_grouped_contract_shape():
                 "id": VARIABLE_ID,
                 "organization_id": ORG_ID,
                 "project_id": PROJECT_ID,
-                "variable_key": "matriz.inscripcion_fojas",
+                "variable_key": "matriz.rol_avaluo",
                 "variable_group": "matriz",
                 "state": "proposed",
                 "source_type": "document",

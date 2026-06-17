@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PencilEdit02Icon, RulerIcon, File02Icon, Settings02Icon } from '@hugeicons/core-free-icons'
+import { File02Icon, PencilEdit02Icon, RulerIcon, Settings02Icon } from '@hugeicons/core-free-icons'
 import { getBoundariesWithNeighbors, type BoundaryWithNeighbor } from '@/lib/geometry/utils'
 import { calculateLegalMetrics } from '@/lib/geometry/utm'
 import type { GeoJSONGeometry } from '@/types/database.types'
@@ -256,11 +255,8 @@ export function LotInfoView({
           {/* ACTION BUTTONS */}
           {lotDetails.estado && ['reservado', 'vendido'].includes(lotDetails.estado) && (
             <div className="flex flex-col gap-2 mt-1">
-              <Button variant="outline" className="w-full" asChild>
-                <Link href={`/documentos/generar/${lotDetails.id}`}>
-                  <HugeiconsIcon icon={File02Icon} className="h-4 w-4 mr-2" />
-                  Generar Documento Legal
-                </Link>
+              <Button variant="outline" className="w-full" disabled>
+                Documento legal desde caso
               </Button>
               {lotDetails.estado === 'reservado' && (
                 <Button

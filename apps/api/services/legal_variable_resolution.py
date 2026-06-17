@@ -38,19 +38,8 @@ logger = get_logger(__name__)
 MANUAL_REVIEW_CONFIDENCE_THRESHOLD = 0.75
 DEFAULT_PROPOSAL_STATE = "proposed"
 DEFAULT_SOURCE_TYPE = "document"
-DOMINIO_VIGENTE_EXTRACTOR_NAME = "dominio_vigente_rules_v1"
 SII_ROLES_EXTRACTOR_NAME = "sii_roles_rules_v1"
 SAG_PLANO_EXTRACTOR_NAME = "sag_plano_rules_v1"
-DOMINIO_VIGENTE_REQUIRED_VARIABLES = (
-    "matriz.nombre_predio",
-    "matriz.ubicacion",
-    "matriz.superficie_total",
-    "matriz.inscripcion_fojas",
-    "matriz.inscripcion_numero",
-    "matriz.inscripcion_anio",
-    "matriz.inscripcion_cbr",
-    "matriz.rol_avaluo",
-)
 SII_ROLES_REQUIRED_VARIABLES = (
     "sii.certificado_asignacion_roles_numero",
     "sii.certificado_fecha_emision",
@@ -102,43 +91,7 @@ REPEATABLE_SOURCE_REF_VARIABLE_KEYS = frozenset(
     }
 )
 
-_INSCRIPTION_RE = re.compile(
-    r"(?:inscrit[ao]?\s+)?(?:a\s+)?fojas\s+(?P<fojas>[\w.-]+).*?"
-    r"(?:n[uú]mero|n[°ºro.]*|num\.?)\s+(?P<numero>[\w.-]+).*?"
-    r"(?:a(?:n|ñ)o|del\s+a(?:n|ñ)o)\s+(?P<anio>\d{4})",
-    re.IGNORECASE | re.DOTALL,
-)
-_CBR_RE = re.compile(
-    r"(?:conservador(?:a)?(?:\s+de\s+bienes\s+ra[ií]ces)?\s+(?:de\s+)?)"
-    r"(?P<cbr>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]{2,80}?)(?=\.|,|;|$)",
-    re.IGNORECASE,
-)
-_ROL_RE = re.compile(
-    r"(?:rol(?:\s+de\s+aval[uú]o)?|rol\s+matriz)\s*(?:n[°ºro.]*|numero)?\s*"
-    r"(?P<rol>\d{1,7}\s*[-/]\s*\d{1,7})",
-    re.IGNORECASE,
-)
-_PREDIO_RE = re.compile(
-    r"(?:(?:predio|inmueble|propiedad|fundo)\s+(?:denominad[ao]\s+)?|parcela\s+)"
-    r"(?P<predio>[A-ZÁÉÍÓÚÑ0-9][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .'-]{2,80}?)"
-    r"(?=\s+se\s+encuentra|\s+ubicad[ao]|\.|,|;|$)",
-    re.IGNORECASE,
-)
-_UBICACION_RE = re.compile(
-    r"(?:ubicad[ao]\s+en|situad[ao]\s+en)\s+"
-    r"(?P<ubicacion>[^.;\n]{5,140})",
-    re.IGNORECASE,
-)
-_SUPERFICIE_RE = re.compile(
-    r"(?:superficie(?:\s+aproximada)?(?:\s+de)?|cabida(?:\s+de)?)\s+"
-    r"(?P<superficie>\d[\d.,]*\s*(?:m2|m²|metros\s+cuadrados|hect[aá]reas|has?\.?))",
-    re.IGNORECASE,
-)
-_ADQUISICION_RE = re.compile(
-    r"(?:adquiri[oó]\s+(?:el\s+inmueble\s+)?(?:por|a\s+t[ií]tulo\s+de)\s+)"
-    r"(?P<modo>compraventa|donaci[oó]n|herencia|adjudicaci[oó]n|permuta)",
-    re.IGNORECASE,
-)
+# Regex patterns for SII and SAG certifications
 _SII_CERTIFICATE_NUMBER_RE = re.compile(
     r"(?:certificado(?:\s+de\s+asignaci[oó]n\s+de\s+roles)?\s*(?:n[uú]mero|n[°ºro.]*)?\s*)"
     r"(?P<number>[A-Z0-9][A-Z0-9.-]{2,40})",
@@ -380,33 +333,7 @@ class VariableReviewMutation:
 class LegalVariableResolutionService:
     """Service boundary for future extraction rules and variable review flows."""
 
-    def extract_dominio_vigente_variables(
-        self,
-        *,
-        organization_id: str,
-        project_id: str,
-        legal_document_id: str,
-        pages: tuple[LegalDocumentPageInput | dict[str, Any], ...]
-        | list[LegalDocumentPageInput | dict[str, Any]],
-        required_variable_keys: tuple[str, ...] = DOMINIO_VIGENTE_REQUIRED_VARIABLES,
-    ) -> tuple[ClassifiedVariableProposal, ...]:
-        normalized_pages = tuple(
-            normalize_document_page(page, legal_document_id=legal_document_id)
-            for page in pages
-        )
-        proposals: list[VariableProposalInput] = []
-        for page in normalized_pages:
-            proposals.extend(
-                self._extract_dominio_vigente_page_variables(
-                    organization_id=organization_id,
-                    project_id=project_id,
-                    page=page,
-                )
-            )
-        return self.classify_proposals(
-            proposals,
-            required_variable_keys=required_variable_keys,
-        )
+
 
     def extract_sii_roles_variables(
         self,
@@ -550,91 +477,7 @@ class LegalVariableResolutionService:
         )
         return self.classify_proposals((proposal,))[0]
 
-    def _extract_dominio_vigente_page_variables(
-        self,
-        *,
-        organization_id: str,
-        project_id: str,
-        page: LegalDocumentPageInput,
-    ) -> list[VariableProposalInput]:
-        text = normalize_whitespace(page.text_content)
-        if not text:
-            return []
 
-        proposals: list[VariableProposalInput] = []
-        common_ref = {
-            "document_type": "dominio_vigente",
-            "page_number": page.page_number,
-        }
-
-        inscription = _INSCRIPTION_RE.search(text)
-        if inscription:
-            snippet = _snippet_for_match(text, inscription)
-            proposals.extend(
-                [
-                    build_document_proposal(
-                        organization_id=organization_id,
-                        project_id=project_id,
-                        legal_document_id=page.legal_document_id,
-                        legal_document_page_id=page.id,
-                        variable_key="matriz.inscripcion_fojas",
-                        value_text=clean_legal_value(inscription.group("fojas")),
-                        source_ref=common_ref,
-                        snippet=snippet,
-                        confidence=0.92,
-                    ),
-                    build_document_proposal(
-                        organization_id=organization_id,
-                        project_id=project_id,
-                        legal_document_id=page.legal_document_id,
-                        legal_document_page_id=page.id,
-                        variable_key="matriz.inscripcion_numero",
-                        value_text=clean_legal_value(inscription.group("numero")),
-                        source_ref=common_ref,
-                        snippet=snippet,
-                        confidence=0.92,
-                    ),
-                    build_document_proposal(
-                        organization_id=organization_id,
-                        project_id=project_id,
-                        legal_document_id=page.legal_document_id,
-                        legal_document_page_id=page.id,
-                        variable_key="matriz.inscripcion_anio",
-                        value_text=clean_legal_value(inscription.group("anio")),
-                        source_ref=common_ref,
-                        snippet=snippet,
-                        confidence=0.92,
-                    ),
-                ]
-            )
-
-        pattern_specs = (
-            ("matriz.inscripcion_cbr", _CBR_RE, "cbr", 0.84),
-            ("matriz.rol_avaluo", _ROL_RE, "rol", 0.88),
-            ("matriz.nombre_predio", _PREDIO_RE, "predio", 0.78),
-            ("matriz.ubicacion", _UBICACION_RE, "ubicacion", 0.78),
-            ("matriz.superficie_total", _SUPERFICIE_RE, "superficie", 0.82),
-            ("matriz.adquisicion_modo", _ADQUISICION_RE, "modo", 0.8),
-        )
-        for variable_key, pattern, group_name, confidence in pattern_specs:
-            match = pattern.search(text)
-            if not match:
-                continue
-            proposals.append(
-                build_document_proposal(
-                    organization_id=organization_id,
-                    project_id=project_id,
-                    legal_document_id=page.legal_document_id,
-                    legal_document_page_id=page.id,
-                    variable_key=variable_key,
-                    value_text=clean_legal_value(match.group(group_name)),
-                    source_ref=common_ref,
-                    snippet=_snippet_for_match(text, match),
-                    confidence=confidence,
-                )
-            )
-
-        return proposals
 
     def _extract_sii_roles_page_variables(
         self,
@@ -1140,13 +983,6 @@ def resolve_document_variables(
     pages: tuple[LegalDocumentPageInput | dict[str, Any], ...]
     | list[LegalDocumentPageInput | dict[str, Any]],
 ) -> tuple[ClassifiedVariableProposal, ...]:
-    if document_type == "dominio_vigente":
-        return service.extract_dominio_vigente_variables(
-            organization_id=organization_id,
-            project_id=project_id,
-            legal_document_id=legal_document_id,
-            pages=pages,
-        )
     if document_type == "certificado_roles_sii":
         return service.extract_sii_roles_variables(
             organization_id=organization_id,
@@ -2071,7 +1907,7 @@ def build_document_proposal(
     source_ref: dict[str, Any],
     snippet: str,
     confidence: float,
-    extractor_name: str = DOMINIO_VIGENTE_EXTRACTOR_NAME,
+    extractor_name: str = "rules_v1",
 ) -> VariableProposalInput:
     normalized_source_ref = {
         **source_ref,

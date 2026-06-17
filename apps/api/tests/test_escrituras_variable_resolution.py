@@ -39,140 +39,7 @@ def _evidence(
     )
 
 
-def test_dominio_vigente_sample_proposes_matriz_variables_with_page_evidence():
-    service = LegalVariableResolutionService()
-    evidence = _evidence(
-        legal_document_id=DOMINIO_DOCUMENT_ID,
-        legal_document_page_id=DOMINIO_PAGE_ID,
-        snippet="inscrita a fojas 4699 numero 3784 del Registro de Propiedad del ano 2020",
-        confidence=0.92,
-    )
-    proposals = (
-        VariableProposalInput(
-            organization_id=ORG_ID,
-            project_id=PROJECT_ID,
-            variable_key="matriz.inscripcion_fojas",
-            value_text="4699",
-            source_ref={"document_type": "dominio_vigente"},
-            confidence=0.92,
-            extractor_name="dominio_vigente_rules_v1",
-            evidence=(evidence,),
-        ),
-        VariableProposalInput(
-            organization_id=ORG_ID,
-            project_id=PROJECT_ID,
-            variable_key="matriz.inscripcion_numero",
-            value_text="3784",
-            source_ref={"document_type": "dominio_vigente"},
-            confidence=0.92,
-            extractor_name="dominio_vigente_rules_v1",
-            evidence=(evidence,),
-        ),
-        VariableProposalInput(
-            organization_id=ORG_ID,
-            project_id=PROJECT_ID,
-            variable_key="matriz.inscripcion_anio",
-            value_text="2020",
-            source_ref={"document_type": "dominio_vigente"},
-            confidence=0.92,
-            extractor_name="dominio_vigente_rules_v1",
-            evidence=(evidence,),
-        ),
-    )
 
-    classified = service.classify_proposals(proposals)
-
-    assert [item.classification for item in classified] == [
-        "proposed",
-        "proposed",
-        "proposed",
-    ]
-    assert {item.proposal.variable_group for item in classified} == {"matriz"}
-    assert all(item.proposal.source_type == "document" for item in classified)
-    assert all(item.proposal.evidence[0].legal_document_id == DOMINIO_DOCUMENT_ID for item in classified)
-    assert all(item.proposal.evidence[0].legal_document_page_id == DOMINIO_PAGE_ID for item in classified)
-    assert all(item.proposal.evidence[0].snippet_hash for item in classified)
-
-
-def test_dominio_vigente_rules_extract_schema_normalized_matriz_outputs():
-    service = LegalVariableResolutionService()
-    page = LegalDocumentPageInput(
-        id=DOMINIO_PAGE_ID,
-        legal_document_id=DOMINIO_DOCUMENT_ID,
-        page_number=2,
-        text_content=(
-            "La propiedad denominada Parcela Los Castanos se encuentra ubicada en "
-            "Camino Interior Km 12, comuna de Puerto Varas. Tiene una superficie "
-            "de 12.500 metros cuadrados. Inscrita a fojas 4699 numero 3784 del "
-            "ano 2020 en el Conservador de Bienes Raices de Puerto Varas. "
-            "Rol de avaluo 1234-56. Adquirio por compraventa."
-        ),
-    )
-
-    classified = service.extract_dominio_vigente_variables(
-        organization_id=ORG_ID,
-        project_id=PROJECT_ID,
-        legal_document_id=DOMINIO_DOCUMENT_ID,
-        pages=(page,),
-    )
-    by_key = {item.proposal.variable_key: item for item in classified}
-
-    assert by_key["matriz.inscripcion_fojas"].proposal.value_text == "4699"
-    assert by_key["matriz.inscripcion_numero"].proposal.value_text == "3784"
-    assert by_key["matriz.inscripcion_anio"].proposal.value_text == "2020"
-    assert by_key["matriz.inscripcion_cbr"].proposal.value_text == "Puerto Varas"
-    assert by_key["matriz.rol_avaluo"].proposal.value_text == "1234-56"
-    assert by_key["matriz.nombre_predio"].proposal.value_text == "Parcela Los Castanos"
-    assert by_key["matriz.superficie_total"].proposal.value_text == (
-        "12.500 metros cuadrados"
-    )
-    assert by_key["matriz.adquisicion_modo"].proposal.value_text == "compraventa"
-    assert by_key["matriz.ubicacion"].classification == "proposed"
-    assert all(
-        item.proposal.extractor_name == "dominio_vigente_rules_v1"
-        for item in by_key.values()
-        if item.classification != "missing"
-    )
-    assert all(
-        item.proposal.source_ref["document_type"] == "dominio_vigente"
-        for item in by_key.values()
-        if item.classification != "missing"
-    )
-    assert all(
-        item.proposal.evidence[0].legal_document_page_id == DOMINIO_PAGE_ID
-        for item in by_key.values()
-        if item.classification != "missing"
-    )
-
-
-def test_dominio_vigente_rules_mark_required_absent_values_as_missing():
-    service = LegalVariableResolutionService()
-    page = {
-        "id": DOMINIO_PAGE_ID,
-        "legal_document_id": DOMINIO_DOCUMENT_ID,
-        "page_number": 1,
-        "text_content": "Inscrita a fojas 4699 numero 3784 del ano 2020.",
-    }
-
-    classified = service.extract_dominio_vigente_variables(
-        organization_id=ORG_ID,
-        project_id=PROJECT_ID,
-        legal_document_id=DOMINIO_DOCUMENT_ID,
-        pages=[page],
-        required_variable_keys=(
-            "matriz.inscripcion_fojas",
-            "matriz.nombre_predio",
-            "matriz.rol_avaluo",
-        ),
-    )
-    by_key = {item.proposal.variable_key: item for item in classified}
-
-    assert by_key["matriz.inscripcion_fojas"].classification == "proposed"
-    assert by_key["matriz.nombre_predio"].classification == "missing"
-    assert by_key["matriz.nombre_predio"].reasons == (
-        "critical_required_variable_absent",
-    )
-    assert by_key["matriz.rol_avaluo"].classification == "missing"
 
 
 def test_sii_roles_sample_preserves_certificate_metadata_and_lot_scope():
@@ -974,16 +841,16 @@ def test_critical_variable_conflicts_block_readiness_with_specific_reason():
             VariableProposalInput(
                 organization_id=ORG_ID,
                 project_id=PROJECT_ID,
-                variable_key="matriz.inscripcion_fojas",
-                value_text="4699",
+                variable_key="matriz.rol_avaluo",
+                value_text="123-45",
                 confidence=0.91,
                 evidence=(evidence,),
             ),
             VariableProposalInput(
                 organization_id=ORG_ID,
                 project_id=PROJECT_ID,
-                variable_key="matriz.inscripcion_fojas",
-                value_text="4700",
+                variable_key="matriz.rol_avaluo",
+                value_text="123-46",
                 confidence=0.91,
                 evidence=(evidence,),
             ),
@@ -1012,16 +879,16 @@ def test_duplicate_values_for_same_scope_are_not_conflicts_after_normalization()
             VariableProposalInput(
                 organization_id=ORG_ID,
                 project_id=PROJECT_ID,
-                variable_key="matriz.inscripcion_cbr",
-                value_text="Puerto Varas",
+                variable_key="matriz.nombre_predio",
+                value_text="Los Castanos",
                 confidence=0.91,
                 evidence=(evidence,),
             ),
             VariableProposalInput(
                 organization_id=ORG_ID,
                 project_id=PROJECT_ID,
-                variable_key="matriz.inscripcion_cbr",
-                value_text=" puerto   varas ",
+                variable_key="matriz.nombre_predio",
+                value_text=" los   castanos ",
                 confidence=0.91,
                 evidence=(evidence,),
             ),

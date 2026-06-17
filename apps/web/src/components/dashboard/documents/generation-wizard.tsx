@@ -113,13 +113,6 @@ const WizardFormSchema = z.object({
   matriz_sur: z.string(),
   matriz_oriente: z.string(),
   matriz_poniente: z.string(),
-  matriz_adquisicion_modo: z.string(),
-  matriz_adquisicion_notaria: z.string(),
-  matriz_adquisicion_fecha: z.string(),
-  matriz_inscripcion_fojas: z.string(),
-  matriz_inscripcion_numero: z.string(),
-  matriz_inscripcion_anio: z.string(),
-  matriz_inscripcion_cbr: z.string(),
   matriz_rol_avaluo: z.string(),
 
   // SAG
@@ -198,13 +191,6 @@ const EMPTY_DEFAULTS: WizardFormValues = {
   matriz_sur: '',
   matriz_oriente: '',
   matriz_poniente: '',
-  matriz_adquisicion_modo: '',
-  matriz_adquisicion_notaria: '',
-  matriz_adquisicion_fecha: '',
-  matriz_inscripcion_fojas: '',
-  matriz_inscripcion_numero: '',
-  matriz_inscripcion_anio: '',
-  matriz_inscripcion_cbr: '',
   matriz_rol_avaluo: '',
   sag_certificado_numero: '',
   sag_certificado_fecha: '',
@@ -707,30 +693,6 @@ export function GenerationWizard({
             <FormField label="Oriente" fieldName="matriz_oriente" textarea />
             <FormField label="Poniente" fieldName="matriz_poniente" textarea />
             <Separator className="col-span-1 sm:col-span-2" />
-            <div className="col-span-1 sm:col-span-2 text-xs font-medium text-muted-foreground">
-              Historia de título
-            </div>
-            <FormField
-              label="Modo de adquisición"
-              fieldName="matriz_adquisicion_modo"
-              placeholder="compraventa, herencia..."
-            />
-            <FormField label="Notaría" fieldName="matriz_adquisicion_notaria" />
-            <FormField
-              label="Fecha adquisición"
-              fieldName="matriz_adquisicion_fecha"
-              placeholder="dd/mm/aaaa"
-            />
-            <FormField label="Fojas inscripción" fieldName="matriz_inscripcion_fojas" />
-            <FormField label="N° inscripción" fieldName="matriz_inscripcion_numero" />
-            <FormField
-              label="Año inscripción"
-              fieldName="matriz_inscripcion_anio"
-              placeholder="2024"
-            />
-            <div className="col-span-1 sm:col-span-2">
-              <FormField label="CBR" fieldName="matriz_inscripcion_cbr" />
-            </div>
             <div className="col-span-1 sm:col-span-2">
               <FormField label="Rol Avalúo" fieldName="matriz_rol_avaluo" placeholder="XXX-YYY" />
             </div>

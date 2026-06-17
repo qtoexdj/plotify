@@ -31,5 +31,6 @@ async def process_legal_document_ingestion(ctx: dict, payload: dict[str, Any]) -
         organization_id=str(organization_id),
         project_id=str(project_id),
         ingestion_job_id=payload.get("ingestion_job_id"),
+        redis=ctx.get("redis"),
     )
     return result.status
