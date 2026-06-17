@@ -170,6 +170,9 @@ class ApprovalBlocker(MatrizResponseModel):
         "snapshot_stale",
     ]
     key: str | None = None
+    # SDD 011: productor previsto de la variable (extracted/authored/manual/...),
+    # usado por la UI para ofrecer la acción correcta (ingresar dato vs aprobar).
+    producer: str | None = None
     gate: str | None = None
     cause: str | None = None
     alert_tipo: str | None = None

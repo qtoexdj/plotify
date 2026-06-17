@@ -195,6 +195,17 @@
             ],
             "title": "Message"
           },
+          "producer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Producer"
+          },
           "required_clause": {
             "anyOf": [
               {

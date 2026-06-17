@@ -973,6 +973,7 @@ def _project_approval_blockers(
                 {
                     "kind": "token_missing",
                     "key": key,
+                    "producer": variable_producer(key),
                     "message": "Texto del estudio de título sin aprobar.",
                     "fix_url": fix_url,
                 },
@@ -1009,6 +1010,15 @@ async def _project_matriz_response(
     snapshot_stale = str(matrix_row.get("snapshot_hash")) != snapshot_hash
     if snapshot_stale and matrix_row.get("status") == "approved":
         matrix_row = await _supersede_approved_project_matriz(
+            client=client,
+            matrix_row=matrix_row,
+            current_snapshot_hash=snapshot_hash,
+        )
+        snapshot_stale = False
+    elif snapshot_stale:
+        # Borrador (o en revisión): adopta el snapshot vigente en vez de quedar
+        # bloqueado tras resolver/aprobar variables del proyecto.
+        matrix_row = await _refresh_project_matriz_snapshot(
             client=client,
             matrix_row=matrix_row,
             current_snapshot_hash=snapshot_hash,
@@ -1191,6 +1201,31 @@ async def _supersede_approved_project_matriz(
         current_snapshot_hash=current_snapshot_hash,
     )
     return updated
+
+
+async def _refresh_project_matriz_snapshot(
+    *,
+    client: Any,
+    matrix_row: dict[str, Any],
+    current_snapshot_hash: str,
+) -> dict[str, Any]:
+    """Un borrador de la matriz del proyecto adopta el snapshot vigente cuando
+    cambian las variables del proyecto (resolver/aprobar datos): se actualiza su
+    `snapshot_hash` para que no quede "desactualizado" bloqueando la aprobación.
+    No cambia versión ni estado (sigue siendo el mismo borrador editable). Se
+    muta `matrix_row` in situ para que el flujo de aprobación vea el hash nuevo.
+    """
+    await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_matrices")
+            .update({"snapshot_hash": current_snapshot_hash})
+            .eq("id", str(matrix_row["id"]))
+            .eq("organization_id", str(matrix_row["organization_id"]))
+            .execute()
+        )
+    )
+    matrix_row["snapshot_hash"] = current_snapshot_hash
+    return matrix_row
 
 
 async def _workflow_context(

@@ -29,6 +29,7 @@ export interface components {
       "key"?: string | null
       "kind": "token_missing" | "readiness_gate" | "alert_clause_missing" | "snapshot_stale"
       "message"?: string | null
+      "producer"?: string | null
       "required_clause"?: string | null
       "title"?: string | null
     }
