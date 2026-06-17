@@ -204,3 +204,49 @@ export async function publishEscrituraTemplate(
     { method: 'POST' }
   )
 }
+
+/** SDD 011 (A4): fija el valor de una variable de proyecto por su clave. */
+export type UpsertVariableBody = {
+  variable_key: string
+  value_text?: string | null
+  value_json?: unknown
+  state?: 'resolved' | 'not_applicable'
+  correction_reason?: string | null
+}
+
+export type VariableReviewResult = {
+  variable_resolution_id: string
+  state: string
+}
+
+export async function upsertProjectVariable(
+  projectId: string,
+  body: UpsertVariableBody
+): Promise<VariableReviewResult> {
+  return requestJson<VariableReviewResult>(
+    `/api/projects/${encodeURIComponent(projectId)}/legal-variables/by-key`,
+    { method: 'PUT', body }
+  )
+}
+
+/** SDD 011 (A5): aprueba en bloque variables revisables del proyecto. */
+export type BulkApproveBody = {
+  group?: string | null
+  variable_keys?: string[]
+}
+
+export type BulkApproveResult = {
+  approved_count: number
+  approved_keys: string[]
+  skipped_keys: string[]
+}
+
+export async function bulkApproveProjectVariables(
+  projectId: string,
+  body: BulkApproveBody = {}
+): Promise<BulkApproveResult> {
+  return requestJson<BulkApproveResult>(
+    `/api/projects/${encodeURIComponent(projectId)}/legal-variables/bulk-approve`,
+    { method: 'POST', body }
+  )
+}

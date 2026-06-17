@@ -22,6 +22,7 @@ import { MesaEncabezado } from './mesa-encabezado'
 import { MesaIndice } from './mesa-indice'
 import { PanelDatos } from './panel-datos'
 import { PendientesList } from './pendientes-list'
+import { PreparacionMatriz } from './preparacion-matriz'
 import { WorkflowAcciones } from './workflow-acciones'
 
 /**
@@ -167,6 +168,21 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
     setAviso(null)
   }
 
+  async function recargarMatriz() {
+    const sourceProjectId = projectId ?? matriz?.project_id
+    if (!caseId && !sourceProjectId) return
+    try {
+      const response = caseId
+        ? await getMatrizCase(caseId)
+        : await getMatrizProject(sourceProjectId as string)
+      setData(response)
+      setBorradores({})
+      setAviso(null)
+    } catch {
+      setAviso(MESA_TEXT.noSePudoCargar)
+    }
+  }
+
   if (isLoading) {
     return (
       <div data-testid="mesa-escritura" className="space-y-4">
@@ -240,7 +256,15 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
           {matriz.approval_blockers.length > 0 ? (
             <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
               <h3 className="mb-3 text-sm font-semibold">{MESA_TEXT.pendientesTitle}</h3>
-              <PendientesList blockers={matriz.approval_blockers} compact />
+              {matriz.scope === 'project' ? (
+                <PreparacionMatriz
+                  projectId={matriz.project_id}
+                  blockers={matriz.approval_blockers}
+                  onResolved={recargarMatriz}
+                />
+              ) : (
+                <PendientesList blockers={matriz.approval_blockers} compact />
+              )}
             </section>
           ) : null}
           <PanelDatos resolucion={matriz.resolution} projectId={matriz.project_id} />

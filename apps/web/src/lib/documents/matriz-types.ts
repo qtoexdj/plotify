@@ -218,6 +218,8 @@ export type ApprovalBlocker = BlockerMicrocopyFields &
     | {
         kind: 'token_missing'
         key: string
+        /** SDD 011: productor previsto — define la acción ofrecida en la UI. */
+        producer?: 'extracted' | 'authored' | 'manual' | 'sale_gap' | 'signing'
         fix_url: string
         message?: string | null
       }

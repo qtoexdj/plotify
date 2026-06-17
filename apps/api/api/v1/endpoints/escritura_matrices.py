@@ -61,6 +61,7 @@ from services.matriz_docx_renderer import (
 from services.legal_variable_catalog import (
     NON_BLOCKING_PROJECT_MATRIZ_KEYS,
     SALE_SCOPED_VARIABLE_KEYS,
+    variable_producer,
 )
 from services.escritura_readiness import fetch_project_matriz_snapshot
 from services.escritura_delivery import deliver_draft, delivery_status_label
@@ -951,6 +952,7 @@ def _project_approval_blockers(
                 {
                     "kind": "token_missing",
                     "key": key,
+                    "producer": variable_producer(key),
                     "message": (
                         "Dato del proyecto pendiente de revisión."
                         if blocked
