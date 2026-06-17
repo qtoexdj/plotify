@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     LEGAL_TITLE_AGENT_ENABLED: bool = False
     LEGAL_TITLE_AGENT_PROVIDER: str = "openai"
     LEGAL_TITLE_AGENT_MODEL: str = "gpt-4o"
+    # Nivel de razonamiento de los modelos OpenAI de razonamiento (familia
+    # gpt-5 / o-series). Vacío = usar el default del modelo. Valores válidos
+    # según el modelo: minimal | low | medium | high (gpt-5.1+ además: none, xhigh).
+    # Se ignora en modelos sin razonamiento (p. ej. gpt-4o).
+    LEGAL_TITLE_AGENT_REASONING_EFFORT: str = ""
     # Budget for the whole agent run (reasoning loop + synthesis), not a
     # single LLM call.
     LEGAL_TITLE_AGENT_TIMEOUT_SECONDS: int = 300

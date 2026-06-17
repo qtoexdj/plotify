@@ -72,9 +72,15 @@ def _get_llm_client(provider: str, model: str, timeout: int) -> Any:
             "api_key": api_key,
             "timeout": timeout,
         }
-        # GPT-5 family (reasoning models) rejects explicit temperature; older
-        # models keep 0.0 for deterministic extraction.
-        if not model.startswith("gpt-5"):
+        # GPT-5 family (reasoning models) rechaza `temperature` explícita y, en
+        # cambio, acepta `reasoning_effort` para regular la profundidad del
+        # razonamiento; los modelos más antiguos quedan en 0.0 para extracción
+        # determinística.
+        if model.startswith("gpt-5"):
+            effort = (settings.LEGAL_TITLE_AGENT_REASONING_EFFORT or "").strip()
+            if effort:
+                client_kwargs["reasoning_effort"] = effort
+        else:
             client_kwargs["temperature"] = 0.0
         return ChatOpenAI(**client_kwargs)
     if provider == "anthropic":

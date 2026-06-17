@@ -330,3 +330,45 @@ class TestHechoSchema:
             snippet="año mil novecientos noventa y seis",
         )
         assert hecho.pagina == 1
+
+
+class TestLlmClientReasoningEffort:
+    """SDD 011: el nivel de razonamiento configurable se aplica a los modelos
+    gpt-5/o-series y los modelos sin razonamiento conservan temperature=0."""
+
+    def _patch_settings(self, monkeypatch, effort: str) -> None:
+        from types import SimpleNamespace
+
+        import agent_titulo.runner as runner_module
+
+        monkeypatch.setattr(
+            runner_module,
+            "get_settings",
+            lambda: SimpleNamespace(
+                OPENAI_API_KEY="sk-test",
+                LEGAL_TITLE_AGENT_REASONING_EFFORT=effort,
+            ),
+        )
+
+    def test_gpt5_uses_reasoning_effort_and_no_temperature(self, monkeypatch):
+        import agent_titulo.runner as runner_module
+
+        self._patch_settings(monkeypatch, "high")
+        client = runner_module._get_llm_client("openai", "gpt-5.5", 300)
+        assert getattr(client, "reasoning_effort", None) == "high"
+        assert getattr(client, "temperature", None) is None
+
+    def test_gpt5_without_effort_omits_reasoning_effort(self, monkeypatch):
+        import agent_titulo.runner as runner_module
+
+        self._patch_settings(monkeypatch, "")
+        client = runner_module._get_llm_client("openai", "gpt-5.5", 300)
+        assert not getattr(client, "reasoning_effort", None)
+
+    def test_non_reasoning_model_keeps_temperature(self, monkeypatch):
+        import agent_titulo.runner as runner_module
+
+        self._patch_settings(monkeypatch, "high")
+        client = runner_module._get_llm_client("openai", "gpt-4o", 300)
+        assert getattr(client, "temperature", None) == 0.0
+        assert not getattr(client, "reasoning_effort", None)
