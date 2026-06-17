@@ -890,6 +890,14 @@ export interface components {
       "value_json"?: Record<string, unknown> | Array<unknown> | null
       "value_text"?: string | null
     }
+    "VariableUpsertRequest": {
+      "correction_reason"?: string | null
+      "reviewed_by"?: string | null
+      "state"?: string
+      "value_json"?: Record<string, unknown> | Array<unknown> | null
+      "value_text"?: string | null
+      "variable_key": string
+    }
   }
 }
 
@@ -1223,6 +1231,12 @@ export interface operations {
     path: "/api/v1/legal-titles/{analysis_id}/narrative"
     requestBody: components["schemas"]["TitleNarrativeUpdateRequest"]
     response: components["schemas"]["TitleAnalysisNarrative"]
+  }
+  "upsert_legal_variable_api_v1_legal_variables_by_key_put": {
+    method: "PUT"
+    path: "/api/v1/legal-variables/by-key"
+    requestBody: components["schemas"]["VariableUpsertRequest"]
+    response: components["schemas"]["VariableReviewResponse"]
   }
   "get_project_legal_variables_api_v1_legal_variables_project__project_id__get": {
     method: "GET"

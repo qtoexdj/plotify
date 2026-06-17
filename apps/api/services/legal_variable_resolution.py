@@ -20,6 +20,7 @@ from schemas.legal_variables import (
     VariableResolutionResponse,
     VariableReviewResponse,
     VariableUpdateRequest,
+    VariableUpsertRequest,
 )
 from services.legal_variable_catalog import (
     READINESS_REQUIRED_VARIABLES_BY_GATE,
@@ -1128,6 +1129,168 @@ async def update_legal_variable(
         reviewed_by=str(updated.get("reviewed_by") or mutation.reviewed_by),
         reviewed_at=updated.get("reviewed_at") or mutation.reviewed_at,
         audit_event_id=str(audit_row["id"]),
+    )
+
+
+async def upsert_project_variable(
+    *,
+    organization_id: str,
+    project_id: str,
+    payload: VariableUpsertRequest,
+    supabase: Any | None = None,
+) -> VariableReviewResponse:
+    """SDD 011 (A4): fija el valor de una variable a scope proyecto por su clave.
+
+    Si la variable ya tiene fila, delega en el flujo de revisión existente
+    (auditado). Si no existe (caso típico de las variables de autoría/manuales
+    que el extractor no produce: plano CBR, mandatario), crea la fila con el
+    valor y registra la decisión. Permite que el abogado resuelva esas
+    variables desde el editor sin sembrarlas a mano en la base."""
+    client = supabase or _get_supabase_client()
+    if not payload.reviewed_by:
+        raise LegalVariableResolutionError("reviewed_by is required for variable upsert.")
+    variable_key = payload.variable_key
+    group = variable_group_for_key(variable_key)
+    if not is_variable_key(variable_key) or group is None:
+        raise LegalVariableResolutionError(f"Unknown variable key: {variable_key}")
+
+    existing = await _fetch_project_variable_by_key(
+        supabase=client,
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_key=variable_key,
+    )
+    if existing is not None:
+        action = "mark_not_applicable" if payload.state == "not_applicable" else "edit"
+        update_req = VariableUpdateRequest(
+            action=action,
+            value_text=payload.value_text,
+            value_json=payload.value_json,
+            state=payload.state if action == "edit" else None,
+            correction_reason=payload.correction_reason,
+            reviewed_by=payload.reviewed_by,
+        )
+        return await update_legal_variable(
+            variable_resolution_id=str(existing["id"]),
+            organization_id=organization_id,
+            project_id=project_id,
+            payload=update_req,
+            supabase=client,
+        )
+
+    now = datetime.now(UTC)
+    value_text = _normalized_payload_text(payload.value_text)
+    if payload.state != "not_applicable" and not _has_review_value(value_text, payload.value_json):
+        raise LegalVariableResolutionError("Manual variable upsert requires a value.")
+    insert_payload = {
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "lot_id": None,
+        "escritura_case_id": None,
+        "variable_key": variable_key,
+        "variable_group": group,
+        "value_text": None if payload.state == "not_applicable" else value_text,
+        "value_json": payload.value_json,
+        "state": payload.state,
+        "source_type": "manual",
+        "reviewed_by": payload.reviewed_by,
+        "reviewed_at": now.isoformat(),
+        "correction_reason": payload.correction_reason,
+    }
+    inserted = await _insert_variable_resolution_row(
+        supabase=client, insert_payload=insert_payload
+    )
+    decision_payload = {
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "lot_id": None,
+        "escritura_case_id": None,
+        "variable_resolution_id": inserted["id"],
+        "decision_type": "manual_override",
+        "decision_status": "approved",
+        "reason": payload.correction_reason,
+        "decided_by": payload.reviewed_by,
+        "decided_at": now.isoformat(),
+    }
+    try:
+        audit_row = await _insert_legal_review_decision(
+            supabase=client, decision_payload=decision_payload
+        )
+    except Exception as exc:
+        await _delete_variable_resolution_row(
+            supabase=client, variable_resolution_id=str(inserted["id"])
+        )
+        raise LegalVariableAuditError(
+            "Legal variable upsert audit could not be persisted."
+        ) from exc
+
+    logger.info(
+        "legal_variable_upserted",
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_key=variable_key,
+        state=payload.state,
+        audit_event_id=str(audit_row["id"]),
+    )
+    return VariableReviewResponse(
+        variable_resolution_id=str(inserted["id"]),
+        state=str(inserted.get("state") or payload.state),
+        reviewed_by=str(inserted.get("reviewed_by") or payload.reviewed_by),
+        reviewed_at=inserted.get("reviewed_at") or now.isoformat(),
+        audit_event_id=str(audit_row["id"]),
+    )
+
+
+async def _fetch_project_variable_by_key(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+    variable_key: str,
+) -> dict[str, Any] | None:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .select("*")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .is_("lot_id", "null")
+            .is_("escritura_case_id", "null")
+            .eq("variable_key", variable_key)
+            .neq("state", "superseded")
+            .limit(1)
+            .execute()
+        )
+    )
+    return _first_row(result)
+
+
+async def _insert_variable_resolution_row(
+    *,
+    supabase: Any,
+    insert_payload: dict[str, Any],
+) -> dict[str, Any]:
+    result = await asyncio.to_thread(
+        lambda: supabase.table("variable_resolutions").insert(insert_payload).execute()
+    )
+    row = _first_row(result)
+    if not row:
+        raise LegalVariableResolutionError("Variable resolution insert returned no row.")
+    return row
+
+
+async def _delete_variable_resolution_row(
+    *,
+    supabase: Any,
+    variable_resolution_id: str,
+) -> None:
+    await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .delete()
+            .eq("id", variable_resolution_id)
+            .execute()
+        )
     )
 
 

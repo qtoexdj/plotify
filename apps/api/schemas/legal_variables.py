@@ -229,6 +229,33 @@ class VariableUpdateRequest(LegalVariableBaseModel):
         return value
 
 
+class VariableUpsertRequest(LegalVariableBaseModel):
+    """SDD 011: fija el valor de una variable de proyecto por su clave, creando
+    la fila si no existe (variables de autoría/manuales que el extractor no
+    produce, p. ej. plano CBR o mandatario)."""
+
+    variable_key: str
+    value_text: str | None = None
+    value_json: dict[str, Any] | list[Any] | None = None
+    state: str = "resolved"
+    correction_reason: str | None = None
+    reviewed_by: str | None = None
+
+    @field_validator("variable_key")
+    @classmethod
+    def validate_variable_key(cls, value: str) -> str:
+        if not catalog.is_variable_key(value):
+            raise ValueError(f"Unknown variable key: {value}")
+        return value
+
+    @field_validator("state")
+    @classmethod
+    def validate_state(cls, value: str) -> str:
+        if value not in {"resolved", "not_applicable"}:
+            raise ValueError(f"Unsupported upsert state: {value}")
+        return value
+
+
 class VariableReviewResponse(LegalVariableResponseModel):
     variable_resolution_id: str
     state: str

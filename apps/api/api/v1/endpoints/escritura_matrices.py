@@ -58,10 +58,9 @@ from services.matriz_docx_renderer import (
     MatrizDocxError,
     render_minuta_docx,
 )
-from services.escritura_operational_bridge import (
-    DERIVED_VARIABLE_KEYS,
-    LOT_GEOMETRY_VARIABLE_KEYS,
-    LOT_RECORD_VARIABLE_KEYS,
+from services.legal_variable_catalog import (
+    NON_BLOCKING_PROJECT_MATRIZ_KEYS,
+    SALE_SCOPED_VARIABLE_KEYS,
 )
 from services.escritura_readiness import fetch_project_matriz_snapshot
 from services.escritura_delivery import deliver_draft, delivery_status_label
@@ -111,17 +110,11 @@ PROJECT_MATRIZ_MISSING_CODE = "project_matriz_approval_missing"
 INSERTABLE_VARIABLES: list[dict[str, str]] = insertable_variables_catalog()
 
 # SDD 011 (FR-002/FR-003): claves que solo se llenan al vender el lote (datos
-# de la venta + geometria del lote + derivadas). En la matriz del PROYECTO son
+# de la venta + geometria del lote + servidumbre). En la matriz del PROYECTO son
 # huecos por diseño ("esperando ventas"): se renderizan como huecos pero NO
-# bloquean la aprobacion. Se normalizan sin el sufijo `[]` de arrays.
-PROJECT_MATRIZ_GAP_KEYS: frozenset[str] = frozenset(
-    key.removesuffix("[]")
-    for key in (
-        *LOT_RECORD_VARIABLE_KEYS,
-        *LOT_GEOMETRY_VARIABLE_KEYS,
-        *DERIVED_VARIABLE_KEYS,
-    )
-)
+# bloquean la aprobacion. Fuente unica: la clasificacion de productor del
+# catalogo (`SALE_SCOPED_VARIABLE_KEYS`), ya normalizada sin el sufijo `[]`.
+PROJECT_MATRIZ_GAP_KEYS: frozenset[str] = SALE_SCOPED_VARIABLE_KEYS
 
 
 def _first_row(data: Any) -> dict[str, Any] | None:
@@ -911,8 +904,10 @@ async def _lazy_create_project_matrix(
 
 
 def _is_project_gap_key(key: str) -> bool:
-    """True si la clave es un dato de venta (hueco por diseño en el proyecto)."""
-    return key.removesuffix("[]") in PROJECT_MATRIZ_GAP_KEYS
+    """True si la clave es un hueco por diseño en la matriz del proyecto: dato
+    de venta (comprador/precio/lote/servidumbre) o dato de firma
+    (notaria/otorgamiento). Ninguno bloquea la aprobación."""
+    return key.removesuffix("[]") in NON_BLOCKING_PROJECT_MATRIZ_KEYS
 
 
 def _project_approval_blockers(
