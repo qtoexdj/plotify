@@ -6,7 +6,7 @@ import hashlib
 import asyncio
 import json
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence
 from dataclasses import dataclass
 
@@ -1274,12 +1274,20 @@ async def request_title_reanalysis(
         )
 
     source_content_hash = compute_source_content_hash(source_documents)
+    settings = get_settings()
     # "Reanalizar" explícito SIEMPRE re-corre: el usuario lo pidió y pudo haber
     # cambiado el modelo o el nivel de razonamiento, que NO entran en el hash de
     # contenido. La idempotencia por contenido sigue protegiendo el camino
     # automático (run_title_analysis en el worker). Aquí solo bloqueamos si ya
-    # hay una corrida en proceso, para no encolar dos a la vez.
+    # hay una corrida RECIENTE en proceso, para no encolar dos a la vez. Una fila
+    # `processing` más vieja que el presupuesto del job es un zombie (worker
+    # caído/reiniciado a mitad de corrida): se considera abandonada y se la
+    # supersede para poder re-correr — si no, el estudio queda pegado para siempre.
     if hasattr(client, "table"):
+        recent_cutoff = (
+            datetime.now(timezone.utc)
+            - timedelta(seconds=settings.LEGAL_TITLE_AGENT_TIMEOUT_SECONDS + 120)
+        ).isoformat()
         processing_result = await _run_supabase(
             lambda: (
                 client.table("title_analyses")
@@ -1287,6 +1295,7 @@ async def request_title_reanalysis(
                 .eq("organization_id", organization_id)
                 .eq("project_id", project_id)
                 .eq("status", "processing")
+                .gte("updated_at", recent_cutoff)
                 .limit(1)
                 .execute()
             )
@@ -1301,7 +1310,6 @@ async def request_title_reanalysis(
         organization_id=organization_id,
         project_id=project_id,
     )
-    settings = get_settings()
     placeholder = await _insert_title_analysis(
         supabase=client,
         payload={

@@ -67,6 +67,10 @@ class FakeQuery:
         self._filters.append(("like", column, pattern))
         return self
 
+    def gte(self, column, value):
+        self._filters.append(("gte", column, value))
+        return self
+
     def order(self, *_args, **_kwargs):
         return self
 
@@ -88,6 +92,8 @@ class FakeQuery:
             if op == "in" and str(current) not in {str(v) for v in value}:
                 return False
             if op == "like" and not str(current).startswith(str(value).rstrip("%")):
+                return False
+            if op == "gte" and (current is None or str(current) < str(value)):
                 return False
         return True
 
@@ -172,6 +178,7 @@ def _analysis_row(**overrides) -> dict:
         "approved_by": None,
         "approved_at": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     row.update(overrides)
     return row
@@ -373,6 +380,36 @@ class TestReanalyzeProjectTitle:
         )
         assert response.status_code == 409
         redis_mock.enqueue_job.assert_not_called()
+
+    def test_stale_processing_run_is_treated_as_abandoned(
+        self, monkeypatch, title_documents, redis_mock
+    ):
+        """SDD 011: una corrida 'processing' más vieja que el presupuesto del job
+        es un zombie (worker caído/reiniciado a mitad de corrida). 'Reanalizar'
+        debe re-correr en vez de quedar pegado en 409 para siempre."""
+        from datetime import timedelta
+
+        stale_ts = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        zombie = _analysis_row(
+            status="processing",
+            source_content_hash=_source_hash(title_documents),
+            updated_at=stale_ts,
+        )
+        fake = FakeSupabase(
+            seed_documents=title_documents,
+            store={"title_analyses": [zombie]},
+        )
+        _use_fake_supabase(monkeypatch, fake)
+        response = _client(_build_app(redis_mock)).post(
+            f"/api/v1/legal-titles/project/{PROJECT_ID}/reanalyze",
+            params={"organization_id": ORG_ID},
+        )
+        assert response.status_code == 202
+        payload = response.json()
+        assert payload["queued"] is True
+        assert payload["status"] == "processing"
+        assert payload["analysis_id"] != zombie["id"]
+        redis_mock.enqueue_job.assert_awaited_once()
 
     def test_422_when_no_title_documents(self, monkeypatch, redis_mock):
         fake = FakeSupabase(seed_documents=[])
