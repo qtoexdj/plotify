@@ -71,6 +71,10 @@ class FakeQuery:
         self._filters.append(("gte", column, value))
         return self
 
+    def lt(self, column, value):
+        self._filters.append(("lt", column, value))
+        return self
+
     def order(self, *_args, **_kwargs):
         return self
 
@@ -94,6 +98,8 @@ class FakeQuery:
             if op == "like" and not str(current).startswith(str(value).rstrip("%")):
                 return False
             if op == "gte" and (current is None or str(current) < str(value)):
+                return False
+            if op == "lt" and (current is None or str(current) >= str(value)):
                 return False
         return True
 
@@ -259,6 +265,48 @@ class TestGetProjectTitleCase:
         assert data["status"] == "proposed"
         assert data["narrative"]["primero"]["effective"] == row["narrative_primero_generated"]
         assert len(data["source_documents"]) == 2
+
+    def test_stale_processing_is_surfaced_as_failed(
+        self, monkeypatch, title_documents, redis_mock
+    ):
+        """SDD 011: una corrida 'processing' zombie (worker caído a mitad) se
+        reporta como 'failed' al leer, para que el panel deje de hacer polling
+        infinito y ofrezca 'Reanalizar'."""
+        from datetime import timedelta
+
+        stale_ts = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        zombie = _analysis_row(status="processing", updated_at=stale_ts)
+        fake = FakeSupabase(
+            seed_documents=title_documents,
+            store={"title_analyses": [zombie]},
+        )
+        _use_fake_supabase(monkeypatch, fake)
+        response = _client(_build_app(redis_mock)).get(
+            f"/api/v1/legal-titles/project/{PROJECT_ID}",
+            params={"organization_id": ORG_ID},
+        )
+        assert response.status_code == 200
+        assert response.json()["analysis"]["status"] == "failed"
+
+    def test_recent_processing_stays_processing(
+        self, monkeypatch, title_documents, redis_mock
+    ):
+        """Una corrida real en vuelo (updated_at reciente) NO se marca fallida."""
+        running = _analysis_row(
+            status="processing",
+            updated_at=datetime.now(timezone.utc).isoformat(),
+        )
+        fake = FakeSupabase(
+            seed_documents=title_documents,
+            store={"title_analyses": [running]},
+        )
+        _use_fake_supabase(monkeypatch, fake)
+        response = _client(_build_app(redis_mock)).get(
+            f"/api/v1/legal-titles/project/{PROJECT_ID}",
+            params={"organization_id": ORG_ID},
+        )
+        assert response.status_code == 200
+        assert response.json()["analysis"]["status"] == "processing"
 
     def test_404_when_no_title_documents(self, monkeypatch, redis_mock):
         fake = FakeSupabase(seed_documents=[])

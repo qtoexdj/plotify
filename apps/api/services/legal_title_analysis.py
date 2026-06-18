@@ -529,6 +529,42 @@ async def _supersede_current_title_analyses(
     )
 
 
+async def _fail_stale_processing_analysis(
+    *,
+    supabase: Any,
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    """Si la fila está `processing` pero más vieja que el presupuesto del job, es
+    un zombie (worker caído/reiniciado a mitad de corrida). Se marca `failed`
+    (abandoned) de forma perezosa al leer, para que el panel deje de hacer
+    polling infinito y ofrezca "Reanalizar". El `.lt(updated_at)` garantiza que
+    NUNCA se toca una corrida real en vuelo (su updated_at es reciente)."""
+    if not hasattr(supabase, "table") or str(row.get("status")) != "processing":
+        return row
+    settings = get_settings()
+    cutoff = (
+        datetime.now(timezone.utc)
+        - timedelta(seconds=settings.LEGAL_TITLE_AGENT_TIMEOUT_SECONDS + 120)
+    ).isoformat()
+    result = await _run_supabase(
+        lambda: (
+            supabase.table("title_analyses")
+            .update({"status": "failed", "failure_code": "abandoned"})
+            .eq("id", str(row["id"]))
+            .eq("status", "processing")
+            .lt("updated_at", cutoff)
+            .execute()
+        )
+    )
+    if _first_row(result):
+        logger.info(
+            "title_analysis_stale_processing_marked_failed",
+            analysis_id=str(row.get("id")),
+        )
+        return {**row, "status": "failed", "failure_code": "abandoned"}
+    return row
+
+
 async def _insert_title_analysis(
     *,
     supabase: Any,
@@ -1228,6 +1264,7 @@ async def get_project_title_case(
         row = _first_row(result)
 
     if row is not None:
+        row = await _fail_stale_processing_analysis(supabase=client, row=row)
         return _hydrate_title_analysis_row(row, source_documents=source_documents)
     if not source_documents:
         return None
