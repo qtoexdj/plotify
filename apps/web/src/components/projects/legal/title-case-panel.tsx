@@ -1,6 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Loader2 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -65,6 +73,29 @@ export function describeSourceDocuments(analysis: ProjectTitleCase | null): stri
   return [...counts.entries()]
     .map(([type, count]) => `${count} ${SOURCE_DOCUMENT_TYPE_LABELS[type] ?? type}`)
     .join(', ')
+}
+
+/** "45 s" / "2 min 05 s" — tiempo transcurrido del análisis en curso. */
+export function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds} s`
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins} min ${String(secs).padStart(2, '0')} s`
+}
+
+/** Contador de tiempo del análisis. Se monta solo dentro del diálogo de carga,
+ * así arranca en 0 cada vez sin resets manuales. */
+function ProcessingTimer() {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setElapsed((value) => value + 1), 1000)
+    return () => window.clearInterval(intervalId)
+  }, [])
+  return (
+    <p className="text-center text-[11px] text-muted-foreground" aria-live="polite">
+      {formatElapsed(elapsed)} transcurridos
+    </p>
+  )
 }
 
 /** Human-readable checklist entry for a server-side approval blocking item. */
@@ -182,6 +213,9 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
   }, [analysis, projectId])
 
   const state = deriveTitlePanelState(analysis)
+  // El agente corre en background; mientras encola o procesa, mostramos un
+  // diálogo de carga para que se note que está trabajando.
+  const showProcessing = reanalyzing || state === 'processing'
 
   if (loading) {
     return (
@@ -457,6 +491,32 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
       )}
 
       {actionError && <p className="text-[11px] text-red-600 dark:text-red-400">{actionError}</p>}
+
+      <AlertDialog open={showProcessing}>
+        <AlertDialogContent className="sm:max-w-md" data-testid="title-processing-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin text-blue-600" aria-hidden="true" />
+              Analizando el título…
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              El agente está leyendo los documentos y reconstruyendo la cadena de adquisición. Con
+              razonamiento profundo puede tomar unos minutos; esta vista se actualizará sola al
+              terminar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div
+            className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-label="Procesando análisis de título"
+          >
+            <div className="h-full w-full animate-pulse rounded-full bg-blue-600" />
+          </div>
+
+          {showProcessing && <ProcessingTimer />}
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   )
 }
