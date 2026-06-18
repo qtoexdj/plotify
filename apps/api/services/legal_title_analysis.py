@@ -546,10 +546,13 @@ async def _fail_stale_processing_analysis(
         datetime.now(timezone.utc)
         - timedelta(seconds=settings.LEGAL_TITLE_AGENT_TIMEOUT_SECONDS + 120)
     ).isoformat()
+    # `timeout` es el failure_code válido más cercano (la corrida nunca terminó
+    # dentro de su presupuesto); el catálogo de title_analyses_failure_code_check
+    # no incluye un código "abandoned".
     result = await _run_supabase(
         lambda: (
             supabase.table("title_analyses")
-            .update({"status": "failed", "failure_code": "abandoned"})
+            .update({"status": "failed", "failure_code": "timeout"})
             .eq("id", str(row["id"]))
             .eq("status", "processing")
             .lt("updated_at", cutoff)
@@ -561,7 +564,7 @@ async def _fail_stale_processing_analysis(
             "title_analysis_stale_processing_marked_failed",
             analysis_id=str(row.get("id")),
         )
-        return {**row, "status": "failed", "failure_code": "abandoned"}
+        return {**row, "status": "failed", "failure_code": "timeout"}
     return row
 
 
