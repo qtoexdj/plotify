@@ -39,6 +39,16 @@ class Settings(BaseSettings):
     LEGAL_TEXT_OCR_ENABLED: bool = False
     LEGAL_TEXT_OCR_DPI: int = 300
     LEGAL_TEXT_OCR_TIMEOUT: int = 30
+    # SDD 009: transcripción por VISIÓN de PDFs escaneados (dominios vigentes
+    # del CBR = imagen escaneada + capa de texto del certificado). El modelo
+    # multimodal lee el PDF directo (Responses API input_file) y transcribe el
+    # contenido escaneado a texto fiel; alimenta el pipeline de texto existente
+    # con su verificación. Reemplaza al OCR clásico (tesseract) para estos docs.
+    LEGAL_TEXT_VISION_ENABLED: bool = False
+    LEGAL_TEXT_VISION_MODEL: str = "gpt-5.5"
+    LEGAL_TEXT_VISION_PROVIDER: str = "openai"
+    LEGAL_TEXT_VISION_REASONING_EFFORT: str = "low"
+    LEGAL_TEXT_VISION_TIMEOUT_SECONDS: int = 240
 
     # SDD 009 legal title agent settings
     LEGAL_TITLE_AGENT_ENABLED: bool = False

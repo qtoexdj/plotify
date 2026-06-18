@@ -13,13 +13,21 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
+from core.logger import get_logger
 from services.legal_variable_catalog import (
     DOCUMENT_INGESTION_JOB_STATUS_SET,
     LEGAL_DOCUMENT_EXTRACTION_STATUS_SET,
 )
 
+logger = get_logger(__name__)
+
 PIPELINE_VERSION = "sdd_007_text_extraction_v1"
 PDF_LOW_TEXT_CHAR_THRESHOLD = 100
+# SDD 009: una página con imágenes escaneadas y MENOS texto digital que este
+# umbral es un escaneo + capa de certificado (no contenido digital completo):
+# candidata a transcripción por visión. La heurística char_count<100 no la
+# detecta porque el certificado aporta ~400-600 chars.
+PDF_VISION_TEXT_THRESHOLD = 1500
 SUPPORTED_TEXT_MIME_TYPES = frozenset(
     {
         "text/plain",
@@ -276,18 +284,39 @@ def _extract_pdf_text_pages(source: LegalDocumentExtractionSource) -> LegalTextE
                 raise EncryptedLegalTextExtractionError(
                     "Encrypted PDF cannot be extracted without a password."
                 )
-        pages = tuple(
-            ExtractedLegalTextPage(
-                page_number=index,
-                page_kind="physical",
-                text_content=(page.extract_text() or "").strip(),
+        page_list: list[ExtractedLegalTextPage] = []
+        image_counts: dict[int, int] = {}
+        for index, page in enumerate(reader.pages, start=1):
+            page_list.append(
+                ExtractedLegalTextPage(
+                    page_number=index,
+                    page_kind="physical",
+                    text_content=(page.extract_text() or "").strip(),
+                )
             )
-            for index, page in enumerate(reader.pages, start=1)
-        )
+            try:
+                image_counts[index] = len(page.images)
+            except Exception:
+                image_counts[index] = 0
+        pages = tuple(page_list)
     except LegalTextExtractionError:
         raise
     except Exception as exc:
         raise LegalTextExtractionError(f"Unable to extract text from PDF: {exc}") from exc
+
+    # SDD 009: PDF escaneado (imágenes) con poco texto digital → transcribir por
+    # visión, que lee el contenido escaneado que la extracción de texto pierde.
+    from core.config import get_settings
+
+    settings = get_settings()
+    scanned_pages = tuple(
+        page.page_number
+        for page in pages
+        if image_counts.get(page.page_number, 0) >= 1
+        and page.char_count < PDF_VISION_TEXT_THRESHOLD
+    )
+    if settings.LEGAL_TEXT_VISION_ENABLED and scanned_pages:
+        return _extract_pdf_vision_pages(source, digital_pages=pages)
 
     non_empty_pages = tuple(page for page in pages if page.text_content)
     pages_needing_ocr = tuple(
@@ -313,6 +342,75 @@ def _extract_pdf_text_pages(source: LegalDocumentExtractionSource) -> LegalTextE
             "mime_type": source.mime_type,
             "storage_bucket": source.storage_bucket,
             "storage_path": source.storage_path,
+        },
+    )
+
+
+def _extract_pdf_vision_pages(
+    source: LegalDocumentExtractionSource,
+    *,
+    digital_pages: tuple[ExtractedLegalTextPage, ...],
+) -> LegalTextExtractionResult:
+    """Transcribe el PDF con el modelo multimodal, que lee el contenido
+    escaneado que la extracción de texto pierde. Si falla, cae al texto digital
+    extraído (mejor que nada) marcando ``ocr_required`` para revisión."""
+    from core.config import get_settings
+    from services.legal_text_vision import (
+        LegalVisionTranscriptionError,
+        transcribe_pdf_with_vision_sync,
+    )
+
+    base_stats = {
+        "page_count": len(digital_pages),
+        "raw_sha256_hash": checksum_bytes(source.content),
+        "mime_type": source.mime_type,
+        "storage_bucket": source.storage_bucket,
+        "storage_path": source.storage_path,
+    }
+    digital_fallback = tuple(p for p in digital_pages if p.text_content) or digital_pages
+
+    try:
+        transcript = transcribe_pdf_with_vision_sync(source.content)
+    except LegalVisionTranscriptionError as exc:
+        logger.warning("legal_text_vision_failed", error=str(exc))
+        return LegalTextExtractionResult(
+            pages=digital_fallback,
+            converter="pdf_text",
+            stats={**base_stats, "vision_status": "failed", "ocr_required": True},
+        )
+
+    vision_pages = tuple(
+        ExtractedLegalTextPage(
+            page_number=int(page_number),
+            page_kind="physical",
+            text_content=text.strip(),
+        )
+        for page_number, text in transcript
+        if text.strip()
+    )
+    if not vision_pages:
+        return LegalTextExtractionResult(
+            pages=digital_fallback,
+            converter="pdf_text",
+            stats={**base_stats, "vision_status": "empty", "ocr_required": True},
+        )
+
+    logger.info(
+        "legal_text_vision_transcribed",
+        page_count=len(vision_pages),
+        char_count=sum(p.char_count for p in vision_pages),
+    )
+    return LegalTextExtractionResult(
+        pages=vision_pages,
+        converter="vision",
+        stats={
+            **base_stats,
+            "vision_status": "ok",
+            "vision_model": get_settings().LEGAL_TEXT_VISION_MODEL,
+            "text_page_count": len(vision_pages),
+            "empty_page_count": 0,
+            "char_count": sum(p.char_count for p in vision_pages),
+            "ocr_required": False,
         },
     )
 
