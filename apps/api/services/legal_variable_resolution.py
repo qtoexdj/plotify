@@ -103,7 +103,8 @@ _SII_CERTIFICATE_NUMBER_RE = re.compile(
     re.IGNORECASE,
 )
 _SII_CERTIFICATE_DATE_RE = re.compile(
-    r"(?:fecha\s+(?:de\s+)?(?:emisi[oó]n|certificado)|emitido\s+con\s+fecha)\s*"
+    # "FECHA DE EMISIÓN: 12/08/2024" — el ':' va entre la etiqueta y la fecha.
+    r"(?:fecha\s+(?:de\s+)?(?:emisi[oó]n|certificado)|emitido\s+con\s+fecha)\s*:?\s*"
     r"(?P<date>\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})",
     re.IGNORECASE,
 )
@@ -190,8 +191,12 @@ _SAG_REGION_RE = re.compile(
     re.IGNORECASE,
 )
 _SAG_OFFICE_RE = re.compile(
-    r"(?:oficina\s+(?:sectorial\s+)?SAG|SAG\s+oficina\s+sectorial)\s+"
-    r"(?P<office>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{2,80}?)(?=\.|,|;|$)",
+    # "El Jefe de Oficina Sectorial Curicó del Servicio Agrícola…" — el nombre
+    # de la oficina va inmediatamente después de "Sectorial" y termina antes de
+    # "del/de"/"SAG"/puntuación. Acepta un "SAG" intermedio opcional.
+    r"oficina\s+sectorial\s+(?:SAG\s+)?"
+    r"(?P<office>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{1,60}?)"
+    r"(?=\s+del?\b|\s+SAG\b|\.|,|;|$)",
     re.IGNORECASE,
 )
 _PLANO_CBR_RE = re.compile(
@@ -1792,8 +1797,24 @@ def normalize_document_page(
     )
 
 
+# Ligaduras tipográficas latinas (ﬁ, ﬂ, …) que aparecen en la capa de texto de
+# muchos PDFs del CBR/SAG: "Oﬁcina" rompe regex que buscan "oficina". Las
+# expandimos a sus letras para que la extracción matchee.
+_LIGATURES = str.maketrans(
+    {
+        "ﬀ": "ff",
+        "ﬁ": "fi",
+        "ﬂ": "fl",
+        "ﬃ": "ffi",
+        "ﬄ": "ffl",
+        "ﬅ": "ft",
+        "ﬆ": "st",
+    }
+)
+
+
 def normalize_whitespace(text: str) -> str:
-    return re.sub(r"\s+", " ", text.replace("\r", "\n")).strip()
+    return re.sub(r"\s+", " ", text.replace("\r", "\n").translate(_LIGATURES)).strip()
 
 
 def clean_legal_value(value: str | None) -> str:

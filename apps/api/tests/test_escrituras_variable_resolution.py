@@ -741,6 +741,58 @@ def test_sag_plano_rules_extract_clear_certificate_and_plan_outputs():
     )
 
 
+def test_sag_office_survives_fi_ligature_in_pdf_text():
+    # PDFs del CBR/SAG traen la ligadura "ﬁ" (U+FB01): "Oﬁcina Sectorial Curicó".
+    # normalize_whitespace la expande para que el regex matchee.
+    service = LegalVariableResolutionService()
+    page = LegalDocumentPageInput(
+        id=PLANO_PAGE_ID,
+        legal_document_id=PLANO_DOCUMENT_ID,
+        page_number=1,
+        text_content=(
+            "CERTIFICADO Nº 1468/2024. "
+            "El Jefe de Oﬁcina Sectorial Curicó del Servicio Agrícola y Ganadero, "
+            "Región del Maule en ejercicio certifica."
+        ),
+    )
+
+    classified = service.extract_sag_plano_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=PLANO_DOCUMENT_ID,
+        pages=(page,),
+    )
+    by_key = {item.proposal.variable_key: item for item in classified}
+
+    assert by_key["sag.oficina_sectorial"].proposal.value_text == "Curicó"
+    assert by_key["sag.region_oficina"].proposal.value_text == "Región del Maule"
+
+
+def test_sii_emission_date_with_colon_uppercase_label():
+    # Cert real: "FECHA DE EMISIÓN: 12/08/2024" — el ':' separa etiqueta y fecha.
+    service = LegalVariableResolutionService()
+    page = LegalDocumentPageInput(
+        id=SII_PAGE_ID,
+        legal_document_id=SII_DOCUMENT_ID,
+        page_number=1,
+        text_content=(
+            "ASIGNACIÓN DE ROLES DE AVALÚO "
+            "CERTIFICADO N° 972575 FECHA DE EMISIÓN: 12/08/2024 "
+            "DATOS DE LA SOLICITUD F2118 Comuna TENO."
+        ),
+    )
+
+    classified = service.extract_sii_roles_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=SII_DOCUMENT_ID,
+        pages=(page,),
+    )
+    by_key = {item.proposal.variable_key: item for item in classified}
+
+    assert by_key["sii.certificado_fecha_emision"].proposal.value_text == "12/08/2024"
+
+
 def test_sag_certificate_extracts_article_two_header_values_from_certificate_layout():
     service = LegalVariableResolutionService()
     page = LegalDocumentPageInput(
