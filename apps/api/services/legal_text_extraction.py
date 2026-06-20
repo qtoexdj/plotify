@@ -379,14 +379,17 @@ def _extract_pdf_vision_pages(
             stats={**base_stats, "vision_status": "failed", "ocr_required": True},
         )
 
+    # Renumeramos 1-based por orden: el número de página que devuelve el modelo
+    # no es confiable (puede venir 0 o no secuencial) y `page_number > 0` es un
+    # CHECK de legal_document_pages.
+    transcript_texts = [text.strip() for _, text in transcript if text.strip()]
     vision_pages = tuple(
         ExtractedLegalTextPage(
-            page_number=int(page_number),
+            page_number=index,
             page_kind="physical",
-            text_content=text.strip(),
+            text_content=text,
         )
-        for page_number, text in transcript
-        if text.strip()
+        for index, text in enumerate(transcript_texts, start=1)
     )
     if not vision_pages:
         return LegalTextExtractionResult(

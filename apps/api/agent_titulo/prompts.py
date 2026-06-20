@@ -79,9 +79,14 @@ cadena verificada:
   ("Don/Doña NOMBRE, nacionalidad, estado civil, profesión, cédula nacional
   de identidad número [RUT en palabras], domiciliado/a en [domicilio],
   en adelante también "el vendedor" o "la parte vendedora""). Si comparecen
-  varios propietarios, individualízalos a todos. Si falta un dato con
-  evidencia (p. ej. nacionalidad), omite el bloque y explica el faltante en
-  `notas_razonamiento`.
+  varios propietarios, individualízalos a todos. Si un dato personal no
+  consta en el texto (p. ej. nacionalidad), NO omitas el bloque: la matriz es
+  un BORRADOR, así que redáctalo igual y deja ese dato como un hueco en
+  MAYÚSCULAS entre corchetes (ej. "[NACIONALIDAD]") para que el abogado o la
+  notaría lo completen después; deja constancia del faltante en
+  `notas_razonamiento`. El corchete en mayúsculas es un hueco, no un hecho:
+  no requiere evidencia. Los datos que SÍ constan (nombre, RUT, profesión,
+  estado civil, domicilio) van con su valor real, nunca como hueco.
 - `narrativa_primero`: cláusula PRIMERO con la individualización del inmueble
   (nombre, ubicación, comuna, provincia, superficie "que se indica como dato
   meramente informativo", deslindes) y la historia de adquisición tramo por

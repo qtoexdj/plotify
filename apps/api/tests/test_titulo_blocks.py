@@ -216,6 +216,24 @@ class TestBlockFactCheck:
         assert not result.ok
         assert any("Minghel" in issue.hecho for issue in result.issues)
 
+    def test_bracketed_hueco_is_not_flagged_as_fact(self):
+        # Borrador: un dato faltante (p. ej. nacionalidad) va como hueco entre
+        # corchetes en MAYÚSCULAS y NO debe marcarse como hecho sin respaldo.
+        analysis = _verified_golden_analysis()
+        comparecencia, _ = _golden_blocks()
+        with_hueco = comparecencia + " de nacionalidad [NACIONALIDAD],"
+        result = check_block_facts(with_hueco, analysis)
+        assert result.ok, [issue.as_dict() for issue in result.issues]
+        # Control: el mismo término SIN corchetes sí se marca como sin respaldo.
+        without_brackets = comparecencia + " de nacionalidad ARGENTINA,"
+        control = check_block_facts(without_brackets, analysis)
+        assert not control.ok
+        assert any(
+            issue.hecho == "ARGENTINA"
+            and issue.motivo == "nombre_sin_respaldo_verificado"
+            for issue in control.issues
+        )
+
     def test_missing_drafts_are_reported_not_hidden(self):
         analysis = _verified_golden_analysis()
         results = check_title_blocks(
