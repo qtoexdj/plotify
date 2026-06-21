@@ -645,11 +645,40 @@ class TestApproveTitleCase:
         assert response.status_code == 409
         blocking = response.json()["detail"]["blocking"]
         kinds = {(item["kind"], item.get("key") or item.get("tipo")) for item in blocking}
-        assert ("variable", "titulo.clausula_primero_texto") in kinds
-        assert ("variable", "matriz.rol_avaluo") in kinds
+        # Solo bloquea la alerta pendiente; las variables en manual_review/conflict
+        # ya NO bloquean (no hay acción de UI que las destrabe -> dead-end).
         assert ("alert", "dl_3516") in kinds
+        assert not any(item["kind"] == "variable" for item in blocking)
         # Analysis must remain untouched.
         assert fake.store["title_analyses"][0]["status"] == "proposed"
+
+    def test_approves_despite_manual_review_and_conflict_variables(
+        self, monkeypatch, redis_mock
+    ):
+        # Regresión del dead-end: con todas las alertas resueltas, un título cuyas
+        # titulo.*/matriz.* quedaron en manual_review/conflict DEBE poder aprobarse,
+        # y la aprobación las promueve a approved.
+        row = _analysis_row(
+            alerts=[{"tipo": "dl_3516", "detalle": "x", "resolution": "dismissed"}]
+        )
+        variables = [
+            _variable_row("titulo.clausula_primero_texto", "manual_review"),
+            _variable_row("titulo.inscripciones[]", "conflict"),
+            _variable_row("matriz.rol_avaluo", "conflict"),
+        ]
+        fake = FakeSupabase(
+            store={"title_analyses": [row], "variable_resolutions": variables}
+        )
+        _use_fake_supabase(monkeypatch, fake)
+        response = self._approve(_client(_build_app(redis_mock)), row["id"])
+        assert response.status_code == 200
+        states = {
+            v["variable_key"]: v["state"]
+            for v in fake.store["variable_resolutions"]
+        }
+        assert states["titulo.clausula_primero_texto"] == "approved"
+        assert states["titulo.inscripciones[]"] == "approved"
+        assert states["matriz.rol_avaluo"] == "approved"
 
     def test_409_when_status_not_approvable(self, monkeypatch, redis_mock):
         row = _analysis_row(status="failed")

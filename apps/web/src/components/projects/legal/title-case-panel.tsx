@@ -478,7 +478,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
                     data-testid="title-blocking-list"
                   >
                     {blocking.map((item, index) => (
-                      <li key={`${item.kind}-${item.key ?? item.tipo ?? index}`}>
+                      <li key={`${item.kind}-${item.key ?? item.tipo ?? 'x'}-${index}`}>
                         {formatBlockingItem(item)}
                       </li>
                     ))}

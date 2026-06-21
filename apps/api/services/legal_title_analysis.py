@@ -1603,16 +1603,12 @@ async def approve_title_case(
         organization_id=organization_id,
         project_id=project_id,
     )
-    for variable in variable_rows:
-        state = str(variable.get("state"))
-        if state in {"manual_review", "conflict"}:
-            blocking.append(
-                {
-                    "kind": "variable",
-                    "key": variable.get("variable_key"),
-                    "state": state,
-                }
-            )
+    # El único gate de aprobación son las ALERTAS pendientes: el abogado las
+    # triagea una a una (tomar en cuenta / cláusula agregada / descartar). Las
+    # variables titulo.* en manual_review/conflict NO bloquean: son flags de
+    # verificación del agente (ya cubiertos por las alertas de discrepancia) y
+    # ninguna acción de la UI las saca de ese estado, así que bloquear por ellas
+    # dejaba el caso inaprobable para siempre. Aprobar el caso ES la revisión.
     alerts_payload = row.get("alerts") if isinstance(row.get("alerts"), list) else []
     for alert in alerts_payload:
         if isinstance(alert, dict) and alert.get("resolution", "pending") == "pending":
@@ -1622,12 +1618,15 @@ async def approve_title_case(
         raise LegalTitleApprovalBlockedError(blocking)
 
     now = datetime.now(timezone.utc)
-    proposed_ids = [
+    # Al aprobar, promueve TODA titulo.* no terminal (proposed/manual_review/
+    # conflict/resolved/derived) a approved, no solo las proposed.
+    _terminal_states = {"approved", "not_applicable", "superseded"}
+    promotable_ids = [
         str(variable["id"])
         for variable in variable_rows
-        if str(variable.get("state")) == "proposed" and variable.get("id")
+        if str(variable.get("state")) not in _terminal_states and variable.get("id")
     ]
-    if proposed_ids and hasattr(client, "table"):
+    if promotable_ids and hasattr(client, "table"):
         await _run_supabase(
             lambda: (
                 client.table("variable_resolutions")
@@ -1638,7 +1637,7 @@ async def approve_title_case(
                         "reviewed_at": now.isoformat(),
                     }
                 )
-                .in_("id", proposed_ids)
+                .in_("id", promotable_ids)
                 .execute()
             )
         )
@@ -1662,7 +1661,7 @@ async def approve_title_case(
             "decision_type": "title_case_approved",
             "decision_status": "approved",
             "reason": None,
-            "decision_payload": {"approved_variable_ids": proposed_ids},
+            "decision_payload": {"approved_variable_ids": promotable_ids},
             "decided_by": approved_by,
             "decided_at": now.isoformat(),
         },
@@ -1671,6 +1670,6 @@ async def approve_title_case(
         "title_case_approved",
         analysis_id=analysis_id,
         approved_by=approved_by,
-        approved_variables=len(proposed_ids),
+        approved_variables=len(promotable_ids),
     )
     return _hydrate_title_analysis_row(approved_row)
