@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     CHECKPOINTER_CONNECT_TIMEOUT_SECONDS: float = 5.0
     CHECKPOINTER_REQUIRED: bool = False
 
+    # SDD 011: control de doble verificación (four-eyes) en la aprobación de la
+    # matriz. Si es True, el revisor que aprueba DEBE ser distinto del que envió
+    # a revisión. Default False: una mejor experiencia para operadores que
+    # trabajan solos; las orgs que necesiten segregación de funciones lo activan.
+    LEGAL_REVIEW_REQUIRE_DISTINCT_REVIEWER: bool = False
+
     # SDD 007 legal document extraction/readiness rollout controls
     ENABLE_LEGAL_DOCUMENTS: bool = True
     LEGAL_DOCUMENTS_ORG_ALLOWLIST: str = ""

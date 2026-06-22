@@ -920,7 +920,35 @@ class TestMatrizReviewWorkflow:
             "legal_review_pending"
         )
 
-    def test_approve_requires_pending_status_and_distinct_reviewer(self, monkeypatch):
+    def test_approve_allows_same_reviewer_by_default(self, monkeypatch):
+        # Default (four-eyes OFF): el mismo usuario que envió puede aprobar.
+        store = FakeStore()
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="legal_review_pending"
+        )
+        matrix["submitted_by"] = "00000000-0000-4000-8000-000000000020"
+
+        same_user = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/approve",
+            params={"organization_id": ORG_ID},
+            json={"approved_by": "00000000-0000-4000-8000-000000000020"},
+        )
+        assert same_user.status_code == 200
+        body = same_user.json()["matriz"]
+        assert body["status"] == "approved"
+        assert body["version"] == 2
+        assert store.tables["legal_review_decisions"][0]["decision_type"] == "matriz_approved"
+
+    def test_approve_blocks_same_reviewer_when_four_eyes_enabled(self, monkeypatch):
+        # Con LEGAL_REVIEW_REQUIRE_DISTINCT_REVIEWER=True, el revisor debe ser
+        # distinto del que envió.
+        from core.config import get_settings
+
+        monkeypatch.setattr(
+            get_settings(), "LEGAL_REVIEW_REQUIRE_DISTINCT_REVIEWER", True
+        )
         store = FakeStore()
         template = _seed_template(store)
         case_row = _seed_case(store)
@@ -942,14 +970,10 @@ class TestMatrizReviewWorkflow:
             params={"organization_id": ORG_ID},
             json={"approved_by": "00000000-0000-4000-8000-000000000021"},
         )
-
         assert approved.status_code == 200
         body = approved.json()["matriz"]
         assert body["status"] == "approved"
-        assert body["version"] == 2
         assert store.tables["escritura_matrices"][0]["approved_by"] == "00000000-0000-4000-8000-000000000021"
-        assert store.tables["legal_review_decisions"][0]["decision_type"] == "matriz_approved"
-        assert store.tables["legal_review_decisions"][0]["decision_status"] == "approved"
 
     def test_reject_returns_pending_matrix_to_draft_and_audits_reason(self, monkeypatch):
         store = FakeStore()

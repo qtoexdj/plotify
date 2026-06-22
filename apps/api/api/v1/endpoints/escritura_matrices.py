@@ -1928,7 +1928,12 @@ async def approve_matriz(
                 "current_status": matrix_row.get("status"),
             },
         )
-    if str(matrix_row.get("submitted_by")) == str(request.approved_by):
+    from core.config import get_settings
+
+    if (
+        get_settings().LEGAL_REVIEW_REQUIRE_DISTINCT_REVIEWER
+        and str(matrix_row.get("submitted_by")) == str(request.approved_by)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
