@@ -25,7 +25,12 @@ import {
 import { DATO_CHIP_TESTID, textoDelChip } from '@/components/documents/mesa/dato-chip'
 import { evidenciaDocumental, urlCorreccion } from '@/components/documents/mesa/dato-popover'
 import { datosAgrupados, pendientesDelGrupo } from '@/components/documents/mesa/panel-datos'
-import { contadorPendientes, contextoDelCaso } from '@/components/documents/mesa/mesa-encabezado'
+import {
+  contadorPendientes,
+  contextoDelCaso,
+  estadoDeMesa,
+  tituloDeMesa,
+} from '@/components/documents/mesa/mesa-encabezado'
 import { pendientesDeClausula, reordenarClausulas } from '@/components/documents/mesa/mesa-indice'
 import { contieneBloquesTitulo } from '@/components/documents/mesa/clausula-editor-inline'
 import {
@@ -33,6 +38,7 @@ import {
   insertablesAgrupados,
 } from '@/components/documents/mesa/insertar-dato-picker'
 import {
+  groupGenerationsByProject,
   generationAuthor,
   generationDescription,
 } from '@/components/documents/mesa/historial-generaciones'
@@ -50,7 +56,7 @@ import {
   preparacionSubtitulo,
 } from '@/components/documents/mesa/estado-preparacion'
 import { pendienteHref, pendienteTitle } from '@/components/documents/mesa/pendientes-list'
-import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
+import { datoStatusLabel, MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type {
   ApprovalBlocker,
   ClauseContentJson,
@@ -79,6 +85,8 @@ function matrizWith(blockers: ApprovalBlocker[], tokens: TokenResolution[] = [])
     project_id: 'p1',
     status: 'draft',
     version: 1,
+    scope: 'lot',
+    source_project_matriz_id: null,
     template: { id: 't1', name: 'Compraventa predio rustico', version: 1 },
     snapshot_stale: false,
     clause_order: [],
@@ -687,6 +695,20 @@ describe('encabezado de la mesa (T013, FR-015)', () => {
     expect(contadorPendientes(0)).toBe('0 pendientes')
     expect(contadorPendientes(3)).toBe('3 pendientes')
   })
+
+  it('distingue la matriz del proyecto de un borrador de lote (T010)', () => {
+    const lote = matrizWith([])
+    const proyecto = {
+      ...lote,
+      escritura_case_id: null,
+      scope: 'project',
+      status: 'approved',
+    } satisfies MatrizView
+
+    expect(tituloDeMesa(lote)).toBe('Compraventa predio rustico')
+    expect(tituloDeMesa(proyecto)).toBe('Matriz del proyecto')
+    expect(estadoDeMesa(proyecto)).toBe(MESA_TEXT.esperandoVentas)
+  })
 })
 
 describe('índice: estado por cláusula (T013)', () => {
@@ -756,10 +778,16 @@ describe('workflow de revisión y generación (T016, US4)', () => {
     const borrador = matrizWith([])
     const enRevision = { ...borrador, status: 'legal_review_pending' } satisfies MatrizView
     const aprobada = { ...borrador, status: 'approved' } satisfies MatrizView
+    const matrizProyectoAprobada = {
+      ...aprobada,
+      escritura_case_id: null,
+      scope: 'project',
+    } satisfies MatrizView
 
     expect(puedeEnviar(borrador)).toBe(true)
     expect(puedeRevisar(enRevision)).toBe(true)
     expect(puedeGenerarMinuta(aprobada)).toBe(true)
+    expect(puedeGenerarMinuta(matrizProyectoAprobada)).toBe(false)
     expect(puedeEnviar({ ...borrador, snapshot_stale: true })).toBe(false)
     expect(puedeGenerarMinuta(borrador)).toBe(false)
   })
@@ -797,6 +825,36 @@ describe('historial de generaciones (T017, US4)', () => {
     expect(description).toContain('versión 3')
     expect(description).not.toContain('abc')
     expect(description).not.toContain('def')
+  })
+
+  it('agrupa por proyecto y conserva el orden recibido para el historial filtrable (T021, FR-015)', () => {
+    const groups = groupGenerationsByProject([
+      {
+        ...GENERACION,
+        id: 'g1',
+        project_id: 'p1',
+        project_name: 'Loteo Teno',
+        lot_label: 'Lote 7',
+      },
+      {
+        ...GENERACION,
+        id: 'g2',
+        project_id: 'p2',
+        project_name: 'Loteo Norte',
+        lot_label: 'Lote 2',
+      },
+      {
+        ...GENERACION,
+        id: 'g3',
+        project_id: 'p1',
+        project_name: 'Loteo Teno',
+        lot_label: 'Lote 8',
+      },
+    ])
+
+    expect(groups.map((group) => group.projectName)).toEqual(['Loteo Teno', 'Loteo Norte'])
+    expect(groups[0].generations.map((generation) => generation.id)).toEqual(['g1', 'g3'])
+    expect(generationDescription(groups[0].generations[0])).toContain('Lote 7')
   })
 })
 
@@ -911,6 +969,17 @@ describe('cableado de la ruta y los componentes', () => {
     expect(orquestador).toContain('...overridesDeLaMatriz(matriz.clauses), ...borradores')
   })
 
+  it('las ediciones de T010 se guardan en la matriz activa, no en la plantilla general', () => {
+    const orquestador = read('src/components/documents/mesa/mesa-escritura.tsx')
+    const cliente = read('src/lib/documents/matriz-client.ts')
+
+    expect(orquestador).toContain('saveMatriz(matriz.id')
+    expect(orquestador).toContain('clause_order: matriz.clause_order')
+    expect(orquestador).toContain('clause_overrides')
+    expect(orquestador).not.toContain('upsertEscrituraTemplateClause')
+    expect(cliente).toContain('/api/escritura-matrices/${encodeURIComponent(matrizId)}')
+  })
+
   it('el picker se abre por botón y atajo @ e inserta el nodo de dato (T015)', () => {
     const picker = read('src/components/documents/mesa/insertar-dato-picker.tsx')
     expect(picker).toContain('data-testid="insertar-dato-picker"')
@@ -949,8 +1018,72 @@ describe('cableado de la ruta y los componentes', () => {
 
   it('la página de historial usa descripciones humanas de la mesa (T017)', () => {
     const page = read('src/app/(dashboard)/documentos/historial/page.tsx')
+    const service = read('src/lib/documents/matriz-history.ts')
     expect(page).toContain('HistorialGeneraciones')
     expect(page).not.toContain('GenerationHistory')
     expect(page).toContain('expedientes vigentes')
+    expect(page).toContain('projectId')
+    expect(page).toContain('listOrganizationHistoryProjects')
+    expect(service).toContain(".eq('project_id', filters.projectId)")
+    expect(service).toContain('project_name')
+    expect(service).toContain('lot_label')
+  })
+})
+
+describe('SDD 011 T014 — la mesa distingue los datos de la venta (FR-007)', () => {
+  // En el borrador del lote los datos de la venta llegan "proposed" desde el
+  // puente operacional y el resolutor los marca 'blocked' → "Por revisar". El
+  // contenido aprobado a nivel proyecto llega 'resolved' → "Verificado".
+  const datoVenta = (key: string, valor: string): TokenResolution => ({
+    variableKey: key,
+    status: 'blocked',
+    value_text: valor,
+    state: 'proposed',
+    source_type: 'system',
+    evidence_refs: [],
+    label: 'Nombre comprador',
+    category: 'comprador',
+    category_label: 'Comprador',
+  })
+  const datoProyecto = (key: string, valor: string): TokenResolution => ({
+    variableKey: key,
+    status: 'resolved',
+    value_text: valor,
+    state: 'approved',
+    source_type: 'document',
+    evidence_refs: [],
+    label: 'Nombre vendedor',
+    category: 'vendedor',
+    category_label: 'Vendedor',
+  })
+
+  it('marca SOLO los datos de la venta como "Por revisar" y el resto como "Verificado"', () => {
+    const tokens = [
+      datoVenta('comprador.nombre', 'Juan Pérez'),
+      datoProyecto('vendedor.nombre', 'Inmobiliaria Teno SpA'),
+    ]
+    // Vocabulario y chip del estado (reusa los componentes de SDD 010).
+    expect(datoStatusLabel('blocked')).toBe('Por revisar')
+    expect(datoStatusLabel('resolved')).toBe('Verificado')
+    expect(DATO_CHIP_TESTID.blocked).toBe('dato-chip-por-revisar')
+    expect(DATO_CHIP_TESTID.resolved).toBe('dato-chip-verificado')
+
+    // Solo el dato de la venta queda "Por revisar".
+    const porRevisar = tokens.filter((t) => t.status === 'blocked')
+    expect(porRevisar.map((t) => t.variableKey)).toEqual(['comprador.nombre'])
+
+    // Agrupado: el comprador tiene 1 pendiente; el vendedor (proyecto), 0.
+    const grupos = datosAgrupados(tokens)
+    const comprador = grupos.find((g) => g.categoria === 'comprador')!
+    const vendedor = grupos.find((g) => g.categoria === 'vendedor')!
+    expect(pendientesDelGrupo(comprador)).toBe(1)
+    expect(pendientesDelGrupo(vendedor)).toBe(0)
+  })
+
+  it('el chip del dato de venta muestra el valor, no el nombre del hueco', () => {
+    const dato = datoVenta('comprador.nombre', 'Juan Pérez')
+    expect(textoDelChip({ estado: dato.status, valor: dato.value_text, label: dato.label! })).toBe(
+      'Juan Pérez'
+    )
   })
 })

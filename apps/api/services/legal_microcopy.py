@@ -30,6 +30,7 @@ READINESS_GATE_LABELS: Final[dict[str, str]] = {
     "price_verified": "Precio y forma de pago verificados",
     "legal_review_ready": "Revisión jurídica lista",
     "warning_acknowledged": "Advertencia legal aceptada",
+    "project_matriz_approved": "Matriz del proyecto aprobada",
 }
 
 READINESS_GATE_PENDING_DESCRIPTIONS: Final[dict[str, str]] = {
@@ -60,6 +61,10 @@ READINESS_GATE_PENDING_DESCRIPTIONS: Final[dict[str, str]] = {
     "warning_acknowledged": (
         "Falta aceptar la advertencia de revisión legal obligatoria."
     ),
+    "project_matriz_approved": (
+        "Falta aprobar la matriz del proyecto. El abogado la prepara en "
+        "Documentos; el borrador del lote se genera apenas quede aprobada."
+    ),
 }
 
 READINESS_GATE_ACTION_LABELS: Final[dict[str, str]] = {
@@ -71,6 +76,7 @@ READINESS_GATE_ACTION_LABELS: Final[dict[str, str]] = {
     "price_verified": "Completar dato",
     "legal_review_ready": "Completar revisión",
     "warning_acknowledged": "Aceptar advertencia",
+    "project_matriz_approved": "Abrir matriz del proyecto",
 }
 
 
@@ -162,6 +168,67 @@ ESCRITURA_CASE_STATUS_LABELS: Final[dict[str, str]] = {
 }
 
 
+# ─── Estados del flujo venta → escritura (SDD 011, data-model §5, FR-014) ─────
+# Frases humanas UNICAS del ciclo proyecto → matriz aprobada → venta → borrador
+# → entrega. Identicas en notificaciones, Centro de Control Legal, mesa y "mis
+# documentos del vendedor": un solo vocabulario en todas las superficies. Se
+# derivan de case_status + estado de la matriz + entregas; aqui vive el texto.
+
+FLOW_STATES: Final[tuple[str, ...]] = (
+    "waiting_project_matriz",
+    "in_preparation",
+    "draft_for_review",
+    "accepted",
+    "delivered",
+)
+
+FLOW_STATE_LABELS: Final[dict[str, str]] = {
+    "waiting_project_matriz": "Esperando matriz del proyecto",
+    "in_preparation": "En preparación",
+    "draft_for_review": "Borrador por revisar",
+    "accepted": "Aceptada",
+    "delivered": "Entregada",
+}
+
+FLOW_STATE_DESCRIPTIONS: Final[dict[str, str]] = {
+    "waiting_project_matriz": (
+        "La venta está validada, pero el abogado aún no aprueba la matriz de "
+        "la escritura del proyecto. El borrador se genera apenas se apruebe."
+    ),
+    "in_preparation": (
+        "La escritura se está preparando: faltan datos de la venta para "
+        "completar el borrador."
+    ),
+    "draft_for_review": (
+        "El borrador está listo y espera la revisión del administrador antes "
+        "de aceptarlo."
+    ),
+    "accepted": (
+        "El administrador aceptó el borrador; el documento se generó con la "
+        "marca de borrador sujeto a revisión legal."
+    ),
+    "delivered": (
+        "El borrador se entregó al vendedor; ya puede descargarlo o "
+        "compartirlo."
+    ),
+}
+
+# SDD 011 (FR-008, ADR-009): marca visible que TODO entregable del flujo de
+# escrituras lleva embebida en el DOCX. Ningun envio externo la esquiva.
+ESCRITURA_BORRADOR_NOTICE: Final[str] = "Borrador sujeto a revisión legal"
+
+
+# ─── Notificaciones administrativas (SDD 011, FR-009) ───────────────────────
+
+ADMIN_NOTIFICATION_LABELS: Final[dict[str, str]] = {
+    "sale_pending_validation": "Venta por validar",
+    "draft_ready_for_review": FLOW_STATE_LABELS["draft_for_review"],
+    "waiting_project_matriz": FLOW_STATE_LABELS["waiting_project_matriz"],
+    # SDD 011 T018: aviso al vendedor cuando su borrador queda entregado.
+    "draft_delivered_to_vendor": FLOW_STATE_LABELS["delivered"],
+}
+
+
 # ─── Composicion de pendientes (blockers humanizados) ────────────────────────
 
 
@@ -212,6 +279,30 @@ def escritura_case_status_label(status: str) -> str:
     label = ESCRITURA_CASE_STATUS_LABELS.get(status)
     if label is None:
         raise KeyError(f"Estado de caso sin texto en el diccionario: {status}")
+    return label
+
+
+def flow_state_label(state: str) -> str:
+    """Frase humana de un estado del flujo venta → escritura (FR-014)."""
+    label = FLOW_STATE_LABELS.get(state)
+    if label is None:
+        raise KeyError(f"Estado del flujo sin texto en el diccionario: {state}")
+    return label
+
+
+def flow_state_description(state: str) -> str:
+    """Explicacion humana de un estado del flujo venta → escritura."""
+    description = FLOW_STATE_DESCRIPTIONS.get(state)
+    if description is None:
+        raise KeyError(f"Estado del flujo sin descripción en el diccionario: {state}")
+    return description
+
+
+def admin_notification_label(event: str) -> str:
+    """Frase humana canonica para notificaciones del flujo venta → escritura."""
+    label = ADMIN_NOTIFICATION_LABELS.get(event)
+    if label is None:
+        raise KeyError(f"Notificación administrativa sin texto: {event}")
     return label
 
 

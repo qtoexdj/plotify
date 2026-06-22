@@ -16,10 +16,12 @@ from typing import Any
 from core.logger import get_logger
 from schemas.legal_variables import (
     DocumentEvidenceResponse,
+    VariableBulkApproveResponse,
     VariableInventoryResponse,
     VariableResolutionResponse,
     VariableReviewResponse,
     VariableUpdateRequest,
+    VariableUpsertRequest,
 )
 from services.legal_variable_catalog import (
     READINESS_REQUIRED_VARIABLES_BY_GATE,
@@ -80,6 +82,9 @@ CRITICAL_VARIABLE_KEYS = frozenset(
 )
 EDIT_TARGET_STATES = frozenset(("resolved", "manual_review"))
 APPROVABLE_STATES = frozenset(("proposed", "resolved", "manual_review", "derived"))
+# Estados desde los que NO se puede aprobar (terminales): aprobar desde
+# `missing`/`conflict` sí vale cuando el revisor aporta un valor (SDD 011).
+APPROVE_TERMINAL_STATES = frozenset(("approved", "not_applicable", "superseded"))
 NOT_APPLICABLE_SOURCE_STATES = frozenset(
     ("missing", "proposed", "resolved", "manual_review", "conflict", "derived")
 )
@@ -98,7 +103,8 @@ _SII_CERTIFICATE_NUMBER_RE = re.compile(
     re.IGNORECASE,
 )
 _SII_CERTIFICATE_DATE_RE = re.compile(
-    r"(?:fecha\s+(?:de\s+)?(?:emisi[oó]n|certificado)|emitido\s+con\s+fecha)\s*"
+    # "FECHA DE EMISIÓN: 12/08/2024" — el ':' va entre la etiqueta y la fecha.
+    r"(?:fecha\s+(?:de\s+)?(?:emisi[oó]n|certificado)|emitido\s+con\s+fecha)\s*:?\s*"
     r"(?P<date>\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})",
     re.IGNORECASE,
 )
@@ -185,8 +191,12 @@ _SAG_REGION_RE = re.compile(
     re.IGNORECASE,
 )
 _SAG_OFFICE_RE = re.compile(
-    r"(?:oficina\s+(?:sectorial\s+)?SAG|SAG\s+oficina\s+sectorial)\s+"
-    r"(?P<office>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{2,80}?)(?=\.|,|;|$)",
+    # "El Jefe de Oficina Sectorial Curicó del Servicio Agrícola…" — el nombre
+    # de la oficina va inmediatamente después de "Sectorial" y termina antes de
+    # "del/de"/"SAG"/puntuación. Acepta un "SAG" intermedio opcional.
+    r"oficina\s+sectorial\s+(?:SAG\s+)?"
+    r"(?P<office>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{1,60}?)"
+    r"(?=\s+del?\b|\s+SAG\b|\.|,|;|$)",
     re.IGNORECASE,
 )
 _PLANO_CBR_RE = re.compile(
@@ -1131,6 +1141,256 @@ async def update_legal_variable(
     )
 
 
+async def upsert_project_variable(
+    *,
+    organization_id: str,
+    project_id: str,
+    payload: VariableUpsertRequest,
+    supabase: Any | None = None,
+) -> VariableReviewResponse:
+    """SDD 011 (A4): fija el valor de una variable a scope proyecto por su clave.
+
+    Si la variable ya tiene fila, delega en el flujo de revisión existente
+    (auditado). Si no existe (caso típico de las variables de autoría/manuales
+    que el extractor no produce: plano CBR, mandatario), crea la fila con el
+    valor y registra la decisión. Permite que el abogado resuelva esas
+    variables desde el editor sin sembrarlas a mano en la base."""
+    client = supabase or _get_supabase_client()
+    if not payload.reviewed_by:
+        raise LegalVariableResolutionError("reviewed_by is required for variable upsert.")
+    variable_key = payload.variable_key
+    group = variable_group_for_key(variable_key)
+    if not is_variable_key(variable_key) or group is None:
+        raise LegalVariableResolutionError(f"Unknown variable key: {variable_key}")
+
+    existing = await _fetch_project_variable_by_key(
+        supabase=client,
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_key=variable_key,
+    )
+    if existing is not None:
+        action = "mark_not_applicable" if payload.state == "not_applicable" else "edit"
+        update_req = VariableUpdateRequest(
+            action=action,
+            value_text=payload.value_text,
+            value_json=payload.value_json,
+            state=payload.state if action == "edit" else None,
+            correction_reason=payload.correction_reason,
+            reviewed_by=payload.reviewed_by,
+        )
+        return await update_legal_variable(
+            variable_resolution_id=str(existing["id"]),
+            organization_id=organization_id,
+            project_id=project_id,
+            payload=update_req,
+            supabase=client,
+        )
+
+    now = datetime.now(UTC)
+    value_text = _normalized_payload_text(payload.value_text)
+    if payload.state != "not_applicable" and not _has_review_value(value_text, payload.value_json):
+        raise LegalVariableResolutionError("Manual variable upsert requires a value.")
+    insert_payload = {
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "lot_id": None,
+        "escritura_case_id": None,
+        "variable_key": variable_key,
+        "variable_group": group,
+        "value_text": None if payload.state == "not_applicable" else value_text,
+        "value_json": payload.value_json,
+        "state": payload.state,
+        "source_type": "manual",
+        "reviewed_by": payload.reviewed_by,
+        "reviewed_at": now.isoformat(),
+        "correction_reason": payload.correction_reason,
+    }
+    inserted = await _insert_variable_resolution_row(
+        supabase=client, insert_payload=insert_payload
+    )
+    decision_payload = {
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "lot_id": None,
+        "escritura_case_id": None,
+        "variable_resolution_id": inserted["id"],
+        "decision_type": "manual_override",
+        "decision_status": "approved",
+        "reason": payload.correction_reason,
+        "decided_by": payload.reviewed_by,
+        "decided_at": now.isoformat(),
+    }
+    try:
+        audit_row = await _insert_legal_review_decision(
+            supabase=client, decision_payload=decision_payload
+        )
+    except Exception as exc:
+        await _delete_variable_resolution_row(
+            supabase=client, variable_resolution_id=str(inserted["id"])
+        )
+        raise LegalVariableAuditError(
+            "Legal variable upsert audit could not be persisted."
+        ) from exc
+
+    logger.info(
+        "legal_variable_upserted",
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_key=variable_key,
+        state=payload.state,
+        audit_event_id=str(audit_row["id"]),
+    )
+    return VariableReviewResponse(
+        variable_resolution_id=str(inserted["id"]),
+        state=str(inserted.get("state") or payload.state),
+        reviewed_by=str(inserted.get("reviewed_by") or payload.reviewed_by),
+        reviewed_at=inserted.get("reviewed_at") or now.isoformat(),
+        audit_event_id=str(audit_row["id"]),
+    )
+
+
+BULK_APPROVABLE_STATES = frozenset(("proposed", "manual_review"))
+
+
+async def bulk_approve_project_variables(
+    *,
+    organization_id: str,
+    project_id: str,
+    reviewed_by: str,
+    group: str | None = None,
+    variable_keys: list[str] | None = None,
+    supabase: Any | None = None,
+) -> VariableBulkApproveResponse:
+    """SDD 011 (A5): aprueba en bloque las variables de proyecto revisables
+    (``proposed``/``manual_review`` con valor), reusando el flujo auditado de
+    aprobación por variable. Acota por grupo o claves si se piden. Devuelve qué
+    se aprobó y qué se saltó (sin valor o en conflicto, que requieren atención
+    manual)."""
+    client = supabase or _get_supabase_client()
+    if not reviewed_by:
+        raise LegalVariableResolutionError("reviewed_by is required for bulk approve.")
+    keys_filter = set(variable_keys or [])
+    rows = await _fetch_project_variables_for_review(
+        supabase=client, organization_id=organization_id, project_id=project_id
+    )
+    approved: list[str] = []
+    skipped: list[str] = []
+    for row in rows:
+        key = str(row.get("variable_key") or "")
+        if group and row.get("variable_group") != group:
+            continue
+        if keys_filter and key not in keys_filter:
+            continue
+        state = str(row.get("state") or "")
+        if state == "conflict":
+            skipped.append(key)
+            continue
+        if state not in BULK_APPROVABLE_STATES:
+            continue
+        if not _has_review_value(row.get("value_text"), row.get("value_json")):
+            skipped.append(key)
+            continue
+        await update_legal_variable(
+            variable_resolution_id=str(row["id"]),
+            organization_id=organization_id,
+            project_id=project_id,
+            payload=VariableUpdateRequest(
+                action="approve", state="approved", reviewed_by=reviewed_by
+            ),
+            supabase=client,
+        )
+        approved.append(key)
+    logger.info(
+        "legal_variables_bulk_approved",
+        organization_id=organization_id,
+        project_id=project_id,
+        group=group,
+        approved_count=len(approved),
+        skipped_count=len(skipped),
+    )
+    return VariableBulkApproveResponse(
+        approved_count=len(approved),
+        approved_keys=approved,
+        skipped_keys=skipped,
+    )
+
+
+async def _fetch_project_variables_for_review(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+) -> list[dict[str, Any]]:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .select("*")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .is_("lot_id", "null")
+            .is_("escritura_case_id", "null")
+            .neq("state", "superseded")
+            .execute()
+        )
+    )
+    data = getattr(result, "data", None)
+    return data if isinstance(data, list) else []
+
+
+async def _fetch_project_variable_by_key(
+    *,
+    supabase: Any,
+    organization_id: str,
+    project_id: str,
+    variable_key: str,
+) -> dict[str, Any] | None:
+    result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .select("*")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .is_("lot_id", "null")
+            .is_("escritura_case_id", "null")
+            .eq("variable_key", variable_key)
+            .neq("state", "superseded")
+            .limit(1)
+            .execute()
+        )
+    )
+    return _first_row(result)
+
+
+async def _insert_variable_resolution_row(
+    *,
+    supabase: Any,
+    insert_payload: dict[str, Any],
+) -> dict[str, Any]:
+    result = await asyncio.to_thread(
+        lambda: supabase.table("variable_resolutions").insert(insert_payload).execute()
+    )
+    row = _first_row(result)
+    if not row:
+        raise LegalVariableResolutionError("Variable resolution insert returned no row.")
+    return row
+
+
+async def _delete_variable_resolution_row(
+    *,
+    supabase: Any,
+    variable_resolution_id: str,
+) -> None:
+    await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .delete()
+            .eq("id", variable_resolution_id)
+            .execute()
+        )
+    )
+
+
 async def _fetch_variable_for_review(
     *,
     supabase: Any,
@@ -1180,12 +1440,15 @@ async def _insert_legal_review_decision(
     supabase: Any,
     decision_payload: dict[str, Any],
 ) -> dict[str, Any]:
+    # PostgREST devuelve la representación de las filas insertadas por defecto
+    # (Prefer: return=representation). `.select()/.single()` NO son encadenables
+    # tras `.insert()` (SyncQueryRequestBuilder no los expone) y provocaban un
+    # 500 al persistir la auditoría de la primera revisión real (los fakes de
+    # test sí los aceptan, así que la suite lo dejaba pasar).
     result = await asyncio.to_thread(
         lambda: (
             supabase.table("legal_review_decisions")
             .insert(decision_payload)
-            .select("*")
-            .single()
             .execute()
         )
     )
@@ -1293,7 +1556,11 @@ def _build_approve_mutation(
     current_state = str(variable.get("state") or "")
     if payload.state is not None and payload.state != "approved":
         raise LegalVariableResolutionError("Approve action must target approved state.")
-    if current_state not in APPROVABLE_STATES:
+    # SDD 011: aprobar también vale como "entrar + aprobar" cuando el revisor
+    # aporta un valor (p. ej. datos manuales del Conservador en estado `missing`,
+    # o resolver un `conflict` eligiendo el valor). Solo se bloquean los estados
+    # terminales (`superseded` ya se rechazó antes en el dispatcher).
+    if current_state in APPROVE_TERMINAL_STATES:
         raise LegalVariableResolutionError(
             f"Cannot approve variable from state {current_state}."
         )
@@ -1530,8 +1797,24 @@ def normalize_document_page(
     )
 
 
+# Ligaduras tipográficas latinas (ﬁ, ﬂ, …) que aparecen en la capa de texto de
+# muchos PDFs del CBR/SAG: "Oﬁcina" rompe regex que buscan "oficina". Las
+# expandimos a sus letras para que la extracción matchee.
+_LIGATURES = str.maketrans(
+    {
+        "ﬀ": "ff",
+        "ﬁ": "fi",
+        "ﬂ": "fl",
+        "ﬃ": "ffi",
+        "ﬄ": "ffl",
+        "ﬅ": "ft",
+        "ﬆ": "st",
+    }
+)
+
+
 def normalize_whitespace(text: str) -> str:
-    return re.sub(r"\s+", " ", text.replace("\r", "\n")).strip()
+    return re.sub(r"\s+", " ", text.replace("\r", "\n").translate(_LIGATURES)).strip()
 
 
 def clean_legal_value(value: str | None) -> str:

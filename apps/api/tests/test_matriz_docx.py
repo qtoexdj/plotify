@@ -142,3 +142,39 @@ def test_render_minuta_docx_rejects_unknown_nodes():
         )
 
     assert exc.value.node_types == ["table"]
+
+
+# ─── SDD 011 T015: marca de borrador (FR-008 / ADR-009) ──────────────────────
+
+_NOTICE_CLAUSE = {
+    "clause_key": "comparecencia",
+    "title": "COMPARECENCIA",
+    "resolved_content": {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+            {"type": "paragraph", "content": [{"type": "text", "text": "Comparecen."}]}
+        ],
+    },
+}
+
+
+def test_render_minuta_docx_includes_draft_notice_when_requested():
+    """La marca de borrador aparece visible en el DOCX entregable (FR-008)."""
+    notice = "Borrador sujeto a revisión legal"
+    docx_bytes = render_minuta_docx(
+        metadata={"title": "Minuta de compraventa", "draft_notice": notice},
+        clauses=[_NOTICE_CLAUSE],
+    )
+    texts = [paragraph.text for paragraph in _docx(docx_bytes).paragraphs]
+    assert notice.upper() in texts
+
+
+def test_render_minuta_docx_omits_draft_notice_by_default():
+    """Sin draft_notice el DOCX no cambia: no-regresion del renderer."""
+    docx_bytes = render_minuta_docx(
+        metadata={"title": "Minuta de compraventa"},
+        clauses=[_NOTICE_CLAUSE],
+    )
+    texts = [paragraph.text for paragraph in _docx(docx_bytes).paragraphs]
+    assert not any("BORRADOR SUJETO" in text.upper() for text in texts)

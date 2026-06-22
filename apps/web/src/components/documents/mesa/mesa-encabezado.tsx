@@ -44,6 +44,17 @@ export function contadorPendientes(cantidad: number): string {
   return cantidad === 1 ? '1 pendiente' : `${cantidad} pendientes`
 }
 
+export function tituloDeMesa(matriz: Pick<MatrizView, 'scope' | 'template'>): string {
+  return matriz.scope === 'project' ? 'Matriz del proyecto' : matriz.template.name
+}
+
+export function estadoDeMesa(matriz: Pick<MatrizView, 'scope' | 'status'>): string {
+  if (matriz.scope === 'project' && matriz.status === 'approved') {
+    return MESA_TEXT.esperandoVentas
+  }
+  return mesaStatusLabel(matriz.status)
+}
+
 const BADGE_ESTADO_MESA = {
   draft: 'border-border bg-muted text-foreground',
   legal_review_pending: 'border-sky-300 bg-sky-50 text-sky-900',
@@ -68,6 +79,8 @@ export function MesaEncabezado({
 }: MesaEncabezadoProps) {
   const contexto = contextoDelCaso(matriz.resolution.tokens)
   const pendientes = matriz.approval_blockers.length
+  const titulo = tituloDeMesa(matriz)
+  const estado = estadoDeMesa(matriz)
 
   return (
     <header
@@ -77,11 +90,9 @@ export function MesaEncabezado({
       <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-lg font-semibold tracking-tight">
-              {matriz.template.name}
-            </h1>
+            <h1 className="truncate text-lg font-semibold tracking-tight">{titulo}</h1>
             <Badge variant="outline" className={BADGE_ESTADO_MESA[matriz.status]}>
-              {mesaStatusLabel(matriz.status)}
+              {estado}
             </Badge>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">

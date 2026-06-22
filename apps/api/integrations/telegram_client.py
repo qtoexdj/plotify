@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 TELEGRAM_API_HOST = "api.telegram.org"
 TELEGRAM_SEND_TIMEOUT_SECONDS = 10.0
 TELEGRAM_CALLBACK_TIMEOUT_SECONDS = 5.0
-_ALLOWED_BOT_METHODS = {"sendMessage", "answerCallbackQuery", "editMessageText"}
+_ALLOWED_BOT_METHODS = {"sendMessage", "sendDocument", "answerCallbackQuery", "editMessageText"}
 
 
 class TelegramClient:
@@ -160,6 +160,83 @@ class TelegramClient:
                         "error_detail": str(e),
                         "retryable": False,
                     }
+                )
+        return None
+
+    async def send_document(
+        self,
+        chat_id: str,
+        *,
+        document_bytes: bytes,
+        filename: str,
+        caption: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Envía un documento (DOCX) por Telegram (Bot API sendDocument, multipart).
+
+        Devuelve la respuesta o None si falla. El llamador decide la caída a
+        "mis documentos": la entrega jamás falla en silencio (SDD 011 FR-010).
+        """
+        if not self.bot_token:
+            logger.warning(
+                "TELEGRAM_BOT_TOKEN no configurado. No se enviará el documento."
+            )
+            return None
+
+        data: Dict[str, str] = {"chat_id": chat_id}
+        if caption:
+            data["caption"] = caption
+            data["parse_mode"] = "Markdown"
+        files = {
+            "document": (
+                filename,
+                document_bytes,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    self._bot_api_url("sendDocument"),
+                    data=data,
+                    files=files,
+                    timeout=TELEGRAM_SEND_TIMEOUT_SECONDS,
+                )
+                response.raise_for_status()
+                logger.debug(f"Documento enviado a Telegram (Chat ID: {chat_id}).")
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                logger.error(
+                    "Telegram API failure in sendDocument (HTTPStatusError)",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "sendDocument",
+                        "chat_id": chat_id,
+                        "status_code": e.response.status_code,
+                        "error_detail": e.response.text,
+                        "retryable": e.response.status_code in [429, 500, 502, 503, 504],
+                    },
+                )
+            except httpx.RequestError as e:
+                logger.error(
+                    "Telegram API network failure in sendDocument (RequestError)",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "sendDocument",
+                        "chat_id": chat_id,
+                        "error_detail": str(e),
+                        "retryable": True,
+                    },
+                )
+            except Exception as e:
+                logger.error(
+                    "Unexpected Telegram Client error in sendDocument",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "sendDocument",
+                        "chat_id": chat_id,
+                        "error_detail": str(e),
+                        "retryable": False,
+                    },
                 )
         return None
 

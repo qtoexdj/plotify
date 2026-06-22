@@ -6,7 +6,7 @@ import hashlib
 import asyncio
 import json
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence
 from dataclasses import dataclass
 
@@ -527,6 +527,45 @@ async def _supersede_current_title_analyses(
             .execute()
         )
     )
+
+
+async def _fail_stale_processing_analysis(
+    *,
+    supabase: Any,
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    """Si la fila está `processing` pero más vieja que el presupuesto del job, es
+    un zombie (worker caído/reiniciado a mitad de corrida). Se marca `failed`
+    (abandoned) de forma perezosa al leer, para que el panel deje de hacer
+    polling infinito y ofrezca "Reanalizar". El `.lt(updated_at)` garantiza que
+    NUNCA se toca una corrida real en vuelo (su updated_at es reciente)."""
+    if not hasattr(supabase, "table") or str(row.get("status")) != "processing":
+        return row
+    settings = get_settings()
+    cutoff = (
+        datetime.now(timezone.utc)
+        - timedelta(seconds=settings.LEGAL_TITLE_AGENT_TIMEOUT_SECONDS + 120)
+    ).isoformat()
+    # `timeout` es el failure_code válido más cercano (la corrida nunca terminó
+    # dentro de su presupuesto); el catálogo de title_analyses_failure_code_check
+    # no incluye un código "abandoned".
+    result = await _run_supabase(
+        lambda: (
+            supabase.table("title_analyses")
+            .update({"status": "failed", "failure_code": "timeout"})
+            .eq("id", str(row["id"]))
+            .eq("status", "processing")
+            .lt("updated_at", cutoff)
+            .execute()
+        )
+    )
+    if _first_row(result):
+        logger.info(
+            "title_analysis_stale_processing_marked_failed",
+            analysis_id=str(row.get("id")),
+        )
+        return {**row, "status": "failed", "failure_code": "timeout"}
+    return row
 
 
 async def _insert_title_analysis(
@@ -1228,6 +1267,7 @@ async def get_project_title_case(
         row = _first_row(result)
 
     if row is not None:
+        row = await _fail_stale_processing_analysis(supabase=client, row=row)
         return _hydrate_title_analysis_row(row, source_documents=source_documents)
     if not source_documents:
         return None
@@ -1274,21 +1314,20 @@ async def request_title_reanalysis(
         )
 
     source_content_hash = compute_source_content_hash(source_documents)
-    existing = await check_idempotency(
-        project_id=project_id,
-        source_content_hash=source_content_hash,
-        extractor_name=EXTRACTOR_NAME,
-        prompt_version=PROMPT_VERSION,
-        supabase=client,
-    )
-    if existing is not None and str(existing.get("status")) != "processing":
-        return str(existing["id"]), str(existing.get("status")), False
-
-    if existing is not None:
-        # Same-hash placeholder already queued: report it without re-queueing.
-        return str(existing["id"]), "processing", False
-
+    settings = get_settings()
+    # "Reanalizar" explícito SIEMPRE re-corre: el usuario lo pidió y pudo haber
+    # cambiado el modelo o el nivel de razonamiento, que NO entran en el hash de
+    # contenido. La idempotencia por contenido sigue protegiendo el camino
+    # automático (run_title_analysis en el worker). Aquí solo bloqueamos si ya
+    # hay una corrida RECIENTE en proceso, para no encolar dos a la vez. Una fila
+    # `processing` más vieja que el presupuesto del job es un zombie (worker
+    # caído/reiniciado a mitad de corrida): se considera abandonada y se la
+    # supersede para poder re-correr — si no, el estudio queda pegado para siempre.
     if hasattr(client, "table"):
+        recent_cutoff = (
+            datetime.now(timezone.utc)
+            - timedelta(seconds=settings.LEGAL_TITLE_AGENT_TIMEOUT_SECONDS + 120)
+        ).isoformat()
         processing_result = await _run_supabase(
             lambda: (
                 client.table("title_analyses")
@@ -1296,6 +1335,7 @@ async def request_title_reanalysis(
                 .eq("organization_id", organization_id)
                 .eq("project_id", project_id)
                 .eq("status", "processing")
+                .gte("updated_at", recent_cutoff)
                 .limit(1)
                 .execute()
             )
@@ -1310,7 +1350,6 @@ async def request_title_reanalysis(
         organization_id=organization_id,
         project_id=project_id,
     )
-    settings = get_settings()
     placeholder = await _insert_title_analysis(
         supabase=client,
         payload={
@@ -1564,16 +1603,12 @@ async def approve_title_case(
         organization_id=organization_id,
         project_id=project_id,
     )
-    for variable in variable_rows:
-        state = str(variable.get("state"))
-        if state in {"manual_review", "conflict"}:
-            blocking.append(
-                {
-                    "kind": "variable",
-                    "key": variable.get("variable_key"),
-                    "state": state,
-                }
-            )
+    # El único gate de aprobación son las ALERTAS pendientes: el abogado las
+    # triagea una a una (tomar en cuenta / cláusula agregada / descartar). Las
+    # variables titulo.* en manual_review/conflict NO bloquean: son flags de
+    # verificación del agente (ya cubiertos por las alertas de discrepancia) y
+    # ninguna acción de la UI las saca de ese estado, así que bloquear por ellas
+    # dejaba el caso inaprobable para siempre. Aprobar el caso ES la revisión.
     alerts_payload = row.get("alerts") if isinstance(row.get("alerts"), list) else []
     for alert in alerts_payload:
         if isinstance(alert, dict) and alert.get("resolution", "pending") == "pending":
@@ -1583,12 +1618,15 @@ async def approve_title_case(
         raise LegalTitleApprovalBlockedError(blocking)
 
     now = datetime.now(timezone.utc)
-    proposed_ids = [
+    # Al aprobar, promueve TODA titulo.* no terminal (proposed/manual_review/
+    # conflict/resolved/derived) a approved, no solo las proposed.
+    _terminal_states = {"approved", "not_applicable", "superseded"}
+    promotable_ids = [
         str(variable["id"])
         for variable in variable_rows
-        if str(variable.get("state")) == "proposed" and variable.get("id")
+        if str(variable.get("state")) not in _terminal_states and variable.get("id")
     ]
-    if proposed_ids and hasattr(client, "table"):
+    if promotable_ids and hasattr(client, "table"):
         await _run_supabase(
             lambda: (
                 client.table("variable_resolutions")
@@ -1599,7 +1637,7 @@ async def approve_title_case(
                         "reviewed_at": now.isoformat(),
                     }
                 )
-                .in_("id", proposed_ids)
+                .in_("id", promotable_ids)
                 .execute()
             )
         )
@@ -1623,7 +1661,7 @@ async def approve_title_case(
             "decision_type": "title_case_approved",
             "decision_status": "approved",
             "reason": None,
-            "decision_payload": {"approved_variable_ids": proposed_ids},
+            "decision_payload": {"approved_variable_ids": promotable_ids},
             "decided_by": approved_by,
             "decided_at": now.isoformat(),
         },
@@ -1632,6 +1670,6 @@ async def approve_title_case(
         "title_case_approved",
         analysis_id=analysis_id,
         approved_by=approved_by,
-        approved_variables=len(proposed_ids),
+        approved_variables=len(promotable_ids),
     )
     return _hydrate_title_analysis_row(approved_row)

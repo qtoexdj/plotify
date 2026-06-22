@@ -674,3 +674,63 @@ async def test_ingestion_job_queues_title_analysis_for_title_document():
     )
 
 
+
+
+def test_vision_pages_uses_transcript_for_scanned_pdf(monkeypatch):
+    """SDD 009: con visión habilitada, el contenido escaneado se transcribe y
+    reemplaza al 'solo certificado' que pierde la extracción de texto."""
+    from services.legal_text_extraction import (
+        ExtractedLegalTextPage,
+        _extract_pdf_vision_pages,
+    )
+    import services.legal_text_vision as vision
+
+    monkeypatch.setattr(
+        vision,
+        "transcribe_pdf_with_vision_sync",
+        lambda content: [
+            (1, "COMPRAVENTA: GALAZ ABARCA don JUAN DE DIOS, cédula 4.606.965-2..."),
+            (2, "de ACCIONES Y DERECHOS sobre LOTE N°3, superficie 26,82 hectáreas..."),
+        ],
+    )
+    source = _source(content=b"%PDF-scanned", mime_type="application/pdf")
+    digital = (
+        ExtractedLegalTextPage(
+            page_number=1, page_kind="physical", text_content="CERTIFICA QUE ... VIGENTE"
+        ),
+    )
+    result = _extract_pdf_vision_pages(source, digital_pages=digital)
+
+    assert result.converter == "vision"
+    assert result.stats["vision_status"] == "ok"
+    assert result.stats["ocr_required"] is False
+    assert len(result.pages) == 2
+    assert "GALAZ ABARCA" in result.pages[0].text_content
+    assert "ACCIONES Y DERECHOS" in result.pages[1].text_content
+
+
+def test_vision_pages_falls_back_to_digital_text_on_error(monkeypatch):
+    """Si la transcripción por visión falla, cae al texto digital (mejor que
+    nada) y marca ocr_required para revisión; jamás rompe la ingesta."""
+    from services.legal_text_extraction import (
+        ExtractedLegalTextPage,
+        _extract_pdf_vision_pages,
+    )
+    import services.legal_text_vision as vision
+
+    def _boom(content):
+        raise vision.LegalVisionTranscriptionError("vision down")
+
+    monkeypatch.setattr(vision, "transcribe_pdf_with_vision_sync", _boom)
+    source = _source(content=b"%PDF-scanned", mime_type="application/pdf")
+    digital = (
+        ExtractedLegalTextPage(
+            page_number=1, page_kind="physical", text_content="CERTIFICA QUE ... VIGENTE"
+        ),
+    )
+    result = _extract_pdf_vision_pages(source, digital_pages=digital)
+
+    assert result.converter == "pdf_text"
+    assert result.stats["vision_status"] == "failed"
+    assert result.stats["ocr_required"] is True
+    assert "CERTIFICA" in result.pages[0].text_content

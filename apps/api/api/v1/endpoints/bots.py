@@ -44,9 +44,10 @@ async def register_bot(payload: RegisterBotRequest):
             )
 
     # 2. Set webhook
-    import os
+    from core.config import get_settings
+    settings = get_settings()
 
-    api_url = os.getenv("API_PUBLIC_URL", "https://api.plotify.demo").rstrip("/")
+    api_url = settings.API_PUBLIC_URL.rstrip("/")
     webhook_url = f"{api_url}/api/v1/webhook/telegram/{org_id}"
 
     async with httpx.AsyncClient() as client:
@@ -56,6 +57,7 @@ async def register_bot(payload: RegisterBotRequest):
                 json={"url": webhook_url},
             )
             resp.raise_for_status()
+
         except Exception as e:
             logger.error(f"Error setting webhook: {e}")
             raise HTTPException(

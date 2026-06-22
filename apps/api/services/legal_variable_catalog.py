@@ -281,6 +281,157 @@ VARIABLE_GROUP_BY_KEY: Final[dict[str, str]] = {
     key: group for group, keys in VARIABLE_KEYS_BY_GROUP.items() for key in keys
 }
 
+# SDD 011: productor previsto de cada variable. Fuente unica que consumen el
+# resolutor de la matriz, los bloqueadores de aprobacion y la UI de variables
+# (antes cada superficie lo decidia por su cuenta).
+#   extracted -> la produce la extraccion/agente (document/system/geometry);
+#                el abogado la revisa y aprueba.
+#   authored  -> texto/dato estandar de autoria humana con default reutilizable
+#                (manual/legal_review); editable por proyecto.
+#   manual    -> dato humano sin default, capturado al cargar el documento
+#                (p. ej. numero/anio del plano en el Conservador de Bienes Raices).
+#   sale_gap  -> lo aporta la venta al validarse (comprador/precio/lote/
+#                servidumbre); en la matriz del PROYECTO es hueco por diseno.
+#   signing   -> dato de la firma / notaria (notario, notaria, ciudad y fecha
+#                de otorgamiento, repertorio): se completa al firmar; en la
+#                matriz del PROYECTO es hueco no-bloqueante.
+VARIABLE_PRODUCERS: Final[tuple[str, ...]] = (
+    "extracted",
+    "authored",
+    "manual",
+    "sale_gap",
+    "signing",
+)
+VARIABLE_PRODUCER_SET: Final = frozenset(VARIABLE_PRODUCERS)
+
+_PRODUCER_BY_GROUP: Final[dict[str, str]] = {
+    "documento": "signing",
+    "revision_juridica": "extracted",
+    "vendedor": "extracted",
+    "comprador": "sale_gap",
+    "personeria": "authored",
+    "matriz": "extracted",
+    "sag": "extracted",
+    "sii": "extracted",
+    "lote": "sale_gap",
+    "servidumbre": "sale_gap",
+    "transaccion": "sale_gap",
+    "clausulas": "authored",
+    "mandato": "authored",
+    "evidencia": "extracted",
+    "titulo": "extracted",
+}
+# Overrides donde un grupo no es uniforme. El certificado y la region del SAG se
+# extraen; los datos del Conservador (numero/anio/registro del plano y oficina
+# sectorial) son captura manual al subir el plano.
+_PRODUCER_BY_KEY: Final[dict[str, str]] = {
+    "sag.plano_cbr_numero": "manual",
+    "sag.plano_cbr_anio": "manual",
+    "sag.plano_cbr_registro": "manual",
+    "sag.oficina_sectorial": "manual",
+}
+
+
+def variable_producer(variable_key: str) -> str:
+    """Productor previsto de una variable: extracted/authored/manual/sale_gap."""
+    normalized = variable_key.removesuffix("[]")
+    if normalized in _PRODUCER_BY_KEY:
+        return _PRODUCER_BY_KEY[normalized]
+    if normalized.startswith("matriz.deslindes."):
+        return "extracted"
+    group = VARIABLE_GROUP_BY_KEY.get(normalized) or normalized.split(".", 1)[0]
+    return _PRODUCER_BY_GROUP.get(group, "extracted")
+
+
+# Variables que la venta llena al validarse (comprador, precio, lote especifico,
+# servidumbre): en la matriz del PROYECTO son huecos por diseno y NUNCA bloquean
+# la aprobacion (FR-002). Derivado de la clasificacion de productor para que sea
+# una sola fuente de verdad. Normalizado sin el sufijo `[]` de arrays.
+SALE_SCOPED_VARIABLE_KEYS: Final[frozenset[str]] = frozenset(
+    key.removesuffix("[]")
+    for key in VARIABLE_KEYS
+    if variable_producer(key) == "sale_gap"
+)
+
+# Datos que se completan al firmar (notaria/otorgamiento): huecos no-bloqueantes
+# de la matriz del proyecto, igual que los datos de venta.
+SIGNING_SCOPED_VARIABLE_KEYS: Final[frozenset[str]] = frozenset(
+    key.removesuffix("[]")
+    for key in VARIABLE_KEYS
+    if variable_producer(key) == "signing"
+)
+
+# Claves que NUNCA bloquean la aprobacion de la matriz del PROYECTO: lo que
+# aporta la venta + lo que se completa al firmar. Se renderizan como huecos.
+NON_BLOCKING_PROJECT_MATRIZ_KEYS: Final[frozenset[str]] = (
+    SALE_SCOPED_VARIABLE_KEYS | SIGNING_SCOPED_VARIABLE_KEYS
+)
+
+# SDD 011: defaults reutilizables de las variables de autoria (`authored`) cuyo
+# texto es boilerplate legal estandar (no especifico de la organizacion). El
+# resolutor los aplica como `derived`/`not_applicable` cuando el proyecto no
+# tiene un valor propio, para que la matriz no nazca con huecos en clausulas
+# estandar; el abogado los puede sobre-escribir por proyecto desde el editor.
+# Los datos especificos de la organizacion (notaria, notario, persona
+# mandataria, ciudad de otorgamiento) NO viven aqui: son configuracion de la
+# organizacion / captura por proyecto.
+AUTHORED_VARIABLE_DEFAULTS: Final[dict[str, dict[str, object]]] = {
+    "clausulas.saneamiento_eviccion": {
+        "state": "derived",
+        "value_text": (
+            "El vendedor responderá del saneamiento de la evicción y de los "
+            "vicios redhibitorios conforme a las reglas generales del Código "
+            "Civil."
+        ),
+    },
+    "clausulas.exencion_eviccion_aprobada": {"state": "derived", "value_text": "false"},
+    "clausulas.exencion_eviccion_texto": {"state": "not_applicable", "value_text": None},
+    "clausulas.entrega_material": {
+        "state": "derived",
+        "value_text": (
+            "La entrega se realiza sin ocupantes ni moradores, con los cierres, "
+            "accesos y mejoras existentes que el comprador declara conocer."
+        ),
+    },
+    "clausulas.entrega_fecha": {"state": "derived", "value_text": "esta misma fecha"},
+    "clausulas.gastos_cargo": {"state": "derived", "value_text": "del comprador"},
+    "clausulas.domicilio_contractual": {"state": "derived", "value_text": "Santiago"},
+    # Excepciones: por defecto "sin excepciones" (caso comun); el abogado agrega
+    # la excepcion solo cuando exista en el proyecto.
+    "clausulas.ocupantes_excepciones": {"state": "not_applicable", "value_text": None},
+    "clausulas.gastos_excepciones": {"state": "not_applicable", "value_text": None},
+    "clausulas.rnda_declaracion": {"state": "not_applicable", "value_text": None},
+    "evidencia.gravamenes_excepciones": {"state": "not_applicable", "value_text": None},
+    "clausulas.lguc_destino_suelo": {
+        "state": "derived",
+        "value_text": (
+            "Las partes declaran conocer las limitaciones del artículo 55 de la "
+            "Ley General de Urbanismo y Construcciones y del Decreto Ley 3.516 "
+            "sobre subdivisión de predios rústicos."
+        ),
+    },
+    "mandato.facultades": {
+        "state": "derived",
+        "value_text": (
+            "El mandato comprende la facultad de suscribir minutas "
+            "rectificatorias y de requerir y firmar las inscripciones y "
+            "subinscripciones que procedan."
+        ),
+    },
+    # Personeria: por defecto NO aplica (vendedor persona natural). `aplica` es
+    # clave de condicion que gatea la clausula de personeria.
+    "personeria.aplica": {"state": "derived", "value_text": "false"},
+    "personeria.constitucion_texto": {"state": "not_applicable", "value_text": None},
+    "personeria.poder_texto": {"state": "not_applicable", "value_text": None},
+    "personeria.delegacion_facultades": {"state": "not_applicable", "value_text": None},
+    "personeria.estado_revision": {"state": "derived", "value_text": "no_aplica"},
+}
+
+
+def authored_variable_default(variable_key: str) -> dict[str, object] | None:
+    """Default reutilizable de una variable de autoria, o None si no tiene."""
+    return AUTHORED_VARIABLE_DEFAULTS.get(variable_key.removesuffix("[]"))
+
 # SDD 010 (research D4): fuente unica de etiquetas humanas es-CL. La copia
 # web de los grupos (`LEGAL_VARIABLE_GROUP_LABELS`) queda para el CCL hasta
 # su rediseno; un test de paridad evita divergencia. Toda clave del catalogo

@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getMatrizCase, saveMatriz, MatrizClientError } from '@/lib/documents/matriz-client'
+import {
+  getMatrizCase,
+  getMatrizProject,
+  saveMatriz,
+  MatrizClientError,
+} from '@/lib/documents/matriz-client'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type {
   ClauseContentJson,
@@ -17,6 +22,7 @@ import { MesaEncabezado } from './mesa-encabezado'
 import { MesaIndice } from './mesa-indice'
 import { PanelDatos } from './panel-datos'
 import { PendientesList } from './pendientes-list'
+import { PreparacionMatriz } from './preparacion-matriz'
 import { WorkflowAcciones } from './workflow-acciones'
 
 /**
@@ -80,23 +86,26 @@ export function overridesDeLaMatriz(
 }
 
 type MesaEscrituraProps = {
-  caseId: string
+  caseId?: string
+  projectId?: string
   initialData?: MatrizCaseResponse | null
 }
 
-export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps) {
+export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEscrituraProps) {
+  const missingSource = !initialData && !caseId && !projectId
   const [data, setData] = useState<MatrizCaseResponse | null>(initialData)
-  const [isLoading, setIsLoading] = useState(!initialData)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(!initialData && !missingSource)
+  const [error, setError] = useState<string | null>(missingSource ? MESA_TEXT.noSePudoCargar : null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [clausulaActiva, setClausulaActiva] = useState<string | null>(null)
   const [borradores, setBorradores] = useState<Record<string, MatrizClauseOverride>>({})
 
   useEffect(() => {
-    if (initialData) return
+    if (initialData || missingSource) return
     let active = true
-    getMatrizCase(caseId)
+    const loader = caseId ? getMatrizCase(caseId) : getMatrizProject(projectId as string)
+    loader
       .then((response) => {
         if (active) setData(response)
       })
@@ -109,7 +118,7 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
     return () => {
       active = false
     }
-  }, [caseId, initialData])
+  }, [caseId, projectId, initialData, missingSource])
 
   const matriz = data?.matriz ?? null
   const resumen = useMemo(() => (matriz ? resumenDeMesa(matriz) : null), [matriz])
@@ -157,6 +166,21 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
     setBorradores({})
     setClausulaActiva(null)
     setAviso(null)
+  }
+
+  async function recargarMatriz() {
+    const sourceProjectId = projectId ?? matriz?.project_id
+    if (!caseId && !sourceProjectId) return
+    try {
+      const response = caseId
+        ? await getMatrizCase(caseId)
+        : await getMatrizProject(sourceProjectId as string)
+      setData(response)
+      setBorradores({})
+      setAviso(null)
+    } catch {
+      setAviso(MESA_TEXT.noSePudoCargar)
+    }
   }
 
   if (isLoading) {
@@ -232,7 +256,15 @@ export function MesaEscritura({ caseId, initialData = null }: MesaEscrituraProps
           {matriz.approval_blockers.length > 0 ? (
             <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
               <h3 className="mb-3 text-sm font-semibold">{MESA_TEXT.pendientesTitle}</h3>
-              <PendientesList blockers={matriz.approval_blockers} compact />
+              {matriz.scope === 'project' ? (
+                <PreparacionMatriz
+                  projectId={matriz.project_id}
+                  blockers={matriz.approval_blockers}
+                  onResolved={recargarMatriz}
+                />
+              ) : (
+                <PendientesList blockers={matriz.approval_blockers} compact />
+              )}
             </section>
           ) : null}
           <PanelDatos resolucion={matriz.resolution} projectId={matriz.project_id} />

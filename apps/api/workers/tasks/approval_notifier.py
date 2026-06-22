@@ -2,6 +2,10 @@ from core.logger import get_logger
 from core.database import get_supabase_client
 from integrations.telegram_client import get_telegram_client_for_org
 from integrations.meta_client import meta_client
+from services.escritura_notifications import (
+    absolute_frontend_link,
+    sale_pending_validation_copy,
+)
 
 logger = get_logger(__name__)
 
@@ -41,6 +45,8 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
         )
         lot_info = lot_res.data[0] if lot_res.data else {}
         numero_lote = lot_info.get("numero_lote", "?")
+        lot_label = f"Lote {numero_lote}"
+        project_id = str(lot_info["project_id"]) if lot_info.get("project_id") else None
 
         project_name = "Desconocido"
         if lot_info.get("project_id"):
@@ -109,9 +115,16 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             )
             notaria_str = payload.get("notaria", "No definida")
             fecha_str = payload.get("fecha_firma", "No definida")
+            notification_copy = sale_pending_validation_copy(
+                project_id=project_id,
+                lot_label=lot_label,
+                project_name=project_name,
+                client_name=payload.get("cliente_nombre", "?"),
+            )
+            deep_link = absolute_frontend_link(notification_copy.deep_link)
 
             message = (
-                f"📋 *Solicitud de Venta*\n\n"
+                f"📋 *{notification_copy.title}*\n\n"
                 f"👤 *Vendedor:* {request['vendor_name']}\n"
                 f"📍 *Lote:* {numero_lote} — *Proyecto:* {project_name}\n"
                 f"🧑 *Cliente:* {payload.get('cliente_nombre', '?')} ({payload.get('cliente_run', '?')})\n"
@@ -119,7 +132,8 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
                 f"💵 *Valor Venta Final:* {valor_final_str}\n"
                 f"🏛️ *Notaría:* {notaria_str}\n"
                 f"📅 *Fecha Firma:* {fecha_str}\n\n"
-                f"¿Aprobáis esta venta?"
+                f"{notification_copy.action_label}: {deep_link}\n\n"
+                f"¿Apruebas esta venta?"
             )
         else:
             valor_str = (

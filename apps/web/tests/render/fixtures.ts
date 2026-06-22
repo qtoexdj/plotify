@@ -59,6 +59,8 @@ export function matrizWith(
     project_id: 'p1',
     status: 'draft',
     version: 1,
+    scope: 'lot',
+    source_project_matriz_id: null,
     template: { id: 't1', name: 'Compraventa predio rustico', version: 1 },
     snapshot_stale: false,
     clause_order: clauses.map((clause) => clause.clause_key),

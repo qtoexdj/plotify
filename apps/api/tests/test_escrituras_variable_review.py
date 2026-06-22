@@ -365,7 +365,8 @@ async def test_review_rejects_invalid_state_transition_without_audit():
         update_legal_variable,
     )
 
-    supabase = FakeSupabase(variable_state="missing")
+    # Aprobar desde un estado terminal (no aplica) sigue siendo inválido.
+    supabase = FakeSupabase(variable_state="not_applicable")
     with pytest.raises(LegalVariableResolutionError):
         await update_legal_variable(
             variable_resolution_id=VARIABLE_ID,
@@ -382,6 +383,32 @@ async def test_review_rejects_invalid_state_transition_without_audit():
 
     assert supabase.variable_updates == []
     assert supabase.review_decisions == []
+
+
+async def test_approve_from_missing_with_value_sets_and_approves():
+    """SDD 011: el revisor puede entrar un valor y aprobar en un paso desde
+    `missing` (datos manuales del Conservador). No es transición inválida."""
+    from schemas.legal_variables import VariableUpdateRequest
+    from services.legal_variable_resolution import update_legal_variable
+
+    supabase = FakeSupabase(variable_state="missing")
+    result = await update_legal_variable(
+        variable_resolution_id=VARIABLE_ID,
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        payload=VariableUpdateRequest.model_validate(
+            {
+                "action": "approve",
+                "value_text": "621",
+                "reviewed_by": USER_ID,
+            }
+        ),
+        supabase=supabase,
+    )
+
+    assert result.state == "approved"
+    assert supabase.variable_updates[0]["state"] == "approved"
+    assert supabase.variable_updates[0]["value_text"] == "621"
 
 
 async def test_review_rolls_back_variable_update_when_audit_insert_fails():

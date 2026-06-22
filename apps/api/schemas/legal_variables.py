@@ -229,12 +229,62 @@ class VariableUpdateRequest(LegalVariableBaseModel):
         return value
 
 
+class VariableUpsertRequest(LegalVariableBaseModel):
+    """SDD 011: fija el valor de una variable de proyecto por su clave, creando
+    la fila si no existe (variables de autoría/manuales que el extractor no
+    produce, p. ej. plano CBR o mandatario)."""
+
+    variable_key: str
+    value_text: str | None = None
+    value_json: dict[str, Any] | list[Any] | None = None
+    state: str = "resolved"
+    correction_reason: str | None = None
+    reviewed_by: str | None = None
+
+    @field_validator("variable_key")
+    @classmethod
+    def validate_variable_key(cls, value: str) -> str:
+        if not catalog.is_variable_key(value):
+            raise ValueError(f"Unknown variable key: {value}")
+        return value
+
+    @field_validator("state")
+    @classmethod
+    def validate_state(cls, value: str) -> str:
+        if value not in {"resolved", "not_applicable"}:
+            raise ValueError(f"Unsupported upsert state: {value}")
+        return value
+
+
 class VariableReviewResponse(LegalVariableResponseModel):
     variable_resolution_id: str
     state: str
     reviewed_by: str | None = None
     reviewed_at: datetime | None = None
     audit_event_id: str
+
+
+class VariableBulkApproveRequest(LegalVariableBaseModel):
+    """SDD 011 (A5): aprueba en bloque las variables revisables del proyecto
+    (proposed/manual_review con valor), opcionalmente acotado a un grupo o a un
+    set de claves. Limpia los 'por revisar' sin clic-por-clic."""
+
+    reviewed_by: str
+    group: str | None = None
+    variable_keys: list[str] = Field(default_factory=list)
+
+    @field_validator("group")
+    @classmethod
+    def validate_group(cls, value: str | None) -> str | None:
+        if value is not None and not catalog.is_variable_group(value):
+            raise ValueError(f"Unknown variable group: {value}")
+        return value
+
+
+class VariableBulkApproveResponse(LegalVariableResponseModel):
+    approved_count: int
+    approved_keys: list[str] = Field(default_factory=list)
+    skipped_keys: list[str] = Field(default_factory=list)
 
 
 class RoleMatchingRequest(LegalVariableBaseModel):

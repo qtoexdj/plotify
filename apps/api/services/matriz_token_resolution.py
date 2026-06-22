@@ -40,6 +40,7 @@ from services.legal_title_words import (
 from services.legal_variable_catalog import (
     VARIABLE_GROUP_LABELS,
     VARIABLE_KEYS,
+    authored_variable_default,
     variable_group_for_key,
     variable_label_for_key,
 )
@@ -340,6 +341,15 @@ class _ClauseResolver:
         self.tokens.append(entry)
         return entry
 
+    def _condition_truthiness(self, condition_key: str) -> bool | None:
+        """Verdad de una condición: snapshot del proyecto y, si no hay valor,
+        el default reutilizable de la variable (SDD 011). Permite que clausulas
+        condicionales como personería/exención tomen su default."""
+        entry = snapshot_entry(self.snapshot, condition_key)
+        if entry is None:
+            entry = authored_variable_default(condition_key)
+        return _is_truthy_condition(entry)
+
     def _evidence_refs(self, key: str) -> tuple[dict[str, Any], ...]:
         refs = self.evidence.get(key)
         if isinstance(refs, list):
@@ -412,6 +422,31 @@ class _ClauseResolver:
                 )
             )
         if entry is None:
+            default = authored_variable_default(key)
+            if default is not None:
+                if str(default.get("state") or "") == "not_applicable":
+                    return self._record(
+                        TokenResolutionEntry(
+                            variable_key=key,
+                            status="resolved",
+                            value_text="",
+                            state="not_applicable",
+                            source_type="legal_review",
+                            label_override=node_label,
+                        )
+                    )
+                default_text = default.get("value_text")
+                if isinstance(default_text, str) and default_text.strip():
+                    return self._record(
+                        TokenResolutionEntry(
+                            variable_key=key,
+                            status="resolved",
+                            value_text=_apply_format(default_text, token_format),
+                            state="derived",
+                            source_type="derived",
+                            label_override=node_label,
+                        )
+                    )
             return self._record(
                 TokenResolutionEntry(
                     variable_key=key, status="missing", label_override=node_label
@@ -594,9 +629,7 @@ class _ClauseResolver:
                 attrs = node.get("attrs") or {}
                 condition_key = str(attrs.get("conditionKey") or "")
                 mode = str(attrs.get("mode") or "omit")
-                condition = _is_truthy_condition(
-                    snapshot_entry(self.snapshot, condition_key)
-                )
+                condition = self._condition_truthiness(condition_key)
                 if condition is None:
                     self._record(
                         TokenResolutionEntry(
@@ -632,9 +665,7 @@ class _ClauseResolver:
 
         condition_key = clause.get("condition_key")
         if condition_key:
-            condition = _is_truthy_condition(
-                snapshot_entry(self.snapshot, str(condition_key))
-            )
+            condition = self._condition_truthiness(str(condition_key))
             mode = str(clause.get("condition_mode") or "omit")
             if condition is None:
                 self._record(

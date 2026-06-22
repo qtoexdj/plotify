@@ -422,8 +422,19 @@ describe('F-v2-4.15 — navItems: grupo Documentos', () => {
     expect(docGroup?.items?.length).toBeGreaterThan(0)
   })
 
-  it('tiene exactamente 2 subitems', () => {
-    expect(docGroup?.items).toHaveLength(2)
+  it('tiene los subitems de Documentos aprobados para escrituras', () => {
+    expect(docGroup?.items).toHaveLength(3)
+    expect(docGroup?.items?.map((item) => item.title)).toEqual([
+      'Escrituras',
+      'Historial',
+      'Plantillas',
+    ])
+  })
+
+  it('subitem Escrituras existe con la URL correcta', () => {
+    const sub = docGroup?.items?.find((i) => i.title === 'Escrituras')
+    expect(sub).toBeDefined()
+    expect(sub?.url).toBe('/documentos')
   })
 
   it('subitem Plantillas existe con la URL correcta', () => {

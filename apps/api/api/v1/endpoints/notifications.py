@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from arq.connections import ArqRedis
-from typing import Optional, Literal
+from dataclasses import asdict
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -18,9 +18,111 @@ from core.redis import get_arq_pool
 from api.deps import verify_internal_secret, require_admin_role
 from workers.tasks.approval_processor import execute_admin_decision_db
 from api.v1.endpoints.approvals import require_approval_organization
+from services.escritura_notifications import (
+    AdminNotificationCopy,
+    draft_ready_for_review_copy,
+    sale_pending_validation_copy,
+    waiting_project_matriz_copy,
+)
 
 router = APIRouter(dependencies=[Depends(verify_internal_secret)])
 logger = get_logger(__name__)
+
+
+def _first_row(data):
+    if isinstance(data, list):
+        return data[0] if data else None
+    return data if isinstance(data, dict) else None
+
+
+def _sale_approved_notification_copy(
+    *,
+    supabase,
+    organization_id: str,
+    project_id: str | None,
+    lot_id: str,
+    lot_label: str,
+) -> AdminNotificationCopy | None:
+    case_res = (
+        supabase.table("escritura_cases")
+        .select("id, case_status, readiness_status, readiness_gates")
+        .eq("organization_id", organization_id)
+        .eq("lot_id", lot_id)
+        .limit(1)
+        .execute()
+    )
+    case_row = _first_row(
+        [
+            row
+            for row in (case_res.data or [])
+            if row.get("case_status") != "cancelled"
+        ]
+    )
+    if not case_row:
+        return None
+
+    matrix_res = (
+        supabase.table("escritura_matrices")
+        .select("id, status, source_project_matriz_id")
+        .eq("organization_id", organization_id)
+        .eq("escritura_case_id", str(case_row["id"]))
+        .limit(1)
+        .execute()
+    )
+    matrix_row = _first_row(
+        [
+            row
+            for row in (matrix_res.data or [])
+            if row.get("status") != "superseded"
+        ]
+    )
+    if matrix_row and matrix_row.get("source_project_matriz_id"):
+        return draft_ready_for_review_copy(
+            escritura_case_id=str(case_row["id"]),
+            lot_label=lot_label,
+        )
+
+    gates = case_row.get("readiness_gates") or {}
+    project_gate = gates.get("project_matriz_approved") or {}
+    if project_gate.get("status") == "blocked":
+        return waiting_project_matriz_copy(
+            project_id=project_id,
+            lot_label=lot_label,
+        )
+
+    return None
+
+
+def _notification_copy_for_item(
+    *,
+    supabase,
+    organization_id: str,
+    request_type: str,
+    status_val: str,
+    project_id: str | None,
+    lot_id: str,
+    lot_label: str,
+    project_name: str,
+    client_name: str,
+) -> AdminNotificationCopy | None:
+    if request_type != "sale":
+        return None
+    if status_val == "pending":
+        return sale_pending_validation_copy(
+            project_id=project_id,
+            lot_label=lot_label,
+            project_name=project_name,
+            client_name=client_name,
+        )
+    if status_val == "approved":
+        return _sale_approved_notification_copy(
+            supabase=supabase,
+            organization_id=organization_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            lot_label=lot_label,
+        )
+    return None
 
 @router.get(
     "/",
@@ -123,6 +225,22 @@ async def list_notifications(
         payload = app_req.get("payload") or {}
         status_val = app_req.get("status", "pending")
         read_at_val = row.get("read_at")
+        request_type = app_req.get("request_type", "reservation")
+        lot_label = f"Lote {lot.get('numero_lote', 'N/A')}"
+        project_name = project.get("name", "N/A")
+        client_name = payload.get("cliente_nombre", "N/A")
+        copy = _notification_copy_for_item(
+            supabase=supabase,
+            organization_id=x_organization_id,
+            request_type=request_type,
+            status_val=status_val,
+            project_id=str(project["id"]) if project.get("id") else None,
+            lot_id=str(app_req.get("lot_id")),
+            lot_label=lot_label,
+            project_name=project_name,
+            client_name=client_name,
+        )
+        copy_payload = asdict(copy) if copy else {}
         
         # Conteo
         if status_val == "pending":
@@ -139,16 +257,17 @@ async def list_notifications(
             NotificationItem(
                 id=row["id"],
                 approval_id=row["approval_id"],
-                request_type=app_req.get("request_type", "reservation"),
+                request_type=request_type,
                 status=status_val,
-                project_name=project.get("name", "N/A"),
-                lot_label=f"Lote {lot.get('numero_lote', 'N/A')}",
-                client_name=payload.get("cliente_nombre", "N/A"),
+                project_name=project_name,
+                lot_label=lot_label,
+                client_name=client_name,
                 vendor_name=app_req.get("vendor_name", "N/A"),
                 created_at=row["created_at"],
                 decided_at=app_req.get("resolved_at"),
                 can_decide=(user_role == "admin" and status_val == "pending"),
-                read_at=read_at_val
+                read_at=read_at_val,
+                **copy_payload,
             )
         )
         
@@ -302,7 +421,7 @@ async def decide_notification_approval(
             logger.error(
                 "notification_decision_enqueue_failed",
                 approval_id=approval_id,
-                org_id=organization_id,
+                org_id=x_organization_id,
                 error=str(redis_err),
             )
             

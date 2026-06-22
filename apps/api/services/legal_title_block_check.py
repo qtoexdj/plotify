@@ -287,6 +287,12 @@ def check_block_facts(block_text: str, analysis: TitleAnalysis) -> BlockCheckRes
     """Validate an agent-drafted block against the verified analysis."""
     issues: list[BlockFactIssue] = []
 
+    # Los huecos del borrador van entre corchetes (ej. "[NACIONALIDAD]"): son
+    # marcadores de un dato faltante que la notaría/abogado completan después,
+    # no hechos afirmados por el agente. Se excluyen de la verificación de
+    # números, fechas y nombres para no marcarlos como "sin respaldo".
+    block_text = re.sub(r"\[[^\]]*\]", " ", block_text)
+
     # 1. Numbers: words or digits, every parsed number must be allowed.
     allowed_numbers = allowed_block_numbers(analysis)
     for value, raw in extract_spanish_numbers(block_text):

@@ -9,12 +9,11 @@ Esta regla aplica a Codex CLI, Codex en VSCode, Antigravity y cualquier agente q
 ## Artefactos Activos
 
 - Constitución: `.specify/memory/constitution.md`
-- Feature activa: `specs/010-mesa-escritura/`
-- Spec: `specs/010-mesa-escritura/spec.md`
-- Plan: `specs/010-mesa-escritura/plan.md`
-- Protocolo agentes/subagentes: `specs/010-mesa-escritura/agent-execution.md`
-- Tareas: `specs/010-mesa-escritura/tasks.md`
-- Contratos de diseño: `specs/010-mesa-escritura/contracts/`
+- Feature activa: `specs/011-venta-escritura/`
+- Spec: `specs/011-venta-escritura/spec.md`
+- Plan: `specs/011-venta-escritura/plan.md`
+- Tareas: `specs/011-venta-escritura/tasks.md`
+- Contratos de diseño: `specs/011-venta-escritura/contracts/`
 
 ## Orden de Trabajo
 
@@ -31,7 +30,7 @@ No saltes directo a implementación si `analyze` reporta issues `CRITICAL`.
 ## Protocolo Antes de Implementar
 
 1. Lee la primera tarea pendiente en `tasks.md`.
-2. Lee `specs/010-mesa-escritura/agent-execution.md`.
+2. Lee `specs/011-venta-escritura/plan.md` y `tasks.md`.
 3. Confirma dependencias previas y fase.
 4. Ejecuta `git status --short`.
 5. Ejecuta `codegraph sync .`.
@@ -54,9 +53,9 @@ No saltes directo a implementación si `analyze` reporta issues `CRITICAL`.
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/010-mesa-escritura/tasks.md.
+Implementa solo TXXX de specs/011-venta-escritura/tasks.md.
 No avances a otra tarea.
-Lee specs/010-mesa-escritura/agent-execution.md.
+Lee specs/011-venta-escritura/plan.md y tasks.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.
@@ -65,7 +64,7 @@ Marca la tarea como completada solo si pasa.
 
 ## Protocolo Multi-Agente
 
-- Usa `agent-execution.md` como regla operativa para roles, subagentes, limites de lineas, paralelizacion y handoff.
+- El feature activo (011) no define `agent-execution.md`; usa esta regla más `tasks.md` como protocolo operativo de roles, subagentes, límites de líneas, paralelización y handoff.
 - Solo tareas marcadas `[P]` pueden paralelizarse y nunca sobre el mismo archivo, migracion, endpoint, tipo generado o tabla.
 - Si una tarea supera 5 archivos, 250 LOC modificadas o mezcla DB/API/Web sin ser tarea de integracion, detente y divide o deja justificacion para revision.
 - Todo cierre de tarea debe reportar tarea, rol activo, archivos, Verify, estado `[x]`, riesgos y siguiente tarea.

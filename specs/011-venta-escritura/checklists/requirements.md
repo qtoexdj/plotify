@@ -42,7 +42,8 @@
   sobre plantillas; posible migracion minima aditiva), D2 canal de entrega
   Telegram (enlace vs archivo), D3 punto exacto de enganche en la
   validacion de venta.
-- Gate de proceso heredado de SDD 010: wireframe de la matriz del proyecto
-  (huecos `______`) y de "mis documentos del vendedor" se aprueban por el
+- Gate de proceso heredado de SDD 010: wireframes de la matriz del proyecto
+  (huecos `______`), de la matriz de variables del proyecto (CCL existente,
+  sin entidad nueva) y de "mis documentos del vendedor" se aprueban por el
   usuario antes de implementar; la sesion de usabilidad incluira el journey
   vendedor→entrega.

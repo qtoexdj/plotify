@@ -23,6 +23,7 @@ from urllib.parse import quote
 from api.deps import verify_internal_secret
 from core.logger import get_logger
 from schemas.escritura_matrices import (
+    EscrituraTraceResponse,
     GenerateMinutaRequest,
     MatrizApproveRequest,
     MatrizCaseResponse,
@@ -35,6 +36,7 @@ from schemas.escritura_matrices import (
 )
 from services.legal_microcopy import (
     ALERT_REQUIRED_CLAUSE_TEXTS,
+    ESCRITURA_BORRADOR_NOTICE,
     BlockerMicrocopy,
     alert_clause_missing_microcopy,
     clause_omitted_reason,
@@ -42,6 +44,8 @@ from services.legal_microcopy import (
     snapshot_stale_microcopy,
     token_blocked_microcopy,
     token_missing_microcopy,
+    flow_state_description,
+    flow_state_label,
 )
 from services.matriz_token_resolution import (
     UnknownNodeError,
@@ -54,6 +58,13 @@ from services.matriz_docx_renderer import (
     MatrizDocxError,
     render_minuta_docx,
 )
+from services.legal_variable_catalog import (
+    NON_BLOCKING_PROJECT_MATRIZ_KEYS,
+    SALE_SCOPED_VARIABLE_KEYS,
+    variable_producer,
+)
+from services.escritura_readiness import fetch_project_matriz_snapshot
+from services.escritura_delivery import deliver_draft, delivery_status_label
 
 logger = get_logger(__name__)
 
@@ -82,8 +93,8 @@ CLAUSE_COLUMNS = (
 MATRIX_COLUMNS = (
     "id, organization_id, project_id, escritura_case_id, template_id, "
     "snapshot_case_status, snapshot_hash, clause_order, clause_overrides, "
-    "status, version, submitted_by, submitted_at, approved_by, approved_at, "
-    "created_at, updated_at"
+    "source_project_matriz_id, status, version, submitted_by, submitted_at, "
+    "approved_by, approved_at, created_at, updated_at"
 )
 GENERATION_COLUMNS = (
     "id, organization_id, project_id, escritura_case_id, matriz_id, "
@@ -92,10 +103,19 @@ GENERATION_COLUMNS = (
     "warning_acknowledged_at, generated_by, generated_at"
 )
 MINUTA_STORAGE_BUCKET = "documents"
+PROJECT_MATRIZ_GATE = "project_matriz_approved"
+PROJECT_MATRIZ_MISSING_CODE = "project_matriz_approval_missing"
 
 # SDD 010 (research D6): catalogo humanizado para el picker "Insertar dato",
 # construido una vez desde la fuente unica (matriz_token_resolution).
 INSERTABLE_VARIABLES: list[dict[str, str]] = insertable_variables_catalog()
+
+# SDD 011 (FR-002/FR-003): claves que solo se llenan al vender el lote (datos
+# de la venta + geometria del lote + servidumbre). En la matriz del PROYECTO son
+# huecos por diseño ("esperando ventas"): se renderizan como huecos pero NO
+# bloquean la aprobacion. Fuente unica: la clasificacion de productor del
+# catalogo (`SALE_SCOPED_VARIABLE_KEYS`), ya normalizada sin el sufijo `[]`.
+PROJECT_MATRIZ_GAP_KEYS: frozenset[str] = SALE_SCOPED_VARIABLE_KEYS
 
 
 def _first_row(data: Any) -> dict[str, Any] | None:
@@ -134,6 +154,15 @@ def _as_dict(value: Any) -> dict[str, Any]:
 
 def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _uuid_text_or_none(value: Any) -> str | None:
+    if not value:
+        return None
+    try:
+        return str(uuid.UUID(str(value)))
+    except (TypeError, ValueError):
+        return None
 
 
 def _utc_now_iso() -> str:
@@ -201,6 +230,28 @@ async def _fetch_project_context(client: Any, case_row: dict[str, Any]) -> dict[
     row = _single_row(result) or {}
     project_name = row.get("name") or row.get("nombre")
     return {"proyecto_nombre": project_name} if project_name else {}
+
+
+async def _fetch_project(
+    client: Any, project_id: str, organization_id: str
+) -> dict[str, Any]:
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("projects")
+            .select("id, organization_id, name")
+            .eq("id", project_id)
+            .eq("organization_id", organization_id)
+            .maybe_single()
+            .execute()
+        )
+    )
+    row = _single_row(result)
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found for this organization.",
+        )
+    return row
 
 
 async def _fetch_published_template(
@@ -310,19 +361,37 @@ async def _fetch_matrix_by_id(
 async def _lazy_create_matrix(
     client: Any, case_row: dict[str, Any], organization_id: str
 ) -> dict[str, Any]:
-    template = await _fetch_published_template(client, organization_id)
-    clauses = await _fetch_template_clauses(client, str(template["id"]), organization_id)
+    project_matrix = await _fetch_approved_project_matrix(
+        client=client,
+        project_id=str(case_row["project_id"]),
+        organization_id=organization_id,
+    )
+    if project_matrix is None:
+        _raise_project_matriz_missing(str(case_row["project_id"]))
+    return await _create_matrix_from_project_matrix(
+        client=client,
+        case_row=case_row,
+        project_matrix=project_matrix,
+    )
+
+
+async def _create_matrix_from_project_matrix(
+    *,
+    client: Any,
+    case_row: dict[str, Any],
+    project_matrix: dict[str, Any],
+) -> dict[str, Any]:
     snapshot_hash = _json_hash(case_row.get("variable_snapshot"))
-    clause_order = [str(clause["clause_key"]) for clause in clauses]
     payload = {
-        "organization_id": organization_id,
+        "organization_id": str(case_row["organization_id"]),
         "project_id": str(case_row["project_id"]),
         "escritura_case_id": str(case_row["id"]),
-        "template_id": str(template["id"]),
+        "template_id": str(project_matrix["template_id"]),
         "snapshot_case_status": case_row.get("case_status") or "variables_pending",
         "snapshot_hash": snapshot_hash,
-        "clause_order": clause_order,
-        "clause_overrides": {},
+        "clause_order": _as_list(project_matrix.get("clause_order")),
+        "clause_overrides": _as_dict(project_matrix.get("clause_overrides")),
+        "source_project_matriz_id": str(project_matrix["id"]),
         "status": "draft",
         "version": 1,
     }
@@ -337,10 +406,11 @@ async def _lazy_create_matrix(
         )
     logger.info(
         "escritura_matriz_lazy_created",
-        organization_id=organization_id,
+        organization_id=str(case_row["organization_id"]),
         escritura_case_id=str(case_row["id"]),
         matriz_id=row["id"],
-        template_id=template["id"],
+        source_project_matriz_id=str(project_matrix["id"]),
+        template_id=project_matrix["template_id"],
     )
     return row
 
@@ -684,6 +754,10 @@ async def _case_response(
                 "project_id": matrix_row["project_id"],
                 "status": matrix_row["status"],
                 "version": matrix_row["version"],
+                "scope": "lot",
+                "source_project_matriz_id": matrix_row.get(
+                    "source_project_matriz_id"
+                ),
                 "template": {
                     "id": template["id"],
                     "name": template["name"],
@@ -708,21 +782,332 @@ async def _case_response(
     )
 
 
+# ─── Matriz del PROYECTO (SDD 011, scope escritura_case_id NULL) ──────────────
+
+
+async def _fetch_project_context_by_id(
+    client: Any, project_id: str, organization_id: str
+) -> dict[str, Any]:
+    row = await _fetch_project(client, project_id, organization_id)
+    project_name = row.get("name") or row.get("nombre")
+    return {"proyecto_nombre": project_name} if project_name else {}
+
+
+async def _fetch_active_project_matrix(
+    client: Any, project_id: str, organization_id: str
+) -> dict[str, Any] | None:
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_matrices")
+            .select(MATRIX_COLUMNS)
+            .eq("project_id", project_id)
+            .eq("organization_id", organization_id)
+            .is_("escritura_case_id", "null")
+            .neq("status", "superseded")
+            .maybe_single()
+            .execute()
+        )
+    )
+    return _single_row(result)
+
+
+async def _fetch_approved_project_matrix(
+    *, client: Any, project_id: str, organization_id: str
+) -> dict[str, Any] | None:
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_matrices")
+            .select(MATRIX_COLUMNS)
+            .eq("project_id", project_id)
+            .eq("organization_id", organization_id)
+            .is_("escritura_case_id", "null")
+            .eq("status", "approved")
+            .maybe_single()
+            .execute()
+        )
+    )
+    return _single_row(result)
+
+
+def _project_matriz_action_url(project_id: str) -> str:
+    return f"/documentos/matriz/proyecto/{project_id}"
+
+
+def _project_matriz_missing_detail(project_id: str) -> dict[str, Any]:
+    action_url = _project_matriz_action_url(project_id)
+    copy = readiness_gate_microcopy(PROJECT_MATRIZ_GATE)
+    blocker = _humanized(
+        {
+            "kind": "readiness_gate",
+            "gate": PROJECT_MATRIZ_GATE,
+            "message": "Falta aprobar la matriz del proyecto.",
+            "fix_url": action_url,
+        },
+        copy,
+        action_url,
+    )
+    return {
+        "code": PROJECT_MATRIZ_MISSING_CODE,
+        "message": "Falta aprobar la matriz del proyecto.",
+        "flow_state": "waiting_project_matriz",
+        "flow_state_label": flow_state_label("waiting_project_matriz"),
+        "flow_state_description": flow_state_description("waiting_project_matriz"),
+        "blocking": [blocker],
+    }
+
+
+def _raise_project_matriz_missing(project_id: str) -> None:
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=_project_matriz_missing_detail(project_id),
+    )
+
+
+async def _lazy_create_project_matrix(
+    client: Any,
+    project_id: str,
+    organization_id: str,
+    variable_snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Crea la matriz del proyecto (case_id NULL) desde la plantilla general."""
+    template = await _fetch_published_template(client, organization_id)
+    clauses = await _fetch_template_clauses(client, str(template["id"]), organization_id)
+    clause_order = [str(clause["clause_key"]) for clause in clauses]
+    payload = {
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "escritura_case_id": None,
+        "template_id": str(template["id"]),
+        "snapshot_case_status": "project",
+        "snapshot_hash": _json_hash(variable_snapshot),
+        "clause_order": clause_order,
+        "clause_overrides": {},
+        "status": "draft",
+        "version": 1,
+    }
+    result = await asyncio.to_thread(
+        lambda: client.table("escritura_matrices").insert(payload).execute()
+    )
+    row = _first_row(result.data)
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Project matriz creation returned no row.",
+        )
+    logger.info(
+        "escritura_project_matriz_created",
+        organization_id=organization_id,
+        project_id=project_id,
+        matriz_id=row["id"],
+        template_id=template["id"],
+    )
+    return row
+
+
+def _is_project_gap_key(key: str) -> bool:
+    """True si la clave es un hueco por diseño en la matriz del proyecto: dato
+    de venta (comprador/precio/lote/servidumbre) o dato de firma
+    (notaria/otorgamiento). Ninguno bloquea la aprobación."""
+    return key.removesuffix("[]") in NON_BLOCKING_PROJECT_MATRIZ_KEYS
+
+
+def _project_approval_blockers(
+    *, manifest: dict[str, Any], project_id: str, snapshot_stale: bool
+) -> list[dict[str, Any]]:
+    """Pendientes de la matriz del PROYECTO (FR-003).
+
+    Los datos de la venta (claves de venta/lote/derivadas) son huecos por
+    diseño y NUNCA bloquean: se excluyen. Bloquean los pendientes del proyecto
+    (titulo, variables legales) que el manifiesto marca sin resolver.
+    """
+    fix_url = f"/projects/{project_id}?tab=legal"
+    blockers: list[dict[str, Any]] = []
+    if snapshot_stale:
+        blockers.append(
+            _humanized(
+                {
+                    "kind": "snapshot_stale",
+                    "message": "La revisión del proyecto cambió; recarga la matriz antes de aprobar.",
+                    "fix_url": fix_url,
+                },
+                snapshot_stale_microcopy(),
+                None,
+            )
+        )
+    for token in manifest.get("tokens") or []:
+        if not isinstance(token, dict) or token.get("status") == "resolved":
+            continue
+        key = str(token.get("variableKey") or "")
+        if _is_project_gap_key(key):
+            continue  # hueco de venta: se muestra como hueco, no bloquea
+        label = token.get("label") or token_label(key)
+        blocked = token.get("status") == "blocked"
+        copy = (
+            token_blocked_microcopy(key, label)
+            if blocked
+            else token_missing_microcopy(key, label)
+        )
+        blockers.append(
+            _humanized(
+                {
+                    "kind": "token_missing",
+                    "key": key,
+                    "producer": variable_producer(key),
+                    "message": (
+                        "Dato del proyecto pendiente de revisión."
+                        if blocked
+                        else "Dato del proyecto sin valor aprobado."
+                    ),
+                    "fix_url": fix_url,
+                },
+                copy,
+                _variable_fix_url(project_id, key),
+            )
+        )
+    for block in manifest.get("blocks") or []:
+        if not isinstance(block, dict) or block.get("status") == "resolved":
+            continue
+        key = str(block.get("blockKey") or "")
+        blockers.append(
+            _humanized(
+                {
+                    "kind": "token_missing",
+                    "key": key,
+                    "producer": variable_producer(key),
+                    "message": "Texto del estudio de título sin aprobar.",
+                    "fix_url": fix_url,
+                },
+                BlockerMicrocopy(
+                    title=f"Falta el texto aprobado: {token_label(key)}",
+                    description=(
+                        "El texto se redacta y aprueba en el estudio de "
+                        "título del proyecto."
+                    ),
+                    action_label="Revisar estudio de título",
+                ),
+                fix_url,
+            )
+        )
+    return blockers
+
+
+async def _project_matriz_response(
+    client: Any,
+    matrix_row: dict[str, Any],
+    *,
+    project_id: str,
+    organization_id: str,
+    variable_snapshot: dict[str, Any],
+    evidence_snapshot: dict[str, Any],
+) -> MatrizCaseResponse:
+    template = await _fetch_template(
+        client, str(matrix_row["template_id"]), organization_id
+    )
+    template_clauses = await _fetch_template_clauses(
+        client, str(template["id"]), organization_id
+    )
+    snapshot_hash = _json_hash(variable_snapshot)
+    snapshot_stale = str(matrix_row.get("snapshot_hash")) != snapshot_hash
+    if snapshot_stale and matrix_row.get("status") == "approved":
+        matrix_row = await _supersede_approved_project_matriz(
+            client=client,
+            matrix_row=matrix_row,
+            current_snapshot_hash=snapshot_hash,
+        )
+        snapshot_stale = False
+    elif snapshot_stale:
+        # Borrador (o en revisión): adopta el snapshot vigente en vez de quedar
+        # bloqueado tras resolver/aprobar variables del proyecto.
+        matrix_row = await _refresh_project_matriz_snapshot(
+            client=client,
+            matrix_row=matrix_row,
+            current_snapshot_hash=snapshot_hash,
+        )
+        snapshot_stale = False
+    view_clauses, active_clauses = _effective_clauses(
+        template_clauses, matrix_row, variable_snapshot
+    )
+    context = await _fetch_project_context_by_id(client, project_id, organization_id)
+    try:
+        resolution = resolve_matriz_clauses(
+            clauses=active_clauses,
+            variable_snapshot=variable_snapshot,
+            evidence_snapshot=evidence_snapshot,
+            context=context,
+        )
+    except UnknownNodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "unknown_matriz_node",
+                "message": "Matriz content contains unknown ProseMirror node types.",
+                "node_types": exc.node_types,
+            },
+        ) from exc
+    manifest = resolution.manifest_dict()
+    resolved_content_by_clause = {
+        item.clause_key: item.resolved_content
+        for item in resolution.clauses
+        if item.resolved_content is not None
+    }
+    for clause in view_clauses:
+        clause["resolved_content"] = resolved_content_by_clause.get(
+            str(clause.get("clause_key"))
+        )
+    return MatrizCaseResponse.model_validate(
+        {
+            "matriz": {
+                "id": matrix_row["id"],
+                "escritura_case_id": None,
+                "project_id": matrix_row["project_id"],
+                "status": matrix_row["status"],
+                "version": matrix_row["version"],
+                "scope": "project",
+                "source_project_matriz_id": None,
+                "template": {
+                    "id": template["id"],
+                    "name": template["name"],
+                    "version": template["version"],
+                },
+                "snapshot_stale": snapshot_stale,
+                "clause_order": [
+                    str(key) for key in _as_list(matrix_row.get("clause_order"))
+                ],
+                "clauses": view_clauses,
+                "resolution": manifest,
+                "approval_blockers": _project_approval_blockers(
+                    manifest=manifest,
+                    project_id=str(matrix_row["project_id"]),
+                    snapshot_stale=snapshot_stale,
+                ),
+                "dismissed_alerts": _dismissed_alerts(variable_snapshot),
+            },
+            "insertable_variables": INSERTABLE_VARIABLES,
+        }
+    )
+
+
 async def _insert_matriz_review_decision(
     *,
     client: Any,
     matrix_row: dict[str, Any],
-    case_row: dict[str, Any],
+    case_row: dict[str, Any] | None,
     decision_type: str,
     decision_status: str,
     decided_by: str,
     reason: str | None = None,
 ) -> None:
+    organization_id = str(
+        case_row["organization_id"] if case_row else matrix_row["organization_id"]
+    )
+    project_id = str(case_row["project_id"] if case_row else matrix_row["project_id"])
+    lot_id = str(case_row["lot_id"]) if case_row and case_row.get("lot_id") else None
+    escritura_case_id = str(case_row["id"]) if case_row else None
     payload = {
-        "organization_id": str(case_row["organization_id"]),
-        "project_id": str(case_row["project_id"]),
-        "lot_id": str(case_row.get("lot_id")) if case_row.get("lot_id") else None,
-        "escritura_case_id": str(case_row["id"]),
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "lot_id": lot_id,
+        "escritura_case_id": escritura_case_id,
         "decision_type": decision_type,
         "decision_status": decision_status,
         "reason": reason,
@@ -733,8 +1118,8 @@ async def _insert_matriz_review_decision(
     )
     logger.info(
         "escritura_matriz_review_decision",
-        organization_id=str(case_row["organization_id"]),
-        escritura_case_id=str(case_row["id"]),
+        organization_id=organization_id,
+        escritura_case_id=escritura_case_id,
         matriz_id=str(matrix_row["id"]),
         decision_type=decision_type,
         decision_status=decision_status,
@@ -780,9 +1165,72 @@ async def _supersede_approved_matriz(
     return updated
 
 
+async def _supersede_approved_project_matriz(
+    *,
+    client: Any,
+    matrix_row: dict[str, Any],
+    current_snapshot_hash: str,
+) -> dict[str, Any]:
+    now = _utc_now_iso()
+    payload = {
+        "status": "draft",
+        "snapshot_case_status": "project",
+        "snapshot_hash": current_snapshot_hash,
+        "version": int(matrix_row.get("version") or 1) + 1,
+        "submitted_by": None,
+        "submitted_at": None,
+        "approved_by": None,
+        "approved_at": None,
+    }
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_matrices")
+            .update(payload)
+            .eq("id", str(matrix_row["id"]))
+            .eq("organization_id", str(matrix_row["organization_id"]))
+            .execute()
+        )
+    )
+    updated = _first_row(result.data) or {**matrix_row, **payload, "updated_at": now}
+    logger.info(
+        "escritura_project_matriz_snapshot_superseded",
+        organization_id=str(matrix_row["organization_id"]),
+        project_id=str(matrix_row["project_id"]),
+        matriz_id=str(matrix_row["id"]),
+        previous_snapshot_hash=str(matrix_row.get("snapshot_hash")),
+        current_snapshot_hash=current_snapshot_hash,
+    )
+    return updated
+
+
+async def _refresh_project_matriz_snapshot(
+    *,
+    client: Any,
+    matrix_row: dict[str, Any],
+    current_snapshot_hash: str,
+) -> dict[str, Any]:
+    """Un borrador de la matriz del proyecto adopta el snapshot vigente cuando
+    cambian las variables del proyecto (resolver/aprobar datos): se actualiza su
+    `snapshot_hash` para que no quede "desactualizado" bloqueando la aprobación.
+    No cambia versión ni estado (sigue siendo el mismo borrador editable). Se
+    muta `matrix_row` in situ para que el flujo de aprobación vea el hash nuevo.
+    """
+    await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_matrices")
+            .update({"snapshot_hash": current_snapshot_hash})
+            .eq("id", str(matrix_row["id"]))
+            .eq("organization_id", str(matrix_row["organization_id"]))
+            .execute()
+        )
+    )
+    matrix_row["snapshot_hash"] = current_snapshot_hash
+    return matrix_row
+
+
 async def _workflow_context(
     matriz_id: UUID, organization_id: UUID
-) -> tuple[Any, str, dict[str, Any], dict[str, Any]]:
+) -> tuple[Any, str, dict[str, Any], dict[str, Any] | None]:
     from api.v1.endpoints.legal_variables import (
         ensure_legal_documents_feature_enabled,
     )
@@ -791,26 +1239,72 @@ async def _workflow_context(
     client = get_supabase_client()
     org_id = str(organization_id)
     matrix_row = await _fetch_matrix_by_id(client, str(matriz_id), org_id)
-    case_row = await _fetch_case(client, str(matrix_row["escritura_case_id"]), org_id)
-    if str(matrix_row.get("project_id")) != str(case_row["project_id"]):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Matriz not found for this project.",
+    case_row: dict[str, Any] | None = None
+    if matrix_row.get("escritura_case_id"):
+        case_row = await _fetch_case(
+            client, str(matrix_row["escritura_case_id"]), org_id
         )
+        if str(matrix_row.get("project_id")) != str(case_row["project_id"]):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Matriz not found for this project.",
+            )
+        project_id = str(case_row["project_id"])
+    else:
+        project_id = str(matrix_row["project_id"])
+        await _fetch_project(client, project_id, org_id)
     ensure_legal_documents_feature_enabled(
         organization_id=org_id,
-        project_id=str(case_row["project_id"]),
+        project_id=project_id,
     )
     return client, org_id, matrix_row, case_row
 
 
+async def _workflow_response(
+    client: Any, matrix_row: dict[str, Any], case_row: dict[str, Any] | None
+) -> MatrizCaseResponse:
+    if case_row is not None:
+        return await _case_response(client, matrix_row, case_row)
+    variable_snapshot, evidence_snapshot = await fetch_project_matriz_snapshot(
+        organization_id=str(matrix_row["organization_id"]),
+        project_id=str(matrix_row["project_id"]),
+        supabase=client,
+    )
+    return await _project_matriz_response(
+        client,
+        matrix_row,
+        project_id=str(matrix_row["project_id"]),
+        organization_id=str(matrix_row["organization_id"]),
+        variable_snapshot=variable_snapshot,
+        evidence_snapshot=evidence_snapshot,
+    )
+
+
 async def _fresh_workflow_view(
-    client: Any, matrix_row: dict[str, Any], case_row: dict[str, Any]
+    client: Any, matrix_row: dict[str, Any], case_row: dict[str, Any] | None
 ) -> tuple[MatrizCaseResponse, list[dict[str, Any]], str]:
-    response = await _case_response(client, matrix_row, case_row)
+    if case_row is not None:
+        response = await _case_response(client, matrix_row, case_row)
+        current_hash = _json_hash(case_row.get("variable_snapshot"))
+    else:
+        variable_snapshot, evidence_snapshot = await fetch_project_matriz_snapshot(
+            organization_id=str(matrix_row["organization_id"]),
+            project_id=str(matrix_row["project_id"]),
+            supabase=client,
+        )
+        response = await _project_matriz_response(
+            client,
+            matrix_row,
+            project_id=str(matrix_row["project_id"]),
+            organization_id=str(matrix_row["organization_id"]),
+            variable_snapshot=variable_snapshot,
+            evidence_snapshot=evidence_snapshot,
+        )
+        current_hash = _json_hash(variable_snapshot)
     matriz = response.matriz
-    current_hash = _json_hash(case_row.get("variable_snapshot"))
-    blockers = [blocker.model_dump(exclude_none=True) for blocker in matriz.approval_blockers]
+    blockers = [
+        blocker.model_dump(exclude_none=True) for blocker in matriz.approval_blockers
+    ]
     return response, blockers, current_hash
 
 
@@ -822,7 +1316,7 @@ def _raise_if_snapshot_stale(
             status_code=status.HTTP_409_CONFLICT,
             detail={
                 "code": "snapshot_stale",
-                "message": f"The escritura case snapshot changed; reload before {action}.",
+                "message": f"The matriz snapshot changed; reload before {action}.",
             },
         )
 
@@ -842,6 +1336,207 @@ async def _generation_response(client: Any, row: dict[str, Any]) -> MinutaGenera
     payload = {**row}
     payload["download_url"] = await _signed_minuta_url(client, str(row["storage_path"]))
     return MinutaGeneration.model_validate(payload)
+
+
+async def _resolve_case_vendor_user_id(
+    client: Any, case_row: dict[str, Any]
+) -> str | None:
+    """user_id del vendedor asignado a la venta del lote del caso (SDD 011 US4).
+
+    Cadena: lote del caso → approval_request de venta → `vendors.user_id`.
+    Devuelve None si no se resuelve; la entrega cae a web-only, igual auditada.
+    """
+    lot_id = case_row.get("lot_id")
+    organization_id = str(case_row["organization_id"])
+    if not lot_id:
+        return None
+    request_result = await asyncio.to_thread(
+        lambda: (
+            client.table("approval_requests")
+            .select("vendor_id, created_at")
+            .eq("organization_id", organization_id)
+            .eq("lot_id", str(lot_id))
+            .eq("request_type", "sale")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    request_rows = request_result.data if isinstance(request_result.data, list) else []
+    vendor_id = request_rows[0].get("vendor_id") if request_rows else None
+    if not vendor_id:
+        return None
+    vendor_result = await asyncio.to_thread(
+        lambda: (
+            client.table("vendors")
+            .select("user_id")
+            .eq("id", vendor_id)
+            .eq("organization_id", organization_id)
+            .limit(1)
+            .execute()
+        )
+    )
+    vendor_rows = vendor_result.data if isinstance(vendor_result.data, list) else []
+    return vendor_rows[0].get("user_id") if vendor_rows else None
+
+
+async def _resolve_lot_label(client: Any, case_row: dict[str, Any]) -> str:
+    lot_id = case_row.get("lot_id")
+    if not lot_id:
+        return "tu lote"
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("lots")
+            .select("numero_lote")
+            .eq("id", str(lot_id))
+            .maybe_single()
+            .execute()
+        )
+    )
+    row = _single_row(result)
+    numero = row.get("numero_lote") if row else None
+    return f"Lote {numero}" if numero else "tu lote"
+
+
+async def _fetch_case_deliveries(
+    client: Any, case_id: str, organization_id: str
+) -> list[dict[str, Any]]:
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_deliveries")
+            .select("channel, status, recipient_user_id, sent_at, created_at")
+            .eq("escritura_case_id", case_id)
+            .eq("organization_id", organization_id)
+            .order("created_at", desc=False)
+            .execute()
+        )
+    )
+    return _rows(result.data)
+
+
+async def _fetch_sale_validation(
+    client: Any, case_row: dict[str, Any]
+) -> dict[str, Any] | None:
+    lot_id = case_row.get("lot_id")
+    if not lot_id:
+        return None
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("approval_requests")
+            .select("id, admin_phone, resolved_at, payload")
+            .eq("organization_id", str(case_row["organization_id"]))
+            .eq("lot_id", str(lot_id))
+            .eq("request_type", "sale")
+            .eq("status", "approved")
+            .order("resolved_at", desc=True)
+            .execute()
+        )
+    )
+    rows = _rows(result.data)
+    return rows[0] if rows else None
+
+
+def _trace_input_keys(manifest: Any) -> list[str]:
+    payload = _as_dict(manifest)
+    keys: set[str] = set()
+    for token in _as_list(payload.get("tokens")):
+        if isinstance(token, dict) and token.get("variableKey"):
+            keys.add(str(token["variableKey"]))
+    for block in _as_list(payload.get("blocks")):
+        if isinstance(block, dict) and block.get("blockKey"):
+            keys.add(str(block["blockKey"]))
+    return sorted(keys)
+
+
+async def _build_escritura_trace(
+    client: Any, case_row: dict[str, Any]
+) -> dict[str, Any]:
+    """Trazabilidad completa de una escritura (SDD 011 T020, FR-012): matriz
+    del proyecto aprobada, venta validada, borrador generado, aceptado y
+    entregas — en orden."""
+    organization_id = str(case_row["organization_id"])
+    project_id = str(case_row["project_id"])
+    case_id = str(case_row["id"])
+    events: list[dict[str, Any]] = []
+    source_project_matriz_id: str | None = None
+
+    project_matriz = await _fetch_active_project_matrix(
+        client, project_id, organization_id
+    )
+    if project_matriz:
+        source_project_matriz_id = str(project_matriz["id"])
+        if project_matriz.get("approved_by"):
+            events.append(
+                {
+                    "kind": "project_matriz_approved",
+                    "label": "Matriz del proyecto aprobada",
+                    "at": project_matriz.get("approved_at"),
+                    "actor_id": project_matriz.get("approved_by"),
+                    "matriz_version": project_matriz.get("version"),
+                }
+            )
+
+    sale_validation = await _fetch_sale_validation(client, case_row)
+    if sale_validation:
+        events.append(
+            {
+                "kind": "sale_validated",
+                "label": "Venta validada",
+                "at": sale_validation.get("resolved_at"),
+                "actor_id": _uuid_text_or_none(sale_validation.get("admin_phone")),
+                "approval_id": sale_validation.get("id"),
+                "input_keys": sorted(_as_dict(sale_validation.get("payload")).keys()),
+            }
+        )
+
+    gen_result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_minuta_generations")
+            .select(GENERATION_COLUMNS)
+            .eq("escritura_case_id", case_id)
+            .eq("organization_id", organization_id)
+            .order("generated_at", desc=False)
+            .execute()
+        )
+    )
+    for gen in _rows(gen_result.data):
+        events.append(
+            {
+                "kind": "draft_generated",
+                "label": "Borrador generado",
+                "at": gen.get("generated_at"),
+                "actor_id": gen.get("generated_by"),
+                "matriz_version": gen.get("matriz_version"),
+                "input_keys": _trace_input_keys(gen.get("resolution_manifest")),
+            }
+        )
+        if gen.get("warning_acknowledged_by"):
+            events.append(
+                {
+                    "kind": "draft_accepted",
+                    "label": "Borrador aceptado",
+                    "at": gen.get("warning_acknowledged_at"),
+                    "actor_id": gen.get("warning_acknowledged_by"),
+                }
+            )
+
+    for delivery in await _fetch_case_deliveries(client, case_id, organization_id):
+        events.append(
+            {
+                "kind": "delivered",
+                "label": delivery_status_label(str(delivery.get("status") or "")),
+                "at": delivery.get("sent_at") or delivery.get("created_at"),
+                "channel": delivery.get("channel"),
+                "status": delivery.get("status"),
+                "recipient_user_id": delivery.get("recipient_user_id"),
+            }
+        )
+
+    return {
+        "escritura_case_id": case_id,
+        "source_project_matriz_id": source_project_matriz_id,
+        "events": events,
+    }
 
 
 async def _generate_minuta_row(
@@ -901,7 +1596,11 @@ async def _generate_minuta_row(
     try:
         docx_bytes = render_minuta_docx(
             clauses=rendered_clauses,
-            metadata={"title": f"Minuta {template['name']}"},
+            metadata={
+                "title": f"Minuta {template['name']}",
+                # FR-008 / ADR-009: todo entregable lleva la marca de borrador.
+                "draft_notice": ESCRITURA_BORRADOR_NOTICE,
+            },
         )
     except MatrizDocxError as exc:
         raise HTTPException(
@@ -958,7 +1657,68 @@ async def _generate_minuta_row(
         generation_id=generation_id,
         content_hash=content_hash,
     )
+
+    # SDD 011 (US4): al aceptar/generar el borrador, entregarlo al vendedor
+    # asignado (Telegram best-effort + "mis documentos"). Best-effort: una falla
+    # de entrega NUNCA invalida la generación del DOCX ya persistida.
+    try:
+        vendor_user_id = await _resolve_case_vendor_user_id(client, case_row)
+        lot_label = await _resolve_lot_label(client, case_row)
+        await deliver_draft(
+            supabase=client,
+            generation=inserted,
+            recipient_user_id=vendor_user_id,
+            lot_label=lot_label,
+        )
+    except Exception as exc:  # noqa: BLE001 - entrega best-effort, jamás bloquea
+        logger.warning(
+            "escritura_delivery_trigger_failed",
+            generation_id=generation_id,
+            error=str(exc),
+        )
+
     return await _generation_response(client, inserted)
+
+
+@router.get(
+    "/escritura-matrices/project/{project_id}",
+    response_model=MatrizCaseResponse,
+)
+async def get_project_matriz(
+    project_id: UUID,
+    organization_id: UUID = Query(...),
+) -> MatrizCaseResponse:
+    from api.v1.endpoints.legal_variables import (
+        ensure_legal_documents_feature_enabled,
+    )
+    from core.database import get_supabase_client
+
+    client = get_supabase_client()
+    org_id = str(organization_id)
+    project_id_str = str(project_id)
+    await _fetch_project(client, project_id_str, org_id)
+    ensure_legal_documents_feature_enabled(
+        organization_id=org_id,
+        project_id=project_id_str,
+    )
+    variable_snapshot, evidence_snapshot = await fetch_project_matriz_snapshot(
+        organization_id=org_id,
+        project_id=project_id_str,
+        supabase=client,
+    )
+    matrix_row = await _fetch_active_project_matrix(client, project_id_str, org_id)
+    if matrix_row is None:
+        matrix_row = await _lazy_create_project_matrix(
+            client, project_id_str, org_id, variable_snapshot
+        )
+    return await _project_matriz_response(
+        client,
+        matrix_row,
+        project_id=project_id_str,
+        organization_id=org_id,
+        variable_snapshot=variable_snapshot,
+        evidence_snapshot=evidence_snapshot,
+    )
 
 
 @router.get(
@@ -1138,7 +1898,7 @@ async def submit_matriz(
         decided_by=str(request.submitted_by),
         reason="submitted_for_legal_review",
     )
-    return await _case_response(client, updated, case_row)
+    return await _workflow_response(client, updated, case_row)
 
 
 @router.post(
@@ -1168,7 +1928,12 @@ async def approve_matriz(
                 "current_status": matrix_row.get("status"),
             },
         )
-    if str(matrix_row.get("submitted_by")) == str(request.approved_by):
+    from core.config import get_settings
+
+    if (
+        get_settings().LEGAL_REVIEW_REQUIRE_DISTINCT_REVIEWER
+        and str(matrix_row.get("submitted_by")) == str(request.approved_by)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
@@ -1210,7 +1975,7 @@ async def approve_matriz(
         decision_status="approved",
         decided_by=str(request.approved_by),
     )
-    return await _case_response(client, updated, case_row)
+    return await _workflow_response(client, updated, case_row)
 
 
 @router.post(
@@ -1225,9 +1990,12 @@ async def reject_matriz(
     client, _org_id, matrix_row, case_row = await _workflow_context(
         matriz_id, organization_id
     )
+    _response, _blockers, current_hash = await _fresh_workflow_view(
+        client, matrix_row, case_row
+    )
     _raise_if_snapshot_stale(
         matrix_row=matrix_row,
-        current_hash=_json_hash(case_row.get("variable_snapshot")),
+        current_hash=current_hash,
         action="rejecting",
     )
     if matrix_row.get("status") != "legal_review_pending":
@@ -1267,7 +2035,7 @@ async def reject_matriz(
         decided_by=str(request.rejected_by),
         reason=request.reason,
     )
-    return await _case_response(client, updated, case_row)
+    return await _workflow_response(client, updated, case_row)
 
 
 @router.post(
@@ -1404,6 +2172,32 @@ async def list_case_generations(
         await _generation_response(client, row) for row in _rows(result.data)
     ]
     return MinutaGenerationListResponse(generations=generations)
+
+
+@router.get(
+    "/escritura-matrices/case/{escritura_case_id}/trace",
+    response_model=EscrituraTraceResponse,
+)
+async def get_escritura_trace(
+    escritura_case_id: UUID,
+    organization_id: UUID = Query(...),
+) -> EscrituraTraceResponse:
+    """Trazabilidad completa de la escritura (FR-012), consultable desde la
+    mesa y el historial."""
+    from api.v1.endpoints.legal_variables import (
+        ensure_legal_documents_feature_enabled,
+    )
+    from core.database import get_supabase_client
+
+    client = get_supabase_client()
+    org_id = str(organization_id)
+    case_row = await _fetch_case(client, str(escritura_case_id), org_id)
+    ensure_legal_documents_feature_enabled(
+        organization_id=org_id,
+        project_id=str(case_row["project_id"]),
+    )
+    trace = await _build_escritura_trace(client, case_row)
+    return EscrituraTraceResponse.model_validate(trace)
 
 
 @router.post(

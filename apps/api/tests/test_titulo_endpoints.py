@@ -67,6 +67,14 @@ class FakeQuery:
         self._filters.append(("like", column, pattern))
         return self
 
+    def gte(self, column, value):
+        self._filters.append(("gte", column, value))
+        return self
+
+    def lt(self, column, value):
+        self._filters.append(("lt", column, value))
+        return self
+
     def order(self, *_args, **_kwargs):
         return self
 
@@ -88,6 +96,10 @@ class FakeQuery:
             if op == "in" and str(current) not in {str(v) for v in value}:
                 return False
             if op == "like" and not str(current).startswith(str(value).rstrip("%")):
+                return False
+            if op == "gte" and (current is None or str(current) < str(value)):
+                return False
+            if op == "lt" and (current is None or str(current) >= str(value)):
                 return False
         return True
 
@@ -172,6 +184,7 @@ def _analysis_row(**overrides) -> dict:
         "approved_by": None,
         "approved_at": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     row.update(overrides)
     return row
@@ -253,6 +266,48 @@ class TestGetProjectTitleCase:
         assert data["narrative"]["primero"]["effective"] == row["narrative_primero_generated"]
         assert len(data["source_documents"]) == 2
 
+    def test_stale_processing_is_surfaced_as_failed(
+        self, monkeypatch, title_documents, redis_mock
+    ):
+        """SDD 011: una corrida 'processing' zombie (worker caído a mitad) se
+        reporta como 'failed' al leer, para que el panel deje de hacer polling
+        infinito y ofrezca 'Reanalizar'."""
+        from datetime import timedelta
+
+        stale_ts = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        zombie = _analysis_row(status="processing", updated_at=stale_ts)
+        fake = FakeSupabase(
+            seed_documents=title_documents,
+            store={"title_analyses": [zombie]},
+        )
+        _use_fake_supabase(monkeypatch, fake)
+        response = _client(_build_app(redis_mock)).get(
+            f"/api/v1/legal-titles/project/{PROJECT_ID}",
+            params={"organization_id": ORG_ID},
+        )
+        assert response.status_code == 200
+        assert response.json()["analysis"]["status"] == "failed"
+
+    def test_recent_processing_stays_processing(
+        self, monkeypatch, title_documents, redis_mock
+    ):
+        """Una corrida real en vuelo (updated_at reciente) NO se marca fallida."""
+        running = _analysis_row(
+            status="processing",
+            updated_at=datetime.now(timezone.utc).isoformat(),
+        )
+        fake = FakeSupabase(
+            seed_documents=title_documents,
+            store={"title_analyses": [running]},
+        )
+        _use_fake_supabase(monkeypatch, fake)
+        response = _client(_build_app(redis_mock)).get(
+            f"/api/v1/legal-titles/project/{PROJECT_ID}",
+            params={"organization_id": ORG_ID},
+        )
+        assert response.status_code == 200
+        assert response.json()["analysis"]["status"] == "processing"
+
     def test_404_when_no_title_documents(self, monkeypatch, redis_mock):
         fake = FakeSupabase(seed_documents=[])
         _use_fake_supabase(monkeypatch, fake)
@@ -333,9 +388,14 @@ class TestGetProjectTitleCase:
 
 
 class TestReanalyzeProjectTitle:
-    def test_idempotent_returns_existing_analysis(
+    def test_reanalyze_forces_rerun_even_with_existing_same_hash(
         self, monkeypatch, title_documents, redis_mock
     ):
+        """SDD 011: 'Reanalizar' explícito SIEMPRE re-corre. El usuario pudo
+        cambiar el modelo o el nivel de razonamiento (que no entran en el hash
+        de contenido), así que no debe ser un no-op aunque exista un análisis
+        con el mismo hash. La idempotencia por contenido queda para el camino
+        automático (run_title_analysis)."""
         existing = _analysis_row(source_content_hash=_source_hash(title_documents))
         fake = FakeSupabase(
             seed_documents=title_documents,
@@ -348,9 +408,10 @@ class TestReanalyzeProjectTitle:
         )
         assert response.status_code == 202
         payload = response.json()
-        assert payload["analysis_id"] == existing["id"]
-        assert payload["queued"] is False
-        redis_mock.enqueue_job.assert_not_called()
+        assert payload["queued"] is True
+        assert payload["status"] == "processing"
+        assert payload["analysis_id"] != existing["id"]
+        redis_mock.enqueue_job.assert_awaited_once()
 
     def test_409_when_analysis_already_processing(
         self, monkeypatch, title_documents, redis_mock
@@ -367,6 +428,36 @@ class TestReanalyzeProjectTitle:
         )
         assert response.status_code == 409
         redis_mock.enqueue_job.assert_not_called()
+
+    def test_stale_processing_run_is_treated_as_abandoned(
+        self, monkeypatch, title_documents, redis_mock
+    ):
+        """SDD 011: una corrida 'processing' más vieja que el presupuesto del job
+        es un zombie (worker caído/reiniciado a mitad de corrida). 'Reanalizar'
+        debe re-correr en vez de quedar pegado en 409 para siempre."""
+        from datetime import timedelta
+
+        stale_ts = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        zombie = _analysis_row(
+            status="processing",
+            source_content_hash=_source_hash(title_documents),
+            updated_at=stale_ts,
+        )
+        fake = FakeSupabase(
+            seed_documents=title_documents,
+            store={"title_analyses": [zombie]},
+        )
+        _use_fake_supabase(monkeypatch, fake)
+        response = _client(_build_app(redis_mock)).post(
+            f"/api/v1/legal-titles/project/{PROJECT_ID}/reanalyze",
+            params={"organization_id": ORG_ID},
+        )
+        assert response.status_code == 202
+        payload = response.json()
+        assert payload["queued"] is True
+        assert payload["status"] == "processing"
+        assert payload["analysis_id"] != zombie["id"]
+        redis_mock.enqueue_job.assert_awaited_once()
 
     def test_422_when_no_title_documents(self, monkeypatch, redis_mock):
         fake = FakeSupabase(seed_documents=[])
@@ -554,11 +645,40 @@ class TestApproveTitleCase:
         assert response.status_code == 409
         blocking = response.json()["detail"]["blocking"]
         kinds = {(item["kind"], item.get("key") or item.get("tipo")) for item in blocking}
-        assert ("variable", "titulo.clausula_primero_texto") in kinds
-        assert ("variable", "matriz.rol_avaluo") in kinds
+        # Solo bloquea la alerta pendiente; las variables en manual_review/conflict
+        # ya NO bloquean (no hay acción de UI que las destrabe -> dead-end).
         assert ("alert", "dl_3516") in kinds
+        assert not any(item["kind"] == "variable" for item in blocking)
         # Analysis must remain untouched.
         assert fake.store["title_analyses"][0]["status"] == "proposed"
+
+    def test_approves_despite_manual_review_and_conflict_variables(
+        self, monkeypatch, redis_mock
+    ):
+        # Regresión del dead-end: con todas las alertas resueltas, un título cuyas
+        # titulo.*/matriz.* quedaron en manual_review/conflict DEBE poder aprobarse,
+        # y la aprobación las promueve a approved.
+        row = _analysis_row(
+            alerts=[{"tipo": "dl_3516", "detalle": "x", "resolution": "dismissed"}]
+        )
+        variables = [
+            _variable_row("titulo.clausula_primero_texto", "manual_review"),
+            _variable_row("titulo.inscripciones[]", "conflict"),
+            _variable_row("matriz.rol_avaluo", "conflict"),
+        ]
+        fake = FakeSupabase(
+            store={"title_analyses": [row], "variable_resolutions": variables}
+        )
+        _use_fake_supabase(monkeypatch, fake)
+        response = self._approve(_client(_build_app(redis_mock)), row["id"])
+        assert response.status_code == 200
+        states = {
+            v["variable_key"]: v["state"]
+            for v in fake.store["variable_resolutions"]
+        }
+        assert states["titulo.clausula_primero_texto"] == "approved"
+        assert states["titulo.inscripciones[]"] == "approved"
+        assert states["matriz.rol_avaluo"] == "approved"
 
     def test_409_when_status_not_approvable(self, monkeypatch, redis_mock):
         row = _analysis_row(status="failed")

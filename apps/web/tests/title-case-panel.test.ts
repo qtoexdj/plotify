@@ -14,6 +14,7 @@ import {
   TITLE_PANEL_STATE_LABELS,
   deriveTitlePanelState,
   formatBlockingItem,
+  formatElapsed,
 } from '@/components/projects/legal/title-case-panel'
 import {
   TitleChainTimeline,
@@ -329,5 +330,23 @@ describe('F4 migración agente — polling, block checks, propietarios y notas',
     const source = readSource('../src/components/projects/legal/title-narrative-editor.tsx')
     expect(source).toContain('block-check-issues-')
     expect(source).toContain('hechos sin calce contra la cadena verificada')
+  })
+})
+
+describe('diálogo de carga mientras el análisis procesa', () => {
+  it('formatElapsed redacta el tiempo transcurrido en es-CL', () => {
+    expect(formatElapsed(0)).toBe('0 s')
+    expect(formatElapsed(45)).toBe('45 s')
+    expect(formatElapsed(60)).toBe('1 min 00 s')
+    expect(formatElapsed(125)).toBe('2 min 05 s')
+  })
+
+  it('muestra un AlertDialog con spinner y barra mientras procesa, en source', () => {
+    const source = readSource('../src/components/projects/legal/title-case-panel.tsx')
+    expect(source).toContain('title-processing-dialog')
+    expect(source).toContain('<AlertDialog open={showProcessing}>')
+    expect(source).toContain('animate-spin')
+    expect(source).toContain('role="progressbar"')
+    expect(source).toContain("const showProcessing = reanalyzing || state === 'processing'")
   })
 })

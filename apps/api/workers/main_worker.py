@@ -134,6 +134,13 @@ class WorkerSettings:
     on_startup = startup
     on_shutdown = shutdown
 
+    # Tope por job. Por defecto arq usa 300s, que cortaba el análisis de título
+    # con razonamiento alto (gpt-5 high/xhigh tarda mucho por llamada) ANTES de
+    # que actuara el timeout propio del agente. Lo atamos al presupuesto del
+    # agente + holgura para gather/persistencia, así subir
+    # LEGAL_TITLE_AGENT_TIMEOUT_SECONDS en el entorno sí tiene efecto real.
+    job_timeout = settings.LEGAL_TITLE_AGENT_TIMEOUT_SECONDS + 120
+
     # Configuraciones de reintentos
     max_tries = 3  # Reintentar hasta 3 veces si un nodo LLM/DB falla intermitentemente
 

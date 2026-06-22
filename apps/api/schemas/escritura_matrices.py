@@ -17,11 +17,20 @@ TEMPLATE_STATUSES = ("draft", "published", "retired")
 MATRIZ_STATUSES = ("draft", "legal_review_pending", "approved", "superseded")
 CONDITION_MODES = ("omit", "block")
 TOKEN_RESOLUTION_STATUSES = ("resolved", "missing", "blocked")
+# SDD 011 (data-model §1): scope de la matriz. proyecto => escritura_case_id
+# NULL ("esperando ventas"); lote => borrador instanciado al validar la venta.
+MATRIZ_SCOPES = ("project", "lot")
+# SDD 011 (data-model §4): entrega del borrador al vendedor.
+DELIVERY_CHANNELS = ("telegram", "web")
+DELIVERY_STATUSES = ("pending", "sent", "failed", "unavailable", "expired")
 
 TemplateStatus = Literal["draft", "published", "retired"]
 MatrizStatus = Literal["draft", "legal_review_pending", "approved", "superseded"]
 ConditionMode = Literal["omit", "block"]
 TokenResolutionStatus = Literal["resolved", "missing", "blocked"]
+MatrizScope = Literal["project", "lot"]
+DeliveryChannel = Literal["telegram", "web"]
+DeliveryStatus = Literal["pending", "sent", "failed", "unavailable", "expired"]
 
 
 class MatrizBaseModel(BaseModel):
@@ -161,6 +170,9 @@ class ApprovalBlocker(MatrizResponseModel):
         "snapshot_stale",
     ]
     key: str | None = None
+    # SDD 011: productor previsto de la variable (extracted/authored/manual/...),
+    # usado por la UI para ofrecer la acción correcta (ingresar dato vs aprobar).
+    producer: str | None = None
     gate: str | None = None
     cause: str | None = None
     alert_tipo: str | None = None
@@ -211,10 +223,19 @@ class MatrizTemplateRef(MatrizResponseModel):
 
 class MatrizView(MatrizResponseModel):
     id: UUID
-    escritura_case_id: UUID
+    # SDD 011 (data-model §1): NULL => matriz de la escritura del PROYECTO
+    # (scope proyecto, "esperando ventas"); presente => borrador del lote.
+    escritura_case_id: UUID | None = None
     project_id: UUID
     status: MatrizStatus
     version: int
+    # SDD 011: discriminador explicito de scope para la mesa/web; deriva de
+    # escritura_case_id pero se expone para no inferir desde null. Default
+    # "lot" preserva la construccion existente (aditividad).
+    scope: MatrizScope = "lot"
+    # SDD 011 (FR-012): matriz de proyecto desde la que se instancio este
+    # borrador del lote (solo en scope lote).
+    source_project_matriz_id: UUID | None = None
     template: MatrizTemplateRef
     snapshot_stale: bool = False
     clause_order: list[str] = Field(default_factory=list)
@@ -293,3 +314,80 @@ class StageOperationalResult(MatrizResponseModel):
     # Claves con estado revisado por humano (approved/resolved/not_applicable)
     # que el puente jamás toca (FR-021).
     protected: list[str] = Field(default_factory=list)
+
+
+# ─── Entrega del borrador al vendedor (SDD 011, data-model §4) ────────────────
+
+
+class EscrituraDeliveryView(MatrizResponseModel):
+    id: UUID
+    escritura_case_id: UUID
+    generation_id: UUID
+    recipient_user_id: UUID | None = None
+    channel: DeliveryChannel
+    status: DeliveryStatus
+    link_expires_at: datetime | None = None
+    sent_at: datetime | None = None
+    created_at: datetime
+    # Campos humanos/resueltos: URL firmada lista para descargar y la frase de
+    # estado del diccionario unico (FR-014). El `link_token` crudo NUNCA viaja
+    # en el contrato (secreto): `extra="ignore"` lo descarta si llega.
+    download_url: str | None = None
+    status_label: str | None = None
+
+
+class EscrituraDeliveryListResponse(MatrizResponseModel):
+    deliveries: list[EscrituraDeliveryView] = Field(default_factory=list)
+
+
+class DeliverDraftRequest(MatrizBaseModel):
+    # Disparo de entrega al aceptar el borrador (US4, FR-010). El destinatario
+    # por defecto es el vendedor asignado; `channels` controla Telegram/web.
+    recipient_user_id: UUID | None = None
+    channels: list[DeliveryChannel] = Field(
+        default_factory=lambda: ["telegram", "web"]
+    )
+
+
+class RenewDeliveryLinkRequest(MatrizBaseModel):
+    # El vendedor renueva el enlace vencido desde "mis documentos" sin
+    # intervencion del administrador (FR-010, edge case enlace vencido).
+    requested_by: UUID
+
+
+# ─── Trazabilidad del flujo por escritura (SDD 011 T020, FR-012) ─────────────
+
+TRACE_EVENT_KINDS = (
+    "project_matriz_approved",
+    "sale_validated",
+    "draft_generated",
+    "draft_accepted",
+    "delivered",
+)
+TraceEventKind = Literal[
+    "project_matriz_approved",
+    "sale_validated",
+    "draft_generated",
+    "draft_accepted",
+    "delivered",
+]
+
+
+class EscrituraTraceEvent(MatrizResponseModel):
+    kind: TraceEventKind
+    label: str
+    at: datetime | None = None
+    actor_id: UUID | None = None
+    # Campos opcionales segun el evento.
+    matriz_version: int | None = None
+    approval_id: UUID | None = None
+    input_keys: list[str] = Field(default_factory=list)
+    channel: DeliveryChannel | None = None
+    status: DeliveryStatus | None = None
+    recipient_user_id: UUID | None = None
+
+
+class EscrituraTraceResponse(MatrizResponseModel):
+    escritura_case_id: UUID
+    source_project_matriz_id: UUID | None = None
+    events: list[EscrituraTraceEvent] = Field(default_factory=list)
