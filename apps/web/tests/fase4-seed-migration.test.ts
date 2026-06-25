@@ -13,6 +13,8 @@
  */
 import { describe, it, expect } from 'vitest'
 import { ESCRITURA_ARTICLES } from '@/types/documents'
+import fs from 'node:fs'
+import path from 'node:path'
 
 // ─── Nombres canónicos insertados por seed_escritura_blocks ──────────────────
 // Fuente de verdad: supabase/migrations/20260331050000_seed_escritura_blocks.sql
@@ -192,5 +194,45 @@ describe('F-v2-4.6 seed_escritura_blocks — orden del catálogo', () => {
       const n = parseInt(id.replace('ART-', ''), 10)
       expect(i).toBe(n) // ART-01 en posición 1, ART-16 en posición 16
     })
+  })
+})
+
+// ─── SDD 012: agent foundation migration shape ───────────────────────────────
+
+const AGENT_FOUNDATION_MIGRATION = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    '../../../packages/database/supabase/migrations/20260622000100_agent_foundation.sql'
+  ),
+  'utf8'
+)
+
+describe('SDD 012 agent foundation migration', () => {
+  it('extends agent_skills with scoped markdown and validation fields', () => {
+    for (const column of [
+      'organization_id',
+      'definition_markdown',
+      'approved_tool_slugs',
+      'current_version',
+      'validation_status',
+      'validation_errors',
+      'updated_by',
+    ]) {
+      expect(AGENT_FOUNDATION_MIGRATION).toContain(column)
+    }
+  })
+
+  it('replaces global slug uniqueness with scoped unique indexes', () => {
+    expect(AGENT_FOUNDATION_MIGRATION).toContain('DROP CONSTRAINT IF EXISTS agent_skills_slug_key')
+    expect(AGENT_FOUNDATION_MIGRATION).toContain('agent_skills_global_slug_key')
+    expect(AGENT_FOUNDATION_MIGRATION).toContain('agent_skills_org_slug_key')
+  })
+
+  it('creates immutable agent_skill_versions with version uniqueness', () => {
+    expect(AGENT_FOUNDATION_MIGRATION).toContain(
+      'CREATE TABLE IF NOT EXISTS public.agent_skill_versions'
+    )
+    expect(AGENT_FOUNDATION_MIGRATION).toContain('agent_skill_versions_skill_version_key')
+    expect(AGENT_FOUNDATION_MIGRATION).toContain('validation_status = ANY')
   })
 })

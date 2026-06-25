@@ -29,12 +29,21 @@ const mockSkill1: AgentSkill = {
   description: 'Busca proyectos disponibles',
   category: 'builtin',
   tool_definition: { name: 'search_projects', description: 'Busca proyectos', parameters: {} },
+  approved_tool_slugs: [],
+  created_by: null,
+  current_version: 1,
+  definition_markdown: null,
   is_system: true,
   requires_mcp: false,
   mcp_provider: null,
+  organization_id: null,
   requires_role: ['admin', 'user'],
   enabled_by_default: true,
   created_at: null,
+  updated_at: null,
+  updated_by: null,
+  validation_errors: [],
+  validation_status: 'valid',
 }
 
 const mockSkill2: AgentSkill = {
@@ -44,12 +53,21 @@ const mockSkill2: AgentSkill = {
   description: 'Sube documentos a Google Drive',
   category: 'mcp',
   tool_definition: {},
+  approved_tool_slugs: [],
+  created_by: null,
+  current_version: 1,
+  definition_markdown: null,
   is_system: false,
   requires_mcp: true,
   mcp_provider: 'google_drive',
+  organization_id: null,
   requires_role: ['admin'],
   enabled_by_default: false,
   created_at: null,
+  updated_at: null,
+  updated_by: null,
+  validation_errors: [],
+  validation_status: 'valid',
 }
 
 const mockConfig: OrgSkillConfig = {

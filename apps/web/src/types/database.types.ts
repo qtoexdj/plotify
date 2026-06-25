@@ -80,6 +80,36 @@ export type ProcessStage =
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
 export type VendorPlatform = 'telegram' | 'whatsapp'
+export type AgentSkillValidationStatus = 'draft' | 'valid' | 'blocked'
+export type AgentSkillVersionStatus = 'draft' | 'valid' | 'blocked' | 'published' | 'superseded'
+
+export interface AgentSkillRuntimeFields {
+  organization_id: string | null
+  definition_markdown: string | null
+  approved_tool_slugs: string[]
+  current_version: number
+  validation_status: AgentSkillValidationStatus
+  validation_errors: unknown[]
+  created_by: string | null
+  updated_by: string | null
+  updated_at: string | null
+}
+
+export interface AgentSkillVersion {
+  id: string
+  skill_id: string
+  organization_id: string | null
+  version: number
+  definition_markdown: string
+  tool_definition: unknown
+  approved_tool_slugs: string[]
+  requires_role: string[]
+  validation_status: AgentSkillVersionStatus
+  validation_errors: unknown[]
+  created_by: string | null
+  change_summary: string | null
+  created_at: string
+}
 
 /** Payload almacenado en approval_requests.payload (JSONB) */
 export interface ApprovalRequestPayload {

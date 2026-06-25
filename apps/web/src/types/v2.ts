@@ -7,6 +7,7 @@ export type PromptVersionInsert = Database['public']['Tables']['prompt_versions'
 
 // ─── Skills ───────────────────────────────────────────────────────────────────
 export type AgentSkill = Database['public']['Tables']['agent_skills']['Row']
+export type AgentSkillVersion = Database['public']['Tables']['agent_skill_versions']['Row']
 export type OrgSkillConfig = Database['public']['Tables']['org_skill_configs']['Row']
 export type OrgSkillConfigUpsert = Database['public']['Tables']['org_skill_configs']['Insert']
 

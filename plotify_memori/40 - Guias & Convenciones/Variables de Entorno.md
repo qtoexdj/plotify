@@ -49,6 +49,24 @@
 | `INTERNAL_API_SECRET` | Mismo secret que el frontend |
 | `REDIS_URL` | `redis://localhost:6379/0`; usa el contenedor Docker existente `redis` |
 
+### Configuración Adicional y Rollout (SDD 009 / SDD 011)
+
+| Variable | Default | Descripcion |
+|----------|---------|-------------|
+| `LEGAL_REVIEW_REQUIRE_DISTINCT_REVIEWER` | `false` | Si es `true`, exige control de doble verificación (four-eyes) en aprobación de matrices: el revisor debe ser distinto del emisor. |
+| `LEGAL_TEXT_VISION_ENABLED` | `false` | Habilita transcripción multimodal por visión para PDFs escaneados de dominio vigente (CBR). |
+| `LEGAL_TEXT_VISION_MODEL` | `gpt-5.5` | Modelo multimodal a utilizar en la transcripción por visión. |
+| `LEGAL_TEXT_VISION_PROVIDER` | `openai` | Proveedor del modelo multimodal. |
+| `LEGAL_TEXT_VISION_REASONING_EFFORT` | `low` | Nivel de razonamiento del modelo de visión (para modelos o-series). |
+| `LEGAL_TEXT_VISION_TIMEOUT_SECONDS` | `240` | Timeout máximo para la llamada del pipeline de visión. |
+| `LEGAL_TITLE_AGENT_ENABLED` | `false` | Habilita el agente de títulos legal (LLM). |
+| `LEGAL_TITLE_AGENT_MODEL` | `gpt-4o` | Modelo utilizado por el agente de títulos. |
+| `LEGAL_TITLE_AGENT_REASONING_EFFORT` | `""` | Esfuerzo de razonamiento del agente de títulos (si aplica). |
+| `LEGAL_TITLE_AGENT_MAX_ITERATIONS` | `24` | Límite máximo de iteraciones del bucle de razonamiento del agente (FR-017). |
+| `LEGAL_TITLE_AGENT_TIMEOUT_SECONDS` | `300` | Presupuesto de tiempo total para la corrida del agente de títulos. |
+| `DB_ENCRYPTION_KEY` | `plotify-dev-key...` | Clave para cifrar las credenciales del vault en reposo. |
+| `API_PUBLIC_URL` | `https://api.plotify.demo` | URL pública expuesta para los webhooks de Telegram. |
+
 ## Infra local compartida
 
 El desarrollo local de Plotify no debe crear un segundo stack Supabase. Debe

@@ -71,6 +71,8 @@ consume SDD 008.
 - **Idempotencia por contenido**: cada corrida se identifica por
   `source_content_hash` + extractor + prompt version; reemplazar un documento
   de titulo supersede el analisis y re-encola automaticamente.
+- **Transcripción por Visión Multimodal (PDFs escaneados CBR)**: Si `LEGAL_TEXT_VISION_ENABLED` está activo y un PDF de dominio vigente tiene imágenes con muy bajo texto digital (`char_count < PDF_VISION_TEXT_THRESHOLD`), se invoca el pipeline de visión. Este pipeline utiliza un modelo multimodal de OpenAI (por defecto `gpt-5.5`) y la Responses API con formato estructurado Pydantic (`_VisionTranscript`) para obtener una transcripción literal y completa del contenido (fojas, deslindes, etc.), bajo el conversor `vision`. Si falla, cae al texto digital extraído y marca `ocr_required`.
+- **Auto-sanación de Análisis "Zombie"**: Para evitar que la interfaz web quede en polling indefinido ante fallas o caídas del worker de Redis, el endpoint GET de consulta de estudio de título realiza una auto-sanación perezosa (*lazy*): si encuentra un análisis en estado `'processing'` cuya fecha de actualización exceda el timeout del agente (`LEGAL_TITLE_AGENT_TIMEOUT_SECONDS + 120` segundos), lo cambia a `failed` con `failure_code: "timeout"`, liberando el loop y permitiendo al usuario volver a solicitar el re-análisis.
 
 ## Fases
 

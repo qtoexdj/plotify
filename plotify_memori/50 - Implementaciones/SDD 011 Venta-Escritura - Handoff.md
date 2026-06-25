@@ -105,6 +105,7 @@ confirmo las superficies principales:
   a revision legal.
 - Los vendedores solo ven documentos de sus propias ventas y proyectos
   asignados.
+- **Control de Doble Verificación (Four-Eyes)**: Cuando se activa el flag `LEGAL_REVIEW_REQUIRE_DISTINCT_REVIEWER=True`, el endpoint de aprobación exige que el revisor que aprueba la matriz sea diferente de quien la envió a revisión, bloqueando con un error HTTP 403 `reviewer_not_authorized` en caso de coincidir. Por defecto está inactivo (`False`) para facilitar la autogestión de operadores individuales.
 
 ## Pendiente humano
 

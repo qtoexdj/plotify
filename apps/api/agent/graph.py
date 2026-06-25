@@ -13,7 +13,8 @@ from core.database import get_supabase_client
 from core.logger import get_logger
 from agent.state import AgentState
 from agent.prompt_cache import get_active_prompt
-from agent.skill_registry import get_tools_for_org
+from agent.runtime_context import build_runtime_context, bind_tools_to_runtime_context
+from agent.skill_registry import get_skill_runtime_for_org
 from agent.tools.lot_search import check_lot_availability
 from agent.tools.projects import search_projects
 from agent.tools.reservations import get_reservation_requirements
@@ -122,7 +123,14 @@ async def get_graph_for_org(org_id: str, role: str):
       - admin  → 'admin_intelligence' + custom instructions personalizadas
       - otros  → 'sales_agent'
     """
-    org_tools = await get_tools_for_org(org_id, role)
+    skill_runtime = await get_skill_runtime_for_org(org_id, role)
+    runtime_context = build_runtime_context(
+        organization_id=org_id,
+        role=role,
+        enabled_skill_slugs=skill_runtime.enabled_skill_slugs,
+        allowed_tool_slugs=skill_runtime.allowed_tool_slugs,
+    )
+    org_tools = bind_tools_to_runtime_context(skill_runtime.tools, runtime_context)
 
     # Elegir slug de prompt según rol (M-v2-6.2)
     prompt_slug = "admin_intelligence" if role == "admin" else "sales_agent"
@@ -136,7 +144,7 @@ async def get_graph_for_org(org_id: str, role: str):
         IMPORTANTE (M-v2-3.2): las tools son específicas a esta org y rol.
         IMPORTANTE (M-v2-6.2): admin usa prompt admin_intelligence con custom instructions.
         """
-        organization_id = state.get("organization_id") or org_id
+        organization_id = runtime_context.organization_id
         prompt_content = await get_active_prompt(prompt_slug)
 
         # Inyectar custom instructions para admin (M-v2-6.2)
@@ -146,9 +154,17 @@ async def get_graph_for_org(org_id: str, role: str):
                 org_id, state.get("user_id")
             )
 
+        system_prompt = prompt_content
+        if skill_runtime.markdown_instructions:
+            system_prompt = (
+                f"{prompt_content}\n\n"
+                "Instrucciones activas de skills para esta organizacion:\n"
+                "{skill_instructions}"
+            )
+
         dynamic_prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", prompt_content),
+                ("system", system_prompt),
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )
@@ -160,6 +176,8 @@ async def get_graph_for_org(org_id: str, role: str):
                 "context": state.get("context", "Etapa de pre-calificación"),
                 "organization_id": organization_id,
                 "custom_instructions": custom_instructions,
+                "skill_instructions": skill_runtime.markdown_instructions,
+                "runtime_context": runtime_context.to_prompt_summary(),
             }
         )
         response = await _llm_with_tools.ainvoke(prompt_value)

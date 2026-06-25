@@ -1,4 +1,4 @@
-from typing import TypedDict, Annotated, Sequence, Dict, Any, Optional
+from typing import TypedDict, Annotated, Sequence, Dict, Any, Optional, NotRequired
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
@@ -22,3 +22,5 @@ class AgentState(TypedDict):
     user_id: Optional[
         str
     ]  # UUID del admin (para resolver custom instructions — M-v2-6.4)
+    profile_id: NotRequired[Optional[str]]
+    vendor_id: NotRequired[Optional[str]]
