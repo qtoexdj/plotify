@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Marcador de alcance resuelto (2026-06-30): SDD 013 cubre **molde del proyecto + borrador de venta por lote** (US5/FR-012), y **reemplaza por completo** los paneles a medida preservando el override SII (FR-013).
+- Marcador de alcance resuelto (2026-06-30): SDD 013 cubre el **molde del proyecto**; la venta por lote rellena datos comerciales automáticamente y cualquier vista posterior queda como trazabilidad opcional, no revisión legal obligatoria. El feature **reemplaza por completo** los paneles a medida preservando el override SII (FR-013).
 - El contrato de no-regresión ("solo presentación, el motor no se toca") está escrito como FR-011 + regla de arquitectura en Context, listo para convertirse en un checklist gate dedicado vía `/speckit-checklist`.
 - Plan, research, data-model, contracts y quickstart generados (2026-06-30). Siguiente: `/speckit-tasks`.

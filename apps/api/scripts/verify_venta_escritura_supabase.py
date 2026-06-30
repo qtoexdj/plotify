@@ -51,6 +51,10 @@ SALE_PREFIXES = ("comprador.", "transaccion.", "lote.", "servidumbre.")
 LOCAL_SUPABASE_HOSTS = {"127.0.0.1", "localhost", "::1", "supabase-kong"}
 
 
+def _progress(message: str) -> None:
+    print(f"[sdd011] {message}", file=sys.stderr, flush=True)
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -91,6 +95,7 @@ async def _execute(builder: Any) -> Any:
 
 
 async def _delete_where(client: Any, table: str, **filters: str) -> None:
+    _progress(f"delete {table} {filters}")
     query = client.table(table).delete()
     for column, value in filters.items():
         query = query.eq(column, value)
@@ -98,6 +103,7 @@ async def _delete_where(client: Any, table: str, **filters: str) -> None:
 
 
 async def _upsert(client: Any, table: str, payload: dict[str, Any]) -> dict[str, Any]:
+    _progress(f"upsert {table} {payload.get('id', '<no-id>')}")
     result = await _execute(client.table(table).upsert(payload, on_conflict="id"))
     row = _first_row(result.data)
     return row or payload
@@ -106,6 +112,7 @@ async def _upsert(client: Any, table: str, payload: dict[str, Any]) -> dict[str,
 async def _upsert_lot_record(client: Any, payload: dict[str, Any]) -> dict[str, Any]:
     """Update the trigger-created record for the lot, or insert if absent."""
     lot_id = str(payload["lot_id"])
+    _progress(f"upsert lot_records for lot {lot_id}")
     existing_result = await _execute(
         client.table("lot_records").select("id").eq("lot_id", lot_id).maybe_single()
     )
@@ -121,6 +128,7 @@ async def _upsert_lot_record(client: Any, payload: dict[str, Any]) -> dict[str, 
 
 async def _ensure_fixture_actor(client: Any) -> str:
     """Ensure the FK target used by fixture rows exists in auth.users."""
+    _progress(f"ensure fixture actor {ACTOR_ID}")
     try:
         await asyncio.to_thread(lambda: client.auth.admin.get_user_by_id(ACTOR_ID))
         return ACTOR_ID
@@ -303,6 +311,7 @@ def _project_variable_payloads(
 
 
 async def _seed_fixture(client: Any) -> dict[str, str]:
+    _progress("seed fixture start")
     fixture = _load_json(OPERATIONAL_FIXTURE)
     snapshot = _load_json(CASE_SNAPSHOT_FIXTURE)
     organization_id = fixture["organization_id"]
@@ -399,6 +408,7 @@ async def _seed_fixture(client: Any) -> dict[str, str]:
         published_by=None,
         supabase=client,
     )
+    _progress("seed fixture done")
     return {
         "organization_id": organization_id,
         "project_id": project_id,
@@ -409,6 +419,7 @@ async def _seed_fixture(client: Any) -> dict[str, str]:
 async def _generate_and_approve_project_matriz(
     client: Any, *, organization_id: str, project_id: str
 ) -> tuple[dict[str, Any], int]:
+    _progress("generate and approve project matriz start")
     from api.v1.endpoints.escritura_matrices import (
         _fetch_active_project_matrix,
         _lazy_create_project_matrix,
@@ -452,12 +463,14 @@ async def _generate_and_approve_project_matriz(
     approved = _first_row(result.data)
     if not approved:
         raise RuntimeError("Project matriz approval update returned no row.")
+    _progress("generate and approve project matriz done")
     return approved, blockers
 
 
 async def _verify_sale_hook(
     client: Any, *, organization_id: str, project_id: str, lot_id: str
 ) -> dict[str, Any]:
+    _progress("verify sale hook start")
     from api.v1.endpoints.escritura_matrices import get_case_matriz
     from services.escritura_sale_hook import handle_sale_validated_for_escritura
 
@@ -501,6 +514,7 @@ async def _verify_sale_hook(
             "Case snapshot is missing sale/lot keys from operational bridge: "
             + ", ".join(missing_snapshot_keys)
         )
+    _progress("verify sale hook done")
 
     return {
         "hook": hook_result.to_dict(),
@@ -521,6 +535,7 @@ async def _verify_sale_hook(
 
 async def run(*, allow_remote: bool) -> dict[str, Any]:
     url_info = _require_safe_supabase_url(allow_remote=allow_remote)
+    _progress(f"supabase host {url_info['hostname']} local={url_info['local']}")
 
     from core.database import get_supabase_client
 

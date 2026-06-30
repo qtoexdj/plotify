@@ -47,23 +47,43 @@ function tenoInventory(): VariableInventoryItem[] {
 
   // 21 listas (extraidas y aprobadas): predio matriz, SAG, titulo.
   for (let i = 0; i < 21; i += 1) {
-    items.push(mk({ variable_key: `extracted.aprobada.${i}`, producer: 'extracted', state: 'approved' }))
+    items.push(
+      mk({ variable_key: `extracted.aprobada.${i}`, producer: 'extracted', state: 'approved' })
+    )
   }
 
   // Vendedor: 4 extraidas por revisar (del dominio vigente).
   for (const key of ['nombre', 'rut', 'profesion_giro', 'domicilio']) {
     items.push(
-      mk({ variable_key: `vendedor.${key}`, variable_group: 'vendedor', producer: 'extracted', state: 'proposed' })
+      mk({
+        variable_key: `vendedor.${key}`,
+        variable_group: 'vendedor',
+        producer: 'extracted',
+        state: 'proposed',
+      })
     )
   }
 
-  // Roles SII por lote: 53 lotes x 2 campos = 106 filas que colapsan a 2 entradas.
+  // Roles SII por lote: 53 lotes x 2 campos = 106 filas que colapsan a 1 entrada visual
+  // pero siguen contando como 2 decisiones revisables.
   for (let lot = 1; lot <= 53; lot += 1) {
     items.push(
-      mk({ variable_key: 'sii.unidad_nombre', variable_group: 'sii', producer: 'extracted', state: 'proposed', lot_id: `lot${lot}` })
+      mk({
+        variable_key: 'sii.unidad_nombre',
+        variable_group: 'sii',
+        producer: 'extracted',
+        state: 'proposed',
+        source_ref: { unit_index: lot },
+      })
     )
     items.push(
-      mk({ variable_key: 'sii.pre_rol_lote', variable_group: 'sii', producer: 'extracted', state: 'proposed', lot_id: `lot${lot}` })
+      mk({
+        variable_key: 'sii.pre_rol_lote',
+        variable_group: 'sii',
+        producer: 'extracted',
+        state: 'proposed',
+        source_ref: { unit_index: lot },
+      })
     )
   }
 
@@ -75,37 +95,86 @@ function tenoInventory(): VariableInventoryItem[] {
     'certificado_fecha_emision',
     'solicitud_numero',
   ]) {
-    items.push(mk({ variable_key: `sii.${key}`, variable_group: 'sii', producer: 'extracted', state: 'proposed' }))
+    items.push(
+      mk({
+        variable_key: `sii.${key}`,
+        variable_group: 'sii',
+        producer: 'extracted',
+        state: 'proposed',
+      })
+    )
   }
 
   // SAG: 2 manuales por revisar (del plano / Conservador).
   for (const key of ['oficina_sectorial', 'plano_cbr_numero']) {
-    items.push(mk({ variable_key: `sag.${key}`, variable_group: 'sag', producer: 'manual', state: 'proposed' }))
+    items.push(
+      mk({
+        variable_key: `sag.${key}`,
+        variable_group: 'sag',
+        producer: 'manual',
+        state: 'proposed',
+      })
+    )
   }
 
   // No accionables (no cuentan en el molde).
-  items.push(mk({ variable_key: 'clausulas.quinto', variable_group: 'clausulas', producer: 'authored', state: 'missing' }))
-  items.push(mk({ variable_key: 'comprador.nombre', variable_group: 'comprador', producer: 'sale_gap', state: 'missing' }))
-  items.push(mk({ variable_key: 'documento.notaria', variable_group: 'documento', producer: 'signing', state: 'missing' }))
+  items.push(
+    mk({
+      variable_key: 'clausulas.quinto',
+      variable_group: 'clausulas',
+      producer: 'authored',
+      state: 'missing',
+    })
+  )
+  items.push(
+    mk({
+      variable_key: 'comprador.nombre',
+      variable_group: 'comprador',
+      producer: 'sale_gap',
+      state: 'missing',
+    })
+  )
+  items.push(
+    mk({
+      variable_key: 'documento.notaria',
+      variable_group: 'documento',
+      producer: 'signing',
+      state: 'missing',
+    })
+  )
 
   return items
 }
 
 describe('reviewBucket', () => {
   it('aprobada/derivada/no-aplica son "listo"', () => {
-    expect(reviewBucket(mk({ variable_key: 'x.a', producer: 'extracted', state: 'approved' }))).toBe('listo')
-    expect(reviewBucket(mk({ variable_key: 'x.b', producer: 'extracted', state: 'derived' }))).toBe('listo')
-    expect(reviewBucket(mk({ variable_key: 'x.c', producer: 'manual', state: 'not_applicable' }))).toBe('listo')
+    expect(
+      reviewBucket(mk({ variable_key: 'x.a', producer: 'extracted', state: 'approved' }))
+    ).toBe('listo')
+    expect(reviewBucket(mk({ variable_key: 'x.b', producer: 'extracted', state: 'derived' }))).toBe(
+      'listo'
+    )
+    expect(
+      reviewBucket(mk({ variable_key: 'x.c', producer: 'manual', state: 'not_applicable' }))
+    ).toBe('listo')
   })
 
   it('extraida/manual sin resolver son "por_revisar"', () => {
-    expect(reviewBucket(mk({ variable_key: 'x.d', producer: 'extracted', state: 'proposed' }))).toBe('por_revisar')
-    expect(reviewBucket(mk({ variable_key: 'x.e', producer: 'manual', state: 'missing' }))).toBe('por_revisar')
+    expect(
+      reviewBucket(mk({ variable_key: 'x.d', producer: 'extracted', state: 'proposed' }))
+    ).toBe('por_revisar')
+    expect(reviewBucket(mk({ variable_key: 'x.e', producer: 'manual', state: 'missing' }))).toBe(
+      'por_revisar'
+    )
   })
 
   it('hueco de venta y firma son "no_editable"', () => {
-    expect(reviewBucket(mk({ variable_key: 'comprador.rut', producer: 'sale_gap', state: 'missing' }))).toBe('no_editable')
-    expect(reviewBucket(mk({ variable_key: 'documento.fecha', producer: 'signing', state: 'missing' }))).toBe('no_editable')
+    expect(
+      reviewBucket(mk({ variable_key: 'comprador.rut', producer: 'sale_gap', state: 'missing' }))
+    ).toBe('no_editable')
+    expect(
+      reviewBucket(mk({ variable_key: 'documento.fecha', producer: 'signing', state: 'missing' }))
+    ).toBe('no_editable')
   })
 })
 
@@ -113,20 +182,26 @@ describe('toMatrixEntries — colapso SII por lote', () => {
   it('colapsa cada clave SII repetida en una entrada con el conteo de lotes', () => {
     const entries = toMatrixEntries(tenoInventory())
     const collapsed = entries.filter((entry) => entry.kind === 'collapsed')
-    expect(collapsed).toHaveLength(2)
-    for (const entry of collapsed) {
-      expect(entry.kind).toBe('collapsed')
-      if (entry.kind === 'collapsed') {
-        expect(entry.lotCount).toBe(53)
-        expect(entry.items).toHaveLength(53)
-        expect(['sii.unidad_nombre', 'sii.pre_rol_lote']).toContain(entry.variableKey)
-      }
+    expect(collapsed).toHaveLength(1)
+    const entry = collapsed[0]
+    expect(entry.kind).toBe('collapsed')
+    if (entry.kind === 'collapsed') {
+      expect(entry.lotCount).toBe(53)
+      expect(entry.items).toHaveLength(106)
+      expect(entry.variableKey).toBe('sii.roles_por_lote')
+      expect(entry.variableKeys).toEqual(['sii.pre_rol_lote', 'sii.unidad_nombre'])
     }
   })
 
   it('una sola fila de una clave por-lote NO colapsa', () => {
     const entries = toMatrixEntries([
-      mk({ variable_key: 'sii.pre_rol_lote', variable_group: 'sii', producer: 'extracted', state: 'proposed', lot_id: 'lot1' }),
+      mk({
+        variable_key: 'sii.pre_rol_lote',
+        variable_group: 'sii',
+        producer: 'extracted',
+        state: 'proposed',
+        lot_id: 'lot1',
+      }),
     ])
     expect(entries).toHaveLength(1)
     expect(entries[0].kind).toBe('single')
@@ -148,7 +223,7 @@ describe('groupByProducer', () => {
   it('cuenta "por revisar" por seccion con SII colapsado', () => {
     const sections = groupByProducer(tenoInventory())
     const byProducer = Object.fromEntries(sections.map((section) => [section.producer, section]))
-    expect(byProducer.extracted.porRevisar).toBe(11) // 4 vendedor + 7 SII (2 colapsadas + 5)
+    expect(byProducer.extracted.porRevisar).toBe(11) // 4 vendedor + 7 SII (2 decisiones colapsadas + 5)
     expect(byProducer.manual.porRevisar).toBe(2)
     expect(byProducer.authored.porRevisar).toBe(0)
     expect(byProducer.sale_gap.porRevisar).toBe(0)

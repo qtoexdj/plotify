@@ -6,7 +6,7 @@
 
 ## Summary
 
-Reemplazar la sección de variables del Centro de Control Legal —y agregar la vista del borrador de venta por lote— por **una matriz única organizada por productor** (extraída / manual / autoría / hueco de venta), con la evidencia al lado, aprobación en bloque, colapso de las repeticiones por lote y progreso hacia "molde aprobable". Es un cambio de **solo presentación**: el único toque de backend es exponer el `producer` —ya calculado en el catálogo canónico— en la respuesta del inventario. Sin migraciones; el motor (resolutor, gates, snapshot, puente operacional, hook de venta, renderer) no se modifica.
+Reemplazar la sección de variables del Centro de Control Legal por **una matriz única organizada por productor** (extraída / manual / autoría / hueco de venta), con la evidencia al lado, aprobación en bloque, colapso de las repeticiones por lote y progreso hacia "molde aprobable". La venta por lote rellena comprador, precio, lote y servidumbre desde el registro comercial al generar la escritura, sin abrir una revisión legal obligatoria por lote. Es un cambio de **solo presentación**: el único toque de backend es exponer el `producer` —ya calculado en el catálogo canónico— en la respuesta del inventario. Sin migraciones; el motor (resolutor, gates, snapshot, puente operacional, hook de venta, renderer) no se modifica.
 
 ## Technical Context
 
@@ -26,7 +26,7 @@ Reemplazar la sección de variables del Centro de Control Legal —y agregar la 
 
 **Constraints**: solo presentación; cero migraciones; un único campo nuevo en el contrato del inventario (`producer`); preservar la funcionalidad fina que hoy vive en los paneles a medida (en particular el ajuste manual de roles SII, FR-013).
 
-**Scale/Scope**: ~14 grupos canónicos, ~34 variables distintas por proyecto real (Teno); repeticiones SII de hasta decenas de lotes; matriz a dos niveles (molde del proyecto + borrador de venta por lote).
+**Scale/Scope**: ~14 grupos canónicos, ~34 variables distintas por proyecto real (Teno); repeticiones SII de hasta decenas de lotes; matriz principal del molde del proyecto. La salida por venta usa el molde aprobado + datos comerciales y solo requiere trazabilidad opcional si se decide exponerla.
 
 ## Constitution Check
 
@@ -60,18 +60,18 @@ specs/013-matriz-variables-ui/
 
 ```text
 apps/api/
-├── services/legal_variable_resolution.py    # get_project_variable_inventory: setear producer por fila
-├── schemas/legal_variables.py               # VariableResolutionResponse.producer: str | None
+├── services/legal_variable_resolution.py    # get_project_variable_inventory: serializa VariableResolutionResponse
+├── schemas/legal_variables.py               # VariableResolutionResponse.producer: str (computed_field)
 └── tests/test_escrituras_variable_inventory.py  # cubrir producer por grupo/clave
 
 apps/web/src/
 ├── components/projects/legal/variable-matrix/   # NUEVO
-│   ├── variable-matrix.tsx                   # orquestador (scope proyecto | lote)
+│   ├── variable-matrix.tsx                   # orquestador del molde del proyecto
 │   ├── molde-progress-header.tsx             # progreso + "Aprobar molde" (bulk global)
 │   ├── producer-group.tsx                    # sección por productor + bulk por grupo
 │   ├── variable-row.tsx                      # valor · confianza · fuente · acciones
 │   ├── variable-inspector.tsx               # dato + evidencia lado a lado (V2)
-│   ├── sii-lot-group.tsx                     # fila colapsada N lotes + detalle + override (FR-013)
+│   ├── sii-lot-detail.tsx                    # fila colapsada N lotes + detalle + override (FR-013)
 │   └── sale-gap-panel.tsx                    # "se completa en la venta" (no editable)
 ├── components/projects/detail/legal-control-center.tsx  # reemplazar variables + paneles por <VariableMatrix>
 └── lib/legal/variable-resolution-types.ts    # tipo/enum/labels producer + helpers de agrupación y colapso
@@ -79,7 +79,7 @@ apps/web/src/
 apps/web/tests/                               # vitest: agrupación, colapso SII, conteo, exclusión de venta
 ```
 
-Eliminados (su lógica fina migra al detalle genérico): `sag-article-two-panel.tsx`, `plano-archive-panel.tsx`, la tabla + formulario inline de Roles SII y los 3 KPI cards del CCL. Conservados como contexto secundario: `legal-document-status-panel.tsx`, `escritura-readiness-panel.tsx`. El override manual de roles SII se preserva dentro de `sii-lot-group.tsx` reutilizando el endpoint `legal-roles/[lotId]`.
+Eliminados (su lógica fina migra al detalle genérico): `sag-article-two-panel.tsx`, `plano-archive-panel.tsx`, la tabla + formulario inline de Roles SII y los 3 KPI cards del CCL. Conservados como contexto secundario: `legal-document-status-panel.tsx`, `escritura-readiness-panel.tsx`. El override manual de roles SII se preserva dentro de `sii-lot-detail.tsx` reutilizando el endpoint `legal-roles/[lotId]`.
 
 **Structure Decision**: web app (frontend Next.js + servicio FastAPI). El grueso del trabajo es frontend bajo `components/projects/legal/variable-matrix/`; el backend se limita a un campo derivado de lectura en el inventario.
 

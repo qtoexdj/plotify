@@ -110,7 +110,12 @@ export function ManualInputDialog({
               onChange={(event) => setValueText(event.target.value)}
             />
           </div>
-          <Button type="button" className="w-full" disabled={saving || !valueText.trim()} onClick={save}>
+          <Button
+            type="button"
+            className="w-full"
+            disabled={saving || !valueText.trim()}
+            onClick={save}
+          >
             Guardar
           </Button>
         </div>

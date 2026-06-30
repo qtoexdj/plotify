@@ -13,8 +13,19 @@ Validación contra el proyecto real **Teno** (`aad0fbf2-ceda-47bc-954a-b3f5f2ac8
 5. **Aprobación en bloque** — "Aprobar 4 del vendedor" / "Aprobar roles SII" resuelven el grupo sin clic por clic.
 6. **Huecos de venta** — comprador/precio/lote/servidumbre aparecen como "se completa en la venta", sin acciones de edición, y **no** cuentan en "por revisar".
 7. **Molde aprobable** — tras resolver las 13, "Aprobar molde" se habilita.
-8. **Borrador de venta** — en un lote vendido y validado, su borrador muestra los huecos de venta **rellenos** ("desde la venta") y el resto heredado del molde, todo por productor.
+8. **Venta automática** — en un lote vendido y validado, comprador/precio/lote/servidumbre se rellenan desde la venta comercial al generar la escritura. No aparece una nueva tarea legal normal por lote; cualquier vista posterior es solo trazabilidad en lectura.
 9. **Override SII preservado** — el detalle por lote permite el ajuste manual de un rol con su razón (FR-013).
+
+## Validación T031 — Teno live
+
+Comando read-only:
+
+```bash
+cd apps/api
+./.venv/bin/python scripts/verify_matriz_variables_ui_teno.py
+```
+
+Resultado del 2026-06-30: **OK**. El escenario base del quickstart valida `13 por revisar / 21 listas / 34 total`; la base live de Teno ya estaba parcialmente revisada y reportó `2 por revisar / 32 listas / 34 total`. Roles SII valida como una entrada visual `sii.roles_por_lote` con 53 lotes, 106 filas y 2 decisiones reales (`sii.pre_rol_lote`, `sii.unidad_nombre`).
 
 ## Gates del pipeline (constitución VI) a correr antes de cerrar
 
@@ -30,4 +41,14 @@ pnpm contracts:generate   # tras agregar `producer` al schema
 ## No-regresión (FR-011)
 
 - Suites existentes de matriz/escritura/variables en verde (web vitest + api pytest).
-- El motor (resolutor, gates, snapshot, puente operacional, hook de venta, renderer DOCX) no se modifica; confirmar que aprobar el molde de Teno y generar un borrador siguen funcionando igual que antes del feature.
+- El motor (resolutor, gates, snapshot, puente operacional, hook de venta, renderer DOCX) no se modifica; confirmar que aprobar el molde de Teno y generar la escritura del lote desde una venta siguen funcionando igual que antes del feature.
+
+Resultado T033 del 2026-06-30:
+
+- `pnpm --filter web lint` OK.
+- `pnpm format:check` OK.
+- `pnpm typecheck:web` OK.
+- `pnpm test:web` OK: 64 archivos, 739 tests.
+- `pnpm build:web` OK.
+- `pnpm test:api` OK: 630 passed, 2 skipped.
+- `./.venv/bin/python scripts/verify_venta_escritura_supabase.py --allow-remote` OK contra Supabase dev/staging remoto: matriz de proyecto aprobada, hook venta→escritura crea borrador de lote, mesa abre en scope `lot`, y snapshot verifica `comprador.nombre`, `comprador.rut`, `transaccion.precio_numeros`, `lote.deslindes`.

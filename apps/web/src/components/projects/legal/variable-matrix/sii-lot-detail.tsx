@@ -23,6 +23,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import {
+  ROLE_MATCHING_STATUS_LABELS,
   ROLE_STATUS_LABELS,
   deriveRoleInProcessText,
   type LegalRoleMatchesResponse,
@@ -90,23 +91,34 @@ export function SiiLotDetail({ projectId, open, onOpenChange, onSaved }: SiiLotD
   const [draft, setDraft] = useState<OverrideDraft | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const load = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await fetch(`/api/projects/${projectId}/legal-roles`)
-      const payload = (await response.json()) as LegalRoleMatchesResponse & { error?: string }
-      if (!response.ok) throw new Error(payload.error || 'Error al cargar roles SII')
-      setLots(sortLots(payload.lots ?? []))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar roles SII')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [projectId])
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      if (signal?.aborted) return
+      setIsLoading(true)
+      setError(null)
+      try {
+        const response = await fetch(`/api/projects/${projectId}/legal-roles`, { signal })
+        const payload = (await response.json()) as LegalRoleMatchesResponse & { error?: string }
+        if (!response.ok) throw new Error(payload.error || 'Error al cargar roles SII')
+        if (signal?.aborted) return
+        setLots(sortLots(payload.lots ?? []))
+      } catch (err) {
+        if ((err as { name?: string }).name === 'AbortError') return
+        setError(err instanceof Error ? err.message : 'Error al cargar roles SII')
+      } finally {
+        if (!signal?.aborted) setIsLoading(false)
+      }
+    },
+    [projectId]
+  )
 
   useEffect(() => {
-    if (open) load()
+    if (!open) return
+    const controller = new AbortController()
+    queueMicrotask(() => {
+      void load(controller.signal)
+    })
+    return () => controller.abort()
   }, [open, load])
 
   const selectedLot = useMemo(
@@ -220,7 +232,10 @@ export function SiiLotDetail({ projectId, open, onOpenChange, onSaved }: SiiLotD
                         {lot.sii_definitive_role ?? lot.sii_pre_role ?? 'Sin rol'}
                       </td>
                       <td className="px-3 py-2 text-right text-muted-foreground">
-                        {lot.matching_status}
+                        <div>{ROLE_MATCHING_STATUS_LABELS[lot.matching_status]}</div>
+                        {lot.source_document_label ? (
+                          <div className="text-[11px]">{lot.source_document_label}</div>
+                        ) : null}
                       </td>
                     </tr>
                   ))}

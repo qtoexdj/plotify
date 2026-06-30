@@ -19,8 +19,8 @@
 **Purpose**: preparar el carril del feature y los blancos de test sin cambiar comportamiento.
 
 - [x] T001 Confirmar contexto `013-matriz-variables-ui` en `/Users/matiasignacio/Developer/plotify/.specify/feature.json`
-- [ ] T002 [P] Crear esqueleto de tests vitest de la matriz en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
-- [ ] T003 [P] Extender el test del inventario para cubrir `producer` por grupo/clave en `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_escrituras_variable_inventory.py`
+- [x] T002 [P] Crear esqueleto de tests vitest de la matriz en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx` _(ya existe con tests de header, grupos, colapso SII y huecos de venta)_
+- [x] T003 [P] Extender el test del inventario para cubrir `producer` por grupo/clave en `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_escrituras_variable_inventory.py` _(hecho 2026-06-30; cubre extracted/manual/sale_gap/authored/signing; `pnpm test:api` verde: 630 passed, 2 skipped)_
 
 **Verify**: `pnpm test:api`
 
@@ -36,7 +36,7 @@
 - [x] T005 Regenerar el contrato tipado con `pnpm contracts:generate` y verificar `producer: string` en `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/services/plotify-chat.generated.ts` + `/Users/matiasignacio/Developer/plotify/packages/contracts/openapi/plotify-chat.v1.json` _(hecho 2026-06-30; tests inventario+catálogo verdes)_
 - [x] T006 Definir el enum/labels de `producer` (extraída/manual/autoría/hueco de venta/firma) en `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/legal/variable-resolution-types.ts` y los helpers de agrupación, colapso SII y progreso del molde en `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/legal/variable-matrix-model.ts` _(hecho 2026-06-30)_
 - [x] T007 [P] Tests unitarios de los helpers (agrupación por productor, colapso de `sii.unidad_nombre`+`sii.pre_rol_lote` por lote, conteo "por revisar", exclusión de `sale_gap`/`signing`) en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix-model.test.ts` — **9 tests verdes, reproducen Teno 13/21/34** _(hecho 2026-06-30)_
-- [x] T008 Scaffold del orquestador `VariableMatrix` (modos `scope: project | lot`) en `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/variable-matrix/variable-matrix.tsx`
+- [x] T008 Scaffold del orquestador `VariableMatrix` para `scope: project` en `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/variable-matrix/variable-matrix.tsx` (`scope: lot` queda solo como trazabilidad opcional si se decide exponerla)
 
 **Verify**: `pnpm test:web`
 
@@ -91,17 +91,17 @@
 
 ---
 
-## Phase 6: User Story 5 - Revisar el borrador de venta de un lote (Priority: P2)
+## Phase 6: User Story 5 - Trazabilidad opcional de la escritura generada por venta (Priority: P3, opcional)
 
-**Goal**: la misma matriz a nivel lote, con los huecos de venta ya rellenos "desde la venta".
+**Goal**: no agregar una revisión obligatoria por lote. Si se conserva esta story, debe ser una vista opcional de trazabilidad para confirmar que el documento del lote se rellenó desde la venta comercial; el flujo principal del abogado sigue siendo aprobar una sola vez el molde del proyecto.
 
-**Independent Test**: con un lote vendido y validado, su borrador muestra los datos de venta rellenos y el resto heredado del molde.
+**Independent Test**: pendiente de decisión de alcance. La validación principal debe demostrar que comprador/precio/lote/servidumbre se rellenan automáticamente al generar la escritura del lote, sin pedir al abogado revisar cada venta como paso normal.
 
-- [x] T023 [P] [US5] Test del modo lote (huecos de venta con valor + origen "desde la venta", herencia del molde) en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
-- [x] T024 [US5] Modo `scope=lot` en `variable-matrix.tsx` (inventario del caso; `sale_gap` con valor, solo lectura) leyendo el inventario por lote
-- [ ] T025 [US5] Montar la matriz del borrador donde hoy se ve el caso/lote de venta (superficie de revisión legal del borrador)
+- [ ] T023 [P] [US5] Test opcional de trazabilidad por venta: `sale_gap` con valor + origen "desde la venta", herencia del molde y **sin** acciones obligatorias en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
+- [ ] T024 [US5] Modo lectura opcional para trazabilidad de caso/lote en `variable-matrix.tsx`, solo si se decide exponerlo; no debe componer una nueva cola de aprobación legal por lote.
+- [ ] T025 [US5] Montar la vista opcional de trazabilidad donde hoy se ve el caso/lote de venta; fuera del cierre obligatorio del molde y sin bloqueo para ventas.
 
-**Checkpoint**: el ciclo completo (molde → venta → borrador) usa una sola matriz por productor.
+**Checkpoint**: el molde sigue siendo único; la venta rellena datos comerciales sin revisión obligatoria por lote.
 
 ---
 
@@ -113,7 +113,7 @@
 
 - [x] T026 [US4] Eliminados `sag-article-two-panel.tsx` y `plano-archive-panel.tsx` (su detalle vive ahora en la matriz por productor) _(hecho 2026-06-30)_
 - [x] T027 [US4] Quitada la tabla + formulario inline de Roles SII del CCL (override ahora en `sii-lot-detail.tsx`); CCL reescrito minimal (header + matriz + documentos/readiness/título). _(hecho 2026-06-30)_
-- [x] T028 [US4] Acceso directo "Ver matriz de escritura" → `/documentos/matriz/proyecto/[projectId]` en la cabecera del CCL. (Contador de borradores: opcional, diferido.) _(hecho 2026-06-30)_
+- [x] T028 [US4] Acceso directo "Ver matriz de escritura" → `/documentos/matriz/proyecto/[projectId]` en la cabecera del CCL. (Contador de ventas/escrituras: opcional, diferido.) _(hecho 2026-06-30)_
 - [x] T029 [US4] Eliminado el huérfano `legal-variable-table.tsx` (nunca montado; reemplazado por `variable-matrix/`). _(hecho 2026-06-30)_
 
 **Checkpoint**: todas las user stories funcionan; acceso centralizado.
@@ -122,21 +122,21 @@
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T030 [P] Conservar `legal-document-status-panel.tsx` y `escritura-readiness-panel.tsx` como contexto secundario (no portada)
-- [ ] T031 Validar `quickstart.md` contra Teno (las 13, colapso SII, vendedor visible, huecos fuera del conteo, molde aprobable, borrador con venta rellena)
-- [ ] T032 Correr gates: `pnpm typecheck:web`, `pnpm test:web`, `pnpm build:web`, `pnpm test:api`, `pnpm contracts:generate`
-- [ ] T033 No-regresión (FR-011): suites de matriz/escritura/variables verdes; aprobar molde y generar borrador de Teno siguen funcionando igual
+- [x] T030 [P] Conservar `legal-document-status-panel.tsx` y `escritura-readiness-panel.tsx` como contexto secundario (no portada) _(hecho: el CCL monta `VariableMatrix` primero y deja documentos/readiness/título bajo la matriz)_
+- [x] T031 Validar `quickstart.md` contra Teno (las 13, colapso SII, vendedor visible, huecos fuera del conteo, molde aprobable; venta automática sin revisión legal por lote) _(hecho 2026-06-30 con `./.venv/bin/python scripts/verify_matriz_variables_ui_teno.py`; base quickstart 13/21/34, live actual Teno 2/32/34)_
+- [x] T032 Correr gates: `pnpm typecheck:web`, `pnpm test:web`, `pnpm build:web`, `pnpm test:api`, `pnpm contracts:generate` _(hecho 2026-06-30; también `pnpm --filter web lint` y `pnpm format:check` verdes)_
+- [x] T033 No-regresión (FR-011): suites de matriz/escritura/variables verdes; aprobar molde y generar escritura de Teno desde una venta siguen funcionando igual _(hecho 2026-06-30: `pnpm --filter web lint`, `pnpm format:check`, `pnpm typecheck:web`, `pnpm test:web`, `pnpm build:web`, `pnpm test:api`, `./.venv/bin/python scripts/verify_venta_escritura_supabase.py --allow-remote`)_
 
 ---
 
 ## Dependencies & Execution Order
 
 - **Setup (Phase 1)** → **Foundational (Phase 2, bloqueante)** → user stories.
-- **US1 (P1)** es el MVP; **US2/US3/US5 (P2)** dependen de la fundación y de US1 para la superficie; **US4 (P3)** al final (limpieza/centralización).
+- **US1 (P1)** es el MVP; **US2/US3 (P2)** dependen de la fundación y de US1; **US4 (P3)** centraliza acceso; **US5 (P3 opcional)** solo agrega trazabilidad en lectura si se decide exponerla.
 - Dentro de cada story: tests → componentes hoja ([P]) → orquestación → montaje en el CCL.
 
 ## Notes
 
-- **T004 y T005 ya están hechas** en este ciclo (backend `producer` + `contracts:generate`, tests verdes). El resto está pendiente.
+- **Estado actual**: T001–T022 y T026–T033 están cerradas; T023–T025 quedan como trazabilidad opcional/futura.
 - El motor no se toca (FR-011): toda acción usa endpoints existentes (PATCH variable, bulk-approve, by-key, legal-roles).
 - Commit después de cada tarea o grupo lógico.

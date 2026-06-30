@@ -17,7 +17,7 @@ Lo que ya existe y NO se reconstruye (verificado contra Supabase real, proyecto 
 - Resolución, gates de preparación, snapshot del caso, puente operacional (`lot_records` → variables de venta), hook de venta y renderer DOCX (SDD 007→011).
 - La clasificación canónica de **productor** por variable ya vive en el backend (`extracted / authored / manual / sale_gap / signing`), expuesta en los bloqueadores pero **no** en el inventario.
 - Endpoints de aprobación en bloque y de ingreso manual por clave ya existen y funcionan.
-- El motor valida la matriz del **proyecto sin los huecos de venta**: comprador, precio, lote y servidumbre se excluyen y se rellenan al validar la venta de cada lote.
+- El motor valida la matriz del **proyecto sin los huecos de venta**: comprador, precio, lote y servidumbre se excluyen y se rellenan al validar la venta de cada lote. Esa venta genera la escritura del lote desde el molde aprobado; no abre una revisión legal obligatoria lote a lote.
 
 Los problemas que este feature cierra (medidos en el proyecto real Teno):
 
@@ -83,7 +83,7 @@ El operador ve un bloque "Se completa en la venta" (comprador, precio, lote, ser
 
 ### User Story 4 - Un solo lugar para variables y escritura (Priority: P3)
 
-La matriz de variables es la superficie principal de la sección legal del proyecto (los paneles a medida pasan a ser detalle de cada grupo), y desde ella el operador puede ir a la matriz de escritura resultante. Cuando hay ventas, ve cuántos borradores de venta cuelgan del molde.
+La matriz de variables es la superficie principal de la sección legal del proyecto (los paneles a medida pasan a ser detalle de cada grupo), y desde ella el operador puede ir a la matriz de escritura resultante. Cuando hay ventas, puede ver cuántas escrituras/ventas cuelgan del molde sin convertirlas en una cola de revisión legal.
 
 **Why this priority**: centraliza el acceso hoy disperso (variables en una pestaña, escritura en otra ruta), pero no bloquea el valor central de US1–US3.
 
@@ -95,18 +95,18 @@ La matriz de variables es la superficie principal de la sección legal del proye
 
 ---
 
-### User Story 5 - Revisar el borrador de venta de un lote (Priority: P2)
+### User Story 5 - Trazar la escritura generada por una venta (Priority: P3)
 
-Cuando una venta se aprueba, se genera un borrador por lote que hereda el molde y trae los huecos de venta ya rellenos (comprador, precio, lote, servidumbre) desde el registro comercial. El operador/abogado revisa ese borrador con el **mismo modelo por productor**: ahora los huecos de venta aparecen con valor y su origen ("desde la venta"), y se revisan/aprueban con la misma mecánica de evidencia antes de la revisión legal y la minuta.
+Cuando una venta se aprueba, el sistema genera la escritura del lote usando el molde del proyecto aprobado y los datos comerciales registrados por el vendedor/administrador (comprador, precio, lote, servidumbre). El abogado no revisa una nueva matriz por cada lote como paso normal. Si se expone una vista del caso de venta, debe ser de trazabilidad/auditoría: muestra qué datos vinieron de la venta y qué partes heredó del molde, sin crear pendientes legales adicionales.
 
-**Why this priority**: cierra el ciclo que el alcance completo exige; sin esta vista el borrador de venta seguiría dependiendo de la mesa de escritura sin una matriz de variables coherente.
+**Why this priority**: cierra el ciclo sin aumentar trabajo legal. La matriz reduce trabajo porque el abogado aprueba un molde reutilizable; la venta solo completa los huecos comerciales.
 
-**Independent Test**: con un lote vendido y validado, el operador abre su borrador y ve las variables de venta rellenas y el resto heredado del molde, todo agrupado por productor.
+**Independent Test**: con un lote vendido y validado, el sistema genera la escritura usando los datos de venta y el molde aprobado sin crear una tarea de revisión legal por lote; si existe una vista de trazabilidad, muestra los orígenes en modo lectura.
 
 **Acceptance Scenarios**:
 
-1. **Given** una venta validada de un lote, **When** el operador abre el borrador, **Then** ve los huecos de venta con valor y marcados como "desde la venta".
-2. **Given** un borrador de venta, **When** el operador revisa sus variables, **Then** las ve agrupadas por productor, heredando del molde lo no-venta y mostrando lo de venta ya resuelto.
+1. **Given** una venta validada de un lote, **When** se genera la escritura, **Then** comprador, precio, lote y servidumbre se rellenan desde la venta comercial.
+2. **Given** una escritura generada por venta, **When** el operador consulta su trazabilidad, **Then** ve los datos de venta en modo lectura y las variables no-venta heredadas del molde aprobado, sin acciones obligatorias de aprobación lote a lote.
 
 ---
 
@@ -134,7 +134,7 @@ Cuando una venta se aprueba, se genera un borrador por lote que hereda el molde 
 - **FR-009**: Las variables de autoría con default disponible MUST mostrarse como "al día / usa plantilla" sin contar como pendientes del operador.
 - **FR-010**: El sistema MUST ofrecer un acceso directo desde la matriz de variables a la matriz de escritura del proyecto.
 - **FR-011**: El sistema MUST preservar el comportamiento existente de resolución, aprobación, snapshot, generación de minuta y flujo de venta (sin regresión).
-- **FR-012**: El sistema MUST mostrar la matriz del borrador de venta de un lote organizada por el mismo modelo de productor, con los huecos de venta ya rellenos desde la venta y marcados como tales, heredando del molde las variables no-venta.
+- **FR-012**: El sistema MUST NOT convertir comprador, precio, lote o servidumbre en pendientes legales por lote. Al generar una escritura de venta, esos datos MUST provenir de la venta comercial y, si se muestran en una vista posterior, MUST aparecer en modo lectura como trazabilidad "desde la venta".
 - **FR-013**: El detalle por lote de los roles SII MUST permitir el ajuste manual de un rol, preservando la capacidad que hoy ofrece el panel especializado, para no perder funcionalidad al reemplazar los paneles a medida.
 
 ### Key Entities _(include if feature involves data)_
@@ -143,7 +143,7 @@ Cuando una venta se aprueba, se genera un borrador por lote que hereda el molde 
 - **Productor**: quién y cuándo llena la variable — extraída (extracción/agente), manual (operador, desde plano/Conservador), autoría (plantilla de la organización), hueco de venta (la venta de cada lote), firma (notaría).
 - **Molde del proyecto**: el conjunto de variables no-venta del proyecto y su estado de aprobación/progreso.
 - **Grupo de roles por lote**: la representación colapsada de las variables SII que se repiten por cada lote, con su detalle.
-- **Borrador de venta**: el caso de escritura por lote que cuelga del molde una vez aprobada la venta (referencia, no se edita aquí).
+- **Escritura generada por venta**: el documento/caso de escritura por lote que usa el molde aprobado y los datos comerciales de la venta. Puede tener trazabilidad posterior, pero no es una superficie de revisión legal obligatoria por lote.
 
 ## Success Criteria _(mandatory)_
 
@@ -154,13 +154,13 @@ Cuando una venta se aprueba, se genera un borrador por lote que hereda el molde 
 - **SC-003**: El 100% de las variables pobladas del proyecto, incluido el grupo vendedor, es visible y accionable desde la matriz (hoy vendedor no aparece).
 - **SC-004**: Los huecos de venta nunca aparecen como bloqueantes ni cuentan como pendientes del molde en un proyecto sin ventas.
 - **SC-005**: El molde de un proyecto real puede aprobarse desde la nueva matriz sin recurrir a la pantalla anterior.
-- **SC-006**: Cero regresiones en los flujos de aprobación de matriz, snapshot, generación de minuta y venta (suites de prueba existentes en verde).
+- **SC-006**: Cero regresiones en los flujos de aprobación de matriz, snapshot, generación automática de escritura por venta y venta (suites de prueba existentes en verde).
 
 ## Assumptions
 
 - El motor de variables (resolución, gates, snapshot, puente operacional, hook de venta, aprobación en bloque, ingreso manual por clave) ya existe y no se modifica; el único cambio fuera del frontend es exponer el productor —ya calculado— en la respuesta del inventario.
 - Los datos de comprador, precio, lote y servidumbre provienen de la venta comercial vía el puente operacional y no se editan en esta pantalla.
 - La aprobación del molde hereda el comportamiento actual (four-eyes opcional, desactivado por defecto).
-- El alcance de SDD 013 cubre la matriz de variables en sus **dos niveles**: el molde del proyecto y el borrador de venta por lote (donde los huecos de venta aparecen ya rellenos desde la venta). La matriz de escritura (el documento) se enlaza pero su rediseño queda fuera.
+- El alcance principal de SDD 013 cubre el **molde del proyecto**. La venta por lote rellena automáticamente comprador, precio, lote y servidumbre al generar la escritura; una vista posterior de trazabilidad por venta queda como salida opcional/de menor prioridad, no como revisión obligatoria del abogado.
 - La unificación **reemplaza por completo** los paneles a medida actuales (SAG, Plano, Roles SII, Título): no conviven con la nueva matriz. Toda capacidad fina que hoy vive en esos paneles (en particular el ajuste manual de roles SII por lote) se preserva dentro del detalle genérico de su grupo (FR-013).
 - El catálogo canónico de variables y su clasificación de productor son la fuente de verdad para el agrupamiento.

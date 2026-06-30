@@ -40,10 +40,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "block_id",
-          "position"
-        ],
+        "required": ["block_id", "position"],
         "title": "AddBlockToTemplateRequest",
         "type": "object"
       },
@@ -183,12 +180,7 @@
             "title": "Key"
           },
           "kind": {
-            "enum": [
-              "token_missing",
-              "readiness_gate",
-              "alert_clause_missing",
-              "snapshot_stale"
-            ],
+            "enum": ["token_missing", "readiness_gate", "alert_clause_missing", "snapshot_stale"],
             "title": "Kind",
             "type": "string"
           },
@@ -237,9 +229,7 @@
             "title": "Title"
           }
         },
-        "required": [
-          "kind"
-        ],
+        "required": ["kind"],
         "title": "ApprovalBlocker",
         "type": "object"
       },
@@ -332,11 +322,7 @@
             "title": "Label"
           },
           "status": {
-            "enum": [
-              "resolved",
-              "missing",
-              "blocked"
-            ],
+            "enum": ["resolved", "missing", "blocked"],
             "title": "Status",
             "type": "string"
           },
@@ -352,10 +338,7 @@
             "title": "Text"
           }
         },
-        "required": [
-          "blockKey",
-          "status"
-        ],
+        "required": ["blockKey", "status"],
         "title": "BlockResolution",
         "type": "object"
       },
@@ -370,10 +353,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "bot_username",
-          "is_active"
-        ],
+        "required": ["bot_username", "is_active"],
         "title": "BotResponse",
         "type": "object"
       },
@@ -405,10 +385,7 @@
           "condition_mode": {
             "anyOf": [
               {
-                "enum": [
-                  "omit",
-                  "block"
-                ],
+                "enum": ["omit", "block"],
                 "type": "string"
               },
               {
@@ -439,11 +416,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "title",
-          "position",
-          "content_json"
-        ],
+        "required": ["title", "position", "content_json"],
         "title": "ClauseUpsertRequest",
         "type": "object"
       },
@@ -495,13 +468,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "organization_id",
-          "user_id",
-          "provider",
-          "display_name",
-          "credentials"
-        ],
+        "required": ["organization_id", "user_id", "provider", "display_name", "credentials"],
         "title": "ConnectRequest",
         "type": "object"
       },
@@ -563,12 +530,7 @@
             "title": "Variables"
           }
         },
-        "required": [
-          "organization_id",
-          "name",
-          "category",
-          "content"
-        ],
+        "required": ["organization_id", "name", "category", "content"],
         "title": "CreateBlockRequest",
         "type": "object"
       },
@@ -645,11 +607,7 @@
             "title": "Page Config"
           }
         },
-        "required": [
-          "organization_id",
-          "name",
-          "document_type"
-        ],
+        "required": ["organization_id", "name", "document_type"],
         "title": "CreateTemplateRequest",
         "type": "object"
       },
@@ -682,9 +640,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "content"
-        ],
+        "required": ["content"],
         "title": "CreateVersionRequest",
         "type": "object"
       },
@@ -711,10 +667,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "organization_id",
-          "skill_id"
-        ],
+        "required": ["organization_id", "skill_id"],
         "title": "CustomSkillPublishRequest",
         "type": "object"
       },
@@ -797,11 +750,7 @@
             "type": "array"
           },
           "validation_status": {
-            "enum": [
-              "draft",
-              "valid",
-              "blocked"
-            ],
+            "enum": ["draft", "valid", "blocked"],
             "title": "Validation Status",
             "type": "string"
           }
@@ -904,13 +853,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "organization_id",
-          "slug",
-          "name",
-          "description",
-          "definition_markdown"
-        ],
+        "required": ["organization_id", "slug", "name", "description", "definition_markdown"],
         "title": "CustomSkillSaveRequest",
         "type": "object"
       },
@@ -930,11 +873,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "action",
-          "organization_id",
-          "admin_id"
-        ],
+        "required": ["action", "organization_id", "admin_id"],
         "title": "DecisionRequest",
         "type": "object"
       },
@@ -957,9 +896,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "DecisionResponse",
         "type": "object"
       },
@@ -981,9 +918,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "tipo"
-        ],
+        "required": ["tipo"],
         "title": "DismissedAlert",
         "type": "object"
       },
@@ -1161,11 +1096,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "escritura_case_id",
-          "case_status",
-          "case_status_label"
-        ],
+        "required": ["escritura_case_id", "case_status", "case_status_label"],
         "title": "EscrituraActiveCase",
         "type": "object"
       },
@@ -1197,10 +1128,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "organization_id",
-          "project_id"
-        ],
+        "required": ["organization_id", "project_id"],
         "title": "EscrituraCaseCreateRequest",
         "type": "object"
       },
@@ -1253,10 +1181,7 @@
       "EscrituraDeliveryView": {
         "properties": {
           "channel": {
-            "enum": [
-              "telegram",
-              "web"
-            ],
+            "enum": ["telegram", "web"],
             "title": "Channel",
             "type": "string"
           },
@@ -1328,13 +1253,7 @@
             "title": "Sent At"
           },
           "status": {
-            "enum": [
-              "pending",
-              "sent",
-              "failed",
-              "unavailable",
-              "expired"
-            ],
+            "enum": ["pending", "sent", "failed", "unavailable", "expired"],
             "title": "Status",
             "type": "string"
           },
@@ -1350,14 +1269,7 @@
             "title": "Status Label"
           }
         },
-        "required": [
-          "id",
-          "escritura_case_id",
-          "generation_id",
-          "channel",
-          "status",
-          "created_at"
-        ],
+        "required": ["id", "escritura_case_id", "generation_id", "channel", "status", "created_at"],
         "title": "EscrituraDeliveryView",
         "type": "object"
       },
@@ -1407,12 +1319,7 @@
             "type": "object"
           }
         },
-        "required": [
-          "organization_id",
-          "project_id",
-          "lot_id",
-          "readiness_status"
-        ],
+        "required": ["organization_id", "project_id", "lot_id", "readiness_status"],
         "title": "EscrituraReadinessResponse",
         "type": "object"
       },
@@ -1456,11 +1363,7 @@
             "title": "Published At"
           },
           "status": {
-            "enum": [
-              "draft",
-              "published",
-              "retired"
-            ],
+            "enum": ["draft", "published", "retired"],
             "title": "Status",
             "type": "string"
           },
@@ -1481,13 +1384,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "document_type",
-          "version",
-          "status"
-        ],
+        "required": ["id", "name", "document_type", "version", "status"],
         "title": "EscrituraTemplateDetail",
         "type": "object"
       },
@@ -1524,11 +1421,7 @@
             "title": "Published At"
           },
           "status": {
-            "enum": [
-              "draft",
-              "published",
-              "retired"
-            ],
+            "enum": ["draft", "published", "retired"],
             "title": "Status",
             "type": "string"
           },
@@ -1549,13 +1442,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "document_type",
-          "version",
-          "status"
-        ],
+        "required": ["id", "name", "document_type", "version", "status"],
         "title": "EscrituraTemplateSummary",
         "type": "object"
       },
@@ -1600,10 +1487,7 @@
           "channel": {
             "anyOf": [
               {
-                "enum": [
-                  "telegram",
-                  "web"
-                ],
+                "enum": ["telegram", "web"],
                 "type": "string"
               },
               {
@@ -1660,13 +1544,7 @@
           "status": {
             "anyOf": [
               {
-                "enum": [
-                  "pending",
-                  "sent",
-                  "failed",
-                  "unavailable",
-                  "expired"
-                ],
+                "enum": ["pending", "sent", "failed", "unavailable", "expired"],
                 "type": "string"
               },
               {
@@ -1676,10 +1554,7 @@
             "title": "Status"
           }
         },
-        "required": [
-          "kind",
-          "label"
-        ],
+        "required": ["kind", "label"],
         "title": "EscrituraTraceEvent",
         "type": "object"
       },
@@ -1710,9 +1585,7 @@
             "title": "Source Project Matriz Id"
           }
         },
-        "required": [
-          "escritura_case_id"
-        ],
+        "required": ["escritura_case_id"],
         "title": "EscrituraTraceResponse",
         "type": "object"
       },
@@ -1821,10 +1694,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "warning_acknowledged",
-          "generated_by"
-        ],
+        "required": ["warning_acknowledged", "generated_by"],
         "title": "GenerateMinutaRequest",
         "type": "object"
       },
@@ -1837,10 +1707,7 @@
           },
           "format": {
             "default": "pdf",
-            "enum": [
-              "pdf",
-              "docx"
-            ],
+            "enum": ["pdf", "docx"],
             "title": "Format",
             "type": "string"
           },
@@ -1870,10 +1737,7 @@
           },
           "selected_recipients": {
             "items": {
-              "enum": [
-                "vendedor",
-                "comprador"
-              ],
+              "enum": ["vendedor", "comprador"],
               "type": "string"
             },
             "title": "Selected Recipients",
@@ -1884,11 +1748,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "template_id",
-          "lot_id",
-          "organization_id"
-        ],
+        "required": ["template_id", "lot_id", "organization_id"],
         "title": "GenerateRequest",
         "type": "object"
       },
@@ -1907,10 +1767,7 @@
             "type": "string"
           },
           "format": {
-            "enum": [
-              "pdf",
-              "docx"
-            ],
+            "enum": ["pdf", "docx"],
             "title": "Format",
             "type": "string"
           },
@@ -2142,12 +1999,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "key",
-          "label",
-          "category",
-          "category_label"
-        ],
+        "required": ["key", "label", "category", "category_label"],
         "title": "InsertableVariable",
         "type": "object"
       },
@@ -2158,9 +2010,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "organization_id"
-        ],
+        "required": ["organization_id"],
         "title": "InvalidateCacheRequest",
         "type": "object"
       },
@@ -2771,10 +2621,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "success",
-          "read_at"
-        ],
+        "required": ["success", "read_at"],
         "title": "MarkReadResponse",
         "type": "object"
       },
@@ -2787,9 +2634,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "approved_by"
-        ],
+        "required": ["approved_by"],
         "title": "MatrizApproveRequest",
         "type": "object"
       },
@@ -2806,9 +2651,7 @@
             "$ref": "#/components/schemas/MatrizView"
           }
         },
-        "required": [
-          "matriz"
-        ],
+        "required": ["matriz"],
         "title": "MatrizCaseResponse",
         "type": "object"
       },
@@ -2823,19 +2666,12 @@
             "type": "string"
           },
           "mode": {
-            "enum": [
-              "omit",
-              "block"
-            ],
+            "enum": ["omit", "block"],
             "title": "Mode",
             "type": "string"
           }
         },
-        "required": [
-          "key",
-          "mode",
-          "active"
-        ],
+        "required": ["key", "mode", "active"],
         "title": "MatrizClauseCondition",
         "type": "object"
       },
@@ -2958,13 +2794,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "clause_key",
-          "title",
-          "position",
-          "fixed_position",
-          "content_json"
-        ],
+        "required": ["clause_key", "title", "position", "fixed_position", "content_json"],
         "title": "MatrizClauseView",
         "type": "object"
       },
@@ -3033,10 +2863,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "rejected_by",
-          "reason"
-        ],
+        "required": ["rejected_by", "reason"],
         "title": "MatrizRejectRequest",
         "type": "object"
       },
@@ -3063,9 +2890,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "version"
-        ],
+        "required": ["version"],
         "title": "MatrizSaveRequest",
         "type": "object"
       },
@@ -3078,9 +2903,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "submitted_by"
-        ],
+        "required": ["submitted_by"],
         "title": "MatrizSubmitRequest",
         "type": "object"
       },
@@ -3100,11 +2923,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "version"
-        ],
+        "required": ["id", "name", "version"],
         "title": "MatrizTemplateRef",
         "type": "object"
       },
@@ -3165,10 +2984,7 @@
           },
           "scope": {
             "default": "lot",
-            "enum": [
-              "project",
-              "lot"
-            ],
+            "enum": ["project", "lot"],
             "title": "Scope",
             "type": "string"
           },
@@ -3190,12 +3006,7 @@
             "title": "Source Project Matriz Id"
           },
           "status": {
-            "enum": [
-              "draft",
-              "legal_review_pending",
-              "approved",
-              "superseded"
-            ],
+            "enum": ["draft", "legal_review_pending", "approved", "superseded"],
             "title": "Status",
             "type": "string"
           },
@@ -3207,13 +3018,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "project_id",
-          "status",
-          "version",
-          "template"
-        ],
+        "required": ["id", "project_id", "status", "version", "template"],
         "title": "MatrizView",
         "type": "object"
       },
@@ -3227,10 +3032,7 @@
             "$ref": "#/components/schemas/MetaValue"
           }
         },
-        "required": [
-          "value",
-          "field"
-        ],
+        "required": ["value", "field"],
         "title": "MetaChange",
         "type": "object"
       },
@@ -3246,10 +3048,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "profile",
-          "wa_id"
-        ],
+        "required": ["profile", "wa_id"],
         "title": "MetaContact",
         "type": "object"
       },
@@ -3267,10 +3066,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "changes"
-        ],
+        "required": ["id", "changes"],
         "title": "MetaEntry",
         "type": "object"
       },
@@ -3300,24 +3096,12 @@
           },
           "type": {
             "default": "unknown",
-            "enum": [
-              "text",
-              "image",
-              "audio",
-              "document",
-              "interactive",
-              "button",
-              "unknown"
-            ],
+            "enum": ["text", "image", "audio", "document", "interactive", "button", "unknown"],
             "title": "Type",
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "from",
-          "timestamp"
-        ],
+        "required": ["id", "from", "timestamp"],
         "title": "MetaMessage",
         "type": "object"
       },
@@ -3328,9 +3112,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "body"
-        ],
+        "required": ["body"],
         "title": "MetaText",
         "type": "object"
       },
@@ -3389,10 +3171,7 @@
             "title": "Statuses"
           }
         },
-        "required": [
-          "messaging_product",
-          "metadata"
-        ],
+        "required": ["messaging_product", "metadata"],
         "title": "MetaValue",
         "type": "object"
       },
@@ -3410,10 +3189,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "object",
-          "entry"
-        ],
+        "required": ["object", "entry"],
         "title": "MetaWebhookPayload",
         "type": "object"
       },
@@ -3542,22 +3318,14 @@
             "type": "integer"
           }
         },
-        "required": [
-          "pending",
-          "approved",
-          "rejected",
-          "unread"
-        ],
+        "required": ["pending", "approved", "rejected", "unread"],
         "title": "NotificationCounts",
         "type": "object"
       },
       "NotificationDecisionRequest": {
         "properties": {
           "action": {
-            "enum": [
-              "approve",
-              "reject"
-            ],
+            "enum": ["approve", "reject"],
             "title": "Action",
             "type": "string"
           },
@@ -3566,10 +3334,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "approval_id",
-          "action"
-        ],
+        "required": ["approval_id", "action"],
         "title": "NotificationDecisionRequest",
         "type": "object"
       },
@@ -3613,9 +3378,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "title": "NotificationDecisionResponse",
         "type": "object"
       },
@@ -3779,10 +3542,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "items",
-          "counts"
-        ],
+        "required": ["items", "counts"],
         "title": "NotificationListResponse",
         "type": "object"
       },
@@ -3801,11 +3561,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "template_id",
-          "lot_id",
-          "organization_id"
-        ],
+        "required": ["template_id", "lot_id", "organization_id"],
         "title": "PreviewRequest",
         "type": "object"
       },
@@ -3816,9 +3572,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "html"
-        ],
+        "required": ["html"],
         "title": "PreviewResponse",
         "type": "object"
       },
@@ -4080,10 +3834,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "gate",
-          "status"
-        ],
+        "required": ["gate", "status"],
         "title": "ReadinessGateResponse",
         "type": "object"
       },
@@ -4098,10 +3849,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "bot_token",
-          "organization_id"
-        ],
+        "required": ["bot_token", "organization_id"],
         "title": "RegisterBotRequest",
         "type": "object"
       },
@@ -4147,11 +3895,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "cliente_nombre",
-          "cliente_run",
-          "valor_reserva"
-        ],
+        "required": ["cliente_nombre", "cliente_run", "valor_reserva"],
         "title": "ReservationPayload",
         "type": "object"
       },
@@ -4217,9 +3961,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "approval_id"
-        ],
+        "required": ["approval_id"],
         "title": "ReservationResponse",
         "type": "object"
       },
@@ -4376,10 +4118,7 @@
             "title": "Source Legal Document Id"
           }
         },
-        "required": [
-          "role_status",
-          "reason"
-        ],
+        "required": ["role_status", "reason"],
         "title": "RoleManualOverrideRequest",
         "type": "object"
       },
@@ -4421,9 +4160,7 @@
             "type": "object"
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "title": "RoleMatchingInventoryResponse",
         "type": "object"
       },
@@ -4469,11 +4206,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "cliente_nombre",
-          "cliente_run",
-          "valor_final"
-        ],
+        "required": ["cliente_nombre", "cliente_run", "valor_final"],
         "title": "SalePayload",
         "type": "object"
       },
@@ -4494,10 +4227,7 @@
           "previous_lot_state": {
             "anyOf": [
               {
-                "enum": [
-                  "disponible",
-                  "reservado"
-                ],
+                "enum": ["disponible", "reservado"],
                 "type": "string"
               },
               {
@@ -4509,10 +4239,7 @@
           "sale_mode": {
             "anyOf": [
               {
-                "enum": [
-                  "direct",
-                  "reserved"
-                ],
+                "enum": ["direct", "reserved"],
                 "type": "string"
               },
               {
@@ -4566,11 +4293,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "prompt_content",
-          "test_message",
-          "organization_id"
-        ],
+        "required": ["prompt_content", "test_message", "organization_id"],
         "title": "SandboxRequest",
         "type": "object"
       },
@@ -4680,10 +4403,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "code",
-          "message"
-        ],
+        "required": ["code", "message"],
         "title": "SkillValidationError",
         "type": "object"
       },
@@ -4746,11 +4466,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "organization_id",
-          "slug",
-          "definition_markdown"
-        ],
+        "required": ["organization_id", "slug", "definition_markdown"],
         "title": "SkillValidationRequest",
         "type": "object"
       },
@@ -4775,10 +4491,7 @@
             "type": "string"
           },
           "status": {
-            "enum": [
-              "valid",
-              "blocked"
-            ],
+            "enum": ["valid", "blocked"],
             "title": "Status",
             "type": "string"
           },
@@ -4790,11 +4503,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "status",
-          "normalized_slug",
-          "approved_tool_slugs"
-        ],
+        "required": ["status", "normalized_slug", "approved_tool_slugs"],
         "title": "SkillValidationResponse",
         "type": "object"
       },
@@ -4857,9 +4566,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "profile_id"
-        ],
+        "required": ["profile_id"],
         "title": "TelegramTokenRequest",
         "type": "object"
       },
@@ -4878,11 +4585,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "token",
-          "bot_username",
-          "deep_link"
-        ],
+        "required": ["token", "bot_username", "deep_link"],
         "title": "TelegramTokenResponse",
         "type": "object"
       },
@@ -4917,10 +4620,7 @@
           "condition_mode": {
             "anyOf": [
               {
-                "enum": [
-                  "omit",
-                  "block"
-                ],
+                "enum": ["omit", "block"],
                 "type": "string"
               },
               {
@@ -4960,12 +4660,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "clause_key",
-          "title",
-          "position",
-          "content_json"
-        ],
+        "required": ["clause_key", "title", "position", "content_json"],
         "title": "TemplateClause",
         "type": "object"
       },
@@ -4996,9 +4691,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "title": "TemplateCreateRequest",
         "type": "object"
       },
@@ -5031,9 +4724,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "published_by"
-        ],
+        "required": ["published_by"],
         "title": "TemplatePublishRequest",
         "type": "object"
       },
@@ -5082,9 +4773,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "tipo"
-        ],
+        "required": ["tipo"],
         "title": "TitleAlert",
         "type": "object"
       },
@@ -5105,11 +4794,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "resolution",
-          "reason",
-          "resolved_by"
-        ],
+        "required": ["resolution", "reason", "resolved_by"],
         "title": "TitleAlertResolveRequest",
         "type": "object"
       },
@@ -5239,9 +4924,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "path"
-        ],
+        "required": ["path"],
         "title": "TitleAnalysisPendingReview",
         "type": "object"
       },
@@ -5261,11 +4944,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "analysis_id",
-          "status",
-          "queued"
-        ],
+        "required": ["analysis_id", "status", "queued"],
         "title": "TitleAnalysisReanalyzeResponse",
         "type": "object"
       },
@@ -5377,10 +5056,7 @@
             ]
           }
         },
-        "required": [
-          "id",
-          "status"
-        ],
+        "required": ["id", "status"],
         "title": "TitleAnalysisResponseData",
         "type": "object"
       },
@@ -5422,11 +5098,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "extractor_name",
-          "model_name",
-          "prompt_version"
-        ],
+        "required": ["extractor_name", "model_name", "prompt_version"],
         "title": "TitleAnalysisRunDetails",
         "type": "object"
       },
@@ -5457,10 +5129,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "legal_document_id",
-          "document_type"
-        ],
+        "required": ["legal_document_id", "document_type"],
         "title": "TitleAnalysisSourceDocument",
         "type": "object"
       },
@@ -5530,10 +5199,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "path",
-          "reason"
-        ],
+        "required": ["path", "reason"],
         "title": "TitleAnalysisVerificationFailure",
         "type": "object"
       },
@@ -5546,9 +5212,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "approved_by"
-        ],
+        "required": ["approved_by"],
         "title": "TitleApproveRequest",
         "type": "object"
       },
@@ -5581,10 +5245,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "hecho",
-          "motivo"
-        ],
+        "required": ["hecho", "motivo"],
         "title": "TitleBlockCheckIssue",
         "type": "object"
       },
@@ -5667,10 +5328,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "orden",
-          "tipo_adquisicion"
-        ],
+        "required": ["orden", "tipo_adquisicion"],
         "title": "TitleInscription",
         "type": "object"
       },
@@ -5695,12 +5353,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "block",
-          "edited_text",
-          "reason",
-          "edited_by"
-        ],
+        "required": ["block", "edited_text", "reason", "edited_by"],
         "title": "TitleNarrativeUpdateRequest",
         "type": "object"
       },
@@ -5780,11 +5433,7 @@
             "title": "State"
           },
           "status": {
-            "enum": [
-              "resolved",
-              "missing",
-              "blocked"
-            ],
+            "enum": ["resolved", "missing", "blocked"],
             "title": "Status",
             "type": "string"
           },
@@ -5804,10 +5453,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "variableKey",
-          "status"
-        ],
+        "required": ["variableKey", "status"],
         "title": "TokenResolution",
         "type": "object"
       },
@@ -5921,11 +5567,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError",
         "type": "object"
       },
@@ -5956,9 +5598,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "reviewed_by"
-        ],
+        "required": ["reviewed_by"],
         "title": "VariableBulkApproveRequest",
         "type": "object"
       },
@@ -5983,9 +5623,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "approved_count"
-        ],
+        "required": ["approved_count"],
         "title": "VariableBulkApproveResponse",
         "type": "object"
       },
@@ -6024,9 +5662,7 @@
             "type": "object"
           }
         },
-        "required": [
-          "project_id"
-        ],
+        "required": ["project_id"],
         "title": "VariableInventoryResponse",
         "type": "object"
       },
@@ -6277,11 +5913,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "variable_resolution_id",
-          "state",
-          "audit_event_id"
-        ],
+        "required": ["variable_resolution_id", "state", "audit_event_id"],
         "title": "VariableReviewResponse",
         "type": "object"
       },
@@ -6312,9 +5944,7 @@
             "$ref": "#/components/schemas/DocumentVariablesGroup"
           }
         },
-        "required": [
-          "variables"
-        ],
+        "required": ["variables"],
         "title": "VariableStatusResponse",
         "type": "object"
       },
@@ -6398,9 +6028,7 @@
             "title": "Value Text"
           }
         },
-        "required": [
-          "action"
-        ],
+        "required": ["action"],
         "title": "VariableUpdateRequest",
         "type": "object"
       },
@@ -6467,9 +6095,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "variable_key"
-        ],
+        "required": ["variable_key"],
         "title": "VariableUpsertRequest",
         "type": "object"
       }
@@ -6530,9 +6156,7 @@
           }
         ],
         "summary": "Request Reservation",
-        "tags": [
-          "approvals"
-        ]
+        "tags": ["approvals"]
       }
     },
     "/api/v1/approvals/request-sale": {
@@ -6577,9 +6201,7 @@
           }
         ],
         "summary": "Request Sale",
-        "tags": [
-          "approvals"
-        ]
+        "tags": ["approvals"]
       }
     },
     "/api/v1/approvals/{approval_id}": {
@@ -6634,9 +6256,7 @@
           }
         ],
         "summary": "Get Approval Request",
-        "tags": [
-          "approvals"
-        ]
+        "tags": ["approvals"]
       }
     },
     "/api/v1/approvals/{approval_id}/decide": {
@@ -6692,9 +6312,7 @@
           }
         ],
         "summary": "Decide Approval Request",
-        "tags": [
-          "approvals"
-        ]
+        "tags": ["approvals"]
       }
     },
     "/api/v1/bots/register": {
@@ -6733,9 +6351,7 @@
           }
         },
         "summary": "Register Bot",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       }
     },
     "/api/v1/bots/{org_id}": {
@@ -6773,9 +6389,7 @@
           }
         },
         "summary": "Delete Bot",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       },
       "get": {
         "operationId": "get_bot_api_v1_bots__org_id__get",
@@ -6821,9 +6435,7 @@
           }
         },
         "summary": "Get Bot",
-        "tags": [
-          "bots"
-        ]
+        "tags": ["bots"]
       }
     },
     "/api/v1/documents/blocks": {
@@ -6890,9 +6502,7 @@
           }
         ],
         "summary": "List Blocks",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       },
       "post": {
         "description": "Crea un nuevo bloque de texto legal con soporte para variables Jinja2.",
@@ -6937,9 +6547,7 @@
           }
         ],
         "summary": "Create Block",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/blocks/{block_id}": {
@@ -6997,9 +6605,7 @@
           }
         ],
         "summary": "Update Block",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/generate": {
@@ -7044,9 +6650,7 @@
           }
         ],
         "summary": "Generate Document",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/generated": {
@@ -7123,9 +6727,7 @@
           }
         ],
         "summary": "List Generated Documents",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/preview": {
@@ -7170,9 +6772,7 @@
           }
         ],
         "summary": "Preview Document",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/templates": {
@@ -7223,9 +6823,7 @@
           }
         ],
         "summary": "List Templates",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       },
       "post": {
         "description": "Crea un nuevo template de documento para una organización.",
@@ -7270,9 +6868,7 @@
           }
         ],
         "summary": "Create Template",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/templates/{template_id}/blocks": {
@@ -7323,9 +6919,7 @@
           }
         ],
         "summary": "Get Template Blocks",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       },
       "post": {
         "description": "Agrega un bloque a un template en una posición específica.",
@@ -7381,9 +6975,7 @@
           }
         ],
         "summary": "Add Block To Template",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/templates/{template_id}/blocks/{item_id}": {
@@ -7431,9 +7023,7 @@
           }
         ],
         "summary": "Remove Block From Template",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/documents/variables/{lot_id}": {
@@ -7504,9 +7094,7 @@
           }
         ],
         "summary": "Get Variables",
-        "tags": [
-          "documents"
-        ]
+        "tags": ["documents"]
       }
     },
     "/api/v1/escritura-cases/lots/{lot_id}": {
@@ -7561,9 +7149,7 @@
           }
         ],
         "summary": "Create Escritura Case",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/escritura-cases/lots/{lot_id}/readiness": {
@@ -7626,9 +7212,7 @@
           }
         ],
         "summary": "Get Escritura Readiness",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/escritura-cases/{escritura_case_id}/stage-operational": {
@@ -7685,9 +7269,7 @@
           }
         ],
         "summary": "Stage Operational Variables",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-deliveries/mine": {
@@ -7741,9 +7323,7 @@
           }
         ],
         "summary": "List My Deliveries",
-        "tags": [
-          "escritura-deliveries"
-        ]
+        "tags": ["escritura-deliveries"]
       }
     },
     "/api/v1/escritura-deliveries/{delivery_id}/renew": {
@@ -7807,9 +7387,7 @@
           }
         ],
         "summary": "Renew My Delivery Link",
-        "tags": [
-          "escritura-deliveries"
-        ]
+        "tags": ["escritura-deliveries"]
       }
     },
     "/api/v1/escritura-matrices/case/{escritura_case_id}": {
@@ -7865,9 +7443,7 @@
           }
         ],
         "summary": "Get Case Matriz",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-matrices/case/{escritura_case_id}/generations": {
@@ -7923,9 +7499,7 @@
           }
         ],
         "summary": "List Case Generations",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-matrices/case/{escritura_case_id}/trace": {
@@ -7982,9 +7556,7 @@
           }
         ],
         "summary": "Get Escritura Trace",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-matrices/project/{project_id}": {
@@ -8040,9 +7612,7 @@
           }
         ],
         "summary": "Get Project Matriz",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-matrices/{matriz_id}": {
@@ -8108,9 +7678,7 @@
           }
         ],
         "summary": "Save Matriz",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-matrices/{matriz_id}/approve": {
@@ -8176,9 +7744,7 @@
           }
         ],
         "summary": "Approve Matriz",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-matrices/{matriz_id}/generate": {
@@ -8244,9 +7810,7 @@
           }
         ],
         "summary": "Generate Minuta",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-matrices/{matriz_id}/reject": {
@@ -8312,9 +7876,7 @@
           }
         ],
         "summary": "Reject Matriz",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-matrices/{matriz_id}/submit": {
@@ -8380,9 +7942,7 @@
           }
         ],
         "summary": "Submit Matriz",
-        "tags": [
-          "escritura-matrices"
-        ]
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-templates": {
@@ -8438,9 +7998,7 @@
           }
         ],
         "summary": "List Escritura Templates",
-        "tags": [
-          "escritura-templates"
-        ]
+        "tags": ["escritura-templates"]
       },
       "post": {
         "operationId": "create_escritura_template_api_v1_escritura_templates_post",
@@ -8494,9 +8052,7 @@
           }
         ],
         "summary": "Create Escritura Template",
-        "tags": [
-          "escritura-templates"
-        ]
+        "tags": ["escritura-templates"]
       }
     },
     "/api/v1/escritura-templates/{template_id}": {
@@ -8552,9 +8108,7 @@
           }
         ],
         "summary": "Get Escritura Template",
-        "tags": [
-          "escritura-templates"
-        ]
+        "tags": ["escritura-templates"]
       }
     },
     "/api/v1/escritura-templates/{template_id}/clauses": {
@@ -8636,9 +8190,7 @@
           }
         ],
         "summary": "Upsert Escritura Template Clause",
-        "tags": [
-          "escritura-templates"
-        ]
+        "tags": ["escritura-templates"]
       }
     },
     "/api/v1/escritura-templates/{template_id}/clauses/{clause_key}": {
@@ -8720,9 +8272,7 @@
           }
         ],
         "summary": "Upsert Escritura Template Clause",
-        "tags": [
-          "escritura-templates"
-        ]
+        "tags": ["escritura-templates"]
       }
     },
     "/api/v1/escritura-templates/{template_id}/publish": {
@@ -8788,9 +8338,7 @@
           }
         ],
         "summary": "Publish Escritura Template",
-        "tags": [
-          "escritura-templates"
-        ]
+        "tags": ["escritura-templates"]
       }
     },
     "/api/v1/health": {
@@ -8814,9 +8362,7 @@
           }
         },
         "summary": "Health Check",
-        "tags": [
-          "health"
-        ]
+        "tags": ["health"]
       }
     },
     "/api/v1/integrations/": {
@@ -8869,9 +8415,7 @@
           }
         ],
         "summary": "List Integrations",
-        "tags": [
-          "integrations"
-        ]
+        "tags": ["integrations"]
       }
     },
     "/api/v1/integrations/connect": {
@@ -8914,9 +8458,7 @@
           }
         ],
         "summary": "Connect Integration",
-        "tags": [
-          "integrations"
-        ]
+        "tags": ["integrations"]
       }
     },
     "/api/v1/integrations/{connection_id}": {
@@ -8960,9 +8502,7 @@
           }
         ],
         "summary": "Revoke Integration",
-        "tags": [
-          "integrations"
-        ]
+        "tags": ["integrations"]
       }
     },
     "/api/v1/integrations/{connection_id}/test": {
@@ -9006,9 +8546,7 @@
           }
         ],
         "summary": "Test Integration",
-        "tags": [
-          "integrations"
-        ]
+        "tags": ["integrations"]
       }
     },
     "/api/v1/legal-documents/project/{project_id}": {
@@ -9062,9 +8600,7 @@
           }
         ],
         "summary": "List Project Legal Documents",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-documents/register": {
@@ -9108,9 +8644,7 @@
           }
         ],
         "summary": "Register Legal Document",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-documents/{legal_document_id}/archive": {
@@ -9173,9 +8707,7 @@
           }
         ],
         "summary": "Archive Legal Document",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-documents/{legal_document_id}/retry": {
@@ -9238,9 +8770,7 @@
           }
         ],
         "summary": "Retry Legal Document Ingestion",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-roles/lots/{lot_id}": {
@@ -9313,9 +8843,7 @@
           }
         ],
         "summary": "Update Lot Legal Role",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-roles/project/{project_id}/matches": {
@@ -9385,9 +8913,7 @@
           }
         ],
         "summary": "Get Project Legal Roles",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-titles/project/{project_id}": {
@@ -9443,9 +8969,7 @@
           }
         ],
         "summary": "Get Project Title Case",
-        "tags": [
-          "legal-titles"
-        ]
+        "tags": ["legal-titles"]
       }
     },
     "/api/v1/legal-titles/project/{project_id}/reanalyze": {
@@ -9501,9 +9025,7 @@
           }
         ],
         "summary": "Reanalyze Project Title",
-        "tags": [
-          "legal-titles"
-        ]
+        "tags": ["legal-titles"]
       }
     },
     "/api/v1/legal-titles/{analysis_id}/alerts/{alert_index}/resolve": {
@@ -9588,9 +9110,7 @@
           }
         ],
         "summary": "Resolve Title Alert",
-        "tags": [
-          "legal-titles"
-        ]
+        "tags": ["legal-titles"]
       }
     },
     "/api/v1/legal-titles/{analysis_id}/approve": {
@@ -9666,9 +9186,7 @@
           }
         ],
         "summary": "Approve Title Case",
-        "tags": [
-          "legal-titles"
-        ]
+        "tags": ["legal-titles"]
       }
     },
     "/api/v1/legal-titles/{analysis_id}/narrative": {
@@ -9744,9 +9262,7 @@
           }
         ],
         "summary": "Update Title Narrative",
-        "tags": [
-          "legal-titles"
-        ]
+        "tags": ["legal-titles"]
       }
     },
     "/api/v1/legal-variables/bulk-approve": {
@@ -9811,9 +9327,7 @@
           }
         ],
         "summary": "Bulk Approve Legal Variables",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-variables/by-key": {
@@ -9878,9 +9392,7 @@
           }
         ],
         "summary": "Upsert Legal Variable",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-variables/project/{project_id}": {
@@ -9992,9 +9504,7 @@
           }
         ],
         "summary": "Get Project Legal Variables",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/legal-variables/{variable_resolution_id}": {
@@ -10067,9 +9577,7 @@
           }
         ],
         "summary": "Update Legal Variable",
-        "tags": [
-          "legal-variables"
-        ]
+        "tags": ["legal-variables"]
       }
     },
     "/api/v1/notifications/": {
@@ -10124,9 +9632,7 @@
           }
         ],
         "summary": "List Notifications",
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/v1/notifications/{approval_id}/decide": {
@@ -10200,9 +9706,7 @@
           }
         ],
         "summary": "Decide Notification Approval",
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/v1/notifications/{notification_id}/read": {
@@ -10257,9 +9761,7 @@
           }
         ],
         "summary": "Mark Notification Read",
-        "tags": [
-          "notifications"
-        ]
+        "tags": ["notifications"]
       }
     },
     "/api/v1/prompts/": {
@@ -10310,9 +9812,7 @@
           }
         ],
         "summary": "List Prompts",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       }
     },
     "/api/v1/prompts/sandbox": {
@@ -10373,9 +9873,7 @@
           }
         ],
         "summary": "Sandbox Prompt",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       }
     },
     "/api/v1/prompts/{prompt_id}/activate/{version_id}": {
@@ -10444,9 +9942,7 @@
           }
         ],
         "summary": "Activate Version",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       }
     },
     "/api/v1/prompts/{prompt_id}/versions": {
@@ -10506,9 +10002,7 @@
           }
         ],
         "summary": "List Versions",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       },
       "post": {
         "description": "Crea una nueva versión de un prompt (no la activa automáticamente).\nEl número de versión se incrementa automáticamente sobre el máximo existente.",
@@ -10576,9 +10070,7 @@
           }
         ],
         "summary": "Create Version",
-        "tags": [
-          "prompts"
-        ]
+        "tags": ["prompts"]
       }
     },
     "/api/v1/skills/custom": {
@@ -10640,9 +10132,7 @@
           }
         ],
         "summary": "Save Custom Skill",
-        "tags": [
-          "skills"
-        ]
+        "tags": ["skills"]
       }
     },
     "/api/v1/skills/custom/publish": {
@@ -10704,9 +10194,7 @@
           }
         ],
         "summary": "Publish Custom Skill",
-        "tags": [
-          "skills"
-        ]
+        "tags": ["skills"]
       }
     },
     "/api/v1/skills/invalidate-cache": {
@@ -10749,9 +10237,7 @@
           }
         ],
         "summary": "Invalidate Cache",
-        "tags": [
-          "skills"
-        ]
+        "tags": ["skills"]
       }
     },
     "/api/v1/skills/validate-definition": {
@@ -10795,9 +10281,7 @@
           }
         ],
         "summary": "Validate Definition",
-        "tags": [
-          "skills"
-        ]
+        "tags": ["skills"]
       }
     },
     "/api/v1/users/telegram-token": {
@@ -10842,9 +10326,7 @@
           }
         ],
         "summary": "Generate Telegram Vincule Token",
-        "tags": [
-          "users"
-        ]
+        "tags": ["users"]
       }
     },
     "/api/v1/webhook/meta": {
@@ -10862,9 +10344,7 @@
           }
         },
         "summary": "Verify Meta Webhook",
-        "tags": [
-          "webhooks"
-        ]
+        "tags": ["webhooks"]
       },
       "post": {
         "description": "Endpoint para recibir Webhooks de Meta (Mensajes entrantes y estados).\nRegla de Oro: Siempre retornar 200 OK de inmediato a Meta.\nTodo el procesamiento pesado va asíncrono vía la cola Redis (arq).",
@@ -10900,9 +10380,7 @@
           }
         },
         "summary": "Receive Meta Webhook",
-        "tags": [
-          "webhooks"
-        ]
+        "tags": ["webhooks"]
       }
     },
     "/api/v1/webhook/telegram/{org_id}": {
@@ -10957,9 +10435,7 @@
           }
         },
         "summary": "Receive Telegram Webhook",
-        "tags": [
-          "webhooks"
-        ]
+        "tags": ["webhooks"]
       }
     }
   }

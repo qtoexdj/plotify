@@ -31,6 +31,7 @@ export const PRODUCER_ORDER: readonly LegalVariableProducer[] = [
 
 /** Claves SII que se repiten una vez por lote → colapsan en una entrada. */
 export const SII_PER_LOT_KEYS = ['sii.unidad_nombre', 'sii.pre_rol_lote'] as const
+export const SII_ROLES_ENTRY_KEY = 'sii.roles_por_lote'
 
 /** Estados que cuentan como resueltos (no requieren accion del operador). */
 const RESOLVED_STATES: ReadonlySet<LegalVariableState> = new Set<LegalVariableState>([
@@ -64,6 +65,7 @@ export interface CollapsedEntry {
   producer: LegalVariableProducer
   bucket: ReviewBucket
   variableKey: string
+  variableKeys: string[]
   lotCount: number
   items: VariableInventoryItem[]
 }
@@ -80,11 +82,26 @@ function worstBucket(items: VariableInventoryItem[]): ReviewBucket {
   return 'listo'
 }
 
-/** Lotes representados por las filas colapsadas (por `lot_id`, con fallback). */
+function sourceRefText(item: VariableInventoryItem, key: string): string | null {
+  const value = item.source_ref?.[key]
+  if (typeof value === 'string' || typeof value === 'number') return String(value)
+  return null
+}
+
+/** Lotes representados por las filas colapsadas (por `lot_id` o unidad SII). */
 function distinctLotCount(rows: VariableInventoryItem[]): number {
   const lots = new Set<string>()
   for (const row of rows) {
-    if (row.lot_id) lots.add(row.lot_id)
+    const lotId = row.lot_id ?? sourceRefText(row, 'lot_id')
+    const unitIndex = sourceRefText(row, 'unit_index')
+    const rowIndex = sourceRefText(row, 'row_index')
+    if (lotId) {
+      lots.add(`lot:${lotId}`)
+    } else if (unitIndex) {
+      lots.add(`unit:${unitIndex}`)
+    } else if (rowIndex) {
+      lots.add(`row:${rowIndex}`)
+    }
   }
   return lots.size > 0 ? lots.size : rows.length
 }
@@ -106,32 +123,30 @@ function singleEntry(item: VariableInventoryItem): SingleEntry {
  * aparicion para las individuales; las colapsadas se emiten al final.
  */
 export function toMatrixEntries(items: VariableInventoryItem[]): MatrixEntry[] {
-  const perLot = new Map<string, VariableInventoryItem[]>()
+  const siiRows: VariableInventoryItem[] = []
   const entries: MatrixEntry[] = []
 
   for (const item of items) {
     if (isPerLotKey(item.variable_key)) {
-      const bucket = perLot.get(item.variable_key) ?? []
-      bucket.push(item)
-      perLot.set(item.variable_key, bucket)
+      siiRows.push(item)
       continue
     }
     entries.push(singleEntry(item))
   }
 
-  for (const [variableKey, rows] of perLot) {
-    if (rows.length === 1) {
-      entries.push(singleEntry(rows[0]))
-      continue
-    }
+  if (siiRows.length === 1) {
+    entries.push(singleEntry(siiRows[0]))
+  } else if (siiRows.length > 1) {
+    const variableKeys = Array.from(new Set(siiRows.map((row) => row.variable_key))).sort()
     entries.push({
       kind: 'collapsed',
-      id: `collapsed:${variableKey}`,
-      producer: producerOf(rows[0]),
-      bucket: worstBucket(rows),
-      variableKey,
-      lotCount: distinctLotCount(rows),
-      items: rows,
+      id: `collapsed:${SII_ROLES_ENTRY_KEY}`,
+      producer: producerOf(siiRows[0]),
+      bucket: worstBucket(siiRows),
+      variableKey: SII_ROLES_ENTRY_KEY,
+      variableKeys,
+      lotCount: distinctLotCount(siiRows),
+      items: siiRows,
     })
   }
 
@@ -141,6 +156,10 @@ export function toMatrixEntries(items: VariableInventoryItem[]): MatrixEntry[] {
 /** Una entrada cuenta como pendiente del molde si es accionable y por revisar. */
 export function isPorRevisar(entry: MatrixEntry): boolean {
   return ACTIONABLE_PRODUCERS.includes(entry.producer) && entry.bucket === 'por_revisar'
+}
+
+function decisionCount(entry: MatrixEntry): number {
+  return entry.kind === 'collapsed' ? entry.variableKeys.length : 1
 }
 
 export interface ProducerSection {
@@ -166,8 +185,8 @@ export function groupByProducer(items: VariableInventoryItem[]): ProducerSection
       producer,
       label: LEGAL_VARIABLE_PRODUCER_LABELS[producer],
       entries: list,
-      porRevisar: list.filter(isPorRevisar).length,
-      total: list.length,
+      porRevisar: list.filter(isPorRevisar).reduce((sum, entry) => sum + decisionCount(entry), 0),
+      total: list.reduce((sum, entry) => sum + decisionCount(entry), 0),
     }
   })
 }
@@ -179,7 +198,13 @@ export function entryKey(entry: MatrixEntry): string {
 
 /** Claves accionables por revisar de una seccion, para aprobar en bloque. */
 export function porRevisarKeys(section: ProducerSection): string[] {
-  return Array.from(new Set(section.entries.filter(isPorRevisar).map(entryKey)))
+  return Array.from(
+    new Set(
+      section.entries
+        .filter(isPorRevisar)
+        .flatMap((entry) => (entry.kind === 'collapsed' ? entry.variableKeys : [entryKey(entry)]))
+    )
+  )
 }
 
 export interface MoldeProgress {
@@ -201,12 +226,16 @@ export function computeMoldeProgress(items: VariableInventoryItem[]): MoldeProgr
   const actionable = toMatrixEntries(items).filter((entry) =>
     ACTIONABLE_PRODUCERS.includes(entry.producer)
   )
-  const porRevisar = actionable.filter((entry) => entry.bucket === 'por_revisar').length
-  const listas = actionable.filter((entry) => entry.bucket === 'listo').length
+  const porRevisar = actionable
+    .filter((entry) => entry.bucket === 'por_revisar')
+    .reduce((sum, entry) => sum + decisionCount(entry), 0)
+  const listas = actionable
+    .filter((entry) => entry.bucket === 'listo')
+    .reduce((sum, entry) => sum + decisionCount(entry), 0)
   return {
     porRevisar,
     listas,
-    total: actionable.length,
+    total: actionable.reduce((sum, entry) => sum + decisionCount(entry), 0),
     moldeAprobable: porRevisar === 0,
   }
 }

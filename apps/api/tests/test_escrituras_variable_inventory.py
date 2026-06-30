@@ -149,6 +149,9 @@ class FakeSupabaseTable:
 
 
 class FakeSupabase:
+    def __init__(self, variable_rows: list[dict[str, object]] | None = None) -> None:
+        self.variable_rows = variable_rows
+
     def table(self, name: str) -> FakeSupabaseTable:
         return FakeSupabaseTable(self, name)
 
@@ -161,7 +164,7 @@ class FakeSupabase:
                 return SimpleNamespace(data=[])
             return SimpleNamespace(data={"id": table.filters.get("id"), "project_id": PROJECT_ID})
         if table.name == "variable_resolutions":
-            rows = [
+            rows = self.variable_rows or [
                 {
                     "id": VARIABLE_ID,
                     "organization_id": ORG_ID,
@@ -258,6 +261,110 @@ async def test_get_project_variable_inventory_groups_summary_and_evidence():
     }
     assert inventory.groups["matriz"][0].evidence[0].legal_document_page_id == PAGE_ID
     assert inventory.groups["matriz"][1].evidence == []
+
+
+async def test_get_project_variable_inventory_exposes_producer_by_group_and_key():
+    from services.legal_variable_resolution import get_project_variable_inventory
+
+    now = datetime(2026, 6, 30, 12, 0, tzinfo=UTC)
+    rows = [
+        {
+            "id": "00000000-0000-4000-8000-000000000101",
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+            "variable_key": "vendedor.nombre",
+            "variable_group": "vendedor",
+            "value_text": "JUAN DE DIOS GALAZ ABARCA",
+            "state": "proposed",
+            "source_type": "document",
+            "source_ref": {},
+            "confidence": 0.98,
+            "approval_required": True,
+            "created_at": now,
+            "updated_at": now,
+        },
+        {
+            "id": "00000000-0000-4000-8000-000000000102",
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+            "variable_key": "sag.plano_cbr_numero",
+            "variable_group": "sag",
+            "value_text": "1394",
+            "state": "proposed",
+            "source_type": "manual",
+            "source_ref": {},
+            "confidence": None,
+            "approval_required": True,
+            "created_at": now,
+            "updated_at": now,
+        },
+        {
+            "id": "00000000-0000-4000-8000-000000000103",
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+            "variable_key": "comprador.nombre",
+            "variable_group": "comprador",
+            "value_text": None,
+            "state": "missing",
+            "source_type": "system",
+            "source_ref": {},
+            "confidence": None,
+            "approval_required": False,
+            "created_at": now,
+            "updated_at": now,
+        },
+        {
+            "id": "00000000-0000-4000-8000-000000000104",
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+            "variable_key": "clausulas.saneamiento_eviccion",
+            "variable_group": "clausulas",
+            "value_text": "La vendedora respondera del saneamiento.",
+            "state": "derived",
+            "source_type": "system",
+            "source_ref": {},
+            "confidence": None,
+            "approval_required": False,
+            "created_at": now,
+            "updated_at": now,
+        },
+        {
+            "id": "00000000-0000-4000-8000-000000000105",
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+            "variable_key": "documento.notario.nombre",
+            "variable_group": "documento",
+            "value_text": None,
+            "state": "missing",
+            "source_type": "system",
+            "source_ref": {},
+            "confidence": None,
+            "approval_required": False,
+            "created_at": now,
+            "updated_at": now,
+        },
+    ]
+
+    inventory = await get_project_variable_inventory(
+        project_id=PROJECT_ID,
+        organization_id=ORG_ID,
+        include_evidence=False,
+        supabase=FakeSupabase(variable_rows=rows),
+    )
+
+    producer_by_key = {
+        item.variable_key: item.producer
+        for group in inventory.groups.values()
+        for item in group
+    }
+
+    assert producer_by_key == {
+        "vendedor.nombre": "extracted",
+        "sag.plano_cbr_numero": "manual",
+        "comprador.nombre": "sale_gap",
+        "clausulas.saneamiento_eviccion": "authored",
+        "documento.notario.nombre": "signing",
+    }
 
 
 async def test_get_project_variable_inventory_rejects_lot_outside_project_scope():

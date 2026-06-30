@@ -154,17 +154,24 @@ describe('T044 - SII lot role matching frontend contract', () => {
     expect(updateRouteSource).toContain('reviewed_by')
   })
 
-  it('keeps the Centro de Control Legal source wired for role status display and manual override reason', () => {
+  it('keeps role matching review wired through the variable matrix detail', () => {
     const centerSource = readSource('../src/components/projects/detail/legal-control-center.tsx')
+    const matrixSource = readSource(
+      '../src/components/projects/legal/variable-matrix/variable-matrix.tsx'
+    )
+    const detailSource = readSource(
+      '../src/components/projects/legal/variable-matrix/sii-lot-detail.tsx'
+    )
 
-    expect(centerSource).toContain('ROLE_MATCHING_STATUS_LABELS')
-    expect(centerSource).toContain('ROLE_FILTER_OPTIONS')
-    expect(centerSource).toContain('ROLE_STATUS_LABELS')
-    expect(centerSource).toContain('certificate_summary')
-    expect(centerSource).toContain('source_document_label')
-    expect(centerSource).toContain('manual_override')
-    expect(centerSource).toContain('reason')
-    expect(centerSource).toContain('rol_en_tramite')
+    expect(centerSource).toContain('VariableMatrix')
+    expect(matrixSource).toContain('SiiLotDetail')
+    expect(matrixSource).toContain('onOpenSiiDetail')
+    expect(detailSource).toContain('ROLE_MATCHING_STATUS_LABELS')
+    expect(detailSource).toContain('ROLE_STATUS_LABELS')
+    expect(detailSource).toContain('source_document_label')
+    expect(detailSource).toContain('manual_override')
+    expect(detailSource).toContain('reason')
+    expect(detailSource).toContain('rol_en_tramite')
   })
 
   it('derives the correct role in process text when pre-role and comuna are updated', () => {

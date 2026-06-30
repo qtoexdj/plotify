@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MoldeProgressHeader } from '@/components/projects/legal/variable-matrix/molde-progress-header'
 import { ProducerGroup } from '@/components/projects/legal/variable-matrix/producer-group'
 import { SaleGapPanel } from '@/components/projects/legal/variable-matrix/sale-gap-panel'
+import { VariableInspector } from '@/components/projects/legal/variable-matrix/variable-inspector'
 import { groupByProducer } from '@/lib/legal/variable-matrix-model'
 import type {
   LegalVariableGroup,
@@ -56,6 +57,21 @@ describe('MoldeProgressHeader', () => {
     expect(button.disabled).toBe(true)
   })
 
+  it('permite enfocar las variables pendientes desde el resumen', () => {
+    const onPendingFocusChange = vi.fn()
+    render(
+      <MoldeProgressHeader
+        progress={{ porRevisar: 2, listas: 32, total: 34, moldeAprobable: false }}
+        projectName="Teno"
+        onPendingFocusChange={onPendingFocusChange}
+      />
+    )
+    const focusButton = screen.getByRole('button', { name: /Ver 2 pendientes/ })
+    expect(focusButton.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(focusButton)
+    expect(onPendingFocusChange).toHaveBeenCalledWith(true)
+  })
+
   it('habilita "Aprobar molde" cuando no quedan pendientes', () => {
     render(
       <MoldeProgressHeader
@@ -80,15 +96,52 @@ describe('MoldeProgressHeader', () => {
 describe('ProducerGroup', () => {
   function extractedSection() {
     const items: VariableInventoryItem[] = [
-      mk({ variable_key: 'vendedor.nombre', variable_group: 'vendedor', producer: 'extracted', state: 'proposed', value_text: 'JUAN DE DIOS GALAZ ABARCA' }),
-      mk({ variable_key: 'vendedor.rut', variable_group: 'vendedor', producer: 'extracted', state: 'approved', value_text: '4.606.965-2' }),
+      mk({
+        variable_key: 'vendedor.nombre',
+        variable_group: 'vendedor',
+        producer: 'extracted',
+        state: 'proposed',
+        value_text: 'JUAN DE DIOS GALAZ ABARCA',
+      }),
+      mk({
+        variable_key: 'vendedor.rut',
+        variable_group: 'vendedor',
+        producer: 'extracted',
+        state: 'approved',
+        value_text: '4.606.965-2',
+      }),
     ]
     for (let lot = 1; lot <= 3; lot += 1) {
       items.push(
-        mk({ variable_key: 'sii.unidad_nombre', variable_group: 'sii', producer: 'extracted', state: 'proposed', lot_id: `lot${lot}` })
+        mk({
+          variable_key: 'sii.unidad_nombre',
+          variable_group: 'sii',
+          producer: 'extracted',
+          state: 'proposed',
+          lot_id: `lot${lot}`,
+        })
       )
     }
     return groupByProducer(items)[0]
+  }
+
+  function manualSection() {
+    return groupByProducer([
+      mk({
+        variable_key: 'sag.oficina_sectorial',
+        variable_group: 'sag',
+        producer: 'manual',
+        state: 'proposed',
+        value_text: 'Curicó',
+      }),
+      mk({
+        variable_key: 'sag.plano_cbr_numero',
+        variable_group: 'sag',
+        producer: 'manual',
+        state: 'approved',
+        value_text: '1394',
+      }),
+    ])[0]
   }
 
   it('renderiza la seccion con su conteo, valores y la entrada SII colapsada', () => {
@@ -105,10 +158,74 @@ describe('ProducerGroup', () => {
       />
     )
     expect(screen.getByText('Extraída')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Aprobar 2' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Aprobar 2 pendientes' })).toBeTruthy()
     expect(screen.getByText('JUAN DE DIOS GALAZ ABARCA')).toBeTruthy()
     expect(screen.getByText('Roles SII por lote')).toBeTruthy()
     expect(screen.getByText('3 lotes')).toBeTruthy()
+  })
+
+  it('permite contraer y expandir la seccion Extraída', () => {
+    render(
+      <ProducerGroup
+        section={extractedSection()}
+        selectedId={null}
+        savingId={null}
+        bulkSaving={false}
+        onSelect={() => {}}
+        onApprove={() => {}}
+        onBulkApprove={() => {}}
+        onOpenSiiDetail={() => {}}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Contraer Extraída' }))
+    expect(screen.queryByText('JUAN DE DIOS GALAZ ABARCA')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Expandir Extraída' }))
+    expect(screen.getByText('JUAN DE DIOS GALAZ ABARCA')).toBeTruthy()
+  })
+
+  it('permite contraer y expandir la seccion Manual', () => {
+    render(
+      <ProducerGroup
+        section={manualSection()}
+        selectedId={null}
+        savingId={null}
+        bulkSaving={false}
+        onSelect={() => {}}
+        onApprove={() => {}}
+        onBulkApprove={() => {}}
+        onOpenSiiDetail={() => {}}
+      />
+    )
+    expect(screen.getByText('Curicó')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Contraer Manual' }))
+    expect(screen.queryByText('Curicó')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Expandir Manual' }))
+    expect(screen.getByText('Curicó')).toBeTruthy()
+  })
+
+  it('marca visualmente la seccion y filas que siguen por aprobar', () => {
+    render(
+      <ProducerGroup
+        section={extractedSection()}
+        selectedId={null}
+        savingId={null}
+        bulkSaving={false}
+        onSelect={() => {}}
+        onApprove={() => {}}
+        onBulkApprove={() => {}}
+        onOpenSiiDetail={() => {}}
+      />
+    )
+    expect(screen.getByTestId('producer-group-extracted').getAttribute('data-has-pending')).toBe(
+      'true'
+    )
+    expect(screen.getAllByText('por aprobar')).toHaveLength(2)
+    expect(screen.getAllByTestId('variable-row')[0].getAttribute('data-review-bucket')).toBe(
+      'por_revisar'
+    )
+    const firstRowClasses = screen.getAllByTestId('variable-row')[0].className
+    expect(firstRowClasses).toContain('grid')
+    expect(firstRowClasses).toContain('sm:grid-cols')
   })
 
   it('"Aprobar" solo aparece en las filas por revisar y dispara onApprove', () => {
@@ -145,7 +262,7 @@ describe('ProducerGroup', () => {
         onOpenSiiDetail={() => {}}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Aprobar 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Aprobar 2 pendientes' }))
     expect(onBulkApprove).toHaveBeenCalledWith(['vendedor.nombre', 'sii.unidad_nombre'])
   })
 
@@ -165,6 +282,41 @@ describe('ProducerGroup', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Ver lotes' }))
     expect(onOpenSiiDetail).toHaveBeenCalledTimes(1)
+  })
+
+  it('confirma la aprobación de roles SII con AlertDialog, barra y aviso final', async () => {
+    const onBulkApprove = vi.fn(async () => true)
+    const collapsed = extractedSection().entries.find((entry) => entry.kind === 'collapsed')
+    expect(collapsed).toBeTruthy()
+
+    render(
+      <VariableInspector
+        entry={collapsed ?? null}
+        saving={false}
+        onApprove={() => {}}
+        onEdit={() => {}}
+        onBulkApprove={onBulkApprove}
+        onOpenSiiDetail={() => {}}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aprobar 3 lotes' }))
+    expect(screen.getByTestId('bulk-approval-dialog')).toBeTruthy()
+
+    const progressbar = screen.getByRole('progressbar', {
+      name: 'Progreso de aprobación de roles SII',
+    })
+    expect(progressbar.getAttribute('aria-valuenow')).toBe('0')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aprobar lotes' }))
+    await waitFor(() => expect(onBulkApprove).toHaveBeenCalledWith(['sii.unidad_nombre']))
+    await waitFor(() => expect(screen.getByText('Aprobación lista')).toBeTruthy())
+    expect(
+      screen
+        .getByRole('progressbar', { name: 'Progreso de aprobación de roles SII' })
+        .getAttribute('aria-valuenow')
+    ).toBe('100')
+    expect(screen.getByText('3 lotes aprobados')).toBeTruthy()
   })
 })
 
