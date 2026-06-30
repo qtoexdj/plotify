@@ -921,6 +921,7 @@ export interface components {
       "id": string
       "lot_id"?: string | null
       "organization_id": string
+      "producer": string
       "project_id": string
       "reviewed_at"?: string | null
       "reviewed_by"?: string | null

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from services import legal_variable_catalog as catalog
 
@@ -179,6 +179,14 @@ class VariableResolutionResponse(LegalVariableResponseModel):
     evidence: list[DocumentEvidenceResponse] = Field(default_factory=list)
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def producer(self) -> str:
+        """SDD 013: productor canonico (extracted/authored/manual/sale_gap/
+        signing) derivado de la clave. Se expone en el inventario para agrupar
+        la matriz de variables por quien llena cada dato, sin tocar el motor."""
+        return catalog.variable_producer(self.variable_key)
 
 
 class VariableInventoryResponse(LegalVariableResponseModel):
