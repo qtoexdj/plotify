@@ -86,12 +86,14 @@ describe('ProducerGroup', () => {
         section={extractedSection()}
         selectedId={null}
         savingId={null}
+        bulkSaving={false}
         onSelect={() => {}}
         onApprove={() => {}}
+        onBulkApprove={() => {}}
       />
     )
     expect(screen.getByText('Extraída')).toBeTruthy()
-    expect(screen.getByText('2 por revisar')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Aprobar 2' })).toBeTruthy()
     expect(screen.getByText('JUAN DE DIOS GALAZ ABARCA')).toBeTruthy()
     expect(screen.getByText('Roles SII por lote')).toBeTruthy()
     expect(screen.getByText('3 lotes')).toBeTruthy()
@@ -104,13 +106,32 @@ describe('ProducerGroup', () => {
         section={extractedSection()}
         selectedId={null}
         savingId={null}
+        bulkSaving={false}
         onSelect={() => {}}
         onApprove={onApprove}
+        onBulkApprove={() => {}}
       />
     )
     const approveButtons = screen.getAllByRole('button', { name: 'Aprobar' })
     expect(approveButtons).toHaveLength(1) // solo vendedor.nombre (proposed); rut esta aprobado
     fireEvent.click(approveButtons[0])
     expect(onApprove).toHaveBeenCalledTimes(1)
+  })
+
+  it('el boton "Aprobar N" de la seccion dispara onBulkApprove con las claves por revisar', () => {
+    const onBulkApprove = vi.fn()
+    render(
+      <ProducerGroup
+        section={extractedSection()}
+        selectedId={null}
+        savingId={null}
+        bulkSaving={false}
+        onSelect={() => {}}
+        onApprove={() => {}}
+        onBulkApprove={onBulkApprove}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Aprobar 2' }))
+    expect(onBulkApprove).toHaveBeenCalledWith(['vendedor.nombre', 'sii.unidad_nombre'])
   })
 })

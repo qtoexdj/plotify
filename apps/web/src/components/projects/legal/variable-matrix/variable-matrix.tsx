@@ -50,6 +50,7 @@ export function VariableMatrix({
   const [savingId, setSavingId] = useState<string | null>(null)
   const [editorItem, setEditorItem] = useState<VariableInventoryItem | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
+  const [bulkSaving, setBulkSaving] = useState(false)
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -131,6 +132,32 @@ export function VariableMatrix({
     setEditorOpen(true)
   }, [])
 
+  const bulkApprove = useCallback(
+    async (variableKeys: string[]) => {
+      if (variableKeys.length === 0) return
+      setBulkSaving(true)
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/legal-variables/bulk-approve`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ variable_keys: variableKeys }),
+          }
+        )
+        const result = (await response.json()) as { approved_count?: number; error?: string }
+        if (!response.ok) throw new Error(result.error || 'Error al aprobar en bloque')
+        toast.success(`${result.approved_count ?? variableKeys.length} variables aprobadas`)
+        await load()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Error al aprobar en bloque')
+      } finally {
+        setBulkSaving(false)
+      }
+    },
+    [projectId, load]
+  )
+
   if (isLoading) {
     return (
       <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
@@ -162,8 +189,10 @@ export function VariableMatrix({
                 section={section}
                 selectedId={selectedId}
                 savingId={savingId}
+                bulkSaving={bulkSaving}
                 onSelect={(entry) => setSelectedId(entry.id)}
                 onApprove={approve}
+                onBulkApprove={bulkApprove}
               />
             )
           )}
@@ -172,9 +201,10 @@ export function VariableMatrix({
         <aside className="lg:sticky lg:top-4 lg:self-start">
           <VariableInspector
             entry={selected}
-            saving={savingId !== null}
+            saving={savingId !== null || bulkSaving}
             onApprove={approve}
             onEdit={openEditor}
+            onBulkApprove={bulkApprove}
           />
         </aside>
       </div>

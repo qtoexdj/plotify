@@ -1,8 +1,14 @@
 'use client'
 
 import { FileText, LayoutTemplate, Pencil, PenLine, ShoppingCart, type LucideIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { LegalVariableProducer, VariableInventoryItem } from '@/lib/legal/variable-resolution-types'
-import type { MatrixEntry, ProducerSection } from '@/lib/legal/variable-matrix-model'
+import {
+  ACTIONABLE_PRODUCERS,
+  porRevisarKeys,
+  type MatrixEntry,
+  type ProducerSection,
+} from '@/lib/legal/variable-matrix-model'
 import { VariableRow } from './variable-row'
 
 /** Icono y subtitulo por productor (eje de la matriz). */
@@ -18,18 +24,23 @@ interface ProducerGroupProps {
   section: ProducerSection
   selectedId: string | null
   savingId: string | null
+  bulkSaving: boolean
   onSelect: (entry: MatrixEntry) => void
   onApprove: (item: VariableInventoryItem) => void
+  onBulkApprove: (variableKeys: string[]) => void
 }
 
 export function ProducerGroup({
   section,
   selectedId,
   savingId,
+  bulkSaving,
   onSelect,
   onApprove,
+  onBulkApprove,
 }: ProducerGroupProps) {
   const Icon = PRODUCER_META[section.producer].icon
+  const canBulk = ACTIONABLE_PRODUCERS.includes(section.producer) && section.porRevisar > 0
 
   return (
     <section
@@ -44,9 +55,22 @@ export function ProducerGroup({
           <h3 className="text-sm font-semibold">{section.label}</h3>
           <p className="text-xs text-muted-foreground">{PRODUCER_META[section.producer].hint}</p>
         </div>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {section.porRevisar > 0 ? `${section.porRevisar} por revisar` : 'sin pendientes'}
-        </span>
+        {canBulk ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="ml-auto"
+            disabled={bulkSaving}
+            onClick={() => onBulkApprove(porRevisarKeys(section))}
+          >
+            Aprobar {section.porRevisar}
+          </Button>
+        ) : (
+          <span className="ml-auto text-xs text-muted-foreground">
+            {section.porRevisar > 0 ? `${section.porRevisar} por revisar` : 'sin pendientes'}
+          </span>
+        )}
       </header>
       <div>
         {section.entries.map((entry) => (

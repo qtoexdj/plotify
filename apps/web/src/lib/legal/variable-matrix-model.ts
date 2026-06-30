@@ -172,6 +172,16 @@ export function groupByProducer(items: VariableInventoryItem[]): ProducerSection
   })
 }
 
+/** Clave de una entrada (la de la variable, o la clave SII por-lote colapsada). */
+export function entryKey(entry: MatrixEntry): string {
+  return entry.kind === 'collapsed' ? entry.variableKey : entry.item.variable_key
+}
+
+/** Claves accionables por revisar de una seccion, para aprobar en bloque. */
+export function porRevisarKeys(section: ProducerSection): string[] {
+  return Array.from(new Set(section.entries.filter(isPorRevisar).map(entryKey)))
+}
+
 export interface MoldeProgress {
   /** Decisiones accionables pendientes (SII colapsado). */
   porRevisar: number

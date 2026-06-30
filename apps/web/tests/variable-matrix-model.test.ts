@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   computeMoldeProgress,
   groupByProducer,
+  porRevisarKeys,
   reviewBucket,
   toMatrixEntries,
 } from '@/lib/legal/variable-matrix-model'
@@ -151,6 +152,18 @@ describe('groupByProducer', () => {
     expect(byProducer.manual.porRevisar).toBe(2)
     expect(byProducer.authored.porRevisar).toBe(0)
     expect(byProducer.sale_gap.porRevisar).toBe(0)
+  })
+})
+
+describe('porRevisarKeys', () => {
+  it('devuelve las claves accionables por revisar, con SII colapsado como clave unica', () => {
+    const sections = groupByProducer(tenoInventory())
+    const extracted = sections.find((section) => section.producer === 'extracted')
+    const keys = porRevisarKeys(extracted!)
+    expect(keys).toContain('vendedor.nombre')
+    expect(keys).toContain('sii.unidad_nombre')
+    expect(keys).toContain('sii.pre_rol_lote')
+    expect(keys).toHaveLength(11) // 4 vendedor + 7 SII (sin duplicar los 53 lotes)
   })
 })
 

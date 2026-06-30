@@ -15,9 +15,16 @@ interface VariableInspectorProps {
   saving: boolean
   onApprove: (item: VariableInventoryItem) => void
   onEdit: (item: VariableInventoryItem) => void
+  onBulkApprove: (variableKeys: string[]) => void
 }
 
-export function VariableInspector({ entry, saving, onApprove, onEdit }: VariableInspectorProps) {
+export function VariableInspector({
+  entry,
+  saving,
+  onApprove,
+  onEdit,
+  onBulkApprove,
+}: VariableInspectorProps) {
   if (!entry) {
     return (
       <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -27,15 +34,25 @@ export function VariableInspector({ entry, saving, onApprove, onEdit }: Variable
   }
 
   if (entry.kind === 'collapsed') {
+    const campo = entry.variableKey === 'sii.pre_rol_lote' ? 'pre-rol' : 'unidad'
     return (
-      <div className="space-y-2 rounded-lg border border-border bg-card p-4 text-card-foreground">
-        <h3 className="text-sm font-semibold">Roles SII por lote</h3>
-        <p className="text-sm text-muted-foreground">
-          {entry.lotCount} lotes con unidad y pre-rol del certificado SII.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          El detalle por lote y la aprobación en bloque llegan en la siguiente entrega.
-        </p>
+      <div className="space-y-3 rounded-lg border border-border bg-card p-4 text-card-foreground">
+        <div>
+          <h3 className="text-sm font-semibold">Roles SII por lote</h3>
+          <p className="text-sm text-muted-foreground">
+            {entry.lotCount} lotes con {campo} del certificado SII.
+          </p>
+        </div>
+        {entry.bucket === 'por_revisar' ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={saving}
+            onClick={() => onBulkApprove([entry.variableKey])}
+          >
+            Aprobar {entry.lotCount} lotes
+          </Button>
+        ) : null}
       </div>
     )
   }

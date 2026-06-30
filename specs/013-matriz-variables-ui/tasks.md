@@ -68,9 +68,9 @@
 
 **Independent Test**: en Teno las 106 filas SII son una entrada "53 lotes" y "Aprobar" las resuelve; el conteo baja a 13.
 
-- [ ] T016 [P] [US2] Tests de colapso y bulk en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
+- [x] T016 [P] [US2] Tests de colapso y bulk en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
 - [ ] T017 [US2] `SiiLotGroup` (fila colapsada "Roles SII · N lotes" + detalle por lote + ajuste manual de rol vía `PATCH /projects/{id}/legal-roles/{lotId}`, FR-013) en `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/variable-matrix/sii-lot-group.tsx`
-- [ ] T018 [US2] `BulkApproveBar` cableado a `POST /projects/{id}/legal-variables/bulk-approve` (por grupo y por claves) en `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/variable-matrix/bulk-approve-bar.tsx`
+- [x] T018 [US2] Aprobación en bloque cableada a `POST /projects/{id}/legal-variables/bulk-approve` por claves: botón "Aprobar N" por sección de productor (`producer-group.tsx`) + "Aprobar N lotes" en el inspector colapsado (`variable-inspector.tsx`), orquestado en `variable-matrix.tsx`. El molde queda 100% aprobable. _(hecho 2026-06-30)_
 - [ ] T019 [US2] Acción "ingresar dato" manual vía `PUT /projects/{id}/legal-variables/by-key` integrada en el productor `manual`
 
 **Checkpoint**: US1+US2 funcionan; revisar un proyecto real es cuestión de minutos.
