@@ -14,6 +14,9 @@
 | `PLOTIFY_CHAT_BASE_URL` | `http://127.0.0.1:8005` | URL base del microservicio de chat/IA. |
 | `NEXT_PUBLIC_TELEGRAM_BOT_USER` | `plotify_chat_bot` | Username del bot de Telegram para deep linking. |
 | `INTERNAL_API_SECRET` | *(secreto)* | Secret compartido entre Next.js y el microservicio para auth interna. |
+| `LEGAL_REVIEW_REQUIRE_DISTINCT_REVIEWER` | `false` | Habilita control "four-eyes" en aprobación de matrices (revisor distinto de emisor). |
+| `LEGAL_TEXT_VISION_ENABLED` | `false` | Habilita transcripción multimodal por visión para PDFs de CBR escaneados (SDD 009). |
+| `LEGAL_TITLE_AGENT_ENABLED` | `false` | Habilita el agente de títulos legal (LLM) a nivel proyecto. |
 
 ## Supabase (local)
 

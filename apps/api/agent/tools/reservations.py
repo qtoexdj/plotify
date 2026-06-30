@@ -7,16 +7,26 @@ IMPORTANTE (M1.4/M1.5):
   en lugar de estar hardcodeados en el código.
 """
 
+import asyncio
+from typing import Optional
+
+from fastapi import HTTPException
 from langchain_core.tools import tool
+
+from agent.skill_registry import register_builtin
 from core.database import get_supabase_client
 from core.logger import get_logger
-from agent.skill_registry import register_builtin
-from typing import Optional
-import asyncio
-
 from utils.audit import log_agent_action
 
 logger = get_logger(__name__)
+
+
+def _pending_message(message: str) -> str:
+    return f"PENDING: {message}"
+
+
+def _blocked_message(message: str) -> str:
+    return f"BLOCKED: {message}"
 
 
 async def _get_payment_info(organization_id: str) -> str:
@@ -81,12 +91,15 @@ async def get_reservation_requirements(
     Indica los pasos para transferir la reserva y los datos bancarios de la organización.
     Si se provee `numero_lote`, devuelve el valor de reserva específico de dicho lote.
     Argumentos:
-    - organization_id (requerido): ID de la organización para obtener datos bancarios correctos.
+    - organization_id (inyectado por runtime): ID confiable de la organización.
     - numero_lote (opcional): número exacto del lote que el cliente desea reservar.
     """
+    organization_id = str(organization_id or "").strip()
     if not organization_id:
         logger.error("get_reservation_requirements llamada sin organization_id")
-        return "Error interno: se requiere organization_id para obtener los datos de reserva."
+        return _blocked_message(
+            "se requiere organization_id confiable para obtener los datos de reserva."
+        )
 
     # Obtener datos bancarios dinámicamente desde la BD de forma no bloqueante
     payment_info = await _get_payment_info(organization_id)
@@ -109,11 +122,13 @@ async def get_reservation_requirements(
             lots = response.data
 
             if not lots:
-                return f"No encontré el lote {numero_lote} para esta organización."
+                return _blocked_message(
+                    f"No encontre el lote {numero_lote} para esta organizacion."
+                )
 
             lot = lots[0]
             if lot.get("estado") != "disponible":
-                return (
+                return _blocked_message(
                     f"El lote {numero_lote} no está disponible "
                     f"(estado actual: {lot.get('estado')})."
                 )
@@ -132,21 +147,23 @@ async def get_reservation_requirements(
                     payload={"numero_lote": numero_lote, "valor": valor},
                 )
 
-                return (
+                return _pending_message(
                     f"{payment_info}\n\n"
-                    f"El valor de reserva exacto para el Lote {numero_lote} es de {val_pesos}."
+                    f"El valor de reserva exacto para el Lote {numero_lote} es de {val_pesos}. "
+                    "La reserva queda pendiente hasta que se cree una solicitud y el administrador la revise."
                 )
             else:
-                return (
+                return _blocked_message(
                     f"{payment_info}\n\n"
                     f"El valor de reserva para el Lote {numero_lote} aún no está fijado "
                     f"en el sistema. Contáctese con un ejecutivo humano."
                 )
 
-        return (
+        return _pending_message(
             f"{payment_info}\n\n"
             "El valor de reserva exacto depende del lote. "
-            "Sugiere que el cliente elija un lote primero para darte el monto preciso."
+            "Sugiere que el cliente elija un lote primero para darte el monto preciso; "
+            "cualquier reserva posterior queda pendiente de aprobacion."
         )
 
     except Exception as e:
@@ -155,4 +172,114 @@ async def get_reservation_requirements(
             organization_id=organization_id,
             error=str(e),
         )
-        return f"Ocurrió un error consultando requisitos de reserva: {str(e)}"
+        return _blocked_message(
+            f"Ocurrió un error consultando requisitos de reserva: {str(e)}"
+        )
+
+
+@register_builtin("request_reservation_intent")
+@tool
+async def request_reservation_intent(
+    organization_id: str,
+    vendor_id: str,
+    lot_id: str,
+    cliente_nombre: str,
+    cliente_run: str,
+    valor_reserva: float,
+    vendor_name: Optional[str] = None,
+    vendor_phone: Optional[str] = None,
+    vendor_platform: str = "telegram",
+    notaria: Optional[str] = None,
+    fecha_firma: Optional[str] = None,
+) -> str:
+    """Crea una solicitud de reserva pendiente para revisión humana.
+    Argumentos:
+    - organization_id (inyectado por runtime): ID confiable de la organización.
+    - vendor_id (inyectado por runtime): vendedor confiable vinculado al canal.
+    - lot_id: ID exacto del lote que el cliente quiere reservar.
+    - cliente_nombre: nombre del comprador.
+    - cliente_run: RUN del comprador.
+    - valor_reserva: monto de la reserva.
+    - vendor_name/vendor_phone/vendor_platform: datos operativos del canal.
+    """
+    organization_id = str(organization_id or "").strip()
+    vendor_id = str(vendor_id or "").strip()
+    lot_id = str(lot_id or "").strip()
+    vendor_platform = str(vendor_platform or "telegram").strip().lower()
+
+    if not organization_id:
+        return _blocked_message("falta organization_id confiable.")
+    if not vendor_id:
+        return _blocked_message("la reserva requiere un vendedor vinculado.")
+    if not lot_id:
+        return _blocked_message("falta el ID del lote a reservar.")
+    if vendor_platform not in {"telegram", "whatsapp"}:
+        return _blocked_message("el canal del vendedor no está soportado.")
+
+    try:
+        from api.v1.endpoints.approvals import request_reservation
+        from core.redis import get_arq_pool
+        from schemas.approval import ReservationPayload, ReservationRequest
+
+        payload_obj = ReservationPayload(
+            cliente_nombre=cliente_nombre,
+            cliente_run=cliente_run,
+            valor_reserva=valor_reserva,
+            notaria=notaria,
+            fecha_firma=fecha_firma,
+        )
+        body = ReservationRequest(
+            lot_id=lot_id,
+            organization_id=organization_id,
+            vendor_id=vendor_id,
+            vendor_name=vendor_name or "Vendedor",
+            vendor_phone=vendor_phone or "",
+            vendor_platform=vendor_platform,
+            payload=payload_obj,
+        )
+        redis = await get_arq_pool()
+        response = await request_reservation(body, redis=redis)
+        status = getattr(response, "status", "pending")
+        approval_id = getattr(response, "approval_id", "")
+        if status != "pending" or not approval_id:
+            logger.warning(
+                "request_reservation_intent_unexpected_status",
+                organization_id=organization_id,
+                vendor_id=vendor_id,
+                lot_id=lot_id,
+                status=status,
+            )
+            return _blocked_message(
+                "la solicitud de reserva no quedo pendiente de revision."
+            )
+
+        return _pending_message(
+            "Solicitud de reserva enviada al administrador. "
+            f"approval_id={approval_id}. No está aprobada todavía."
+        )
+    except HTTPException as exc:
+        detail = (
+            exc.detail
+            if isinstance(exc.detail, str)
+            else "regla operacional bloqueada"
+        )
+        logger.info(
+            "request_reservation_intent_blocked",
+            organization_id=organization_id,
+            vendor_id=vendor_id,
+            lot_id=lot_id,
+            status_code=exc.status_code,
+            detail=detail,
+        )
+        return _blocked_message(str(detail))
+    except Exception as exc:
+        logger.error(
+            "request_reservation_intent_failed",
+            organization_id=organization_id,
+            vendor_id=vendor_id,
+            lot_id=lot_id,
+            error=str(exc),
+        )
+        return _blocked_message(
+            "no fue posible crear la solicitud de reserva en este momento."
+        )

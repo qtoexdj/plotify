@@ -12,6 +12,18 @@ logger = get_logger(__name__)
 settings = get_settings()
 
 
+def _telegram_secret_token_state(
+    expected_token: str, provided_token: str | None
+) -> str:
+    if not expected_token:
+        return "disabled"
+    if not provided_token:
+        return "missing"
+    if provided_token != expected_token:
+        return "invalid"
+    return "valid"
+
+
 @router.get("/meta")
 @limiter.limit("50/second")
 async def verify_meta_webhook(
@@ -124,20 +136,36 @@ async def receive_telegram_webhook(
     1. Mensajes de texto → se encolan para el agente LangGraph.
     2. callback_query (botones inline) → se encolan para procesar decisiones de aprobación.
     """
-    # T056: Validar autenticidad del webhook de Telegram
-    if settings.TELEGRAM_WEBHOOK_SECRET:
-        if not x_telegram_token or x_telegram_token != settings.TELEGRAM_WEBHOOK_SECRET:
-            logger.warning(
-                "Intento de llamada webhook de Telegram no autenticada o falsificada",
-                org_id=org_id,
-                provided_token=x_telegram_token
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Webhook token secreto de autenticación inválido o ausente."
-            )
+    token_state = _telegram_secret_token_state(
+        settings.TELEGRAM_WEBHOOK_SECRET, x_telegram_token
+    )
+    if token_state in {"missing", "invalid"}:
+        logger.warning(
+            "Webhook Telegram rechazado por autenticacion",
+            org_id=org_id,
+            token_state=token_state,
+            ip=request.client.host if request.client else "unknown",
+            user_agent=request.headers.get("user-agent", "unknown"),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Webhook Telegram no autorizado.",
+        )
 
-    body = await request.json()
+    try:
+        body = await request.json()
+    except ValueError:
+        logger.warning("Payload Telegram invalido", org_id=org_id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload Telegram invalido.",
+        )
+    if not isinstance(body, dict):
+        logger.warning("Payload Telegram no es objeto JSON", org_id=org_id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload Telegram invalido.",
+        )
     logger.info("Raw Telegram Payload recibido", payload=body, org_id=org_id)
 
     # --- CASO 1: Callback Query (Admin presionó un botón de aprobación) ---

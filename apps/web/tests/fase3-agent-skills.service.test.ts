@@ -29,12 +29,21 @@ const mockSkill1: AgentSkill = {
   description: 'Busca proyectos disponibles',
   category: 'builtin',
   tool_definition: { name: 'search_projects', description: 'Busca proyectos', parameters: {} },
+  approved_tool_slugs: [],
+  created_by: null,
+  current_version: 1,
+  definition_markdown: null,
   is_system: true,
   requires_mcp: false,
   mcp_provider: null,
+  organization_id: null,
   requires_role: ['admin', 'user'],
   enabled_by_default: true,
   created_at: null,
+  updated_at: null,
+  updated_by: null,
+  validation_errors: [],
+  validation_status: 'valid',
 }
 
 const mockSkill2: AgentSkill = {
@@ -44,12 +53,21 @@ const mockSkill2: AgentSkill = {
   description: 'Sube documentos a Google Drive',
   category: 'mcp',
   tool_definition: {},
+  approved_tool_slugs: [],
+  created_by: null,
+  current_version: 1,
+  definition_markdown: null,
   is_system: false,
   requires_mcp: true,
   mcp_provider: 'google_drive',
+  organization_id: null,
   requires_role: ['admin'],
   enabled_by_default: false,
   created_at: null,
+  updated_at: null,
+  updated_by: null,
+  validation_errors: [],
+  validation_status: 'valid',
 }
 
 const mockConfig: OrgSkillConfig = {
@@ -64,20 +82,38 @@ const mockConfig: OrgSkillConfig = {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function buildSupabaseMock(skills: AgentSkill[] | null, configs: OrgSkillConfig[]) {
+function buildSupabaseMock(
+  skills: AgentSkill[] | null,
+  configs: OrgSkillConfig[],
+  mcpConnections: Array<{ provider: string; status: string }> = []
+) {
   const orderFn = vi.fn().mockResolvedValue({ data: skills, error: null })
-  const selectSkills = vi.fn().mockReturnValue({ order: orderFn })
+  const orFn = vi.fn().mockReturnValue({ order: orderFn })
+  const selectSkills = vi.fn().mockReturnValue({ or: orFn })
 
   const eqFn = vi.fn().mockResolvedValue({ data: configs, error: null })
   const selectConfigs = vi.fn().mockReturnValue({ eq: eqFn })
 
+  const eqMcpOrg = vi.fn().mockResolvedValue({ data: mcpConnections, error: null })
+  const selectMcpConnections = vi.fn().mockReturnValue({ eq: eqMcpOrg })
+
   const from = vi.fn((table: string) => {
     if (table === 'agent_skills') return { select: selectSkills }
     if (table === 'org_skill_configs') return { select: selectConfigs }
+    if (table === 'mcp_connections') return { select: selectMcpConnections }
     throw new Error(`Tabla no esperada: ${table}`)
   })
 
-  return { from, orderFn, selectSkills, eqFn, selectConfigs }
+  return {
+    from,
+    orderFn,
+    orFn,
+    selectSkills,
+    eqFn,
+    selectConfigs,
+    eqMcpOrg,
+    selectMcpConnections,
+  }
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -85,13 +121,14 @@ describe('getSkillsForOrg', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('consulta agent_skills con select(*) ordenado por category', async () => {
-    const { from, selectSkills, orderFn } = buildSupabaseMock([mockSkill1], [])
+    const { from, selectSkills, orFn, orderFn } = buildSupabaseMock([mockSkill1], [])
     vi.mocked(createClient).mockResolvedValue({ from } as never)
 
     await getSkillsForOrg(ORG_ID)
 
     expect(from).toHaveBeenCalledWith('agent_skills')
     expect(selectSkills).toHaveBeenCalledWith('*')
+    expect(orFn).toHaveBeenCalledWith(`organization_id.is.null,organization_id.eq.${ORG_ID}`)
     expect(orderFn).toHaveBeenCalledWith('category', { ascending: true })
   })
 
@@ -104,6 +141,17 @@ describe('getSkillsForOrg', () => {
     expect(from).toHaveBeenCalledWith('org_skill_configs')
     expect(selectConfigs).toHaveBeenCalledWith('*')
     expect(eqFn).toHaveBeenCalledWith('organization_id', ORG_ID)
+  })
+
+  it('consulta conexiones MCP de la organización para calcular readiness', async () => {
+    const { from, selectMcpConnections, eqMcpOrg } = buildSupabaseMock([mockSkill2], [])
+    vi.mocked(createClient).mockResolvedValue({ from } as never)
+
+    await getSkillsForOrg(ORG_ID)
+
+    expect(from).toHaveBeenCalledWith('mcp_connections')
+    expect(selectMcpConnections).toHaveBeenCalledWith('provider,status')
+    expect(eqMcpOrg).toHaveBeenCalledWith('organization_id', ORG_ID)
   })
 
   it('retorna [] cuando agent_skills devuelve null', async () => {
@@ -154,5 +202,46 @@ describe('getSkillsForOrg', () => {
     expect(skill.is_system).toBe(true)
     expect(skill.enabled_by_default).toBe(true)
     expect(skill.requires_mcp).toBe(false)
+  })
+
+  it('marca una skill MCP como lista cuando existe provider activo', async () => {
+    const { from } = buildSupabaseMock(
+      [mockSkill2],
+      [],
+      [{ provider: 'google_drive', status: 'active' }]
+    )
+    vi.mocked(createClient).mockResolvedValue({ from } as never)
+
+    const result = await getSkillsForOrg(ORG_ID)
+
+    expect(result[0]?.mcp_ready).toBe(true)
+    expect(result[0]?.mcp_requirement_state).toBe('ready')
+    expect(result[0]?.mcp_connection_status).toBe('active')
+  })
+
+  it('marca una skill MCP como pendiente cuando falta conexión activa', async () => {
+    const { from } = buildSupabaseMock([mockSkill2], [])
+    vi.mocked(createClient).mockResolvedValue({ from } as never)
+
+    const result = await getSkillsForOrg(ORG_ID)
+
+    expect(result[0]?.mcp_ready).toBe(false)
+    expect(result[0]?.mcp_requirement_state).toBe('pending')
+    expect(result[0]?.mcp_connection_status).toBeNull()
+  })
+
+  it('marca una skill MCP como bloqueada cuando la conexión fue revocada', async () => {
+    const { from } = buildSupabaseMock(
+      [mockSkill2],
+      [],
+      [{ provider: 'google_drive', status: 'revoked' }]
+    )
+    vi.mocked(createClient).mockResolvedValue({ from } as never)
+
+    const result = await getSkillsForOrg(ORG_ID)
+
+    expect(result[0]?.mcp_ready).toBe(false)
+    expect(result[0]?.mcp_requirement_state).toBe('revoked')
+    expect(result[0]?.mcp_connection_status).toBe('revoked')
   })
 })

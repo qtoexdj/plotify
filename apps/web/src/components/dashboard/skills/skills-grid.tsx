@@ -66,6 +66,39 @@ export function getRoleLabel(roles: string[] | null): string {
   return roles.join(', ')
 }
 
+export function getValidationLabel(status: string | null): string {
+  switch (status) {
+    case 'draft':
+      return 'Borrador'
+    case 'blocked':
+      return 'Revisar'
+    case 'valid':
+      return 'Validada'
+    default:
+      return status ?? 'Sin validar'
+  }
+}
+
+export function getMcpRequirementLabel(skill: SkillWithConfig): string {
+  if (!skill.requires_mcp) return 'Sin MCP'
+  switch (skill.mcp_requirement_state) {
+    case 'ready':
+      return 'MCP listo'
+    case 'revoked':
+      return 'Conexión revocada'
+    case 'expired':
+      return 'Conexión expirada'
+    case 'error':
+      return 'Conexión con error'
+    default:
+      return skill.mcp_ready ? 'MCP listo' : 'Requiere conexión'
+  }
+}
+
+function isMcpBlocked(skill: SkillWithConfig): boolean {
+  return Boolean(skill.requires_mcp && !skill.mcp_ready)
+}
+
 export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
   const [optimisticStates, setOptimisticStates] = useState<Record<string, boolean>>({})
   const [selectedSkill, setSelectedSkill] = useState<SkillWithConfig | null>(null)
@@ -106,7 +139,7 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
 
   return (
     <TooltipProvider>
-      <div className="space-y-8">
+      <div className="space-y-8" data-testid="agent-skills-grid">
         {sortedCategories.map((category) => (
           <div key={category}>
             <div className="flex items-center gap-2 mb-4">
@@ -123,10 +156,14 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {grouped[category].map((skill) => {
                 const enabled = isEnabled(skill)
+                const mcpBlocked = isMcpBlocked(skill)
                 return (
                   <Card
                     key={skill.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${!enabled ? 'opacity-60' : ''}`}
+                    data-testid={`skill-card-${skill.slug}`}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      !enabled || mcpBlocked ? 'opacity-60' : ''
+                    }`}
                     onClick={() => setSelectedSkill(skill)}
                   >
                     <CardHeader className="pb-2">
@@ -164,8 +201,10 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
                             </Tooltip>
                           ) : null}
                           <Switch
+                            aria-label={`Alternar ${skill.name}`}
+                            data-testid={`skill-toggle-${skill.slug}`}
                             checked={enabled}
-                            disabled={isPending || (skill.is_system ?? false)}
+                            disabled={isPending || (skill.is_system ?? false) || mcpBlocked}
                             onCheckedChange={(value) => handleToggle(skill, value)}
                           />
                         </div>
@@ -177,23 +216,69 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
                       </CardDescription>
                       <div className="flex flex-wrap gap-1.5">
                         <Badge
+                          data-testid={`skill-badge-category-${skill.slug}`}
                           variant={getCategoryVariant(skill.category ?? 'custom')}
                           className="text-xs"
                         >
                           {getCategoryLabel(skill.category ?? 'custom')}
                         </Badge>
                         <Badge
+                          data-testid={`skill-badge-role-${skill.slug}`}
                           variant={getRoleBadgeVariant(skill.requires_role as string[] | null)}
                           className="text-xs"
                         >
                           {getRoleLabel(skill.requires_role as string[] | null)}
                         </Badge>
+                        {skill.is_system && (
+                          <Badge
+                            data-testid={`skill-badge-system-${skill.slug}`}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            Siempre activa
+                          </Badge>
+                        )}
+                        {skill.category === 'custom' && (
+                          <Badge
+                            data-testid={`skill-badge-version-${skill.slug}`}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            v{skill.current_version}
+                          </Badge>
+                        )}
+                        {skill.category === 'custom' && (
+                          <Badge
+                            data-testid={`skill-badge-validation-${skill.slug}`}
+                            variant={
+                              skill.validation_status === 'blocked' ? 'destructive' : 'outline'
+                            }
+                            className="text-xs"
+                          >
+                            {getValidationLabel(skill.validation_status)}
+                          </Badge>
+                        )}
+                        {skill.approved_tool_slugs.length > 0 && (
+                          <Badge
+                            data-testid={`skill-badge-tools-${skill.slug}`}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {skill.approved_tool_slugs.length}{' '}
+                            {skill.approved_tool_slugs.length === 1 ? 'tool' : 'tools'}
+                          </Badge>
+                        )}
                         {skill.requires_mcp && (
                           <Badge
-                            variant="outline"
-                            className="text-xs border-purple-300 text-purple-600"
+                            data-testid={`skill-badge-mcp-${skill.slug}`}
+                            variant={skill.mcp_ready ? 'outline' : 'destructive'}
+                            className={
+                              skill.mcp_ready
+                                ? 'text-xs border-purple-300 text-purple-600'
+                                : 'text-xs'
+                            }
                           >
-                            Requiere MCP
+                            {getMcpRequirementLabel(skill)}
                           </Badge>
                         )}
                       </div>

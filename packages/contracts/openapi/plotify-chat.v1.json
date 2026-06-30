@@ -644,6 +644,219 @@
         "title": "CreateVersionRequest",
         "type": "object"
       },
+      "CustomSkillPublishRequest": {
+        "properties": {
+          "change_summary": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Summary"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "skill_id": {
+            "title": "Skill Id",
+            "type": "string"
+          }
+        },
+        "required": ["organization_id", "skill_id"],
+        "title": "CustomSkillPublishRequest",
+        "type": "object"
+      },
+      "CustomSkillResponse": {
+        "properties": {
+          "approved_tool_slugs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Approved Tool Slugs",
+            "type": "array"
+          },
+          "current_version": {
+            "title": "Current Version",
+            "type": "integer"
+          },
+          "definition_markdown": {
+            "title": "Definition Markdown",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "mcp_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Provider"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "requires_mcp": {
+            "default": false,
+            "title": "Requires Mcp",
+            "type": "boolean"
+          },
+          "requires_role": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requires Role",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "validation_errors": {
+            "items": {
+              "$ref": "#/components/schemas/SkillValidationError"
+            },
+            "title": "Validation Errors",
+            "type": "array"
+          },
+          "validation_status": {
+            "enum": ["draft", "valid", "blocked"],
+            "title": "Validation Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "organization_id",
+          "slug",
+          "name",
+          "description",
+          "definition_markdown",
+          "approved_tool_slugs",
+          "requires_role",
+          "current_version",
+          "validation_status"
+        ],
+        "title": "CustomSkillResponse",
+        "type": "object"
+      },
+      "CustomSkillSaveRequest": {
+        "properties": {
+          "approved_tool_slugs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Approved Tool Slugs",
+            "type": "array"
+          },
+          "change_summary": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Summary"
+          },
+          "definition_markdown": {
+            "maxLength": 20000,
+            "title": "Definition Markdown",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 2,
+            "title": "Description",
+            "type": "string"
+          },
+          "mcp_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Provider"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "requires_mcp": {
+            "default": false,
+            "title": "Requires Mcp",
+            "type": "boolean"
+          },
+          "requires_role": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requires Role",
+            "type": "array"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Id"
+          },
+          "slug": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": ["organization_id", "slug", "name", "description", "definition_markdown"],
+        "title": "CustomSkillSaveRequest",
+        "type": "object"
+      },
       "DecisionRequest": {
         "properties": {
           "action": {
@@ -4166,6 +4379,132 @@
           }
         },
         "title": "SiiRoleCertificateSummary",
+        "type": "object"
+      },
+      "SkillValidationError": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"],
+        "title": "SkillValidationError",
+        "type": "object"
+      },
+      "SkillValidationRequest": {
+        "properties": {
+          "approved_tool_slugs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Approved Tool Slugs",
+            "type": "array"
+          },
+          "definition_markdown": {
+            "maxLength": 20000,
+            "title": "Definition Markdown",
+            "type": "string"
+          },
+          "mcp_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Provider"
+          },
+          "organization_id": {
+            "title": "Organization Id",
+            "type": "string"
+          },
+          "requires_mcp": {
+            "default": false,
+            "title": "Requires Mcp",
+            "type": "boolean"
+          },
+          "requires_role": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requires Role",
+            "type": "array"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Id"
+          },
+          "slug": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": ["organization_id", "slug", "definition_markdown"],
+        "title": "SkillValidationRequest",
+        "type": "object"
+      },
+      "SkillValidationResponse": {
+        "properties": {
+          "approved_tool_slugs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Approved Tool Slugs",
+            "type": "array"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/SkillValidationError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "normalized_slug": {
+            "title": "Normalized Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": ["valid", "blocked"],
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": ["status", "normalized_slug", "approved_tool_slugs"],
+        "title": "SkillValidationResponse",
         "type": "object"
       },
       "StageOperationalResult": {
@@ -9727,6 +10066,130 @@
         "tags": ["prompts"]
       }
     },
+    "/api/v1/skills/custom": {
+      "post": {
+        "operationId": "save_custom_skill_api_v1_skills_custom_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomSkillSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomSkillResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Save Custom Skill",
+        "tags": ["skills"]
+      }
+    },
+    "/api/v1/skills/custom/publish": {
+      "post": {
+        "operationId": "publish_custom_skill_api_v1_skills_custom_publish_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomSkillPublishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomSkillResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Publish Custom Skill",
+        "tags": ["skills"]
+      }
+    },
     "/api/v1/skills/invalidate-cache": {
       "post": {
         "description": "Invalida el cache de skills de una organización.\n\nTras llamar este endpoint, el próximo mensaje procesado para esa org\nconsultará la BD y recompilará el grafo con las tools actualizadas.",
@@ -9767,6 +10230,50 @@
           }
         ],
         "summary": "Invalidate Cache",
+        "tags": ["skills"]
+      }
+    },
+    "/api/v1/skills/validate-definition": {
+      "post": {
+        "operationId": "validate_definition_api_v1_skills_validate_definition_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillValidationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillValidationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Validate Definition",
         "tags": ["skills"]
       }
     },

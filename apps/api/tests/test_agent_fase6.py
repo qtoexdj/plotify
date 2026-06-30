@@ -14,6 +14,7 @@ asyncio_mode = auto (pytest.ini) — no se necesita @pytest.mark.asyncio
 """
 
 from datetime import datetime, timezone, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # ---------------------------------------------------------------------------
@@ -130,7 +131,17 @@ class TestGraphPromptRouting:
 
         with (
             patch("agent.graph.get_active_prompt", side_effect=fake_get_active_prompt),
-            patch("agent.graph.get_tools_for_org", new=AsyncMock(return_value=[])),
+            patch(
+                "agent.graph.get_skill_runtime_for_org",
+                new=AsyncMock(
+                    return_value=SimpleNamespace(
+                        tools=[],
+                        enabled_skill_slugs=[],
+                        allowed_tool_slugs=[],
+                        markdown_instructions="",
+                    )
+                ),
+            ),
             patch(
                 "agent.graph._get_custom_instructions", new=AsyncMock(return_value="")
             ),
@@ -179,7 +190,17 @@ class TestGraphPromptRouting:
 
         with (
             patch("agent.graph.get_active_prompt", side_effect=fake_get_active_prompt),
-            patch("agent.graph.get_tools_for_org", new=AsyncMock(return_value=[])),
+            patch(
+                "agent.graph.get_skill_runtime_for_org",
+                new=AsyncMock(
+                    return_value=SimpleNamespace(
+                        tools=[],
+                        enabled_skill_slugs=[],
+                        allowed_tool_slugs=[],
+                        markdown_instructions="",
+                    )
+                ),
+            ),
             patch("agent.graph.llm", fake_llm),
             patch(
                 "agent.graph._get_checkpointer",

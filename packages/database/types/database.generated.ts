@@ -54,48 +54,146 @@ export type Database = {
       }
       agent_skills: {
         Row: {
+          approved_tool_slugs: string[]
           category: string
           created_at: string | null
+          created_by: string | null
+          current_version: number
+          definition_markdown: string | null
           description: string
           enabled_by_default: boolean | null
           id: string
           is_system: boolean | null
           mcp_provider: string | null
           name: string
+          organization_id: string | null
           requires_mcp: boolean | null
           requires_role: string[] | null
           slug: string
           tool_definition: Json
+          updated_at: string | null
+          updated_by: string | null
+          validation_errors: Json
+          validation_status: string
         }
         Insert: {
+          approved_tool_slugs?: string[]
           category?: string
           created_at?: string | null
+          created_by?: string | null
+          current_version?: number
+          definition_markdown?: string | null
           description: string
           enabled_by_default?: boolean | null
           id?: string
           is_system?: boolean | null
           mcp_provider?: string | null
           name: string
+          organization_id?: string | null
           requires_mcp?: boolean | null
           requires_role?: string[] | null
           slug: string
           tool_definition: Json
+          updated_at?: string | null
+          updated_by?: string | null
+          validation_errors?: Json
+          validation_status?: string
         }
         Update: {
+          approved_tool_slugs?: string[]
           category?: string
           created_at?: string | null
+          created_by?: string | null
+          current_version?: number
+          definition_markdown?: string | null
           description?: string
           enabled_by_default?: boolean | null
           id?: string
           is_system?: boolean | null
           mcp_provider?: string | null
           name?: string
+          organization_id?: string | null
           requires_mcp?: boolean | null
           requires_role?: string[] | null
           slug?: string
           tool_definition?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+          validation_errors?: Json
+          validation_status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agent_skills_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_skill_versions: {
+        Row: {
+          approved_tool_slugs: string[]
+          change_summary: string | null
+          created_at: string
+          created_by: string | null
+          definition_markdown: string
+          id: string
+          organization_id: string | null
+          requires_role: string[]
+          skill_id: string
+          tool_definition: Json
+          validation_errors: Json
+          validation_status: string
+          version: number
+        }
+        Insert: {
+          approved_tool_slugs?: string[]
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          definition_markdown: string
+          id?: string
+          organization_id?: string | null
+          requires_role?: string[]
+          skill_id: string
+          tool_definition?: Json
+          validation_errors?: Json
+          validation_status?: string
+          version: number
+        }
+        Update: {
+          approved_tool_slugs?: string[]
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          definition_markdown?: string
+          id?: string
+          organization_id?: string | null
+          requires_role?: string[]
+          skill_id?: string
+          tool_definition?: Json
+          validation_errors?: Json
+          validation_status?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_skill_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_skill_versions_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "agent_skills"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       approval_requests: {
         Row: {

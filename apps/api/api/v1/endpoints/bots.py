@@ -49,12 +49,16 @@ async def register_bot(payload: RegisterBotRequest):
 
     api_url = settings.API_PUBLIC_URL.rstrip("/")
     webhook_url = f"{api_url}/api/v1/webhook/telegram/{org_id}"
+    webhook_payload = {"url": webhook_url}
+    if settings.TELEGRAM_WEBHOOK_SECRET:
+        webhook_payload["secret_token"] = settings.TELEGRAM_WEBHOOK_SECRET
 
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.post(
                 f"https://api.telegram.org/bot{token}/setWebhook",
-                json={"url": webhook_url},
+                json=webhook_payload,
+                timeout=10.0,
             )
             resp.raise_for_status()
 

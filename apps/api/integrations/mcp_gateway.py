@@ -8,6 +8,8 @@ Fase 5 — M-v2-5.3
 """
 
 import asyncio
+import ipaddress
+from urllib.parse import quote, urlparse
 
 import httpx
 
@@ -17,7 +19,36 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 # Timeout en segundos para llamadas a servidores MCP externos
-MCP_REQUEST_TIMEOUT = 30.0
+MCP_REQUEST_TIMEOUT = 10.0
+MCP_ALLOWED_SERVER_SCHEMES = frozenset({"https"})
+MCP_BLOCKED_HOSTS = frozenset({"localhost", "0.0.0.0"})
+
+
+def _host_is_private_or_loopback(host: str) -> bool:
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return address.is_private or address.is_loopback or address.is_link_local
+
+
+def validate_mcp_server_url(server_url: str | None) -> str | None:
+    """Return a normalized MCP server URL when it is safe to call."""
+    if not server_url:
+        return None
+
+    parsed = urlparse(server_url.strip())
+    host = parsed.hostname
+    if parsed.scheme not in MCP_ALLOWED_SERVER_SCHEMES or not host:
+        return None
+
+    normalized_host = host.lower()
+    if normalized_host in MCP_BLOCKED_HOSTS or normalized_host.endswith(".local"):
+        return None
+    if _host_is_private_or_loopback(normalized_host):
+        return None
+
+    return server_url.strip().rstrip("/")
 
 
 async def execute_mcp_tool(connection_id: str, tool_name: str, params: dict) -> str:
@@ -77,19 +108,20 @@ async def execute_mcp_tool(connection_id: str, tool_name: str, params: dict) -> 
         )
         return f"Error: Conexión MCP no disponible (estado: {status})."
 
-    server_url = conn.get("server_url")
+    server_url = validate_mcp_server_url(conn.get("server_url"))
     if not server_url:
         logger.error(
-            "mcp_no_server_url",
+            "mcp_invalid_server_url",
             connection_id=connection_id,
             provider=conn.get("provider"),
         )
-        return "Error: servidor MCP no configurado para esta conexión."
+        return "Error: servidor MCP no configurado o no permitido para esta conexión."
 
     try:
+        tool_path = quote(tool_name, safe="")
         async with httpx.AsyncClient(timeout=MCP_REQUEST_TIMEOUT) as client:
             response = await client.post(
-                f"{server_url}/tools/{tool_name}",
+                f"{server_url}/tools/{tool_path}",
                 json={"credentials": credentials, "params": params},
             )
 

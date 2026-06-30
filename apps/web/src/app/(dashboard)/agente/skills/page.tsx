@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getSkillsForOrg } from '@/lib/services/agent-skills.service'
+import { CustomSkillEditor } from '@/components/dashboard/skills/custom-skill-editor'
 import { SkillsGrid } from '@/components/dashboard/skills/skills-grid'
 
 export const dynamic = 'force-dynamic'
@@ -20,17 +21,35 @@ export default async function SkillsPage() {
 
   if (!member || member.role !== 'admin') redirect('/')
 
-  const skills = await getSkillsForOrg(member.organization_id)
+  const organizationId = member.organization_id
+  const skills = await getSkillsForOrg(organizationId)
+  const availableTools = skills
+    .filter(
+      (skill) =>
+        skill.organization_id === null &&
+        ['builtin', 'mcp'].includes(skill.category ?? '') &&
+        skill.validation_status !== 'blocked'
+    )
+    .map((skill) => ({
+      slug: skill.slug,
+      name: skill.name,
+      description: skill.description,
+      roles: skill.requires_role ?? [],
+    }))
 
   return (
-    <div className="p-6 md:p-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <main
+      className="p-6 md:p-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700"
+      data-testid="agent-skills-page"
+    >
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Skills del Agente</h1>
         <p className="text-muted-foreground mt-1">
           Habilita o deshabilita las herramientas que tu agente de IA puede utilizar
         </p>
       </div>
-      <SkillsGrid skills={skills} organizationId={member.organization_id} />
-    </div>
+      <CustomSkillEditor organizationId={organizationId} availableTools={availableTools} />
+      <SkillsGrid skills={skills} organizationId={organizationId} />
+    </main>
   )
 }

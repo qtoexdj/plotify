@@ -18,6 +18,105 @@ def _table_with_execute(data):
     return table
 
 
+class _FilteredQuery:
+    def __init__(self, rows):
+        self._rows = list(rows)
+        self._eq_filters = []
+        self._in_filters = []
+        self._limit = None
+        self._single = False
+
+    def eq(self, field, value):
+        self._eq_filters.append((field, value))
+        return self
+
+    def in_(self, field, values):
+        self._in_filters.append((field, set(values)))
+        return self
+
+    def limit(self, count):
+        self._limit = count
+        return self
+
+    def order(self, *_args, **_kwargs):
+        return self
+
+    def single(self):
+        self._single = True
+        return self
+
+    def execute(self):
+        rows = [
+            row
+            for row in self._rows
+            if all(row.get(field) == value for field, value in self._eq_filters)
+            and all(row.get(field) in values for field, values in self._in_filters)
+        ]
+        if self._limit is not None:
+            rows = rows[: self._limit]
+        if self._single:
+            return MagicMock(data=rows[0] if rows else None)
+        return MagicMock(data=rows)
+
+
+class _FilteredTable:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def select(self, *_args, **_kwargs):
+        return _FilteredQuery(self._rows)
+
+
+class _FilteredSupabase:
+    def __init__(self, tables):
+        self._tables = tables
+        self.table_calls = []
+
+    def table(self, name):
+        self.table_calls.append(name)
+        return _FilteredTable(self._tables.get(name, []))
+
+
+def _telegram_client_mock():
+    telegram_client = MagicMock()
+    telegram_client.send_text = AsyncMock()
+    return telegram_client
+
+
+def _linked_vendor_filtered_supabase():
+    return _FilteredSupabase(
+        {
+            "profiles": [
+                {"id": "profile-1", "telegram_chat_id": "telegram-chat-1"},
+            ],
+            "organization_members": [
+                {"organization_id": "org-1", "user_id": "profile-1", "role": "vendor"},
+            ],
+            "vendors": [
+                {
+                    "id": "vendor-1",
+                    "user_id": "profile-1",
+                    "organization_id": "org-1",
+                    "nombre": "Vendedora",
+                    "phone": "+56911111111",
+                    "active": True,
+                },
+            ],
+            "vendor_projects": [
+                {"vendor_id": "vendor-1", "project_id": "project-1"},
+            ],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+            ],
+        }
+    )
+
+
 async def test_assigned_vendor_can_query_assigned_lot_availability():
     from workers.tasks.message_processor import process_vendor_telegram_operation
 
@@ -26,6 +125,9 @@ async def test_assigned_vendor_can_query_assigned_lot_availability():
     )
     assignments_table = _table_with_execute([{"project_id": "project-1"}])
     profiles_table = _table_with_execute([{"id": "user-1", "phone": "telegram-chat-1"}])
+    members_table = _table_with_execute(
+        [{"organization_id": "org-1", "user_id": "user-1", "role": "vendor"}]
+    )
     lots_table = MagicMock()
     lots_table.select.return_value.eq.return_value.in_.return_value.execute.return_value = MagicMock(
         data=[{"id": "lot-1", "numero_lote": "24", "estado": "disponible", "project_id": "project-1"}]
@@ -37,6 +139,7 @@ async def test_assigned_vendor_can_query_assigned_lot_availability():
         "vendor_projects": assignments_table,
         "lots": lots_table,
         "profiles": profiles_table,
+        "organization_members": members_table,
     }[name]
     telegram_client = MagicMock()
     telegram_client.send_text = AsyncMock()
@@ -55,6 +158,402 @@ async def test_assigned_vendor_can_query_assigned_lot_availability():
     assert result == "AVAILABILITY:1"
     telegram_client.send_text.assert_awaited_once()
     assert "Lote 24" in telegram_client.send_text.call_args.args[1]
+
+
+async def test_linked_vendor_availability_filters_unavailable_and_foreign_project_lots():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _FilteredSupabase(
+        {
+            "profiles": [
+                {"id": "profile-1", "telegram_chat_id": "telegram-chat-1"},
+            ],
+            "organization_members": [
+                {"organization_id": "org-1", "user_id": "profile-1", "role": "vendor"},
+            ],
+            "vendors": [
+                {
+                    "id": "vendor-1",
+                    "user_id": "profile-1",
+                    "organization_id": "org-1",
+                    "nombre": "Vendedora",
+                    "phone": "+56911111111",
+                    "active": True,
+                },
+                {
+                    "id": "vendor-foreign",
+                    "user_id": "profile-2",
+                    "organization_id": "org-2",
+                    "nombre": "Vendedor Ajeno",
+                    "phone": "+56922222222",
+                    "active": True,
+                },
+            ],
+            "vendor_projects": [
+                {"vendor_id": "vendor-1", "project_id": "project-1"},
+                {"vendor_id": "vendor-foreign", "project_id": "project-foreign"},
+            ],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+                {
+                    "id": "lot-unavailable",
+                    "numero_lote": "99",
+                    "estado": "reservado",
+                    "project_id": "project-1",
+                },
+                {
+                    "id": "lot-foreign",
+                    "numero_lote": "88",
+                    "estado": "disponible",
+                    "project_id": "project-foreign",
+                },
+            ],
+        }
+    )
+    telegram_client = _telegram_client_mock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "telegram-chat-1", "availability"
+        )
+
+    message = telegram_client.send_text.call_args.args[1]
+    assert result == "AVAILABILITY:1"
+    assert "Lote 24" in message
+    assert "Lote 99" not in message
+    assert "Lote 88" not in message
+
+
+async def test_telegram_vendor_availability_is_audited_with_assigned_scope():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _linked_vendor_filtered_supabase()
+    telegram_client = _telegram_client_mock()
+    audit_log = AsyncMock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch("workers.tasks.message_processor.log_agent_action", new=audit_log),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "telegram-chat-1", "availability"
+        )
+
+    assert result == "AVAILABILITY:1"
+    audit_log.assert_awaited_once()
+    kwargs = audit_log.call_args.kwargs
+    assert kwargs["action"] == "telegram.vendor.availability_requested"
+    assert kwargs["organization_id"] == "org-1"
+    assert kwargs["payload"]["vendor_id"] == "vendor-1"
+    assert kwargs["payload"]["result_count"] == 1
+
+
+async def test_linked_profile_without_org_membership_does_not_fall_back_to_phone_vendor():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _FilteredSupabase(
+        {
+            "profiles": [
+                {"id": "profile-1", "telegram_chat_id": "telegram-chat-1"},
+            ],
+            "organization_members": [],
+            "vendors": [
+                {
+                    "id": "legacy-vendor",
+                    "user_id": "legacy-user",
+                    "organization_id": "org-1",
+                    "nombre": "Legacy",
+                    "phone": "telegram-chat-1",
+                    "active": True,
+                },
+            ],
+            "vendor_projects": [
+                {"vendor_id": "legacy-vendor", "project_id": "project-1"},
+            ],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+            ],
+        }
+    )
+    telegram_client = _telegram_client_mock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "telegram-chat-1", "availability"
+        )
+
+    message = telegram_client.send_text.call_args.args[1]
+    assert result == "UNASSIGNED_VENDOR"
+    assert "Lote 24" not in message
+    assert "vendor_projects" not in supabase.table_calls
+    assert "lots" not in supabase.table_calls
+
+
+async def test_linked_profile_without_org_vendor_does_not_use_phone_fallback():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _FilteredSupabase(
+        {
+            "profiles": [
+                {"id": "profile-1", "telegram_chat_id": "telegram-chat-1"},
+            ],
+            "organization_members": [
+                {"organization_id": "org-1", "user_id": "profile-1", "role": "vendor"},
+            ],
+            "vendors": [
+                {
+                    "id": "legacy-vendor",
+                    "user_id": "legacy-user",
+                    "organization_id": "org-1",
+                    "nombre": "Legacy",
+                    "phone": "telegram-chat-1",
+                    "active": True,
+                },
+            ],
+            "vendor_projects": [
+                {"vendor_id": "legacy-vendor", "project_id": "project-1"},
+            ],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+            ],
+        }
+    )
+    telegram_client = _telegram_client_mock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "telegram-chat-1", "availability"
+        )
+
+    message = telegram_client.send_text.call_args.args[1]
+    assert result == "UNASSIGNED_VENDOR"
+    assert "Lote 24" not in message
+    assert "vendor_projects" not in supabase.table_calls
+    assert "lots" not in supabase.table_calls
+
+
+async def test_unlinked_chat_can_use_legacy_phone_fallback_when_active_and_assigned():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _FilteredSupabase(
+        {
+            "profiles": [],
+            "vendors": [
+                {
+                    "id": "legacy-vendor",
+                    "user_id": "legacy-user",
+                    "organization_id": "org-1",
+                    "nombre": "Legacy",
+                    "phone": "telegram-chat-1",
+                    "active": True,
+                },
+            ],
+            "vendor_projects": [
+                {"vendor_id": "legacy-vendor", "project_id": "project-1"},
+            ],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+            ],
+        }
+    )
+    telegram_client = _telegram_client_mock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "telegram-chat-1", "availability"
+        )
+
+    message = telegram_client.send_text.call_args.args[1]
+    assert result == "AVAILABILITY:1"
+    assert "Lote 24" in message
+
+
+async def test_unlinked_telegram_chat_is_rejected_without_commercial_data():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _FilteredSupabase(
+        {
+            "profiles": [],
+            "vendors": [],
+            "vendor_projects": [{"vendor_id": "vendor-1", "project_id": "project-1"}],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+            ],
+        }
+    )
+    telegram_client = _telegram_client_mock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "unknown-chat", "availability"
+        )
+
+    message = telegram_client.send_text.call_args.args[1]
+    assert result == "UNASSIGNED_VENDOR"
+    assert "Lote 24" not in message
+    assert "lots" not in supabase.table_calls
+
+
+async def test_inactive_linked_vendor_is_rejected_without_lot_lookup():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _FilteredSupabase(
+        {
+            "profiles": [
+                {"id": "profile-1", "telegram_chat_id": "telegram-chat-1"},
+            ],
+            "organization_members": [
+                {"organization_id": "org-1", "user_id": "profile-1", "role": "vendor"},
+            ],
+            "vendors": [
+                {
+                    "id": "vendor-1",
+                    "user_id": "profile-1",
+                    "organization_id": "org-1",
+                    "nombre": "Vendedora",
+                    "phone": "+56911111111",
+                    "active": False,
+                },
+            ],
+            "vendor_projects": [{"vendor_id": "vendor-1", "project_id": "project-1"}],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+            ],
+        }
+    )
+    telegram_client = _telegram_client_mock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "telegram-chat-1", "availability"
+        )
+
+    message = telegram_client.send_text.call_args.args[1]
+    assert result == "UNASSIGNED_VENDOR"
+    assert "Lote 24" not in message
+    assert "vendor_projects" not in supabase.table_calls
+    assert "lots" not in supabase.table_calls
+
+
+async def test_linked_vendor_without_project_assignments_is_rejected_before_lot_lookup():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _FilteredSupabase(
+        {
+            "profiles": [
+                {"id": "profile-1", "telegram_chat_id": "telegram-chat-1"},
+            ],
+            "organization_members": [
+                {"organization_id": "org-1", "user_id": "profile-1", "role": "vendor"},
+            ],
+            "vendors": [
+                {
+                    "id": "vendor-1",
+                    "user_id": "profile-1",
+                    "organization_id": "org-1",
+                    "nombre": "Vendedora",
+                    "phone": "+56911111111",
+                    "active": True,
+                },
+            ],
+            "vendor_projects": [],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+            ],
+        }
+    )
+    telegram_client = _telegram_client_mock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "telegram-chat-1", "availability"
+        )
+
+    message = telegram_client.send_text.call_args.args[1]
+    assert result == "UNASSIGNED_VENDOR"
+    assert "Lote 24" not in message
+    assert "lots" not in supabase.table_calls
 
 
 async def test_unassigned_or_foreign_vendor_is_rejected():
@@ -82,7 +581,48 @@ async def test_unassigned_or_foreign_vendor_is_rejected():
         )
 
     assert result == "UNASSIGNED_VENDOR"
-    assert "No tienes proyectos asignados" in telegram_client.send_text.call_args.args[1]
+    assert "validar tu acceso" in telegram_client.send_text.call_args.args[1]
+
+
+async def test_unassigned_vendor_denial_is_audited_without_lot_lookup():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _FilteredSupabase(
+        {
+            "profiles": [],
+            "vendors": [],
+            "vendor_projects": [{"vendor_id": "vendor-1", "project_id": "project-1"}],
+            "lots": [
+                {
+                    "id": "lot-available",
+                    "numero_lote": "24",
+                    "estado": "disponible",
+                    "project_id": "project-1",
+                },
+            ],
+        }
+    )
+    telegram_client = _telegram_client_mock()
+    audit_log = AsyncMock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch("workers.tasks.message_processor.log_agent_action", new=audit_log),
+    ):
+        result = await process_vendor_telegram_operation(
+            {}, "org-1", "unknown-chat", "availability"
+        )
+
+    assert result == "UNASSIGNED_VENDOR"
+    assert "lots" not in supabase.table_calls
+    audit_log.assert_awaited_once()
+    kwargs = audit_log.call_args.kwargs
+    assert kwargs["action"] == "telegram.vendor.operation_denied"
+    assert kwargs["payload"]["reason"] == "vendor_context_unresolved"
 
 
 async def test_assigned_vendor_can_create_reservation_request_from_telegram():
@@ -93,6 +633,9 @@ async def test_assigned_vendor_can_create_reservation_request_from_telegram():
     )
     assignments_table = _table_with_execute([{"project_id": "project-1"}])
     profiles_table = _table_with_execute([{"id": "user-1", "phone": "telegram-chat-1"}])
+    members_table = _table_with_execute(
+        [{"organization_id": "org-1", "user_id": "user-1", "role": "vendor"}]
+    )
     
     lots_table = MagicMock()
     select_mock = MagicMock()
@@ -121,11 +664,13 @@ async def test_assigned_vendor_can_create_reservation_request_from_telegram():
         "lots": lots_table,
         "approval_requests": approvals_table,
         "profiles": profiles_table,
+        "organization_members": members_table,
     }[name]
     telegram_client = MagicMock()
     telegram_client.send_text = AsyncMock()
     redis = MagicMock()
     redis.enqueue_job = AsyncMock()
+    audit_log = AsyncMock()
 
     with (
         patch("core.database.get_supabase_client", return_value=supabase),
@@ -135,6 +680,7 @@ async def test_assigned_vendor_can_create_reservation_request_from_telegram():
             "workers.tasks.message_processor.get_telegram_client_for_org",
             new=AsyncMock(return_value=telegram_client),
         ),
+        patch("workers.tasks.message_processor.log_agent_action", new=audit_log),
     ):
         result = await process_vendor_telegram_operation(
             {"redis": redis},
@@ -153,7 +699,209 @@ async def test_assigned_vendor_can_create_reservation_request_from_telegram():
 
     assert result == "RESERVATION_REQUESTED:approval-1"
     approvals_table.insert.assert_called_once()
+    inserted_request = approvals_table.insert.call_args.args[0]
+    assert inserted_request["status"] == "pending"
+    assert inserted_request["lot_id"] == "4f8dbde6-7788-4444-a111-c678a9c04909"
+    assert inserted_request["organization_id"] == "org-1"
+    assert inserted_request["vendor_id"] == "vendor-1"
+    assert inserted_request["vendor_platform"] == "telegram"
+    assert inserted_request["payload"] == {
+        "cliente_nombre": "Comprador Demo",
+        "cliente_run": "12.345.678-9",
+        "valor_reserva": 500000.0,
+        "notaria": None,
+        "fecha_firma": None,
+    }
+    assert "approved" not in inserted_request.values()
+    approvals_table.update.assert_not_called()
+    lots_table.update.assert_not_called()
     redis.enqueue_job.assert_awaited_once_with("notify_admin_approval", "approval-1")
+    audit_log.assert_awaited_once()
+    audit_kwargs = audit_log.call_args.kwargs
+    assert audit_kwargs["action"] == "telegram.vendor.reservation_requested"
+    assert audit_kwargs["entity_id"] == "approval-1"
+    assert audit_kwargs["payload"]["status"] == "pending"
+    assert audit_kwargs["payload"]["lot_id"] == "4f8dbde6-7788-4444-a111-c678a9c04909"
+
+
+async def test_telegram_reservation_invalid_payload_is_rejected_before_central_request():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _linked_vendor_filtered_supabase()
+    telegram_client = _telegram_client_mock()
+    audit_log = AsyncMock()
+    request_reservation = AsyncMock()
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch("api.v1.endpoints.approvals.request_reservation", new=request_reservation),
+        patch("workers.tasks.message_processor.log_agent_action", new=audit_log),
+    ):
+        result = await process_vendor_telegram_operation(
+            {"redis": MagicMock()},
+            "org-1",
+            "telegram-chat-1",
+            "reserve",
+            {
+                "lot_id": "lot-available",
+                "payload": {
+                    "cliente_nombre": "Comprador Demo",
+                    "cliente_run": "12.345.678-9",
+                    "valor_reserva": "abc",
+                },
+            },
+        )
+
+    assert result == "INVALID_RESERVATION_DATA"
+    request_reservation.assert_not_awaited()
+    message = telegram_client.send_text.call_args.args[1]
+    assert "valor de reserva" in message.lower()
+    assert "Ejemplo:" in message
+    audit_log.assert_awaited_once()
+    assert audit_log.call_args.kwargs["action"] == "telegram.vendor.operation_denied"
+    assert audit_log.call_args.kwargs["payload"]["reason"] == "invalid_reservation_payload"
+
+
+async def test_telegram_reservation_invalid_lot_returns_operational_copy_and_audit():
+    from fastapi import HTTPException
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    supabase = _linked_vendor_filtered_supabase()
+    telegram_client = _telegram_client_mock()
+    audit_log = AsyncMock()
+    request_reservation = AsyncMock(
+        side_effect=HTTPException(status_code=404, detail="Lote no encontrado.")
+    )
+
+    with (
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch("api.v1.endpoints.approvals.request_reservation", new=request_reservation),
+        patch("workers.tasks.message_processor.log_agent_action", new=audit_log),
+    ):
+        result = await process_vendor_telegram_operation(
+            {"redis": MagicMock()},
+            "org-1",
+            "telegram-chat-1",
+            "reserve",
+            {
+                "lot_id": "lot-missing",
+                "payload": {
+                    "cliente_nombre": "Comprador Demo",
+                    "cliente_run": "12.345.678-9",
+                    "valor_reserva": 500000,
+                },
+            },
+        )
+
+    assert result == "RESERVATION_FAILED"
+    request_reservation.assert_awaited_once()
+    message = telegram_client.send_text.call_args.args[1]
+    assert "Lote no encontrado" in message
+    assert "consulta /lotes" in message
+    audit_log.assert_awaited_once()
+    assert audit_log.call_args.kwargs["action"] == "telegram.vendor.operation_denied"
+    assert audit_log.call_args.kwargs["payload"]["reason"] == "reservation_rejected"
+
+
+async def test_telegram_reservation_existing_pending_request_does_not_auto_approve_or_notify():
+    from workers.tasks.message_processor import process_vendor_telegram_operation
+
+    vendor_table = _table_with_execute(
+        [
+            {
+                "id": "vendor-1",
+                "organization_id": "org-1",
+                "nombre": "Vendedora",
+                "active": True,
+            }
+        ]
+    )
+    assignments_table = _table_with_execute([{"project_id": "project-1"}])
+    profiles_table = _table_with_execute([{"id": "user-1", "phone": "telegram-chat-1"}])
+    members_table = _table_with_execute(
+        [{"organization_id": "org-1", "user_id": "user-1", "role": "vendor"}]
+    )
+
+    lots_table = MagicMock()
+    select_mock = MagicMock()
+    lots_table.select = select_mock
+    lot_row = {
+        "id": "4f8dbde6-7788-4444-a111-c678a9c04909",
+        "estado": "disponible",
+        "numero_lote": "24",
+        "project_id": "project-1",
+        "projects": {"organization_id": "org-1"},
+    }
+    select_mock.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
+        data=[lot_row]
+    )
+    select_mock.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[lot_row]
+    )
+
+    approvals_table = MagicMock()
+    approvals_table.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[{"id": "existing-pending"}]
+    )
+
+    supabase = MagicMock()
+    supabase.table.side_effect = lambda name: {
+        "vendors": vendor_table,
+        "vendor_projects": assignments_table,
+        "lots": lots_table,
+        "approval_requests": approvals_table,
+        "profiles": profiles_table,
+        "organization_members": members_table,
+    }[name]
+    telegram_client = MagicMock()
+    telegram_client.send_text = AsyncMock()
+    redis = MagicMock()
+    redis.enqueue_job = AsyncMock()
+    audit_log = AsyncMock()
+
+    with (
+        patch("core.database.get_supabase_client", return_value=supabase),
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch("api.v1.endpoints.approvals.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch("workers.tasks.message_processor.log_agent_action", new=audit_log),
+    ):
+        result = await process_vendor_telegram_operation(
+            {"redis": redis},
+            "org-1",
+            "telegram-chat-1",
+            "reserve",
+            {
+                "lot_id": "4f8dbde6-7788-4444-a111-c678a9c04909",
+                "payload": {
+                    "cliente_nombre": "Comprador Demo",
+                    "cliente_run": "12.345.678-9",
+                    "valor_reserva": 500000,
+                },
+            },
+        )
+
+    assert result == "RESERVATION_FAILED"
+    message = telegram_client.send_text.call_args.args[1]
+    assert "pendiente" in message.lower()
+    approvals_table.insert.assert_not_called()
+    approvals_table.update.assert_not_called()
+    lots_table.update.assert_not_called()
+    redis.enqueue_job.assert_not_called()
+    audit_log.assert_awaited_once()
+    assert audit_log.call_args.kwargs["action"] == "telegram.vendor.operation_denied"
+    assert audit_log.call_args.kwargs["payload"]["reason"] == "reservation_rejected"
 
 
 async def test_process_incoming_message_reserva_quoted_args():
@@ -210,6 +958,56 @@ async def test_process_incoming_message_reserva_quoted_args():
                 }
             }
         )
+
+
+async def test_process_incoming_message_reserva_incomplete_args_sends_format_copy_and_audits():
+    from workers.tasks.message_processor import process_incoming_message
+
+    profiles_table = _table_with_execute([{"id": "user-1"}])
+    vendor_table = MagicMock()
+    vendor_table.select.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock(
+        data=[{"id": "vendor-1", "organization_id": "org-1", "nombre": "Vendedor Pro"}]
+    )
+
+    supabase = MagicMock()
+    supabase.table.side_effect = lambda name: {
+        "profiles": profiles_table,
+        "vendors": vendor_table,
+        "organization_members": _table_with_execute([]),
+    }[name]
+
+    telegram_client = _telegram_client_mock()
+    audit_log = AsyncMock()
+    redis = MagicMock()
+    payload = {
+        "platform": "telegram",
+        "phone_id": "telegram-chat-123",
+        "message_id": "msg-123",
+        "message_text": "/reserva lot-only",
+        "organization_id": "org-1",
+        "raw_payload": {},
+    }
+
+    with (
+        patch("core.database.get_supabase_client", return_value=supabase),
+        patch("workers.tasks.message_processor.get_supabase_client", return_value=supabase),
+        patch(
+            "workers.tasks.message_processor.get_telegram_client_for_org",
+            new=AsyncMock(return_value=telegram_client),
+        ),
+        patch("workers.tasks.message_processor.process_vendor_telegram_operation") as mock_operation,
+        patch("workers.tasks.message_processor.log_agent_action", new=audit_log),
+    ):
+        result = await process_incoming_message({"redis": redis}, payload)
+
+    assert result == "MISSING_RESERVE_ARGS"
+    mock_operation.assert_not_called()
+    message = telegram_client.send_text.call_args.args[1]
+    assert "Formato de reserva incompleto" in message
+    assert "Ejemplo:" in message
+    audit_log.assert_awaited_once()
+    assert audit_log.call_args.kwargs["action"] == "telegram.vendor.operation_denied"
+    assert audit_log.call_args.kwargs["payload"]["reason"] == "invalid_reservation_format"
 
 
 async def test_telegram_client_send_failed_auditing():
@@ -447,6 +1245,3 @@ async def test_telegram_docs_shortcut_routing():
         result = await process_incoming_message({"redis": redis}, payload)
         
     assert result in ("DOCS_SHORTCUT_SUCCESS", "SUCCESS")
-
-
-

@@ -1,3 +1,5 @@
+import math
+
 from core.logger import get_logger
 from schemas.message_job import MessageJobPayload
 from agent.graph import get_graph_for_org
@@ -7,8 +9,133 @@ from core.database import get_supabase_client
 from integrations.meta_client import meta_client
 from integrations.telegram_client import get_telegram_client_for_org
 from utils.sanitize import sanitize_user_input
+from utils.audit import log_agent_action
 
 logger = get_logger(__name__)
+
+TELEGRAM_VENDOR_ACCESS_DENIED_MESSAGE = (
+    "No pudimos validar tu acceso de vendedor o no tienes proyectos asignados "
+    "en esta inmobiliaria. Escríbele al administrador de tu equipo para revisar "
+    "tu acceso."
+)
+TELEGRAM_RESERVATION_FORMAT_MESSAGE = (
+    'Formato de reserva incompleto. Envía: /reserva <lote_id> "Nombre comprador" '
+    '"RUN" <valor_reserva>\n'
+    'Ejemplo: /reserva 4f8dbde6-7788-4444-a111-c678a9c04909 '
+    '"Juan Pérez" "12.345.678-9" 500000'
+)
+
+
+def _first_data_row(result) -> dict | None:
+    data = getattr(result, "data", None)
+    if isinstance(data, list):
+        return data[0] if data else None
+    if isinstance(data, dict):
+        return data
+    return None
+
+
+def _clean_text(value) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _reservation_validation_message(reason: str) -> str:
+    return (
+        f"No pude crear la solicitud de reserva: {reason}\n\n"
+        f"{TELEGRAM_RESERVATION_FORMAT_MESSAGE}"
+    )
+
+
+def _reservation_failure_message(detail: str) -> str:
+    return (
+        "No se pudo enviar la solicitud de reserva. "
+        f"{detail} Revisa el lote y los datos, o consulta /lotes antes de intentar otra vez."
+    )
+
+
+def _validate_reservation_command_data(data: dict) -> tuple[dict | None, str | None]:
+    lot_id = _clean_text(data.get("lot_id"))
+    if not lot_id:
+        return None, "indica el ID del lote que quieres reservar."
+
+    payload_data = data.get("payload")
+    if not isinstance(payload_data, dict):
+        return None, "faltan los datos del comprador."
+
+    cliente_nombre = _clean_text(payload_data.get("cliente_nombre"))
+    if len(cliente_nombre) < 2:
+        return None, "indica el nombre del comprador."
+
+    cliente_run = _clean_text(payload_data.get("cliente_run"))
+    if len(cliente_run) < 7:
+        return None, "indica un RUN válido del comprador."
+
+    try:
+        valor_reserva = float(payload_data.get("valor_reserva"))
+    except (TypeError, ValueError):
+        return None, "el valor de reserva debe ser un número mayor a 0."
+
+    if not math.isfinite(valor_reserva) or valor_reserva <= 0:
+        return None, "el valor de reserva debe ser mayor a 0."
+
+    return (
+        {
+            "lot_id": lot_id,
+            "payload": {
+                "cliente_nombre": cliente_nombre,
+                "cliente_run": cliente_run,
+                "valor_reserva": valor_reserva,
+                "notaria": payload_data.get("notaria"),
+                "fecha_firma": payload_data.get("fecha_firma"),
+            },
+        },
+        None,
+    )
+
+
+async def _audit_telegram_vendor_operation(
+    action: str,
+    org_id: str,
+    telegram_chat_id: str,
+    operation: str,
+    *,
+    context: dict | None = None,
+    entity: str = "telegram_vendor_operation",
+    entity_id: str | None = None,
+    payload: dict | None = None,
+) -> None:
+    audit_payload = {
+        "channel": "telegram",
+        "telegram_chat_id": str(telegram_chat_id),
+        "operation": operation,
+    }
+    if context:
+        audit_payload.update(
+            {
+                "vendor_id": context.get("vendor_id"),
+                "project_count": len(context.get("project_ids") or []),
+            }
+        )
+    if payload:
+        audit_payload.update(payload)
+
+    try:
+        await log_agent_action(
+            actor=str(telegram_chat_id),
+            action=action,
+            entity=entity,
+            entity_id=entity_id or str(telegram_chat_id),
+            organization_id=org_id,
+            payload=audit_payload,
+        )
+    except Exception as err:
+        logger.warning(
+            "No se pudo registrar auditoría de operación Telegram vendedor.",
+            action=action,
+            error=str(err),
+        )
 
 
 async def resolve_telegram_actor_context(
@@ -56,10 +183,9 @@ async def resolve_telegram_actor_context(
 async def resolve_vendor_telegram_context(
     org_id: str, telegram_chat_id: str
 ) -> dict | None:
-    """Resolve an assigned vendor context from a Telegram chat id using profiles linking."""
+    """Resolve an assigned vendor context from a Telegram chat id using trusted links."""
     supabase = get_supabase_client()
-    
-    # 1. Buscar en profiles por telegram_chat_id
+
     profile_res = (
         supabase.table("profiles")
         .select("id, phone")
@@ -67,36 +193,54 @@ async def resolve_vendor_telegram_context(
         .limit(1)
         .execute()
     )
-    
-    vendor_res = None
-    if profile_res.data:
-        profile = profile_res.data[0]
-        # Buscar el vendor vinculado al perfil de usuario
+
+    profile = _first_data_row(profile_res)
+    vendor = None
+
+    if profile:
+        profile_id = profile.get("id")
+        if not profile_id:
+            return None
+
+        member_res = (
+            supabase.table("organization_members")
+            .select("role, organization_id")
+            .eq("organization_id", org_id)
+            .eq("user_id", profile_id)
+            .limit(1)
+            .execute()
+        )
+        if not _first_data_row(member_res):
+            return None
+
         vendor_res = (
             supabase.table("vendors")
             .select("id, user_id, organization_id, nombre, phone, active")
-            .eq("user_id", profile["id"])
+            .eq("user_id", profile_id)
             .eq("organization_id", org_id)
             .limit(1)
             .execute()
         )
-
-    # Fallback histórico: vendors.phone == telegram_chat_id
-    if not vendor_res or not vendor_res.data:
+        vendor = _first_data_row(vendor_res)
+        if not vendor:
+            return None
+    else:
+        # Fallback histórico: vendors.phone == telegram_chat_id.
+        # Solo aplica cuando no existe un perfil Telegram vinculado.
         vendor_res = (
             supabase.table("vendors")
             .select("id, user_id, organization_id, nombre, phone, active")
-            .eq("phone", telegram_chat_id)
+            .eq("phone", str(telegram_chat_id))
             .eq("organization_id", org_id)
             .limit(1)
             .execute()
         )
+        vendor = _first_data_row(vendor_res)
 
-    if not vendor_res.data:
+    if not vendor:
         return None
 
-    vendor = vendor_res.data[0]
-    if vendor.get("active") is False:
+    if vendor.get("active") is not True:
         return None
 
     assignments_res = (
@@ -137,10 +281,17 @@ async def process_vendor_telegram_operation(
     context = await resolve_vendor_telegram_context(org_id, telegram_chat_id)
     telegram_client = await get_telegram_client_for_org(org_id)
     if not context:
+        await _audit_telegram_vendor_operation(
+            "telegram.vendor.operation_denied",
+            org_id,
+            telegram_chat_id,
+            operation,
+            payload={"reason": "vendor_context_unresolved"},
+        )
         if telegram_client:
             await telegram_client.send_text(
                 telegram_chat_id,
-                "No tienes proyectos asignados para operar desde Telegram.",
+                TELEGRAM_VENDOR_ACCESS_DENIED_MESSAGE,
             )
         return "UNASSIGNED_VENDOR"
 
@@ -155,31 +306,82 @@ async def process_vendor_telegram_operation(
         )
         lots_res = lots_query.execute()
         lots = lots_res.data or []
+        await _audit_telegram_vendor_operation(
+            "telegram.vendor.availability_requested",
+            org_id,
+            telegram_chat_id,
+            operation,
+            context=context,
+            entity="lots",
+            entity_id=context["vendor_id"],
+            payload={"result_count": len(lots)},
+        )
         if telegram_client:
             lot_labels = ", ".join(f"Lote {lot['numero_lote']}" for lot in lots)
             await telegram_client.send_text(
                 telegram_chat_id,
-                lot_labels or "No hay lotes disponibles asignados.",
+                (
+                    f"Lotes disponibles asignados: {lot_labels}."
+                    if lot_labels
+                    else "No hay lotes disponibles en tus proyectos asignados por ahora."
+                ),
             )
         return f"AVAILABILITY:{len(lots)}"
 
     if operation == "reserve":
-        lot_id = data.get("lot_id")
-        payload_data = data.get("payload") or {}
-        if not lot_id:
-            return "MISSING_LOT_ID"
+        normalized_data, validation_error = _validate_reservation_command_data(data)
+        if validation_error:
+            if telegram_client:
+                await telegram_client.send_text(
+                    telegram_chat_id,
+                    _reservation_validation_message(validation_error),
+                )
+            await _audit_telegram_vendor_operation(
+                "telegram.vendor.operation_denied",
+                org_id,
+                telegram_chat_id,
+                operation,
+                context=context,
+                payload={
+                    "reason": "invalid_reservation_payload",
+                    "validation_error": validation_error,
+                },
+            )
+            return "INVALID_RESERVATION_DATA"
+
+        lot_id = normalized_data["lot_id"]
+        payload_data = normalized_data["payload"]
 
         from schemas.approval import ReservationRequest, ReservationPayload
         from api.v1.endpoints.approvals import request_reservation
 
-        # Estructurar payload de la reserva
-        payload_obj = ReservationPayload(
-            cliente_nombre=payload_data.get("cliente_nombre", "?"),
-            cliente_run=payload_data.get("cliente_run", "?"),
-            valor_reserva=float(payload_data.get("valor_reserva", 0.0)),
-            notaria=payload_data.get("notaria"),
-            fecha_firma=payload_data.get("fecha_firma"),
-        )
+        try:
+            payload_obj = ReservationPayload(
+                cliente_nombre=payload_data["cliente_nombre"],
+                cliente_run=payload_data["cliente_run"],
+                valor_reserva=payload_data["valor_reserva"],
+                notaria=payload_data.get("notaria"),
+                fecha_firma=payload_data.get("fecha_firma"),
+            )
+        except Exception as err:
+            detail = "los datos de reserva no tienen un formato válido."
+            if telegram_client:
+                await telegram_client.send_text(
+                    telegram_chat_id,
+                    _reservation_validation_message(detail),
+                )
+            await _audit_telegram_vendor_operation(
+                "telegram.vendor.operation_denied",
+                org_id,
+                telegram_chat_id,
+                operation,
+                context=context,
+                payload={
+                    "reason": "invalid_reservation_payload",
+                    "validation_error": str(err),
+                },
+            )
+            return "INVALID_RESERVATION_DATA"
 
         body = ReservationRequest(
             lot_id=lot_id,
@@ -197,26 +399,68 @@ async def process_vendor_telegram_operation(
             # Llamar directamente al endpoint FastAPI centralizado (M1.2 / US2.1)
             res_val = await request_reservation(body, redis=redis_pool)
             approval_id = res_val.approval_id
+            request_status = getattr(res_val, "status", "pending")
+            if request_status != "pending":
+                raise RuntimeError("La solicitud de reserva no quedó pendiente.")
         except Exception as err:
             logger.error("Error al invocar request_reservation en Telegram.", error=str(err))
+            from fastapi import HTTPException
+            detail = str(err)
+            audit_action = "telegram.vendor.operation_failed"
+            reason = "reservation_failed"
+            if isinstance(err, HTTPException):
+                detail = str(err.detail)
+                if 400 <= err.status_code < 500:
+                    audit_action = "telegram.vendor.operation_denied"
+                    reason = "reservation_rejected"
+            await _audit_telegram_vendor_operation(
+                audit_action,
+                org_id,
+                telegram_chat_id,
+                operation,
+                context=context,
+                payload={
+                    "reason": reason,
+                    "lot_id": lot_id,
+                    "error": detail,
+                },
+            )
             if telegram_client:
-                from fastapi import HTTPException
-                detail = str(err)
-                if isinstance(err, HTTPException):
-                    detail = err.detail
                 await telegram_client.send_text(
                     telegram_chat_id,
-                    f"⚠️ No se pudo procesar la reserva:\n{detail}",
+                    _reservation_failure_message(detail),
                 )
             return "RESERVATION_FAILED"
 
+        await _audit_telegram_vendor_operation(
+            "telegram.vendor.reservation_requested",
+            org_id,
+            telegram_chat_id,
+            operation,
+            context=context,
+            entity="approval_requests",
+            entity_id=approval_id,
+            payload={
+                "lot_id": lot_id,
+                "approval_id": approval_id,
+                "status": "pending",
+            },
+        )
         if telegram_client:
             await telegram_client.send_text(
                 telegram_chat_id,
-                "Solicitud de reserva enviada al administrador exitosamente.",
+                "Solicitud de reserva enviada. Quedó pendiente de revisión del administrador.",
             )
         return f"RESERVATION_REQUESTED:{approval_id}"
 
+    await _audit_telegram_vendor_operation(
+        "telegram.vendor.operation_failed",
+        org_id,
+        telegram_chat_id,
+        operation,
+        context=context,
+        payload={"reason": "unknown_operation"},
+    )
     return "UNKNOWN_OPERATION"
 
 
@@ -243,6 +487,7 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
         lead_name = "Cliente"
         profile = None
         vendor_res = None
+        actor_ctx = None
 
         if payload.platform == "telegram":
             # Intentar resolver actor (admin o vendor) de forma segura por vinculación
@@ -385,19 +630,25 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
                     if telegram_client:
                         await telegram_client.send_text(
                             payload.phone_id,
-                            "⚠️ *Formato incorrecto.*\n\n"
-                            "Uso: `/reserva <lote_id> <cliente_nombre> <cliente_run> <valor_reserva>`\n"
-                            "Ejemplo: `/reserva UUID \"Juan Pérez\" \"12345678-9\" 500000`"
+                            TELEGRAM_RESERVATION_FORMAT_MESSAGE,
                         )
+                    await _audit_telegram_vendor_operation(
+                        "telegram.vendor.operation_denied",
+                        org_id,
+                        payload.phone_id,
+                        "reserve",
+                        payload={"reason": "invalid_reservation_format"},
+                    )
                     return "MISSING_RESERVE_ARGS"
                 
                 lot_id = parts[1]
                 cliente_nombre = parts[2].strip()
                 cliente_run = parts[3].strip()
+                valor_reserva_raw = parts[4].strip()
                 try:
-                    valor_reserva = float(parts[4])
+                    valor_reserva = float(valor_reserva_raw)
                 except ValueError:
-                    valor_reserva = 0.0
+                    valor_reserva = valor_reserva_raw
 
                 reserve_data = {
                     "lot_id": lot_id,
@@ -433,16 +684,46 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
         )
 
         # Preparamos el estado inicial extendido
+        trusted_profile_id = profile.get("id") if isinstance(profile, dict) else None
+        trusted_vendor_id = None
+        trusted_vendor_name = lead_name if role == "vendor" else None
+        trusted_vendor_phone = payload.phone_id if role == "vendor" else None
+
+        if vendor_res and getattr(vendor_res, "data", None):
+            vendor_row = vendor_res.data[0]
+            trusted_vendor_id = vendor_row.get("id")
+            trusted_vendor_name = vendor_row.get("nombre") or trusted_vendor_name
+        elif role == "vendor" and trusted_profile_id:
+            vendor_lookup = (
+                supabase.table("vendors")
+                .select("id, nombre, phone")
+                .eq("organization_id", org_id)
+                .eq("user_id", trusted_profile_id)
+                .limit(1)
+                .execute()
+            )
+            if vendor_lookup.data:
+                vendor_row = vendor_lookup.data[0]
+                trusted_vendor_id = vendor_row.get("id")
+                trusted_vendor_name = vendor_row.get("nombre") or trusted_vendor_name
+                trusted_vendor_phone = vendor_row.get("phone") or trusted_vendor_phone
+
         initial_state = {
             "messages": [HumanMessage(content=safe_message)],
             "role": role,
             "organization_id": org_id,
             "lead_info": {"phone": payload.phone_id, "name": lead_name},
             "context": "iniciando",
+            "user_id": trusted_profile_id,
+            "profile_id": trusted_profile_id,
+            "vendor_id": trusted_vendor_id,
+            "vendor_name": trusted_vendor_name,
+            "vendor_phone": trusted_vendor_phone,
+            "channel": payload.platform,
         }
 
         # Invocar pipeline LLM asíncrono
-        graph = await get_graph_for_org(org_id, role)
+        graph = await get_graph_for_org(org_id, role, runtime_state=initial_state)
         result = await graph.ainvoke(initial_state, config=config)
 
         # Extraer el último mensaje generado por el Agente
