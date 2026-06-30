@@ -111,10 +111,10 @@
 
 **Independent Test**: desde la matriz se llega a la matriz de escritura del proyecto sin buscar otra ruta.
 
-- [ ] T026 [US4] Eliminar `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/sag-article-two-panel.tsx` y `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/plano-archive-panel.tsx`, migrando su detalle al productor correspondiente
-- [ ] T027 [US4] Quitar la tabla + formulario inline de Roles SII de `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/detail/legal-control-center.tsx` (su override vive ahora en `sii-lot-group.tsx`)
-- [ ] T028 [US4] Agregar acceso directo a la matriz de escritura del proyecto (`/documentos/matriz/proyecto/[projectId]`) y, si hay ventas, contador de borradores
-- [ ] T029 [US4] Resolver el destino del huérfano `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/legal-variable-table.tsx` (reemplazado por `variable-matrix/`) — eliminar o reusar
+- [x] T026 [US4] Eliminados `sag-article-two-panel.tsx` y `plano-archive-panel.tsx` (su detalle vive ahora en la matriz por productor) _(hecho 2026-06-30)_
+- [x] T027 [US4] Quitada la tabla + formulario inline de Roles SII del CCL (override ahora en `sii-lot-detail.tsx`); CCL reescrito minimal (header + matriz + documentos/readiness/título). _(hecho 2026-06-30)_
+- [x] T028 [US4] Acceso directo "Ver matriz de escritura" → `/documentos/matriz/proyecto/[projectId]` en la cabecera del CCL. (Contador de borradores: opcional, diferido.) _(hecho 2026-06-30)_
+- [x] T029 [US4] Eliminado el huérfano `legal-variable-table.tsx` (nunca montado; reemplazado por `variable-matrix/`). _(hecho 2026-06-30)_
 
 **Checkpoint**: todas las user stories funcionan; acceso centralizado.
 
