@@ -183,6 +183,27 @@ export const LEGAL_VARIABLE_SOURCE_TYPE_LABELS = {
   post_minuta: 'Post minuta',
 } as const satisfies Record<LegalVariableSourceType, string>
 
+// SDD 013: productor canonico de cada variable (de quien/cuando se llena).
+// Lo provee el inventario en `producer` (derivado del catalogo en el backend,
+// expuesto via el contrato generado). Es el eje de agrupacion de la matriz.
+export const LEGAL_VARIABLE_PRODUCERS = [
+  'extracted',
+  'manual',
+  'authored',
+  'sale_gap',
+  'signing',
+] as const
+
+export type LegalVariableProducer = (typeof LEGAL_VARIABLE_PRODUCERS)[number]
+
+export const LEGAL_VARIABLE_PRODUCER_LABELS = {
+  extracted: 'Extraída',
+  manual: 'Manual',
+  authored: 'Autoría',
+  sale_gap: 'Hueco de venta',
+  signing: 'Firma',
+} as const satisfies Record<LegalVariableProducer, string>
+
 export const LEGAL_VARIABLE_SCOPES = ['project', 'lot', 'escritura_case'] as const
 
 export type LegalVariableScope = (typeof LEGAL_VARIABLE_SCOPES)[number]
@@ -503,6 +524,9 @@ export interface VariableInventoryItem extends Pick<
   label?: string
   description?: string
   source_ref?: LegalVariableSourceRef
+  // SDD 013: productor del inventario (contrato generado). Opcional para
+  // tolerar respuestas previas; los helpers asumen 'extracted' por defecto.
+  producer?: LegalVariableProducer
   evidence: DocumentEvidence[]
 }
 

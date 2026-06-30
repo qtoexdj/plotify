@@ -34,8 +34,8 @@
 
 - [x] T004 Exponer `producer` como `computed_field` en `VariableResolutionResponse` (derivado de `catalog.variable_producer`) en `/Users/matiasignacio/Developer/plotify/apps/api/schemas/legal_variables.py` _(hecho 2026-06-30)_
 - [x] T005 Regenerar el contrato tipado con `pnpm contracts:generate` y verificar `producer: string` en `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/services/plotify-chat.generated.ts` + `/Users/matiasignacio/Developer/plotify/packages/contracts/openapi/plotify-chat.v1.json` _(hecho 2026-06-30; tests inventario+catálogo verdes)_
-- [ ] T006 Definir el enum/labels de `producer` (extraída/manual/autoría/hueco de venta/firma) y los helpers de agrupación, colapso SII y progreso del molde en `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/legal/variable-matrix-model.ts`, consumiendo el tipo generado (no el mirror manual) — Principio IV
-- [ ] T007 [P] Tests unitarios de los helpers (agrupación por productor, colapso de `sii.unidad_nombre`+`sii.pre_rol_lote` por lote, conteo "por revisar", exclusión de `sale_gap`/`signing`) en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix-model.test.ts`
+- [x] T006 Definir el enum/labels de `producer` (extraída/manual/autoría/hueco de venta/firma) en `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/legal/variable-resolution-types.ts` y los helpers de agrupación, colapso SII y progreso del molde en `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/legal/variable-matrix-model.ts` _(hecho 2026-06-30)_
+- [x] T007 [P] Tests unitarios de los helpers (agrupación por productor, colapso de `sii.unidad_nombre`+`sii.pre_rol_lote` por lote, conteo "por revisar", exclusión de `sale_gap`/`signing`) en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix-model.test.ts` — **9 tests verdes, reproducen Teno 13/21/34** _(hecho 2026-06-30)_
 - [ ] T008 Scaffold del orquestador `VariableMatrix` (modos `scope: project | lot`) en `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/variable-matrix/variable-matrix.tsx`
 
 **Verify**: `pnpm test:web`
