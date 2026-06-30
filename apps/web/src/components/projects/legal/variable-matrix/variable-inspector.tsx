@@ -16,6 +16,7 @@ interface VariableInspectorProps {
   onApprove: (item: VariableInventoryItem) => void
   onEdit: (item: VariableInventoryItem) => void
   onBulkApprove: (variableKeys: string[]) => void
+  onOpenSiiDetail: () => void
 }
 
 export function VariableInspector({
@@ -24,6 +25,7 @@ export function VariableInspector({
   onApprove,
   onEdit,
   onBulkApprove,
+  onOpenSiiDetail,
 }: VariableInspectorProps) {
   if (!entry) {
     return (
@@ -43,16 +45,21 @@ export function VariableInspector({
             {entry.lotCount} lotes con {campo} del certificado SII.
           </p>
         </div>
-        {entry.bucket === 'por_revisar' ? (
-          <Button
-            type="button"
-            size="sm"
-            disabled={saving}
-            onClick={() => onBulkApprove([entry.variableKey])}
-          >
-            Aprobar {entry.lotCount} lotes
+        <div className="flex flex-wrap gap-2">
+          {entry.bucket === 'por_revisar' ? (
+            <Button
+              type="button"
+              size="sm"
+              disabled={saving}
+              onClick={() => onBulkApprove([entry.variableKey])}
+            >
+              Aprobar {entry.lotCount} lotes
+            </Button>
+          ) : null}
+          <Button type="button" size="sm" variant="outline" onClick={onOpenSiiDetail}>
+            Ver detalle por lote
           </Button>
-        ) : null}
+        </div>
       </div>
     )
   }

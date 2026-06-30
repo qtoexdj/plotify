@@ -90,6 +90,7 @@ describe('ProducerGroup', () => {
         onSelect={() => {}}
         onApprove={() => {}}
         onBulkApprove={() => {}}
+        onOpenSiiDetail={() => {}}
       />
     )
     expect(screen.getByText('Extraída')).toBeTruthy()
@@ -110,6 +111,7 @@ describe('ProducerGroup', () => {
         onSelect={() => {}}
         onApprove={onApprove}
         onBulkApprove={() => {}}
+        onOpenSiiDetail={() => {}}
       />
     )
     const approveButtons = screen.getAllByRole('button', { name: 'Aprobar' })
@@ -129,9 +131,28 @@ describe('ProducerGroup', () => {
         onSelect={() => {}}
         onApprove={() => {}}
         onBulkApprove={onBulkApprove}
+        onOpenSiiDetail={() => {}}
       />
     )
     fireEvent.click(screen.getByRole('button', { name: 'Aprobar 2' }))
     expect(onBulkApprove).toHaveBeenCalledWith(['vendedor.nombre', 'sii.unidad_nombre'])
+  })
+
+  it('"Ver lotes" en la entrada colapsada dispara onOpenSiiDetail', () => {
+    const onOpenSiiDetail = vi.fn()
+    render(
+      <ProducerGroup
+        section={extractedSection()}
+        selectedId={null}
+        savingId={null}
+        bulkSaving={false}
+        onSelect={() => {}}
+        onApprove={() => {}}
+        onBulkApprove={() => {}}
+        onOpenSiiDetail={onOpenSiiDetail}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Ver lotes' }))
+    expect(onOpenSiiDetail).toHaveBeenCalledTimes(1)
   })
 })

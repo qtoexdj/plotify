@@ -45,9 +45,17 @@ interface VariableRowProps {
   saving: boolean
   onSelect: (entry: MatrixEntry) => void
   onApprove: (item: VariableInventoryItem) => void
+  onOpenSiiDetail: () => void
 }
 
-export function VariableRow({ entry, selected, saving, onSelect, onApprove }: VariableRowProps) {
+export function VariableRow({
+  entry,
+  selected,
+  saving,
+  onSelect,
+  onApprove,
+  onOpenSiiDetail,
+}: VariableRowProps) {
   const canApprove = entry.kind === 'single' && isPorRevisar(entry)
   const confidence = entry.kind === 'single' ? formatConfidence(entry.item.confidence) : ''
 
@@ -94,7 +102,17 @@ export function VariableRow({ entry, selected, saving, onSelect, onApprove }: Va
           Aprobar
         </Button>
       ) : entry.kind === 'collapsed' ? (
-        <span className="shrink-0 text-xs text-muted-foreground">Ver lotes</span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={(event) => {
+            event.stopPropagation()
+            onOpenSiiDetail()
+          }}
+        >
+          Ver lotes
+        </Button>
       ) : null}
     </div>
   )

@@ -28,6 +28,7 @@ interface ProducerGroupProps {
   onSelect: (entry: MatrixEntry) => void
   onApprove: (item: VariableInventoryItem) => void
   onBulkApprove: (variableKeys: string[]) => void
+  onOpenSiiDetail: () => void
 }
 
 export function ProducerGroup({
@@ -38,6 +39,7 @@ export function ProducerGroup({
   onSelect,
   onApprove,
   onBulkApprove,
+  onOpenSiiDetail,
 }: ProducerGroupProps) {
   const Icon = PRODUCER_META[section.producer].icon
   const canBulk = ACTIONABLE_PRODUCERS.includes(section.producer) && section.porRevisar > 0
@@ -81,6 +83,7 @@ export function ProducerGroup({
             saving={entry.kind === 'single' && savingId === entry.id}
             onSelect={onSelect}
             onApprove={onApprove}
+            onOpenSiiDetail={onOpenSiiDetail}
           />
         ))}
       </div>

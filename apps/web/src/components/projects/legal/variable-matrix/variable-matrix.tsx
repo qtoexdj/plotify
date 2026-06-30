@@ -16,6 +16,7 @@ import type {
 import { MoldeProgressHeader } from './molde-progress-header'
 import { ProducerGroup } from './producer-group'
 import { SaleGapPanel } from './sale-gap-panel'
+import { SiiLotDetail } from './sii-lot-detail'
 import { VariableInspector } from './variable-inspector'
 
 /**
@@ -51,6 +52,7 @@ export function VariableMatrix({
   const [editorItem, setEditorItem] = useState<VariableInventoryItem | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
   const [bulkSaving, setBulkSaving] = useState(false)
+  const [siiDetailOpen, setSiiDetailOpen] = useState(false)
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -193,6 +195,7 @@ export function VariableMatrix({
                 onSelect={(entry) => setSelectedId(entry.id)}
                 onApprove={approve}
                 onBulkApprove={bulkApprove}
+                onOpenSiiDetail={() => setSiiDetailOpen(true)}
               />
             )
           )}
@@ -205,6 +208,7 @@ export function VariableMatrix({
             onApprove={approve}
             onEdit={openEditor}
             onBulkApprove={bulkApprove}
+            onOpenSiiDetail={() => setSiiDetailOpen(true)}
           />
         </aside>
       </div>
@@ -217,6 +221,13 @@ export function VariableMatrix({
         onSave={(variable, payload) => persist(variable, payload, 'Variable corregida')}
         onApprove={(variable, payload) => persist(variable, payload, 'Variable aprobada')}
         onMarkNotApplicable={(variable, payload) => persist(variable, payload, 'Marcada no aplica')}
+      />
+
+      <SiiLotDetail
+        projectId={projectId}
+        open={siiDetailOpen}
+        onOpenChange={setSiiDetailOpen}
+        onSaved={load}
       />
     </section>
   )
