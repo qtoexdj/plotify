@@ -21,11 +21,16 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+vi.mock('@/lib/services/microservice.client', () => ({
+  microserviceFetch: vi.fn(),
+}))
+
 vi.mock('@/lib/logger', () => ({
   logger: { error: vi.fn() },
 }))
 
 import { createClient } from '@/lib/supabase/server'
+import { microserviceFetch } from '@/lib/services/microservice.client'
 import { revalidatePath } from 'next/cache'
 import { toggleOrgSkill } from '@/actions/agent-skills.action'
 
@@ -80,7 +85,14 @@ function buildClientMock({
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 describe('toggleOrgSkill', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(microserviceFetch).mockResolvedValue({
+      data: { status: 'invalidated', organization_id: ORG_ID },
+      error: null,
+      status: 200,
+    })
+  })
 
   it('devuelve { success: false, error: "No autenticado" } cuando no hay usuario', async () => {
     const { supabase } = buildClientMock({ user: null })

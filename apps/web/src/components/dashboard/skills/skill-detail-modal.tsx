@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -53,6 +54,55 @@ function getRoleLabel(roles: string[] | null): string {
   return roles.join(', ')
 }
 
+export function getValidationLabel(status: string | null): string {
+  switch (status) {
+    case 'draft':
+      return 'Borrador'
+    case 'blocked':
+      return 'Revisar'
+    case 'valid':
+      return 'Validada'
+    default:
+      return status ?? 'Sin validar'
+  }
+}
+
+export function getMcpRequirementLabel(skill: SkillWithConfig): string {
+  if (!skill.requires_mcp) return 'Sin MCP'
+  switch (skill.mcp_requirement_state) {
+    case 'ready':
+      return 'MCP listo'
+    case 'revoked':
+      return 'Conexión revocada'
+    case 'expired':
+      return 'Conexión expirada'
+    case 'error':
+      return 'Conexión con error'
+    default:
+      return skill.mcp_ready ? 'MCP listo' : 'Requiere conexión'
+  }
+}
+
+export function getMcpRequirementDescription(skill: SkillWithConfig): string {
+  const provider = skill.mcp_provider ?? 'la integración'
+  switch (skill.mcp_requirement_state) {
+    case 'ready':
+      return `${provider} está conectado y aprobado para esta organización.`
+    case 'revoked':
+      return `${provider} fue revocada. Vuelve a conectar la integración antes de activar esta skill.`
+    case 'expired':
+      return `${provider} expiró. Renueva la conexión antes de activar esta skill.`
+    case 'error':
+      return `${provider} tiene un error operativo. Revisa la integración antes de activar esta skill.`
+    default:
+      return `Conecta ${provider} en integraciones antes de activar esta skill.`
+  }
+}
+
+function isMcpBlocked(skill: SkillWithConfig): boolean {
+  return Boolean(skill.requires_mcp && !skill.mcp_ready)
+}
+
 // Extraer parámetros del tool_definition
 export function getParameters(
   toolDefinition: unknown
@@ -78,10 +128,11 @@ export function getParameters(
 
 export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDetailModalProps) {
   const parameters = getParameters(skill.tool_definition)
+  const mcpBlocked = isMcpBlocked(skill)
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" data-testid="agent-skill-detail">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div
@@ -112,12 +163,64 @@ export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDet
             <Badge variant="outline">
               Rol: {getRoleLabel(skill.requires_role as string[] | null)}
             </Badge>
+            <Badge variant="outline">Versión v{skill.current_version}</Badge>
+            <Badge variant={skill.validation_status === 'blocked' ? 'destructive' : 'outline'}>
+              {getValidationLabel(skill.validation_status)}
+            </Badge>
+            {skill.approved_tool_slugs.length > 0 && (
+              <Badge variant="outline">
+                {skill.approved_tool_slugs.length}{' '}
+                {skill.approved_tool_slugs.length === 1 ? 'tool aprobada' : 'tools aprobadas'}
+              </Badge>
+            )}
             {skill.requires_mcp && skill.mcp_provider && (
-              <Badge variant="outline" className="border-purple-300 text-purple-600">
-                MCP: {skill.mcp_provider}
+              <Badge
+                variant={skill.mcp_ready ? 'outline' : 'destructive'}
+                className={skill.mcp_ready ? 'border-purple-300 text-purple-600' : ''}
+              >
+                {getMcpRequirementLabel(skill)}: {skill.mcp_provider}
               </Badge>
             )}
           </div>
+
+          {skill.requires_mcp && skill.mcp_provider && (
+            <div
+              data-testid="skill-detail-mcp-requirement"
+              className="rounded-lg border p-3 text-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">{getMcpRequirementLabel(skill)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {getMcpRequirementDescription(skill)}
+                  </p>
+                </div>
+                {!skill.mcp_ready && (
+                  <Button asChild size="sm" variant="outline" className="shrink-0">
+                    <a href="/agente/integrations" data-testid="skill-detail-mcp-cta">
+                      <HugeiconsIcon icon={DatabaseIcon} size={14} />
+                      Configurar
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {skill.approved_tool_slugs.length > 0 && (
+            <div data-testid="skill-detail-approved-tools">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Tools aprobadas
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {skill.approved_tool_slugs.map((toolSlug) => (
+                  <Badge key={toolSlug} variant="outline" className="font-mono text-xs">
+                    {toolSlug}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Parámetros */}
           {parameters.length > 0 && (
@@ -158,9 +261,11 @@ export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDet
                 {enabled ? 'Habilitada' : 'Deshabilitada'}
               </Label>
               <p className="text-xs text-muted-foreground">
-                {skill.is_system
-                  ? 'Esta skill del sistema siempre está activa'
-                  : 'Controla si tu agente puede usar esta herramienta'}
+                {mcpBlocked
+                  ? 'La integración requerida debe estar lista antes de activar esta skill'
+                  : skill.is_system
+                    ? 'Esta skill del sistema siempre está activa'
+                    : 'Controla si tu agente puede usar esta herramienta'}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -168,8 +273,9 @@ export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDet
                 <HugeiconsIcon icon={LockIcon} size={14} className="text-muted-foreground" />
               )}
               <Switch
+                aria-label={`Alternar ${skill.name}`}
                 checked={enabled}
-                disabled={skill.is_system ?? false}
+                disabled={(skill.is_system ?? false) || mcpBlocked}
                 onCheckedChange={(value) => onToggle(skill, value)}
               />
             </div>

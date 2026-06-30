@@ -98,6 +98,40 @@ export interface components {
       "change_note"?: string | null
       "content": string
     }
+    "CustomSkillPublishRequest": {
+      "change_summary"?: string | null
+      "organization_id": string
+      "skill_id": string
+    }
+    "CustomSkillResponse": {
+      "approved_tool_slugs": Array<string>
+      "current_version": number
+      "definition_markdown": string
+      "description": string
+      "id": string
+      "mcp_provider"?: string | null
+      "name": string
+      "organization_id": string
+      "requires_mcp"?: boolean
+      "requires_role": Array<string>
+      "slug": string
+      "updated_at"?: string | null
+      "validation_errors"?: Array<components["schemas"]["SkillValidationError"]>
+      "validation_status": "draft" | "valid" | "blocked"
+    }
+    "CustomSkillSaveRequest": {
+      "approved_tool_slugs"?: Array<string>
+      "change_summary"?: string | null
+      "definition_markdown": string
+      "description": string
+      "mcp_provider"?: string | null
+      "name": string
+      "organization_id": string
+      "requires_mcp"?: boolean
+      "requires_role"?: Array<string>
+      "skill_id"?: string | null
+      "slug": string
+    }
     "DecisionRequest": {
       "action": string
       "admin_id": string
@@ -665,6 +699,28 @@ export interface components {
       "source_legal_document_ids"?: Array<string>
       "superseded_certificate_count"?: number
       "text_source"?: string | null
+    }
+    "SkillValidationError": {
+      "code": string
+      "field"?: string | null
+      "message": string
+    }
+    "SkillValidationRequest": {
+      "approved_tool_slugs"?: Array<string>
+      "definition_markdown": string
+      "mcp_provider"?: string | null
+      "organization_id": string
+      "requires_mcp"?: boolean
+      "requires_role"?: Array<string>
+      "skill_id"?: string | null
+      "slug": string
+    }
+    "SkillValidationResponse": {
+      "approved_tool_slugs": Array<string>
+      "errors"?: Array<components["schemas"]["SkillValidationError"]>
+      "normalized_slug": string
+      "status": "valid" | "blocked"
+      "warnings"?: Array<string>
     }
     "StageOperationalResult": {
       "missing"?: Array<string>
@@ -1315,11 +1371,29 @@ export interface operations {
     requestBody: components["schemas"]["CreateVersionRequest"]
     response: void
   }
+  "save_custom_skill_api_v1_skills_custom_post": {
+    method: "POST"
+    path: "/api/v1/skills/custom"
+    requestBody: components["schemas"]["CustomSkillSaveRequest"]
+    response: components["schemas"]["CustomSkillResponse"]
+  }
+  "publish_custom_skill_api_v1_skills_custom_publish_post": {
+    method: "POST"
+    path: "/api/v1/skills/custom/publish"
+    requestBody: components["schemas"]["CustomSkillPublishRequest"]
+    response: components["schemas"]["CustomSkillResponse"]
+  }
   "invalidate_cache_api_v1_skills_invalidate_cache_post": {
     method: "POST"
     path: "/api/v1/skills/invalidate-cache"
     requestBody: components["schemas"]["InvalidateCacheRequest"]
     response: void
+  }
+  "validate_definition_api_v1_skills_validate_definition_post": {
+    method: "POST"
+    path: "/api/v1/skills/validate-definition"
+    requestBody: components["schemas"]["SkillValidationRequest"]
+    response: components["schemas"]["SkillValidationResponse"]
   }
   "generate_telegram_vincule_token_api_v1_users_telegram_token_post": {
     method: "POST"

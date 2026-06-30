@@ -24,3 +24,6 @@ class AgentState(TypedDict):
     ]  # UUID del admin (para resolver custom instructions — M-v2-6.4)
     profile_id: NotRequired[Optional[str]]
     vendor_id: NotRequired[Optional[str]]
+    vendor_name: NotRequired[Optional[str]]
+    vendor_phone: NotRequired[Optional[str]]
+    channel: NotRequired[Optional[str]]

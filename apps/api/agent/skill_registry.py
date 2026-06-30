@@ -14,7 +14,7 @@ M-v2-3.1
 import asyncio
 import json
 from dataclasses import asdict, dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from langchain_core.tools import StructuredTool
 
@@ -57,6 +57,8 @@ class ResolvedSkill:
     requires_mcp: bool = False
     mcp_provider: str | None = None
     mcp_ready: bool = True
+    mcp_connection_id: str | None = None
+    mcp_connection_status: str | None = None
     executable: bool = True
     blocked_reason: str | None = None
 
@@ -90,19 +92,53 @@ class SkillRuntimePayload:
     @property
     def allowed_tool_slugs(self) -> list[str]:
         slugs: list[str] = []
+        executable_skill_slugs = {
+            skill.slug for skill in self.skills if skill.executable
+        }
         for skill in self.skills:
             if not skill.executable:
                 continue
             if skill.slug in BUILTIN_HANDLERS and skill.slug not in slugs:
                 slugs.append(skill.slug)
+            elif (
+                skill.category == "mcp"
+                and skill.mcp_ready
+                and skill.mcp_connection_id
+                and skill.slug not in slugs
+            ):
+                slugs.append(skill.slug)
             for approved_slug in skill.approved_tool_slugs:
-                if approved_slug in BUILTIN_HANDLERS and approved_slug not in slugs:
+                if (
+                    approved_slug in BUILTIN_HANDLERS
+                    or approved_slug in executable_skill_slugs
+                ) and approved_slug not in slugs:
                     slugs.append(approved_slug)
         return slugs
 
     @property
     def tools(self) -> list[StructuredTool]:
-        return [BUILTIN_HANDLERS[slug] for slug in self.allowed_tool_slugs]
+        tools: list[StructuredTool] = []
+        skills_by_slug = {skill.slug: skill for skill in self.skills}
+        for slug in self.allowed_tool_slugs:
+            if slug in BUILTIN_HANDLERS:
+                tools.append(BUILTIN_HANDLERS[slug])
+                continue
+
+            skill = skills_by_slug.get(slug)
+            if (
+                skill
+                and skill.category == "mcp"
+                and skill.mcp_ready
+                and skill.mcp_connection_id
+            ):
+                tools.append(
+                    _create_mcp_tool(
+                        skill_slug=skill.slug,
+                        skill_description=skill.description,
+                        connection_id=skill.mcp_connection_id,
+                    )
+                )
+        return tools
 
     @property
     def markdown_instructions(self) -> str:
@@ -176,6 +212,47 @@ def _row_scope_matches(row: dict[str, Any], org_id: str) -> bool:
     return organization_id is None or organization_id == org_id
 
 
+def _index_mcp_connections_by_provider(
+    rows: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+) -> dict[str, dict[str, str | None]]:
+    connections: dict[str, dict[str, str | None]] = {}
+    for row in rows:
+        provider = str(row.get("provider") or "")
+        if not provider:
+            continue
+
+        connection = {
+            "id": str(row.get("id")) if row.get("id") else None,
+            "status": str(row.get("status") or "unknown"),
+        }
+        existing = connections.get(provider)
+        if existing is None or existing.get("status") != "active":
+            connections[provider] = connection
+
+    return connections
+
+
+def _resolve_mcp_connection_state(
+    *,
+    provider: str | None,
+    active_mcp_providers: set[str],
+    mcp_connections_by_provider: Mapping[str, Mapping[str, str | None]],
+) -> tuple[bool, str | None, str | None]:
+    if not provider:
+        return False, None, None
+
+    connection = mcp_connections_by_provider.get(str(provider))
+    if connection:
+        status = connection.get("status")
+        connection_id = connection.get("id")
+        return status == "active", connection_id, status
+
+    if str(provider) in active_mcp_providers:
+        return True, None, "active"
+
+    return False, None, None
+
+
 def _resolve_skill_rows(
     *,
     skill_rows: list[dict[str, Any]],
@@ -183,8 +260,10 @@ def _resolve_skill_rows(
     org_id: str,
     role: str,
     active_mcp_providers: set[str] | None = None,
+    mcp_connections_by_provider: Mapping[str, Mapping[str, str | None]] | None = None,
 ) -> SkillRuntimePayload:
     active_mcp_providers = active_mcp_providers or set()
+    mcp_connections_by_provider = mcp_connections_by_provider or {}
     enabled_config_ids = {
         str(row.get("skill_id"))
         for row in config_rows
@@ -203,10 +282,20 @@ def _resolve_skill_rows(
         validation_status = row.get("validation_status") or "valid"
         category = row.get("category") or "builtin"
         requires_mcp = bool(row.get("requires_mcp"))
-        mcp_provider = row.get("mcp_provider")
-        mcp_ready = (not requires_mcp) or (
-            bool(mcp_provider) and str(mcp_provider) in active_mcp_providers
-        )
+        mcp_provider = str(row.get("mcp_provider")) if row.get("mcp_provider") else None
+        mcp_ready = True
+        mcp_connection_id = None
+        mcp_connection_status = None
+        if requires_mcp:
+            (
+                mcp_ready,
+                mcp_connection_id,
+                mcp_connection_status,
+            ) = _resolve_mcp_connection_state(
+                provider=mcp_provider,
+                active_mcp_providers=active_mcp_providers,
+                mcp_connections_by_provider=mcp_connections_by_provider,
+            )
         blocked_reason = None
         executable = True
 
@@ -215,7 +304,11 @@ def _resolve_skill_rows(
             blocked_reason = "validation_blocked"
         elif requires_mcp and not mcp_ready:
             executable = False
-            blocked_reason = "mcp_connection_required"
+            blocked_reason = (
+                f"mcp_connection_{mcp_connection_status}"
+                if mcp_connection_status
+                else "mcp_connection_required"
+            )
         elif category == "custom" and not (row.get("definition_markdown") or "").strip():
             executable = False
             blocked_reason = "empty_markdown"
@@ -239,6 +332,8 @@ def _resolve_skill_rows(
                 requires_mcp=requires_mcp,
                 mcp_provider=mcp_provider,
                 mcp_ready=mcp_ready,
+                mcp_connection_id=mcp_connection_id,
+                mcp_connection_status=mcp_connection_status,
                 executable=executable,
                 blocked_reason=blocked_reason,
             )
@@ -288,9 +383,8 @@ async def get_skill_runtime_for_org(org_id: str, role: str) -> SkillRuntimePaylo
         )
         mcp_res = (
             supabase.table("mcp_connections")
-            .select("provider")
+            .select("id, provider, status")
             .eq("organization_id", org_id)
-            .eq("status", "active")
             .execute()
         )
         return global_res, custom_res, org_res, mcp_res
@@ -298,10 +392,13 @@ async def get_skill_runtime_for_org(org_id: str, role: str) -> SkillRuntimePaylo
     global_res, custom_res, org_res, mcp_res = await asyncio.to_thread(_fetch)
 
     skill_rows = list(global_res.data or []) + list(custom_res.data or [])
+    mcp_connections_by_provider = _index_mcp_connections_by_provider(
+        list(mcp_res.data or [])
+    )
     active_mcp_providers = {
-        row.get("provider")
-        for row in (mcp_res.data or [])
-        if row.get("provider")
+        provider
+        for provider, connection in mcp_connections_by_provider.items()
+        if connection.get("status") == "active"
     }
     runtime = _resolve_skill_rows(
         skill_rows=skill_rows,
@@ -309,6 +406,7 @@ async def get_skill_runtime_for_org(org_id: str, role: str) -> SkillRuntimePaylo
         org_id=org_id,
         role=role,
         active_mcp_providers={str(provider) for provider in active_mcp_providers},
+        mcp_connections_by_provider=mcp_connections_by_provider,
     )
 
     await redis.setex(cache_key, SKILLS_CACHE_TTL, runtime.to_cache_json())

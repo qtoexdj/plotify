@@ -26,11 +26,12 @@ async def check_lot_availability(
 ) -> str:
     """Busca y filtra parcelas para responder a los clientes. Úsala para saber qué lotes o terrenos están disponibles.
     Argumentos:
-    - organization_id (requerido): ID de la organización para aislar los datos.
+    - organization_id (inyectado por runtime): ID confiable de la organización para aislar los datos.
     - max_price (opcional): si el cliente menciona un presupuesto máximo.
     - min_m2 (opcional): si el cliente quiere un terreno de al menos cierto metraje.
     - numero_lote (opcional): si el cliente pregunta por el estado de un lote exacto (ej. Lote 2).
     """
+    organization_id = str(organization_id or "").strip()
     if not organization_id:
         logger.error("check_lot_availability llamada sin organization_id")
         return "Error interno: se requiere organization_id para buscar lotes."
@@ -94,9 +95,10 @@ async def get_lot_stage(
 ) -> str:
     """Retorna la etapa actual de un lote en el pipeline de proceso.
     Argumentos:
-    - organization_id (requerido): ID de la organización para aislamiento multi-tenant.
+    - organization_id (inyectado por runtime): ID confiable de la organización.
     - numero_lote (requerido): número exacto del lote a consultar.
     """
+    organization_id = str(organization_id or "").strip()
     if not organization_id:
         return "Error: organization_id es requerido"
 

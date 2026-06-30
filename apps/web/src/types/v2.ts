@@ -29,6 +29,9 @@ export type AgentCustomInstruction =
 // ─── Utility / Composed Types ─────────────────────────────────────────────────
 export type SkillWithConfig = AgentSkill & {
   org_config?: OrgSkillConfig | null
+  mcp_ready?: boolean
+  mcp_requirement_state?: 'none' | 'ready' | 'pending' | 'revoked' | 'expired' | 'error'
+  mcp_connection_status?: McpConnection['status'] | null
 }
 
 export type TemplateWithBlocks = DocumentTemplate & {

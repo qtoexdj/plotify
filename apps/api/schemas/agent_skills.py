@@ -36,6 +36,7 @@ class SkillValidationResponse(BaseModel):
 
 class CustomSkillSaveRequest(BaseModel):
     organization_id: str
+    skill_id: str | None = None
     slug: str = Field(..., min_length=2, max_length=80)
     name: str = Field(..., min_length=2, max_length=120)
     description: str = Field(..., min_length=2, max_length=500)

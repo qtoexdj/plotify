@@ -129,7 +129,50 @@ pnpm verify:migrations
 ./apps/api/.venv/bin/python scripts/export_openapi_contract.py
 ```
 
-Validacion manual pendiente hasta implementar las historias correspondientes:
+## 10. Notas de validacion de cierre
 
-- Telegram vendedor E2E: pendiente de US1.
-- Crear, validar, publicar y activar custom skill desde UI: pendiente de US3.
+Fecha: 2026-06-30.
+
+Alcance validado en el cierre SDD 012:
+
+- Telegram vendedor: cubierto por pruebas API para webhook con
+  `secret_token`, vendedor vinculado/no vinculado/inactivo/sin asignacion,
+  aislamiento cross-tenant, lotes no disponibles, formato invalido y reserva
+  siempre `pending`.
+- Custom skills markdown: cubierto por pruebas API y web para validar, guardar,
+  publicar, versionar, limitar por rol y bloquear tools no aprobadas,
+  instrucciones peligrosas o MCP sin conexion activa.
+- Runtime del agente: cubierto por pruebas de contexto confiable para que
+  `organization_id`, rol, perfil y vendedor no dependan de argumentos del LLM.
+- MCP futuro: cubierto por gating de conexion activa y validacion de URL/timeout
+  del gateway.
+- Contratos y tipos: OpenAPI y cliente web regenerados con
+  `pnpm contracts:generate`; tipos Supabase disponibles desde la fuente
+  canonica `packages/database/types/database.generated.ts`.
+
+Comandos ejecutados en el cierre:
+
+```bash
+codegraph sync .
+pnpm verify:migrations
+pnpm contracts:generate
+pnpm test:api
+pnpm test:web
+pnpm typecheck:web
+pnpm --filter web lint
+pnpm format:check
+pnpm build:web
+```
+
+Resultado local:
+
+- `pnpm test:api`: 629 passed, 2 skipped.
+- `pnpm test:web`: 724 passed.
+- `pnpm typecheck:web`, `pnpm --filter web lint`, `pnpm format:check`,
+  `pnpm build:web`, `pnpm verify:migrations` y `pnpm contracts:generate`:
+  PASS.
+
+Validacion manual pendiente fuera del entorno local:
+
+- Pasada E2E con un bot Telegram real, una organizacion de prueba y un vendedor
+  vinculado, para confirmar entrega real de mensajes y notificaciones.

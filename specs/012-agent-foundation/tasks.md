@@ -58,18 +58,18 @@
 ### Tests for User Story 1
 
 - [x] T014 [P] [US1] Add Telegram webhook `secret_token` registration and rejection tests in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
-- [ ] T015 [P] [US1] Add seller Telegram isolation tests for linked, unlinked, inactive, unassigned, foreign project, and unavailable lot cases in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_mvp_vendor_telegram.py`
-- [ ] T016 [P] [US1] Add reservation pending-status and no-auto-approval tests for Telegram seller operations in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_mvp_vendor_telegram.py`
+- [x] T015 [P] [US1] Add seller Telegram isolation tests for linked, unlinked, inactive, unassigned, foreign project, and unavailable lot cases in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_mvp_vendor_telegram.py`
+- [x] T016 [P] [US1] Add reservation pending-status and no-auto-approval tests for Telegram seller operations in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_mvp_vendor_telegram.py`
 
 ### Implementation for User Story 1
 
 - [x] T017 [US1] Extend bot registration to send Telegram `secret_token` when configured in `/Users/matiasignacio/Developer/plotify/apps/api/api/v1/endpoints/bots.py`
-- [ ] T018 [US1] Harden Telegram webhook unauthorized logging and payload handling for missing/invalid secret token in `/Users/matiasignacio/Developer/plotify/apps/api/api/v1/endpoints/webhook.py`
-- [ ] T019 [US1] Tighten linked seller resolution to prefer `profiles.telegram_chat_id`, active vendor, membership, and assigned projects before fallback in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
-- [ ] T020 [US1] Validate `/reserva` Telegram payload fields before creating `ReservationPayload` and return operational errors for incomplete or invalid values in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
-- [ ] T021 [US1] Add audit logging for Telegram availability, reservation requested, denied, and failed operations in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
-- [ ] T022 [US1] Ensure Telegram seller reservation path always uses centralized `request_reservation` and leaves `approval_requests.status` pending in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
-- [ ] T023 [US1] Update seller Telegram user-facing copy for success, unassigned, invalid lot, and invalid reservation format in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
+- [x] T018 [US1] Harden Telegram webhook unauthorized logging and payload handling for missing/invalid secret token in `/Users/matiasignacio/Developer/plotify/apps/api/api/v1/endpoints/webhook.py`
+- [x] T019 [US1] Tighten linked seller resolution to prefer `profiles.telegram_chat_id`, active vendor, membership, and assigned projects before fallback in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
+- [x] T020 [US1] Validate `/reserva` Telegram payload fields before creating `ReservationPayload` and return operational errors for incomplete or invalid values in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
+- [x] T021 [US1] Add audit logging for Telegram availability, reservation requested, denied, and failed operations in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
+- [x] T022 [US1] Ensure Telegram seller reservation path always uses centralized `request_reservation` and leaves `approval_requests.status` pending in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
+- [x] T023 [US1] Update seller Telegram user-facing copy for success, unassigned, invalid lot, and invalid reservation format in `/Users/matiasignacio/Developer/plotify/apps/api/workers/tasks/message_processor.py`
 
 **Verify**: `pnpm test:api`
 
@@ -85,18 +85,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T024 [P] [US2] Add web action tests asserting `toggleOrgSkill` calls `/api/v1/skills/invalidate-cache` and handles invalidation failure in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.action.test.ts`
-- [ ] T025 [P] [US2] Add API cache invalidation tests for all agent roles in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
-- [ ] T026 [P] [US2] Add web component tests for system skill disabled toggle, custom/MCP badges, and optimistic rollback in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.components.test.tsx`
+- [x] T024 [P] [US2] Add web action tests asserting `toggleOrgSkill` calls `/api/v1/skills/invalidate-cache` and handles invalidation failure in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.action.test.ts`
+- [x] T025 [P] [US2] Add API cache invalidation tests for all agent roles in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
+- [x] T026 [P] [US2] Add web component tests for system skill disabled toggle, custom/MCP badges, and optimistic rollback in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.components.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Add microservice invalidation call after successful skill toggle in `/Users/matiasignacio/Developer/plotify/apps/web/src/actions/agent-skills.action.ts`
-- [ ] T028 [US2] Return invalidation errors from skill toggle without reporting success in `/Users/matiasignacio/Developer/plotify/apps/web/src/actions/agent-skills.action.ts`
-- [ ] T029 [US2] Extend skill listing to include scoped custom skills, current version, validation status, approved tools, and MCP requirement state in `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/services/agent-skills.service.ts`
-- [ ] T030 [US2] Update skill grid data-testids, badges, disabled states, and invalidation error handling in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/skills-grid.tsx`
-- [ ] T031 [US2] Update skill detail modal to show version, validation status, approved tools, and MCP requirement state in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/skill-detail-modal.tsx`
-- [ ] T032 [US2] Add or extend route wiring so `/agente/skills` can render scoped custom skill metadata in `/Users/matiasignacio/Developer/plotify/apps/web/src/app/(dashboard)/agente/skills/page.tsx`
+- [x] T027 [US2] Add microservice invalidation call after successful skill toggle in `/Users/matiasignacio/Developer/plotify/apps/web/src/actions/agent-skills.action.ts`
+- [x] T028 [US2] Return invalidation errors from skill toggle without reporting success in `/Users/matiasignacio/Developer/plotify/apps/web/src/actions/agent-skills.action.ts`
+- [x] T029 [US2] Extend skill listing to include scoped custom skills, current version, validation status, approved tools, and MCP requirement state in `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/services/agent-skills.service.ts`
+- [x] T030 [US2] Update skill grid data-testids, badges, disabled states, and invalidation error handling in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/skills-grid.tsx`
+- [x] T031 [US2] Update skill detail modal to show version, validation status, approved tools, and MCP requirement state in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/skill-detail-modal.tsx`
+- [x] T032 [US2] Add or extend route wiring so `/agente/skills` can render scoped custom skill metadata in `/Users/matiasignacio/Developer/plotify/apps/web/src/app/(dashboard)/agente/skills/page.tsx`
 
 **Verify**: `pnpm test:api`, `pnpm test:web`, and `pnpm typecheck:web`
 
@@ -112,21 +112,21 @@
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] Add API validation tests for valid markdown, empty markdown, unapproved tool, incompatible role, permission bypass, and MCP without connection in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
-- [ ] T034 [P] [US3] Add web action tests for creating, validating, publishing, and versioning custom skills in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.action.test.ts`
-- [ ] T035 [P] [US3] Add component tests for markdown editor, approved tools picker, and validation panel in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.components.test.tsx`
+- [x] T033 [P] [US3] Add API validation tests for valid markdown, empty markdown, unapproved tool, incompatible role, permission bypass, and MCP without connection in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
+- [x] T034 [P] [US3] Add web action tests for creating, validating, publishing, and versioning custom skills in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.action.test.ts`
+- [x] T035 [P] [US3] Add component tests for markdown editor, approved tools picker, and validation panel in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.components.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T036 [US3] Add internal skill definition validation endpoint `/api/v1/skills/validate-definition` in `/Users/matiasignacio/Developer/plotify/apps/api/api/v1/endpoints/skills.py`
-- [ ] T037 [US3] Add custom skill create/update/publish endpoint handlers using `agent_skill_versions` in `/Users/matiasignacio/Developer/plotify/apps/api/api/v1/endpoints/skills.py`
-- [ ] T038 [US3] Add DB write helpers for custom skill versioning and audit actions in `/Users/matiasignacio/Developer/plotify/apps/api/services/agent_skill_validation.py`
-- [ ] T039 [US3] Add Pydantic request/response models for custom skill save, publish, validation errors, and version metadata in `/Users/matiasignacio/Developer/plotify/apps/api/schemas/agent_skills.py`
-- [ ] T040 [US3] Add `createCustomSkill`, `validateCustomSkill`, and `publishCustomSkill` server actions in `/Users/matiasignacio/Developer/plotify/apps/web/src/actions/agent-skills.action.ts`
-- [ ] T041 [P] [US3] Create custom skill editor component with markdown, metadata, roles, and save/publish actions in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/custom-skill-editor.tsx`
-- [ ] T042 [P] [US3] Create approved tools picker component filtered by role-compatible tools in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/approved-tools-picker.tsx`
-- [ ] T043 [P] [US3] Create skill validation panel component for blocked reasons and warnings in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/skill-validation-panel.tsx`
-- [ ] T044 [US3] Integrate custom skill creation flow into the skills page in `/Users/matiasignacio/Developer/plotify/apps/web/src/app/(dashboard)/agente/skills/page.tsx`
+- [x] T036 [US3] Add internal skill definition validation endpoint `/api/v1/skills/validate-definition` in `/Users/matiasignacio/Developer/plotify/apps/api/api/v1/endpoints/skills.py`
+- [x] T037 [US3] Add custom skill create/update/publish endpoint handlers using `agent_skill_versions` in `/Users/matiasignacio/Developer/plotify/apps/api/api/v1/endpoints/skills.py`
+- [x] T038 [US3] Add DB write helpers for custom skill versioning and audit actions in `/Users/matiasignacio/Developer/plotify/apps/api/services/agent_skill_validation.py`
+- [x] T039 [US3] Add Pydantic request/response models for custom skill save, publish, validation errors, and version metadata in `/Users/matiasignacio/Developer/plotify/apps/api/schemas/agent_skills.py`
+- [x] T040 [US3] Add `createCustomSkill`, `validateCustomSkill`, and `publishCustomSkill` server actions in `/Users/matiasignacio/Developer/plotify/apps/web/src/actions/agent-skills.action.ts`
+- [x] T041 [P] [US3] Create custom skill editor component with markdown, metadata, roles, and save/publish actions in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/custom-skill-editor.tsx`
+- [x] T042 [P] [US3] Create approved tools picker component filtered by role-compatible tools in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/approved-tools-picker.tsx`
+- [x] T043 [P] [US3] Create skill validation panel component for blocked reasons and warnings in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/skill-validation-panel.tsx`
+- [x] T044 [US3] Integrate custom skill creation flow into the skills page in `/Users/matiasignacio/Developer/plotify/apps/web/src/app/(dashboard)/agente/skills/page.tsx`
 
 **Verify**: `pnpm test:api`, `pnpm test:web`, `pnpm typecheck:web`, and `pnpm contracts:generate`
 
@@ -142,16 +142,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T045 [P] [US4] Add sensitive tool execution tests proving model-provided tenant/vendor arguments are ignored in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
-- [ ] T046 [P] [US4] Add audit tests for sensitive agent operations and failed business-rule responses in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
+- [x] T045 [P] [US4] Add sensitive tool execution tests proving model-provided tenant/vendor arguments are ignored in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
+- [x] T046 [P] [US4] Add audit tests for sensitive agent operations and failed business-rule responses in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
 
 ### Implementation for User Story 4
 
-- [ ] T047 [US4] Wrap sensitive agent tools with trusted runtime context and deterministic rule checks in `/Users/matiasignacio/Developer/plotify/apps/api/agent/runtime_context.py`
-- [ ] T048 [US4] Update lot and reservation tools to consume trusted context instead of LLM-controlled `organization_id` where applicable in `/Users/matiasignacio/Developer/plotify/apps/api/agent/tools/lot_search.py`
-- [ ] T049 [US4] Update reservation requirement and reservation-intent tool behavior to return pending/blocked outcomes only in `/Users/matiasignacio/Developer/plotify/apps/api/agent/tools/reservations.py`
-- [ ] T050 [US4] Add structured audit calls for allowed, denied, and failed sensitive tool executions in `/Users/matiasignacio/Developer/plotify/apps/api/agent/runtime_context.py`
-- [ ] T051 [US4] Update graph prompt assembly to include active markdown skill instructions without exposing secrets or raw DB payloads in `/Users/matiasignacio/Developer/plotify/apps/api/agent/graph.py`
+- [x] T047 [US4] Wrap sensitive agent tools with trusted runtime context and deterministic rule checks in `/Users/matiasignacio/Developer/plotify/apps/api/agent/runtime_context.py`
+- [x] T048 [US4] Update lot and reservation tools to consume trusted context instead of LLM-controlled `organization_id` where applicable in `/Users/matiasignacio/Developer/plotify/apps/api/agent/tools/lot_search.py`
+- [x] T049 [US4] Update reservation requirement and reservation-intent tool behavior to return pending/blocked outcomes only in `/Users/matiasignacio/Developer/plotify/apps/api/agent/tools/reservations.py`
+- [x] T050 [US4] Add structured audit calls for allowed, denied, and failed sensitive tool executions in `/Users/matiasignacio/Developer/plotify/apps/api/agent/runtime_context.py`
+- [x] T051 [US4] Update graph prompt assembly to include active markdown skill instructions without exposing secrets or raw DB payloads in `/Users/matiasignacio/Developer/plotify/apps/api/agent/graph.py`
 
 **Verify**: `pnpm test:api`
 
@@ -167,15 +167,15 @@
 
 ### Tests for User Story 5
 
-- [ ] T052 [P] [US5] Add MCP dependency gating tests for missing, revoked, and active connections in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
-- [ ] T053 [P] [US5] Add web tests for MCP pending badge and integration requirement copy in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.components.test.tsx`
+- [x] T052 [P] [US5] Add MCP dependency gating tests for missing, revoked, and active connections in `/Users/matiasignacio/Developer/plotify/apps/api/tests/test_agent_foundation.py`
+- [x] T053 [P] [US5] Add web tests for MCP pending badge and integration requirement copy in `/Users/matiasignacio/Developer/plotify/apps/web/tests/agent-foundation-skills.components.test.tsx`
 
 ### Implementation for User Story 5
 
-- [ ] T054 [US5] Add MCP connection status lookup to skill registry execution gating in `/Users/matiasignacio/Developer/plotify/apps/api/agent/skill_registry.py`
-- [ ] T055 [US5] Reduce MCP gateway timeout to the constitutional maximum and validate custom server URL host/scheme before execution in `/Users/matiasignacio/Developer/plotify/apps/api/integrations/mcp_gateway.py`
-- [ ] T056 [US5] Surface MCP blocked/ready state in skill service results in `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/services/agent-skills.service.ts`
-- [ ] T057 [US5] Add MCP requirement CTA and blocked state rendering in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/skill-detail-modal.tsx`
+- [x] T054 [US5] Add MCP connection status lookup to skill registry execution gating in `/Users/matiasignacio/Developer/plotify/apps/api/agent/skill_registry.py`
+- [x] T055 [US5] Reduce MCP gateway timeout to the constitutional maximum and validate custom server URL host/scheme before execution in `/Users/matiasignacio/Developer/plotify/apps/api/integrations/mcp_gateway.py`
+- [x] T056 [US5] Surface MCP blocked/ready state in skill service results in `/Users/matiasignacio/Developer/plotify/apps/web/src/lib/services/agent-skills.service.ts`
+- [x] T057 [US5] Add MCP requirement CTA and blocked state rendering in `/Users/matiasignacio/Developer/plotify/apps/web/src/components/dashboard/skills/skill-detail-modal.tsx`
 
 **Verify**: `pnpm test:api`, `pnpm test:web`, and `pnpm typecheck:web`
 
