@@ -1,0 +1,101 @@
+'use client'
+
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { isPorRevisar, type MatrixEntry } from '@/lib/legal/variable-matrix-model'
+import type { VariableInventoryItem } from '@/lib/legal/variable-resolution-types'
+
+/** Valor legible de una variable (texto, JSON serializado, o guion). */
+export function formatVariableValue(item: VariableInventoryItem): string {
+  if (item.value_text) return item.value_text
+  if (item.value_json !== null && item.value_json !== undefined) {
+    return JSON.stringify(item.value_json)
+  }
+  return '—'
+}
+
+function formatConfidence(confidence: number | null | undefined): string {
+  if (confidence === null || confidence === undefined) return ''
+  return `${Math.round(confidence * 100)}%`
+}
+
+function entryLabel(entry: MatrixEntry): string {
+  if (entry.kind === 'collapsed') return 'Roles SII por lote'
+  return entry.item.label ?? entry.item.variable_key
+}
+
+function entryKeyText(entry: MatrixEntry): string {
+  return entry.kind === 'collapsed' ? entry.variableKey : entry.item.variable_key
+}
+
+function entryValue(entry: MatrixEntry): string {
+  if (entry.kind === 'collapsed') return `${entry.lotCount} lotes`
+  return formatVariableValue(entry.item)
+}
+
+const BUCKET_DOT = {
+  listo: 'bg-emerald-500',
+  por_revisar: 'bg-amber-500',
+  no_editable: 'bg-muted-foreground/40',
+} as const
+
+interface VariableRowProps {
+  entry: MatrixEntry
+  selected: boolean
+  saving: boolean
+  onSelect: (entry: MatrixEntry) => void
+  onApprove: (item: VariableInventoryItem) => void
+}
+
+export function VariableRow({ entry, selected, saving, onSelect, onApprove }: VariableRowProps) {
+  const canApprove = entry.kind === 'single' && isPorRevisar(entry)
+  const confidence = entry.kind === 'single' ? formatConfidence(entry.item.confidence) : ''
+
+  return (
+    <div
+      data-testid="variable-row"
+      data-state={selected ? 'selected' : undefined}
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(entry)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onSelect(entry)
+        }
+      }}
+      className={cn(
+        'flex cursor-pointer items-center gap-3 border-t border-border px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring',
+        selected && 'bg-primary/5'
+      )}
+    >
+      <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', BUCKET_DOT[entry.bucket])} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium text-foreground">{entryLabel(entry)}</div>
+        <div className="truncate text-xs text-muted-foreground">{entryKeyText(entry)}</div>
+      </div>
+      <div className="min-w-0 max-w-[40%] truncate text-right text-foreground">{entryValue(entry)}</div>
+      {confidence ? (
+        <span className="w-9 shrink-0 text-right font-mono text-xs text-muted-foreground">
+          {confidence}
+        </span>
+      ) : null}
+      {canApprove ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={saving}
+          onClick={(event) => {
+            event.stopPropagation()
+            if (entry.kind === 'single') onApprove(entry.item)
+          }}
+        >
+          Aprobar
+        </Button>
+      ) : entry.kind === 'collapsed' ? (
+        <span className="shrink-0 text-xs text-muted-foreground">Ver lotes</span>
+      ) : null}
+    </div>
+  )
+}

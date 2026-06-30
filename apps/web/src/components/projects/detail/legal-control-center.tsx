@@ -16,7 +16,6 @@ import {
   type LegalRoleMatchesResponse,
   type LegalRoleMatchUpdatePayload,
   type LegalVariableEditPayload,
-  type LegalVariableState,
   type LegalVariableEditResponse,
   type LotRoleStatus,
   type LotRoleMatch,
@@ -31,10 +30,10 @@ import { PlanoArchivePanel } from '@/components/projects/legal/plano-archive-pan
 import { SagArticleTwoPanel } from '@/components/projects/legal/sag-article-two-panel'
 import { EscrituraReadinessPanel } from '@/components/projects/legal/escritura-readiness-panel'
 import { TitleCasePanel } from '@/components/projects/legal/title-case-panel'
+import { VariableMatrix } from '@/components/projects/legal/variable-matrix/variable-matrix'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   File02Icon,
-  CheckmarkCircle02Icon,
   AlertCircleIcon,
   Refresh01Icon,
   Settings02Icon,
@@ -70,12 +69,6 @@ const ROLE_FILTER_OPTIONS = ['all', ...ROLE_MATCHING_STATUSES] as const
 
 type RoleFilter = (typeof ROLE_FILTER_OPTIONS)[number]
 
-const BLOCKING_STATES = new Set<LegalVariableState>([
-  'missing',
-  'manual_review',
-  'conflict',
-  'proposed',
-])
 const SAG_RECALCULABLE_DOCUMENT_TYPES = new Set(['certificado_sag', 'plano_oficial'])
 const SAG_RECALCULABLE_STATUSES = new Set([
   'failed',
@@ -86,10 +79,6 @@ const SAG_RECALCULABLE_STATUSES = new Set([
 
 export function flattenVariableGroups(groups: VariableInventoryGroups): VariableInventoryItem[] {
   return Object.values(groups).flatMap((variables) => variables ?? [])
-}
-
-function countBlockingVariables(variables: VariableInventoryItem[]) {
-  return variables.filter((variable) => BLOCKING_STATES.has(variable.state)).length
 }
 
 function RoleOverrideForm({
@@ -193,9 +182,6 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
     [inventory?.groups]
   )
 
-  const blockingCount = useMemo(() => countBlockingVariables(variables), [variables])
-  const approvedCount = inventory?.summary.approved ?? 0
-  const totalCount = inventory?.summary.total ?? variables.length
   const roleBlockingCount =
     (roleInventory?.summary.ambiguous ?? 0) + (roleInventory?.summary.missing ?? 0)
   const filteredRoleLots = useMemo(() => {
@@ -559,52 +545,8 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
         </Button>
       </div>
 
-      {/* Bento Grid Superior de 3 Columnas para KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-border bg-card text-card-foreground p-4 shadow-sm flex items-center justify-between transition-all duration-200 hover:border-primary/50">
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Total variables
-            </p>
-            <h3 className="text-2xl font-bold mt-1 text-foreground">{totalCount}</h3>
-          </div>
-          <div className="p-3 bg-muted rounded-lg text-muted-foreground">
-            <HugeiconsIcon icon={File02Icon} className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card text-card-foreground p-4 shadow-sm flex items-center justify-between transition-all duration-200 hover:border-emerald-500/50">
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Aprobadas
-            </p>
-            <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
-              {approvedCount}
-            </h3>
-          </div>
-          <div className="p-3 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-lg text-emerald-600 dark:text-emerald-400">
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card text-card-foreground p-4 shadow-sm flex items-center justify-between transition-all duration-200 hover:border-destructive/50">
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Por revisar
-            </p>
-            <h3
-              className={`text-2xl font-bold mt-1 ${blockingCount > 0 ? 'text-destructive' : 'text-foreground'}`}
-            >
-              {blockingCount}
-            </h3>
-          </div>
-          <div
-            className={`p-3 rounded-lg ${blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}
-          >
-            <HugeiconsIcon icon={AlertCircleIcon} className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
+      {/* SDD 013: matriz de variables por productor (reemplaza los KPI cards) */}
+      <VariableMatrix projectId={projectId} projectName={projectName} />
 
       {/* Bento Grid Principal de 12 Columnas */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
