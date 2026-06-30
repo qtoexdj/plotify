@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MoldeProgressHeader } from '@/components/projects/legal/variable-matrix/molde-progress-header'
 import { ProducerGroup } from '@/components/projects/legal/variable-matrix/producer-group'
+import { SaleGapPanel } from '@/components/projects/legal/variable-matrix/sale-gap-panel'
 import { groupByProducer } from '@/lib/legal/variable-matrix-model'
 import type {
   LegalVariableGroup,
@@ -63,6 +64,16 @@ describe('MoldeProgressHeader', () => {
     )
     const button = screen.getByRole('button', { name: /Aprobar molde/ }) as HTMLButtonElement
     expect(button.disabled).toBe(false)
+  })
+
+  it('en scope lote rotula el subtitulo como "Borrador de venta"', () => {
+    render(
+      <MoldeProgressHeader
+        progress={{ porRevisar: 0, listas: 3, total: 3, moldeAprobable: true }}
+        scope="lot"
+      />
+    )
+    expect(screen.getByText(/Borrador de venta/)).toBeTruthy()
   })
 })
 
@@ -154,5 +165,16 @@ describe('ProducerGroup', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Ver lotes' }))
     expect(onOpenSiiDetail).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('SaleGapPanel', () => {
+  it('muestra, de forma estatica, los grupos que se completan en la venta', () => {
+    render(<SaleGapPanel />)
+    expect(screen.getByText('Se completa en la venta')).toBeTruthy()
+    expect(screen.getByText('Comprador')).toBeTruthy()
+    expect(screen.getByText('Precio y pago')).toBeTruthy()
+    expect(screen.getByText('Lote')).toBeTruthy()
+    expect(screen.getByText('Servidumbre')).toBeTruthy()
   })
 })

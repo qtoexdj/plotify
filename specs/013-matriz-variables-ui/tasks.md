@@ -71,7 +71,7 @@
 - [x] T016 [P] [US2] Tests de colapso y bulk en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
 - [x] T017 [US2] `SiiLotDetail` (Dialog con tabla por lote del certificado SII + ajuste manual de rol vía `PATCH /projects/{id}/legal-roles/{lotId}`, FR-013) en `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/variable-matrix/sii-lot-detail.tsx`, abierto desde "Ver lotes" (fila colapsada) y "Ver detalle por lote" (inspector). _(hecho 2026-06-30)_
 - [x] T018 [US2] Aprobación en bloque cableada a `POST /projects/{id}/legal-variables/bulk-approve` por claves: botón "Aprobar N" por sección de productor (`producer-group.tsx`) + "Aprobar N lotes" en el inspector colapsado (`variable-inspector.tsx`), orquestado en `variable-matrix.tsx`. El molde queda 100% aprobable. _(hecho 2026-06-30)_
-- [ ] T019 [US2] Acción "ingresar dato" manual vía `PUT /projects/{id}/legal-variables/by-key` integrada en el productor `manual`
+- [x] T019 [US2] Acción "ingresar dato" manual vía `PUT /projects/{id}/legal-variables/by-key` integrada en el productor `manual`
 
 **Checkpoint**: US1+US2 funcionan; revisar un proyecto real es cuestión de minutos.
 
@@ -83,9 +83,9 @@
 
 **Independent Test**: en un proyecto sin ventas, los grupos de venta son informativos y el molde puede aprobarse.
 
-- [ ] T020 [P] [US3] Tests de exclusión del conteo y no-edición de `sale_gap`/`signing` en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix-model.test.ts`
-- [ ] T021 [US3] `SaleGapPanel` ("se completa en la venta", no editable) en `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/variable-matrix/sale-gap-panel.tsx`
-- [ ] T022 [US3] Excluir `sale_gap`/`signing` del progreso y del CTA "Aprobar molde" en `molde-progress-header.tsx` y los helpers
+- [x] T020 [P] [US3] Tests de exclusión del conteo y no-edición de `sale_gap`/`signing` en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix-model.test.ts`
+- [x] T021 [US3] `SaleGapPanel` ("se completa en la venta", no editable) en `/Users/matiasignacio/Developer/plotify/apps/web/src/components/projects/legal/variable-matrix/sale-gap-panel.tsx`
+- [x] T022 [US3] Excluir `sale_gap`/`signing` del progreso y del CTA "Aprobar molde" en `molde-progress-header.tsx` y los helpers
 
 **Checkpoint**: el conteo es honesto; los huecos de venta no bloquean el molde.
 
@@ -97,8 +97,8 @@
 
 **Independent Test**: con un lote vendido y validado, su borrador muestra los datos de venta rellenos y el resto heredado del molde.
 
-- [ ] T023 [P] [US5] Test del modo lote (huecos de venta con valor + origen "desde la venta", herencia del molde) en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
-- [ ] T024 [US5] Modo `scope=lot` en `variable-matrix.tsx` (inventario del caso; `sale_gap` con valor, solo lectura) leyendo el inventario por lote
+- [x] T023 [P] [US5] Test del modo lote (huecos de venta con valor + origen "desde la venta", herencia del molde) en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
+- [x] T024 [US5] Modo `scope=lot` en `variable-matrix.tsx` (inventario del caso; `sale_gap` con valor, solo lectura) leyendo el inventario por lote
 - [ ] T025 [US5] Montar la matriz del borrador donde hoy se ve el caso/lote de venta (superficie de revisión legal del borrador)
 
 **Checkpoint**: el ciclo completo (molde → venta → borrador) usa una sola matriz por productor.

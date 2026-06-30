@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { LegalVariableEditor } from '@/components/projects/legal/legal-variable-editor'
 import {
   computeMoldeProgress,
@@ -13,6 +15,7 @@ import type {
   VariableInventoryItem,
   VariableInventoryResponse,
 } from '@/lib/legal/variable-resolution-types'
+import { ManualInputDialog } from './manual-input-dialog'
 import { MoldeProgressHeader } from './molde-progress-header'
 import { ProducerGroup } from './producer-group'
 import { SaleGapPanel } from './sale-gap-panel'
@@ -53,6 +56,7 @@ export function VariableMatrix({
   const [editorOpen, setEditorOpen] = useState(false)
   const [bulkSaving, setBulkSaving] = useState(false)
   const [siiDetailOpen, setSiiDetailOpen] = useState(false)
+  const [manualOpen, setManualOpen] = useState(false)
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -180,25 +184,31 @@ export function VariableMatrix({
     <section aria-label="Matriz de variables" data-testid="variable-matrix" className="space-y-4">
       <MoldeProgressHeader progress={progress} projectName={projectName} scope={scope} />
 
+      {scope === 'project' ? (
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" size="sm" onClick={() => setManualOpen(true)}>
+            <Plus className="size-4" aria-hidden />
+            Ingresar dato manual
+          </Button>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-3">
-          {sections.map((section) =>
-            section.producer === 'sale_gap' ? (
-              <SaleGapPanel key={section.producer} section={section} />
-            ) : (
-              <ProducerGroup
-                key={section.producer}
-                section={section}
-                selectedId={selectedId}
-                savingId={savingId}
-                bulkSaving={bulkSaving}
-                onSelect={(entry) => setSelectedId(entry.id)}
-                onApprove={approve}
-                onBulkApprove={bulkApprove}
-                onOpenSiiDetail={() => setSiiDetailOpen(true)}
-              />
-            )
-          )}
+          {sections.map((section) => (
+            <ProducerGroup
+              key={section.producer}
+              section={section}
+              selectedId={selectedId}
+              savingId={savingId}
+              bulkSaving={bulkSaving}
+              onSelect={(entry) => setSelectedId(entry.id)}
+              onApprove={approve}
+              onBulkApprove={bulkApprove}
+              onOpenSiiDetail={() => setSiiDetailOpen(true)}
+            />
+          ))}
+          {scope === 'project' ? <SaleGapPanel /> : null}
         </div>
 
         <aside className="lg:sticky lg:top-4 lg:self-start">
@@ -227,6 +237,13 @@ export function VariableMatrix({
         projectId={projectId}
         open={siiDetailOpen}
         onOpenChange={setSiiDetailOpen}
+        onSaved={load}
+      />
+
+      <ManualInputDialog
+        projectId={projectId}
+        open={manualOpen}
+        onOpenChange={setManualOpen}
         onSaved={load}
       />
     </section>

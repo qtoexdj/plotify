@@ -1,10 +1,18 @@
 'use client'
 
 import { ShoppingCart } from 'lucide-react'
-import type { ProducerSection } from '@/lib/legal/variable-matrix-model'
+import { LEGAL_VARIABLE_GROUP_LABELS } from '@/lib/legal/variable-resolution-types'
 
-/** Bloque informativo de los huecos de venta: no se editan en el molde. */
-export function SaleGapPanel({ section }: { section: ProducerSection }) {
+/**
+ * SDD 013 US3 — bloque informativo de los huecos de venta en el molde del
+ * proyecto. A nivel proyecto estas variables NO existen como filas (las
+ * aporta la venta de cada lote vía el puente operacional), por eso el panel
+ * es estatico: lista los grupos que se rellenan en la venta, sin acciones.
+ */
+
+const SALE_GAP_GROUPS = ['comprador', 'transaccion', 'lote', 'servidumbre'] as const
+
+export function SaleGapPanel() {
   return (
     <section
       data-testid="sale-gap-panel"
@@ -15,21 +23,21 @@ export function SaleGapPanel({ section }: { section: ProducerSection }) {
           <ShoppingCart className="size-4" aria-hidden />
         </span>
         <div>
-          <h3 className="text-sm font-semibold">{section.label}</h3>
-          <p className="text-xs text-muted-foreground">no se edita aquí</p>
+          <h3 className="text-sm font-semibold">Se completa en la venta</h3>
+          <p className="text-xs text-muted-foreground">no se edita aquí · no bloquea el molde</p>
         </div>
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
-        Comprador, precio, lote y servidumbre se rellenan automáticamente cuando se aprueba la venta
-        de cada lote.
+        Estos datos se rellenan automáticamente cuando se aprueba la venta de cada lote, desde el
+        registro comercial.
       </p>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {section.entries.slice(0, 10).map((entry) => (
+        {SALE_GAP_GROUPS.map((group) => (
           <span
-            key={entry.id}
-            className="rounded-md border border-border bg-background px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
+            key={group}
+            className="rounded-md border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground"
           >
-            {entry.kind === 'single' ? entry.item.variable_key : entry.variableKey}
+            {LEGAL_VARIABLE_GROUP_LABELS[group]}
           </span>
         ))}
       </div>
