@@ -1,10 +1,11 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { AlertTriangle, CheckCircle2, RefreshCw, Save } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ListFilter, RefreshCw, Save } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MESA_TEXT, mesaStatusLabel } from '@/lib/documents/matriz-microcopy'
+import { matrizEscrituraProgress } from '@/lib/documents/matriz-progress'
 import type { MatrizStatus, MatrizView, TokenResolution } from '@/lib/documents/matriz-types'
 
 /**
@@ -67,6 +68,8 @@ type MesaEncabezadoProps = {
   puedeGuardar: boolean
   guardando: boolean
   onGuardar: () => void
+  soloPendientes?: boolean
+  onSoloPendientesChange?: (active: boolean) => void
   acciones?: ReactNode
 }
 
@@ -75,12 +78,16 @@ export function MesaEncabezado({
   puedeGuardar,
   guardando,
   onGuardar,
+  soloPendientes = false,
+  onSoloPendientesChange,
   acciones = null,
 }: MesaEncabezadoProps) {
   const contexto = contextoDelCaso(matriz.resolution.tokens)
-  const pendientes = matriz.approval_blockers.length
+  const progreso = matrizEscrituraProgress(matriz)
+  const pendientes = progreso.porRevisar
   const titulo = tituloDeMesa(matriz)
   const estado = estadoDeMesa(matriz)
+  const puedeFiltrarPendientes = pendientes > 0 && Boolean(onSoloPendientesChange)
 
   return (
     <header
@@ -97,6 +104,9 @@ export function MesaEncabezado({
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             {contexto ? <span className="min-w-0 truncate">{contexto}</span> : null}
+            <span data-testid="mesa-progreso-sdd13" className="font-medium text-foreground">
+              {progreso.listas}/{progreso.total} listas
+            </span>
             <span
               data-testid="mesa-contador-pendientes"
               className={
@@ -112,11 +122,23 @@ export function MesaEncabezado({
               )}
               {contadorPendientes(pendientes)}
             </span>
+            {matriz.scope === 'project' ? <span>los huecos de venta no cuentan</span> : null}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {acciones}
+          {puedeFiltrarPendientes ? (
+            <Button
+              type="button"
+              variant={soloPendientes ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => onSoloPendientesChange?.(!soloPendientes)}
+            >
+              <ListFilter />
+              {soloPendientes ? 'Ver todas' : 'Ver pendientes'}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"

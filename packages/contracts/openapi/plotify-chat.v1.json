@@ -5399,6 +5399,18 @@
             ],
             "title": "Label"
           },
+          "producer": {
+            "anyOf": [
+              {
+                "enum": ["extracted", "authored", "manual", "sale_gap", "signing"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Producer"
+          },
           "source_label": {
             "anyOf": [
               {

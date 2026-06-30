@@ -41,6 +41,7 @@ from services.legal_variable_catalog import (
     VARIABLE_GROUP_LABELS,
     VARIABLE_KEYS,
     authored_variable_default,
+    variable_producer,
     variable_group_for_key,
     variable_label_for_key,
 )
@@ -182,6 +183,7 @@ class TokenResolutionEntry:
             "label": token_label(self.variable_key, self.label_override),
             "category": category,
             "category_label": category_label,
+            "producer": variable_producer(self.variable_key),
             "source_label": (
                 source_origin_label(self.source_type)
                 if not self.evidence_refs

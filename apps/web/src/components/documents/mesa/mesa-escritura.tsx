@@ -100,6 +100,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
   const [guardando, setGuardando] = useState(false)
   const [clausulaActiva, setClausulaActiva] = useState<string | null>(null)
   const [borradores, setBorradores] = useState<Record<string, MatrizClauseOverride>>({})
+  const [soloPendientes, setSoloPendientes] = useState(false)
 
   useEffect(() => {
     if (initialData || missingSource) return
@@ -218,6 +219,8 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
         puedeGuardar={resumen.puedeEditar}
         guardando={guardando}
         onGuardar={handleGuardar}
+        soloPendientes={soloPendientes}
+        onSoloPendientesChange={setSoloPendientes}
       />
 
       {aviso ? (
@@ -233,6 +236,8 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
         <MesaIndice
           clausulas={ordenadas}
           resolucion={matriz.resolution}
+          scope={matriz.scope}
+          soloPendientes={soloPendientes}
           puedeReordenar={resumen.puedeEditar}
           onReordenar={handleReordenar}
         />
@@ -267,7 +272,12 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
               )}
             </section>
           ) : null}
-          <PanelDatos resolucion={matriz.resolution} projectId={matriz.project_id} />
+          <PanelDatos
+            resolucion={matriz.resolution}
+            projectId={matriz.project_id}
+            scope={matriz.scope}
+            soloPendientes={soloPendientes}
+          />
         </aside>
       </div>
     </div>

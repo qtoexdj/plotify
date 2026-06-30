@@ -60,7 +60,6 @@ from services.matriz_docx_renderer import (
 )
 from services.legal_variable_catalog import (
     NON_BLOCKING_PROJECT_MATRIZ_KEYS,
-    SALE_SCOPED_VARIABLE_KEYS,
     variable_producer,
 )
 from services.escritura_readiness import fetch_project_matriz_snapshot
@@ -110,12 +109,11 @@ PROJECT_MATRIZ_MISSING_CODE = "project_matriz_approval_missing"
 # construido una vez desde la fuente unica (matriz_token_resolution).
 INSERTABLE_VARIABLES: list[dict[str, str]] = insertable_variables_catalog()
 
-# SDD 011 (FR-002/FR-003): claves que solo se llenan al vender el lote (datos
-# de la venta + geometria del lote + servidumbre). En la matriz del PROYECTO son
-# huecos por diseño ("esperando ventas"): se renderizan como huecos pero NO
-# bloquean la aprobacion. Fuente unica: la clasificacion de productor del
-# catalogo (`SALE_SCOPED_VARIABLE_KEYS`), ya normalizada sin el sufijo `[]`.
-PROJECT_MATRIZ_GAP_KEYS: frozenset[str] = SALE_SCOPED_VARIABLE_KEYS
+# SDD 011/013 (FR-002/FR-003): claves que solo se llenan al vender el lote o al
+# firmar (comprador, precio, lote, servidumbre, notaria/otorgamiento). En la
+# matriz del PROYECTO son huecos por diseño: se renderizan pero NO bloquean la
+# aprobacion. Fuente unica: la clasificacion de productor del catalogo.
+PROJECT_MATRIZ_GAP_KEYS: frozenset[str] = NON_BLOCKING_PROJECT_MATRIZ_KEYS
 
 
 def _first_row(data: Any) -> dict[str, Any] | None:

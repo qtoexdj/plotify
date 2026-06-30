@@ -175,6 +175,7 @@ export interface MatrizEvidenceRef {
 }
 
 export type TokenResolutionStatus = 'resolved' | 'missing' | 'blocked'
+export type TokenResolutionProducer = 'extracted' | 'manual' | 'authored' | 'sale_gap' | 'signing'
 
 export interface TokenResolution {
   variableKey: string
@@ -187,6 +188,8 @@ export interface TokenResolution {
   label?: string | null
   category?: string | null
   category_label?: string | null
+  /** Productor previsto del dato; permite separar pendientes reales de huecos del molde. */
+  producer?: TokenResolutionProducer | null
   /** Origen operacional descrito; solo cuando no hay evidencia documental. */
   source_label?: string | null
 }
