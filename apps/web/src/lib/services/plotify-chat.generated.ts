@@ -872,6 +872,7 @@ export interface components {
       "category_label"?: string | null
       "evidence_refs"?: Array<components["schemas"]["MatrizEvidenceRef"]>
       "label"?: string | null
+      "producer"?: "extracted" | "authored" | "manual" | "sale_gap" | "signing" | null
       "source_label"?: string | null
       "source_type"?: string | null
       "state"?: string | null
@@ -921,6 +922,7 @@ export interface components {
       "id": string
       "lot_id"?: string | null
       "organization_id": string
+      "producer": string
       "project_id": string
       "reviewed_at"?: string | null
       "reviewed_by"?: string | null

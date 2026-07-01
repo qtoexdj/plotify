@@ -26,12 +26,14 @@ from schemas.legal_variables import (
 from services.legal_variable_catalog import (
     READINESS_REQUIRED_VARIABLES_BY_GATE,
     VARIABLE_STATES,
+    authored_variable_default,
     is_variable_group,
     VARIABLE_BLOCKING_STATES,
     is_source_type,
     is_variable_key,
     is_variable_state,
     variable_group_for_key,
+    variable_producer,
 )
 
 
@@ -42,6 +44,8 @@ DEFAULT_PROPOSAL_STATE = "proposed"
 DEFAULT_SOURCE_TYPE = "document"
 SII_ROLES_EXTRACTOR_NAME = "sii_roles_rules_v1"
 SAG_PLANO_EXTRACTOR_NAME = "sag_plano_rules_v1"
+HIPOTECA_GRAVAMEN_EXTRACTOR_NAME = "hipoteca_gravamen_rules_v1"
+HIPOTECA_GRAVAMEN_REQUIRED_VARIABLES = ("evidencia.certificado_gp_referencia",)
 SII_ROLES_REQUIRED_VARIABLES = (
     "sii.certificado_asignacion_roles_numero",
     "sii.certificado_fecha_emision",
@@ -210,6 +214,188 @@ _LOW_CONFIDENCE_MARKERS_RE = re.compile(
     r"\b(?:borroso|ilegible|posiblemente|probablemente|dudoso|no\s+se\s+lee|OCR)\b",
     re.IGNORECASE,
 )
+
+# Certificado de Hipotecas y Gravámenes / Interdicciones y Prohibiciones / Litigios
+# (SDD 013, alineación LOTE 29): tres Conservadores distintos (Curicó, Peralillo,
+# San Carlos) redactan estas tres declaraciones con frases distintas pero
+# reconocibles. Se ancla cada sección por su mención "registro(s) de..." (o la
+# palabra "litigios") y se busca, en un contexto simétrico alrededor del ancla,
+# si la frase declara la sección limpia, si declara una inscripción/gravamen
+# real, o si no se puede determinar (→ manual_review, nunca se redacta sola).
+_GP_SECTION_ANCHORS = (
+    ("hipotecas_gravamenes", re.compile(r"registros?\s+de\s+hipotecas\s+y\s+grav[aá]menes", re.IGNORECASE)),
+    ("prohibiciones_embargos", re.compile(r"registros?\s+de\s+interdicciones\s+y\s+prohibiciones", re.IGNORECASE)),
+    ("litigios", re.compile(r"\blitigios\b", re.IGNORECASE)),
+)
+_GP_SECTION_CONTEXT_RADIUS = 300
+_GP_TIENE_INSCRIPCION_VIGENTE = (
+    r"tiene(?:\(n\))?\s+(?:en\s+dicho\s+per[ií]odo\s+)?(?:una\s+)?"
+    r"inscripci[oó]n(?:\(es\))?\s+vigente(?:\(s\))?"
+)
+_GP_CLEAN_RE = re.compile(
+    r"\bno\s+(?:le\s+afectan|" + _GP_TIENE_INSCRIPCION_VIGENTE + r"|est[aá]\s+afecta\s+a|hay\s+constancia)",
+    re.IGNORECASE,
+)
+_GP_FOUND_RE = re.compile(
+    r"\b" + _GP_TIENE_INSCRIPCION_VIGENTE
+    + r"|^\s*\d+\s*[-.]?\s*(?:servidumbre|hipoteca|embargo|prohibici[oó]n)",
+    re.IGNORECASE | re.MULTILINE,
+)
+_GP_CBR_FECHA_RE = re.compile(
+    r"conservador\s+de\s+bienes\s+ra[ií]ces\s+de\s+(?P<cbr>[A-ZÁÉÍÓÚÜÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]{2,40}?)"
+    r"[,.]\s*(?:a\s+)?(?P<fecha>[a-záéíóúñ0-9][^.\n]{4,80}?)"
+    r"(?=\s*(?:a\s+las\b|\.-|\.|,-|$))",
+    re.IGNORECASE,
+)
+# Fallback: encabezado "CONSERVADOR DE BIENES RAICES\n<comuna>" + fecha suelta
+# "<comuna>, DD de MES de AAAA" en el cuerpo (formato con varios certificados
+# encabezados por comuna en vez de "Conservador de Bienes Raíces de X,").
+_GP_CBR_HEADER_RE = re.compile(
+    r"conservador\s+de\s+bienes\s+ra[ií]ces\s*\n\s*(?P<cbr>[A-ZÁÉÍÓÚÜÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]{2,40})",
+    re.IGNORECASE,
+)
+_GP_LOOSE_FECHA_RE = re.compile(
+    r"[A-ZÁÉÍÓÚÜÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]{2,40},\s*"
+    r"(?P<fecha>\d{1,2}\s+de\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+\s+de\s+\d{4})",
+    re.IGNORECASE,
+)
+
+
+def _classify_gp_section(context: str) -> str:
+    """"clean" (declara nada afecta), "found" (declara una inscripción/gravamen
+    real) o "unknown" (no se pudo determinar) para el contexto de una sección."""
+    if _GP_CLEAN_RE.search(context):
+        return "clean"
+    if _GP_FOUND_RE.search(context):
+        return "found"
+    return "unknown"
+
+
+def _gp_section_verdicts(text: str) -> dict[str, str]:
+    verdicts: dict[str, str] = {}
+    for key, anchor in _GP_SECTION_ANCHORS:
+        match = anchor.search(text)
+        if not match:
+            continue
+        start = max(0, match.start() - _GP_SECTION_CONTEXT_RADIUS)
+        end = min(len(text), match.end() + _GP_SECTION_CONTEXT_RADIUS)
+        verdicts[key] = _classify_gp_section(text[start:end])
+    return verdicts
+
+
+def _gp_cbr_fecha(text: str) -> tuple[str, str] | None:
+    match = _GP_CBR_FECHA_RE.search(text)
+    if match:
+        return match.group("cbr").strip(), match.group("fecha").strip()
+    header_match = _GP_CBR_HEADER_RE.search(text)
+    loose_match = _GP_LOOSE_FECHA_RE.search(text)
+    if header_match and loose_match:
+        return header_match.group("cbr").strip().title(), loose_match.group("fecha").strip()
+    return None
+
+
+def _build_hipoteca_gravamen_proposal(
+    *,
+    organization_id: str,
+    project_id: str,
+    legal_document_id: str,
+    legal_document_page_id: str | None,
+    text: str,
+) -> VariableProposalInput:
+    variable_key = "evidencia.certificado_gp_referencia"
+    source_ref = {
+        "document_type": "hipoteca_gravamen",
+        "legal_document_id": legal_document_id,
+        "legal_document_page_id": legal_document_page_id,
+    }
+    verdicts = _gp_section_verdicts(text)
+    if not verdicts:
+        return VariableProposalInput(
+            organization_id=organization_id,
+            project_id=project_id,
+            variable_key=variable_key,
+            value_text=(
+                "No se pudo leer el certificado de hipotecas, gravámenes y "
+                "prohibiciones (documento sin texto reconocible; puede estar "
+                "escaneado). Revisa el documento fuente y redacta la cláusula "
+                "manualmente."
+            ),
+            source_ref={
+                **source_ref,
+                "manual_review_reason": "gp_certificate_no_recognizable_sections",
+            },
+            confidence=0.0,
+            extractor_name=HIPOTECA_GRAVAMEN_EXTRACTOR_NAME,
+        )
+
+    if "found" in verdicts.values():
+        return VariableProposalInput(
+            organization_id=organization_id,
+            project_id=project_id,
+            variable_key=variable_key,
+            value_text=(
+                "El certificado indica una inscripción vigente (posible "
+                "hipoteca, gravamen, prohibición, embargo o litigio) — no se "
+                "redacta automáticamente. Revisa el certificado y redacta la "
+                "cláusula de gravámenes manualmente."
+            ),
+            source_ref={
+                **source_ref,
+                "manual_review_reason": "gp_certificate_encumbrance_detected",
+                "section_verdicts": verdicts,
+            },
+            confidence=0.0,
+            extractor_name=HIPOTECA_GRAVAMEN_EXTRACTOR_NAME,
+        )
+
+    hipotecas_clean = verdicts.get("hipotecas_gravamenes") == "clean"
+    prohibiciones_clean = verdicts.get("prohibiciones_embargos") == "clean"
+    litigios_ok = verdicts.get("litigios", "unknown") in ("clean", "unknown")
+    cbr_fecha = _gp_cbr_fecha(text)
+
+    if hipotecas_clean and prohibiciones_clean and litigios_ok and cbr_fecha:
+        cbr, fecha = cbr_fecha
+        citation = (
+            "Según Certificado de Hipotecas, Gravámenes y Prohibiciones emitido "
+            f"por el Conservador de Bienes Raíces de {cbr}, de fecha {fecha}, el "
+            "inmueble no registra hipotecas, gravámenes, prohibiciones ni "
+            "litigios vigentes."
+        )
+        return build_document_proposal(
+            organization_id=organization_id,
+            project_id=project_id,
+            legal_document_id=legal_document_id,
+            legal_document_page_id=legal_document_page_id,
+            variable_key=variable_key,
+            value_text=citation,
+            source_ref={**source_ref, "section_verdicts": verdicts},
+            snippet=citation,
+            confidence=0.9,
+            extractor_name=HIPOTECA_GRAVAMEN_EXTRACTOR_NAME,
+        )
+
+    return VariableProposalInput(
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_key=variable_key,
+        value_text=(
+            "No se pudo confirmar automáticamente que el predio esté libre de "
+            "gravámenes, prohibiciones y litigios (falta el nombre del "
+            "Conservador o la fecha del certificado). Revisa el certificado y "
+            "redacta la cláusula manualmente."
+        ),
+        source_ref={
+            **source_ref,
+            "manual_review_reason": (
+                "gp_certificate_cbr_or_fecha_not_extracted"
+                if hipotecas_clean and prohibiciones_clean and litigios_ok
+                else "gp_certificate_not_confirmed_clean"
+            ),
+            "section_verdicts": verdicts,
+        },
+        confidence=0.0,
+        extractor_name=HIPOTECA_GRAVAMEN_EXTRACTOR_NAME,
+    )
 
 
 @dataclass(frozen=True)
@@ -439,6 +625,40 @@ class LegalVariableResolutionService:
         return self.classify_proposals(
             proposals,
             required_variable_keys=required_variable_keys,
+        )
+
+    def extract_hipoteca_gravamen_variables(
+        self,
+        *,
+        organization_id: str,
+        project_id: str,
+        legal_document_id: str,
+        pages: tuple[LegalDocumentPageInput | dict[str, Any], ...]
+        | list[LegalDocumentPageInput | dict[str, Any]],
+        required_variable_keys: tuple[str, ...] = HIPOTECA_GRAVAMEN_REQUIRED_VARIABLES,
+    ) -> tuple[ClassifiedVariableProposal, ...]:
+        """Certificado de Hipotecas, Gravámenes, Prohibiciones y Litigios (SDD 013,
+        alineación LOTE 29). Solo redacta la cita de la escritura cuando las tres
+        declaraciones (hipotecas/gravámenes, prohibiciones/embargos, litigios) se
+        reconocen como "limpias" con alta confianza; cualquier gravamen real
+        detectado, o cualquier sección que no se pueda confirmar, se deja en
+        `manual_review` — nunca se genera una declaración legal a ciegas."""
+        normalized_pages = tuple(
+            normalize_document_page(page, legal_document_id=legal_document_id)
+            for page in pages
+        )
+        full_text = "\n".join(page.text_content for page in normalized_pages)
+        proposal = _build_hipoteca_gravamen_proposal(
+            organization_id=organization_id,
+            project_id=project_id,
+            legal_document_id=legal_document_id,
+            legal_document_page_id=(
+                normalized_pages[0].id if normalized_pages else None
+            ),
+            text=full_text,
+        )
+        return self.classify_proposals(
+            (proposal,), required_variable_keys=required_variable_keys
         )
 
     def validate_proposal(self, proposal: VariableProposalInput) -> VariableProposalInput:
@@ -1015,7 +1235,131 @@ def resolve_document_variables(
             pages=pages,
             required_variable_keys=PLANO_OFICIAL_REQUIRED_VARIABLES,
         )
+    if document_type == "hipoteca_gravamen":
+        return service.extract_hipoteca_gravamen_variables(
+            organization_id=organization_id,
+            project_id=project_id,
+            legal_document_id=legal_document_id,
+            pages=pages,
+        )
     return ()
+
+
+def _variable_token_keys(content_json: Any) -> set[str]:
+    """Claves `variable_token` de un `content_json` de clausula (excluye
+    `item.*`, que solo tiene sentido dentro de un `repeat_section`)."""
+    keys: set[str] = set()
+
+    def _walk(node: Any) -> None:
+        if not isinstance(node, dict):
+            return
+        if node.get("type") == "variable_token":
+            key = node.get("attrs", {}).get("variableKey")
+            if isinstance(key, str) and not key.startswith("item."):
+                keys.add(key)
+        for child in node.get("content") or []:
+            _walk(child)
+
+    _walk(content_json)
+    return keys
+
+
+async def _ensure_authored_variable_gaps(
+    *, supabase: Any, organization_id: str, project_id: str
+) -> None:
+    """SDD 013 (alineacion LOTE 29, excepcion puntual y acotada a "el motor no
+    se toca"): las variables `authored` sin default de catalogo (p. ej.
+    `mandato.rectificacion_nombre/rut`, `evidencia.certificado_gp_referencia`)
+    nunca reciben una fila en `variable_resolutions` a menos que alguien las
+    edite a mano — el resolutor solo las completa con el default al RENDERIZAR
+    la minuta (`matriz_token_resolution.authored_variable_default`), demasiado
+    tarde para que el abogado las revise en la matriz. Verificado en Supabase
+    (proyecto Teno): cero filas para `mandato.*`/`evidencia.*` pese a que el
+    template publicado las exige. Este paso es autosanador (corre en cada
+    fetch del inventario del proyecto, sin migracion de backfill) y solo
+    agrega filas `missing` que faltaban; no toca resolucion, gates, snapshot
+    ni el renderer.
+    """
+    template_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("escritura_templates")
+            .select("id")
+            .eq("organization_id", organization_id)
+            .eq("document_type", "compraventa")
+            .eq("status", "published")
+            .order("published_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    template = _first_row(template_result)
+    if not template:
+        return
+
+    clauses_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("escritura_template_clauses")
+            .select("content_json")
+            .eq("template_id", template["id"])
+            .execute()
+        )
+    )
+    referenced_keys: set[str] = set()
+    for clause in _rows(clauses_result):
+        referenced_keys |= _variable_token_keys(clause.get("content_json"))
+
+    gap_keys = sorted(
+        key
+        for key in referenced_keys
+        if variable_producer(key) == "authored" and authored_variable_default(key) is None
+    )
+    if not gap_keys:
+        return
+
+    existing_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .select("variable_key")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .is_("lot_id", "null")
+            .in_("variable_key", gap_keys)
+            .execute()
+        )
+    )
+    existing_keys = {row["variable_key"] for row in _rows(existing_result)}
+    missing_keys = [key for key in gap_keys if key not in existing_keys]
+    if not missing_keys:
+        return
+
+    payloads = [
+        {
+            "organization_id": organization_id,
+            "project_id": project_id,
+            "lot_id": None,
+            "escritura_case_id": None,
+            "variable_key": key,
+            "variable_group": variable_group_for_key(key),
+            "value_text": None,
+            "value_json": None,
+            "state": "missing",
+            "source_type": "legal_review",
+            "source_ref": {"seeded_by": "ensure_authored_variable_gaps"},
+            "confidence": None,
+            "extractor_name": None,
+            "approval_required": True,
+        }
+        for key in missing_keys
+    ]
+    await asyncio.to_thread(
+        lambda: supabase.table("variable_resolutions").insert(payloads).execute()
+    )
+    logger.info(
+        "authored_variable_gaps_seeded",
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_keys=missing_keys,
+    )
 
 
 async def get_project_variable_inventory(
@@ -1040,6 +1384,12 @@ async def get_project_variable_inventory(
         project_id=project_id,
         lot_id=lot_id,
     )
+    if lot_id is None:
+        await _ensure_authored_variable_gaps(
+            supabase=client,
+            organization_id=organization_id,
+            project_id=project_id,
+        )
     variable_rows = await _fetch_variable_resolution_rows(
         supabase=client,
         organization_id=organization_id,

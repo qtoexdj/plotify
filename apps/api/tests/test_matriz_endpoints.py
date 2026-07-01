@@ -620,7 +620,7 @@ class TestSaveMatriz:
                 "version": 1,
                 "clause_order": ["compraventa", "comparecencia"],
                 "clause_overrides": {
-                    "gravamenes": {"disabled": True},
+                    "cuerpo_cierto": {"disabled": True},
                     "comparecencia": {"title": "COMPARECENCIA EDITADA"},
                 },
             },
@@ -634,10 +634,10 @@ class TestSaveMatriz:
             "comparecencia",
         ]
         assert body["clauses"][1]["title"] == "COMPARECENCIA EDITADA"
-        gravamenes = next(
-            clause for clause in body["clauses"] if clause["clause_key"] == "gravamenes"
+        cuerpo_cierto = next(
+            clause for clause in body["clauses"] if clause["clause_key"] == "cuerpo_cierto"
         )
-        assert gravamenes["disabled"] is True
+        assert cuerpo_cierto["disabled"] is True
         assert store.tables["escritura_matrices"][0]["version"] == 2
 
     def test_put_returns_409_on_version_conflict(self, monkeypatch):

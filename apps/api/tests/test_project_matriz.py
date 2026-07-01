@@ -16,6 +16,7 @@ from api.v1.endpoints.escritura_matrices import (
     _project_approval_blockers,
 )
 from services.escritura_readiness import fetch_project_matriz_snapshot
+from services.matriz_token_resolution import TokenResolutionEntry
 
 
 # ─── Fake Supabase minimo (stateful por tabla, soporta is_/insert) ───────────
@@ -107,10 +108,21 @@ def test_project_level_keys_are_not_gaps() -> None:
     assert not _is_project_gap_key("titulo.historia_dominio")
     # Sanidad: el set no quedo vacio ni colo claves de proyecto.
     assert "comprador.nombre" in PROJECT_MATRIZ_GAP_KEYS
+    assert "documento.fecha_otorgamiento" in PROJECT_MATRIZ_GAP_KEYS
     assert "vendedor.rut" not in PROJECT_MATRIZ_GAP_KEYS
 
 
 # ─── Blockers de la matriz del proyecto ──────────────────────────────────────
+
+
+def test_token_manifest_exposes_variable_producer() -> None:
+    sale_gap = TokenResolutionEntry("comprador.nombre", "missing").to_dict()
+    signing = TokenResolutionEntry("documento.fecha_otorgamiento", "missing").to_dict()
+    project_data = TokenResolutionEntry("vendedor.rut", "missing").to_dict()
+
+    assert sale_gap["producer"] == "sale_gap"
+    assert signing["producer"] == "signing"
+    assert project_data["producer"] == "extracted"
 
 
 def test_sale_gaps_never_block_project_matriz_but_project_pendings_do() -> None:

@@ -100,6 +100,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
   const [guardando, setGuardando] = useState(false)
   const [clausulaActiva, setClausulaActiva] = useState<string | null>(null)
   const [borradores, setBorradores] = useState<Record<string, MatrizClauseOverride>>({})
+  const [soloPendientes, setSoloPendientes] = useState(false)
 
   useEffect(() => {
     if (initialData || missingSource) return
@@ -135,6 +136,19 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
           clause_order: reordenadas.map((clause) => clause.clause_key),
         },
       }
+    })
+  }
+
+  /** Interruptor manual de la cláusula (no aplica a las de posición fija). */
+  function handleToggleDisabled(clauseKey: string) {
+    setData((current) => {
+      if (!current) return current
+      const clauses = current.matriz.clauses.map((clause) =>
+        clause.clause_key === clauseKey && !clause.fixed_position
+          ? { ...clause, disabled: !clause.disabled }
+          : clause
+      )
+      return { ...current, matriz: { ...current.matriz, clauses } }
     })
   }
 
@@ -218,6 +232,8 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
         puedeGuardar={resumen.puedeEditar}
         guardando={guardando}
         onGuardar={handleGuardar}
+        soloPendientes={soloPendientes}
+        onSoloPendientesChange={setSoloPendientes}
       />
 
       {aviso ? (
@@ -233,8 +249,11 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
         <MesaIndice
           clausulas={ordenadas}
           resolucion={matriz.resolution}
+          scope={matriz.scope}
+          soloPendientes={soloPendientes}
           puedeReordenar={resumen.puedeEditar}
           onReordenar={handleReordenar}
+          onToggleDisabled={handleToggleDisabled}
         />
 
         <MesaDocumento
@@ -267,7 +286,12 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
               )}
             </section>
           ) : null}
-          <PanelDatos resolucion={matriz.resolution} projectId={matriz.project_id} />
+          <PanelDatos
+            resolucion={matriz.resolution}
+            projectId={matriz.project_id}
+            scope={matriz.scope}
+            soloPendientes={soloPendientes}
+          />
         </aside>
       </div>
     </div>

@@ -143,6 +143,7 @@ class TokenResolution(MatrizResponseModel):
     label: str | None = None
     category: str | None = None
     category_label: str | None = None
+    producer: Literal["extracted", "authored", "manual", "sale_gap", "signing"] | None = None
     source_label: str | None = None
 
 

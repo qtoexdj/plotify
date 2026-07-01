@@ -247,6 +247,12 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "clausulas.tribunales_competentes",
         "clausulas.promesa_finiquito",
         "clausulas.factibilidad_servicios",
+        # SDD 013 (alineacion LOTE 29): permisos del comprador citados en la
+        # clausula factibilidad_servicios (b/c) y declaracion de IVA/DL 825.
+        "clausulas.permisos_construccion",
+        "clausulas.permisos_tala_arboles",
+        "clausulas.iva_no_afecto_aplica",
+        "clausulas.iva_no_afecto_texto",
         "clausulas.lguc_destino_suelo",
         "clausulas.rnda_declaracion",
     ),
@@ -410,6 +416,65 @@ AUTHORED_VARIABLE_DEFAULTS: Final[dict[str, dict[str, object]]] = {
             "sobre subdivisión de predios rústicos."
         ),
     },
+    # SDD 013 (alineacion LOTE 29): boilerplate de las 3 declaraciones de la
+    # clausula factibilidad_servicios (a: agua/luz ya cubierta arriba por
+    # clausulas.factibilidad_servicios; b y c abajo) y de la declaracion de
+    # IVA/DL 825, off por defecto (personeria.aplica es el mismo patron).
+    "clausulas.promesa_finiquito": {
+        "state": "derived",
+        "value_text": (
+            "Las partes dan por cumplido y finiquitado cualquier cierre de "
+            "negocio, promesa de compraventa, oferta de compra o acuerdo "
+            "previo que hubiesen celebrado respecto del inmueble objeto de "
+            "este contrato, otorgándose recíprocamente el más amplio y "
+            "completo finiquito al respecto."
+        ),
+    },
+    "clausulas.factibilidad_servicios": {
+        "state": "derived",
+        "value_text": (
+            "Las partes establecen que es el comprador quien determina la forma "
+            "en que debe abastecerse de agua y energía eléctrica. Ni el vendedor "
+            "ni ningún intermediario aseguran la existencia de pozo ni "
+            "abastecimiento de agua o electricidad de ninguna especie, cuestión "
+            "que queda bajo la responsabilidad única y exclusiva del comprador."
+        ),
+    },
+    "clausulas.permisos_construccion": {
+        "state": "derived",
+        "value_text": (
+            "Será de responsabilidad del comprador seguir los procedimientos y "
+            "solicitar las autorizaciones que establece la ley para cualquier "
+            "tipo de construcción que desee realizar en la propiedad que "
+            "adquiere. Las partes exoneran de toda responsabilidad al vendedor "
+            "respecto de la obtención de permisos y/o abastecimiento de "
+            "servicios de agua y electricidad."
+        ),
+    },
+    "clausulas.permisos_tala_arboles": {
+        "state": "derived",
+        "value_text": (
+            "El comprador declara conocer que, para realizar trabajos de corta "
+            "o tala de árboles, en especial de especies nativas o bosque "
+            "nativo, debe solicitar los permisos, autorizaciones y/o planes de "
+            "manejo correspondientes ante la Corporación Nacional Forestal "
+            "(CONAF), eximiendo de toda responsabilidad al vendedor respecto de "
+            "cualquier infracción a la normativa forestal aplicable."
+        ),
+    },
+    "clausulas.iva_no_afecto_aplica": {"state": "derived", "value_text": "false"},
+    "clausulas.iva_no_afecto_texto": {
+        "state": "derived",
+        "value_text": (
+            "Las partes comparecientes declaran ante el Notario que suscribe "
+            "que, de acuerdo a lo establecido en el Decreto Ley número "
+            "ochocientos veinticinco, sobre Impuesto a las Ventas y Servicios, "
+            "la venta del bien raíz objeto del presente contrato da cuenta de "
+            "una convención que se encuentra NO AFECTA o EXENTA del Impuesto a "
+            "las Ventas y Servicios, por corresponder a predio rural sin "
+            "construcción."
+        ),
+    },
     "mandato.facultades": {
         "state": "derived",
         "value_text": (
@@ -543,6 +608,10 @@ VARIABLE_LABELS: Final[dict[str, str]] = {
     "clausulas.tribunales_competentes": "Tribunales competentes",
     "clausulas.promesa_finiquito": "Finiquito de la promesa",
     "clausulas.factibilidad_servicios": "Factibilidad de servicios",
+    "clausulas.permisos_construccion": "Permisos de construcción",
+    "clausulas.permisos_tala_arboles": "Permisos de corta o tala de árboles",
+    "clausulas.iva_no_afecto_aplica": "Aplica declaración de IVA",
+    "clausulas.iva_no_afecto_texto": "Texto de la declaración de IVA",
     "clausulas.lguc_destino_suelo": "Destino de suelo según LGUC",
     "clausulas.rnda_declaracion": "Declaración RNDA",
     "mandato.rectificacion_nombre": "Nombre para el mandato de rectificación",

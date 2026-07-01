@@ -51,6 +51,7 @@ from services.matriz_token_resolution import (
     UnknownNodeError,
     insertable_variables_catalog,
     resolve_matriz_clauses,
+    snapshot_entry,
     token_category,
     token_label,
 )
@@ -60,7 +61,6 @@ from services.matriz_docx_renderer import (
 )
 from services.legal_variable_catalog import (
     NON_BLOCKING_PROJECT_MATRIZ_KEYS,
-    SALE_SCOPED_VARIABLE_KEYS,
     variable_producer,
 )
 from services.escritura_readiness import fetch_project_matriz_snapshot
@@ -110,12 +110,11 @@ PROJECT_MATRIZ_MISSING_CODE = "project_matriz_approval_missing"
 # construido una vez desde la fuente unica (matriz_token_resolution).
 INSERTABLE_VARIABLES: list[dict[str, str]] = insertable_variables_catalog()
 
-# SDD 011 (FR-002/FR-003): claves que solo se llenan al vender el lote (datos
-# de la venta + geometria del lote + servidumbre). En la matriz del PROYECTO son
-# huecos por diseño ("esperando ventas"): se renderizan como huecos pero NO
-# bloquean la aprobacion. Fuente unica: la clasificacion de productor del
-# catalogo (`SALE_SCOPED_VARIABLE_KEYS`), ya normalizada sin el sufijo `[]`.
-PROJECT_MATRIZ_GAP_KEYS: frozenset[str] = SALE_SCOPED_VARIABLE_KEYS
+# SDD 011/013 (FR-002/FR-003): claves que solo se llenan al vender el lote o al
+# firmar (comprador, precio, lote, servidumbre, notaria/otorgamiento). En la
+# matriz del PROYECTO son huecos por diseño: se renderizan pero NO bloquean la
+# aprobacion. Fuente unica: la clasificacion de productor del catalogo.
+PROJECT_MATRIZ_GAP_KEYS: frozenset[str] = NON_BLOCKING_PROJECT_MATRIZ_KEYS
 
 
 def _first_row(data: Any) -> dict[str, Any] | None:
@@ -167,6 +166,22 @@ def _uuid_text_or_none(value: Any) -> str | None:
 
 def _utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _docx_cover_lines(variable_snapshot: dict[str, Any]) -> list[str]:
+    """Portada del DOCX: criterio del Conservador (indexa por "vendedor A
+    comprador"), no el nombre interno de la plantilla. SDD 013 (alineacion
+    LOTE 29)."""
+    vendedor = snapshot_entry(variable_snapshot, "vendedor.nombre")
+    comprador = snapshot_entry(variable_snapshot, "comprador.nombre")
+    vendedor_nombre = (vendedor or {}).get("value_text") or "VENDEDOR"
+    comprador_nombre = (comprador or {}).get("value_text") or "COMPRADOR"
+    return [
+        "Escritura Pública de Compraventa",
+        vendedor_nombre,
+        "A",
+        comprador_nombre,
+    ]
 
 
 def _truthy_snapshot_value(snapshot: dict[str, Any], key: str | None) -> bool | None:
@@ -1597,7 +1612,7 @@ async def _generate_minuta_row(
         docx_bytes = render_minuta_docx(
             clauses=rendered_clauses,
             metadata={
-                "title": f"Minuta {template['name']}",
+                "title_lines": _docx_cover_lines(variable_snapshot),
                 # FR-008 / ADR-009: todo entregable lleva la marca de borrador.
                 "draft_notice": ESCRITURA_BORRADOR_NOTICE,
             },

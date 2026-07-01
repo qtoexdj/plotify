@@ -1,9 +1,16 @@
 'use client'
 
 import { useMemo } from 'react'
+import { AlertTriangle, CheckCircle2, PenLine, ShoppingCart, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MESA_TEXT, datoStatusLabel } from '@/lib/documents/matriz-microcopy'
+import {
+  datosAgrupadosSdd13,
+  type MesaDatoBucket,
+  type MesaDatosGrupo,
+} from '@/lib/documents/matriz-progress'
 import type {
+  MatrizScope,
   ResolutionManifest,
   TokenResolution,
   TokenResolutionStatus,
@@ -65,7 +72,40 @@ const TEXTO_ESTADO = {
   missing: 'text-amber-700',
 } as const satisfies Record<TokenResolutionStatus, string>
 
-function FilaDato({ dato, projectId }: { dato: TokenResolution; projectId: string }) {
+const GROUP_ICON = {
+  por_revisar: AlertTriangle,
+  venta: ShoppingCart,
+  firma: PenLine,
+  listas: CheckCircle2,
+} as const satisfies Record<MesaDatoBucket, LucideIcon>
+
+const GROUP_TONE = {
+  por_revisar:
+    'border-amber-300 bg-amber-50/80 text-amber-900 dark:border-amber-400/40 dark:bg-amber-950/20 dark:text-amber-100',
+  venta:
+    'border-sky-200 bg-sky-50/70 text-sky-900 dark:border-sky-400/30 dark:bg-sky-950/20 dark:text-sky-100',
+  firma:
+    'border-border bg-muted/60 text-foreground dark:border-border dark:bg-muted/30 dark:text-foreground',
+  listas:
+    'border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-400/30 dark:bg-emerald-950/20 dark:text-emerald-100',
+} as const satisfies Record<MesaDatoBucket, string>
+
+function estadoDatoLabel(dato: TokenResolution, bucket: MesaDatoBucket): string {
+  if (bucket === 'venta') return 'Venta'
+  if (bucket === 'firma') return 'Firma'
+  return datoStatusLabel(dato.status)
+}
+
+function FilaDato({
+  dato,
+  projectId,
+  bucket,
+}: {
+  dato: TokenResolution
+  projectId: string
+  bucket: MesaDatoBucket
+}) {
+  const isNonBlocking = bucket === 'venta' || bucket === 'firma'
   return (
     <DatoPopover
       projectId={projectId}
@@ -85,25 +125,79 @@ function FilaDato({ dato, projectId }: { dato: TokenResolution; projectId: strin
         <span
           className={cn(
             'flex shrink-0 items-center gap-1.5 text-xs font-medium',
-            TEXTO_ESTADO[dato.status]
+            isNonBlocking ? 'text-muted-foreground' : TEXTO_ESTADO[dato.status]
           )}
         >
-          <span aria-hidden className={cn('size-1.5 rounded-full', PUNTO_ESTADO[dato.status])} />
-          {datoStatusLabel(dato.status)}
+          <span
+            aria-hidden
+            className={cn(
+              'size-1.5 rounded-full',
+              isNonBlocking ? 'bg-muted-foreground' : PUNTO_ESTADO[dato.status]
+            )}
+          />
+          {estadoDatoLabel(dato, bucket)}
         </span>
       </button>
     </DatoPopover>
   )
 }
 
+function GrupoDatos({ grupo, projectId }: { grupo: MesaDatosGrupo; projectId: string }) {
+  const Icon = GROUP_ICON[grupo.bucket]
+  const hasPending = grupo.bucket === 'por_revisar'
+
+  return (
+    <section
+      data-testid={`panel-datos-grupo-${grupo.bucket}`}
+      className={cn(
+        'overflow-hidden rounded-lg border transition-colors',
+        GROUP_TONE[grupo.bucket],
+        hasPending && 'shadow-sm shadow-amber-500/10'
+      )}
+    >
+      <header className="flex items-start gap-2 px-3 py-3">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-background/70 text-current">
+          <Icon aria-hidden className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="truncate text-sm font-semibold">{grupo.label}</h4>
+            <span className="text-xs font-medium">
+              {grupo.datos.length === 1 ? '1 dato' : `${grupo.datos.length} datos`}
+            </span>
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">{grupo.description}</p>
+        </div>
+      </header>
+      <ul className="border-t border-current/10 bg-card/70 px-1 py-1 text-card-foreground">
+        {grupo.datos.map((dato) => (
+          <li key={dato.variableKey}>
+            <FilaDato dato={dato} projectId={projectId} bucket={grupo.bucket} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 type PanelDatosProps = {
   resolucion: ResolutionManifest
   projectId: string
+  scope: MatrizScope
+  soloPendientes?: boolean
 }
 
-export function PanelDatos({ resolucion, projectId }: PanelDatosProps) {
+export function PanelDatos({
+  resolucion,
+  projectId,
+  scope,
+  soloPendientes = false,
+}: PanelDatosProps) {
   const { tokens: datosDelCaso } = resolucion
-  const grupos = useMemo(() => datosAgrupados(datosDelCaso), [datosDelCaso])
+  const grupos = useMemo(
+    () => datosAgrupadosSdd13(datosDelCaso, scope, soloPendientes),
+    [datosDelCaso, scope, soloPendientes]
+  )
 
   return (
     <section
@@ -117,32 +211,13 @@ export function PanelDatos({ resolucion, projectId }: PanelDatosProps) {
 
       {grupos.length === 0 ? (
         <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-          {MESA_TEXT.expedienteVacio}
+          {soloPendientes ? 'No quedan datos por revisar.' : MESA_TEXT.expedienteVacio}
         </p>
       ) : (
-        <div className="space-y-4 px-2 py-3">
-          {grupos.map((grupo) => {
-            const pendientes = pendientesDelGrupo(grupo)
-            return (
-              <div key={grupo.categoria || grupo.categoriaLabel}>
-                <div className="flex items-center justify-between gap-2 px-2 pb-1">
-                  <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {grupo.categoriaLabel}
-                  </h4>
-                  {pendientes > 0 ? (
-                    <span className="text-xs text-amber-700">{pendientes} por completar</span>
-                  ) : null}
-                </div>
-                <ul>
-                  {grupo.datos.map((dato) => (
-                    <li key={dato.variableKey}>
-                      <FilaDato dato={dato} projectId={projectId} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
+        <div className="space-y-3 px-2 py-3">
+          {grupos.map((grupo) => (
+            <GrupoDatos key={grupo.bucket} grupo={grupo} projectId={projectId} />
+          ))}
         </div>
       )}
     </section>

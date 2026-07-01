@@ -151,9 +151,73 @@ class TestBlockTokens:
         assert result.missing_count >= 2
 
 
+def _inscripciones_clause() -> dict:
+    """Clausula sintetica con repeat_section sobre titulo.inscripciones[]
+    (SC-001). Ya no vive en el template golden (se elimino `titulos_inscripciones`
+    por redundante con el bloque narrativo de titulo, alineacion LOTE 29), pero
+    la capacidad del resolutor de expandir arrays con referencias registrales en
+    palabras se sigue probando aca de forma aislada."""
+    return {
+        "clause_key": "titulos_inscripciones",
+        "content_json": {
+            "schema_version": 1,
+            "type": "doc",
+            "content": [
+                {
+                    "type": "repeat_section",
+                    "attrs": {"arrayKey": "titulo.inscripciones[]"},
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": "Inscripción a fojas "},
+                                {
+                                    "type": "variable_token",
+                                    "attrs": {
+                                        "variableKey": "item.fojas",
+                                        "label": "Fojas",
+                                        "format": "words",
+                                    },
+                                },
+                                {"type": "text", "text": ", número "},
+                                {
+                                    "type": "variable_token",
+                                    "attrs": {
+                                        "variableKey": "item.numero",
+                                        "label": "Número",
+                                        "format": "words",
+                                    },
+                                },
+                                {
+                                    "type": "text",
+                                    "text": ", del Registro de Propiedad del Conservador de Bienes Raíces de ",
+                                },
+                                {
+                                    "type": "variable_token",
+                                    "attrs": {"variableKey": "item.cbr", "label": "Conservador"},
+                                },
+                                {"type": "text", "text": ", correspondiente al año "},
+                                {
+                                    "type": "variable_token",
+                                    "attrs": {
+                                        "variableKey": "item.anio",
+                                        "label": "Año",
+                                        "format": "words",
+                                    },
+                                },
+                                {"type": "text", "text": "."},
+                            ],
+                        }
+                    ],
+                }
+            ],
+        },
+    }
+
+
 class TestRepeatSections:
     def test_sexto_renders_inscripciones_in_words(self):
-        result = _resolve()
+        result = _resolve(clauses=[_inscripciones_clause()])
         text = _plain_text(_clause(result, "titulos_inscripciones").resolved_content)
         # SC-001: referencias registrales en palabras, deterministicas.
         assert number_to_words_spanish(1338) in text  # fojas tramo 1
@@ -175,7 +239,7 @@ class TestRepeatSections:
     def test_empty_array_marks_array_missing(self):
         snapshot = _snapshot()
         snapshot["variable_snapshot"]["titulo"]["inscripciones"] = []
-        result = _resolve(snapshot=snapshot)
+        result = _resolve(clauses=[_inscripciones_clause()], snapshot=snapshot)
         token = next(
             t for t in result.tokens if t.variable_key == "titulo.inscripciones[]"
         )
@@ -184,7 +248,7 @@ class TestRepeatSections:
     def test_missing_item_field_reports_indexed_key(self):
         snapshot = _snapshot()
         snapshot["variable_snapshot"]["titulo"]["inscripciones"][1]["fojas"] = None
-        result = _resolve(snapshot=snapshot)
+        result = _resolve(clauses=[_inscripciones_clause()], snapshot=snapshot)
         missing = [t.variable_key for t in result.tokens if t.status == "missing"]
         assert "titulo.inscripciones[][1].fojas" in missing
 

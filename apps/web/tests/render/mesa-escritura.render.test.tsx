@@ -5,9 +5,10 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 
 import { MesaEscritura } from '@/components/documents/mesa/mesa-escritura'
+import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import { caseResponse, clausula, matrizWith, GATE_BLOCKER, DATO_BLOCKER } from './fixtures'
 
 afterEach(cleanup)
@@ -32,5 +33,36 @@ describe('MesaEscritura (render)', () => {
     expect(screen.getByTestId('mesa-documento')).toBeTruthy()
     // El título de la cláusula se renderiza en el documento.
     expect(screen.getAllByText(/OBJETO/i).length).toBeGreaterThan(0)
+  })
+})
+
+describe('MesaIndice: interruptor de activar/desactivar cláusula', () => {
+  it('desactiva una cláusula movible desde el índice y la refleja como tachada', () => {
+    const matriz = matrizWith(
+      [],
+      [
+        clausula({ clause_key: 'comparecencia', fixed_position: true }),
+        clausula({ clause_key: 'objeto' }),
+      ]
+    )
+    render(<MesaEscritura caseId="c1" initialData={caseResponse(matriz)} />)
+
+    const filaObjeto = screen.getByTestId('mesa-indice-objeto')
+    const botonDesactivar = within(filaObjeto).getByLabelText(MESA_TEXT.desactivarClausula)
+    fireEvent.click(botonDesactivar)
+
+    expect(within(filaObjeto).getByText(MESA_TEXT.clausulaDesactivada)).toBeTruthy()
+    expect(within(filaObjeto).getByLabelText(MESA_TEXT.reactivarClausula)).toBeTruthy()
+  })
+
+  it('no permite desactivar una cláusula de posición fija', () => {
+    const matriz = matrizWith([], [clausula({ clause_key: 'comparecencia', fixed_position: true })])
+    render(<MesaEscritura caseId="c1" initialData={caseResponse(matriz)} />)
+
+    const filaComparecencia = screen.getByTestId('mesa-indice-comparecencia')
+    const boton = within(filaComparecencia).getByLabelText(
+      MESA_TEXT.desactivarClausula
+    ) as HTMLButtonElement
+    expect(boton.disabled).toBe(true)
   })
 })

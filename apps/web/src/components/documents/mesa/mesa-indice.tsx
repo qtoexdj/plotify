@@ -18,12 +18,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, LockKeyhole } from 'lucide-react'
+import { Eye, EyeOff, GripVertical, LockKeyhole } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
+import { clavesDeClausula, resumenSdd13DeClausula } from '@/lib/documents/matriz-progress'
 import type {
-  ClauseContentJson,
+  MatrizScope,
   MatrizClauseView,
   ResolutionManifest,
 } from '@/lib/documents/matriz-types'
@@ -68,30 +69,12 @@ export function reordenarClausulas(
   })
 }
 
-function clavesDeDatos(content: ClauseContentJson | null): Set<string> {
-  const claves = new Set<string>()
-  const recorrer = (nodes: unknown[]) => {
-    for (const value of nodes) {
-      if (!value || typeof value !== 'object') continue
-      const node = value as { type?: string; attrs?: Record<string, unknown>; content?: unknown[] }
-      if (node.type === 'variable_token') {
-        const clave = String(node.attrs?.variableKey ?? '')
-        if (clave) claves.add(clave)
-        continue
-      }
-      if (node.content) recorrer(node.content)
-    }
-  }
-  if (content) recorrer(content.content)
-  return claves
-}
-
 /** Datos de la cláusula aún no verificados, para el estado del índice. */
 export function pendientesDeClausula(
   clause: MatrizClauseView,
   resolucion: ResolutionManifest
 ): number {
-  const claves = clavesDeDatos(clause.content_json)
+  const claves = clavesDeClausula(clause.content_json).datos
   let pendientes = 0
   for (const dato of resolucion.tokens) {
     if (claves.has(dato.variableKey) && dato.status !== 'resolved') pendientes += 1
@@ -99,15 +82,43 @@ export function pendientesDeClausula(
   return pendientes
 }
 
-type FilaIndiceProps = {
-  clause: MatrizClauseView
-  pendientes: number
-  omitida: boolean
-  puedeReordenar: boolean
+function textoResumenClausula(summary: {
+  porRevisar: number
+  venta: number
+  firma: number
+}): string {
+  if (summary.porRevisar > 0) {
+    return summary.porRevisar === 1 ? '1 por revisar' : `${summary.porRevisar} por revisar`
+  }
+  if (summary.venta > 0 && summary.firma > 0) {
+    return `${summary.venta} de venta · ${summary.firma} firma/notaría`
+  }
+  if (summary.venta > 0) {
+    return summary.venta === 1 ? '1 se completa en venta' : `${summary.venta} se completan en venta`
+  }
+  if (summary.firma > 0) {
+    return summary.firma === 1 ? '1 firma/notaría' : `${summary.firma} firma/notaría`
+  }
+  return MESA_TEXT.clausulaCompleta
 }
 
-function FilaIndice({ clause, pendientes, omitida, puedeReordenar }: FilaIndiceProps) {
+type FilaIndiceProps = {
+  clause: MatrizClauseView
+  summary: ReturnType<typeof resumenSdd13DeClausula>
+  omitida: boolean
+  puedeReordenar: boolean
+  onToggleDisabled?: (clauseKey: string) => void
+}
+
+function FilaIndice({
+  clause,
+  summary,
+  omitida,
+  puedeReordenar,
+  onToggleDisabled,
+}: FilaIndiceProps) {
   const arrastreDeshabilitado = !puedeReordenar || clause.fixed_position
+  const toggleDeshabilitado = !puedeReordenar || clause.fixed_position || !onToggleDisabled
   const {
     attributes,
     listeners,
@@ -131,7 +142,9 @@ function FilaIndice({ clause, pendientes, omitida, puedeReordenar }: FilaIndiceP
       style={style}
       data-testid={`mesa-indice-${clause.clause_key}`}
       className={cn(
-        'grid grid-cols-[2rem_minmax(0,1fr)] items-stretch rounded-md border border-transparent text-sm transition-colors hover:bg-muted',
+        'grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-stretch rounded-md border border-transparent text-sm transition-colors hover:bg-muted',
+        summary.porRevisar > 0 && 'border-amber-300 bg-amber-50/80 dark:bg-amber-950/20',
+        clause.disabled && 'opacity-60',
         isDragging && 'z-10 border-border opacity-70 shadow-sm'
       )}
     >
@@ -149,19 +162,41 @@ function FilaIndice({ clause, pendientes, omitida, puedeReordenar }: FilaIndiceP
         {clause.fixed_position ? <LockKeyhole /> : <GripVertical />}
       </Button>
       <a href={`#clausula-${clause.clause_key}`} className="min-w-0 px-2 py-1.5">
-        <span className={cn('block truncate font-medium', omitida && 'text-muted-foreground')}>
+        <span
+          className={cn(
+            'block truncate font-medium',
+            (omitida || clause.disabled) && 'text-muted-foreground',
+            clause.disabled && 'line-through'
+          )}
+        >
           {clause.title}
         </span>
         <span className="mt-0.5 block text-xs text-muted-foreground">
-          {omitida ? (
+          {clause.disabled ? (
+            MESA_TEXT.clausulaDesactivada
+          ) : omitida ? (
             MESA_TEXT.noAplicaCorto
-          ) : pendientes > 0 ? (
-            <span className="text-amber-700">{pendientes} por completar</span>
+          ) : summary.porRevisar > 0 ? (
+            <span className="font-medium text-amber-700 dark:text-amber-200">
+              {textoResumenClausula(summary)}
+            </span>
           ) : (
-            MESA_TEXT.clausulaCompleta
+            textoResumenClausula(summary)
           )}
         </span>
       </a>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        disabled={toggleDeshabilitado}
+        aria-label={clause.disabled ? MESA_TEXT.reactivarClausula : MESA_TEXT.desactivarClausula}
+        title={clause.disabled ? MESA_TEXT.reactivarClausula : MESA_TEXT.desactivarClausula}
+        className="h-full rounded-md text-muted-foreground"
+        onClick={() => onToggleDisabled?.(clause.clause_key)}
+      >
+        {clause.disabled ? <EyeOff /> : <Eye />}
+      </Button>
     </div>
   )
 }
@@ -169,15 +204,21 @@ function FilaIndice({ clause, pendientes, omitida, puedeReordenar }: FilaIndiceP
 type MesaIndiceProps = {
   clausulas: MatrizClauseView[]
   resolucion: ResolutionManifest
+  scope: MatrizScope
+  soloPendientes?: boolean
   puedeReordenar: boolean
   onReordenar: (clausulas: MatrizClauseView[]) => void
+  onToggleDisabled?: (clauseKey: string) => void
 }
 
 export function MesaIndice({
   clausulas,
   resolucion,
+  scope,
+  soloPendientes = false,
   puedeReordenar,
   onReordenar,
+  onToggleDisabled,
 }: MesaIndiceProps) {
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -196,6 +237,13 @@ export function MesaIndice({
     onReordenar(reordenadas)
   }
 
+  const clausulasVisibles = soloPendientes
+    ? clausulas.filter((clause) => {
+        if (esClausulaOmitida(clause)) return false
+        return resumenSdd13DeClausula(clause, resolucion, scope).porRevisar > 0
+      })
+    : clausulas
+
   return (
     <nav
       data-testid="mesa-indice"
@@ -208,19 +256,26 @@ export function MesaIndice({
       <div className="max-h-[70vh] overflow-auto p-2">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
-            items={clausulas.map((clause) => clause.clause_key)}
+            items={clausulasVisibles.map((clause) => clause.clause_key)}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-0.5">
-              {clausulas.map((clause) => (
-                <FilaIndice
-                  key={clause.clause_key}
-                  clause={clause}
-                  pendientes={pendientesDeClausula(clause, resolucion)}
-                  omitida={esClausulaOmitida(clause)}
-                  puedeReordenar={puedeReordenar}
-                />
-              ))}
+              {clausulasVisibles.length > 0 ? (
+                clausulasVisibles.map((clause) => (
+                  <FilaIndice
+                    key={clause.clause_key}
+                    clause={clause}
+                    summary={resumenSdd13DeClausula(clause, resolucion, scope)}
+                    omitida={esClausulaOmitida(clause)}
+                    puedeReordenar={puedeReordenar}
+                    onToggleDisabled={onToggleDisabled}
+                  />
+                ))
+              ) : (
+                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  No quedan pendientes por revisar.
+                </p>
+              )}
             </div>
           </SortableContext>
         </DndContext>
