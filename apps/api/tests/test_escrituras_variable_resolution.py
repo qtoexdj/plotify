@@ -1043,3 +1043,181 @@ async def test_repeatable_sii_role_text_scoping_by_unit_index():
     by_unit = {p["source_ref"]["unit_index"]: p for p in inserted_payloads}
     assert by_unit[1]["value_text"] == "Rol de Lote 7"
     assert by_unit[2]["value_text"] == "Rol de Lote 8"
+
+
+# ─── SDD 013 (alineación LOTE 29): extractor de certificado GP ──────────────
+# (Certificado de Hipotecas, Gravámenes, Prohibiciones y Litigios). Textos
+# reales de 3 Conservadores distintos (Curicó/Teno, Peralillo, San Carlos)
+# aportados por el usuario para validar variaciones de formato reales.
+
+GP_DOCUMENT_ID = "00000000-0000-4000-8000-000000000040"
+GP_PAGE_ID = "00000000-0000-4000-8000-000000000041"
+
+GP_TENO_CLEAN_TEXT = """CERTIFICADO DE HIPOTECA Y GRAVÁMENES
+PROHIBICIONES, INTERDICCIONES Y/O EMBARGOS
+REVISADO EL INMUEBLE UBICADO EN LA COMUNA DE TENO, INSCRITO A FOJA 4699,
+NÚMERO 2781, DEL REGISTRO DE PROPIEDAD DEL AÑO 2023, A NOMBRE DE JUAN DE
+DIOS GALAZ ABARCA.
+Certifico que, revisados los registros de Hipotecas y Gravámenes, por sus
+índices y nombres correspondientes, desde 1994 hasta la fecha; al inmueble
+previamente individualizado, NO LE AFECTAN HIPOTECAS NI GRAVÁMENES.
+Así también, certifico que, revisados los registros de Interdicciones y
+Prohibiciones de Enajenar, por sus índices y nombres correspondientes, 1994
+la fecha; al inmueble previamente individualizado, NO LE AFECTAN
+PROHIBICIONES, INTERDICCIONES Y/O EMBARGOS.
+ESTA PROPIEDAD NO ESTÁ AFECTA A LITIGIOS.
+Certificado emitido por el Conservador de Bienes Raíces de Curicó, a
+catorce de octubre del dos mil veinticuatro.-
+"""
+
+GP_PERALILLO_MIXED_TEXT = """CERTIFICADO DE HIPOTECAS Y GRAVAMENES
+INTERDICCIONES Y PROHIBICIONES
+Del inmueble ubicado en la Comuna de Marchigüe, inscrito a fojas ciento
+ochenta y tres (183) número ciento sesenta y nueve (169) del Registro de
+Propiedad del año dos mil diecinueve (2019), a nombre de DT PEÑUELAS S.A..
+Revisados los Indices del Registro de Hipotecas y Gravámenes durante
+treinta años a la fecha, certifico que al inmueble individualizado
+precedentemente tiene(n) en dicho período una inscripción vigente(s).
+1.- SERVIDUMBRE : A fojas dieciocho (18) número catorce (14) del año dos
+mil veinte (2020) en favor de SOCIEDAD MONTES SA.
+Conservador de Bienes Raíces de Peralillo, ocho de Junio del año dos mil
+veintitrés a las 11:46 AM.-
+Revisados igualmente durante treinta años a la fecha los Indices del
+Registro de Interdicciones y Prohibiciones de Enajenar, certifico que al
+inmueble individualizado precedentemente NO le afectan Interdicciones y
+Prohibiciones.
+Conservador de Bienes Raíces de Peralillo, ocho de Junio del año dos mil
+veintitrés a las 11:46 AM.-
+"""
+
+GP_SAN_CARLOS_CLEAN_TEXT = """CESAR FUENTES VENEGAS
+CONSERVADOR DE BIENES RAICES
+SAN CARLOS
+CERTIFICADO DE HIPOTECAS Y GRAVAMENES
+Revisados por personal del CBR., los índices del Registro de Hipotecas y
+Gravámenes, durante treinta años a la fecha, certifico que la propiedad
+individualizada precedentemente a la fecha, NO tiene en dicho período
+inscripcion(es) vigente(s).-
+San Carlos, 17 de Noviembre de 2025.-
+CERTIFICADO DE INTERDICCIONES Y PROHIBICIONES DE ENAJENAR
+Revisados igualmente por personal del CBR., durante treinta años, los
+índices del Registro de Interdicciones y Prohibiciones de enajenar,
+certifico que la propiedad referida anteriormente, NO tiene en dicho
+período inscripcion(es) vigente(s).-
+San Carlos, 17 de Noviembre de 2025.-
+CERTIFICADO DE LITIGIOS
+CERTIFICO: Que revisada por el personal del CBR, la inscripción de dominio
+de la propiedad antes referida, no hay constancia de que dicha propiedad
+sea objeto de Litigios pendientes.
+San Carlos, 17 de Noviembre de 2025.-
+"""
+
+
+def _gp_page(text: str) -> LegalDocumentPageInput:
+    return LegalDocumentPageInput(
+        id=GP_PAGE_ID,
+        legal_document_id=GP_DOCUMENT_ID,
+        page_number=1,
+        text_content=text,
+    )
+
+
+def test_hipoteca_gravamen_clean_certificate_proposes_citation_with_cbr_and_fecha():
+    service = LegalVariableResolutionService()
+    result = service.extract_hipoteca_gravamen_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=GP_DOCUMENT_ID,
+        pages=[_gp_page(GP_TENO_CLEAN_TEXT)],
+    )
+    assert len(result) == 1
+    item = result[0]
+    assert item.proposal.variable_key == "evidencia.certificado_gp_referencia"
+    assert item.classification == "proposed"
+    assert "Curicó" in item.proposal.value_text
+    assert "catorce de octubre del dos mil veinticuatro" in item.proposal.value_text
+    assert item.proposal.evidence
+
+
+def test_hipoteca_gravamen_different_cbr_format_still_resolves_clean():
+    """Formato de otro Conservador (San Carlos): declaraciones separadas por
+    sección con frase "NO tiene... vigente(s)" en vez de "NO le afectan"."""
+    service = LegalVariableResolutionService()
+    result = service.extract_hipoteca_gravamen_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=GP_DOCUMENT_ID,
+        pages=[_gp_page(GP_SAN_CARLOS_CLEAN_TEXT)],
+    )
+    assert len(result) == 1
+    assert result[0].classification == "proposed"
+    assert "San Carlos" in result[0].proposal.value_text
+
+
+def test_hipoteca_gravamen_real_encumbrance_never_drafts_and_requires_manual_review():
+    """Caso mixto real (Peralillo): hay una servidumbre vigente en la sección
+    de hipotecas/gravámenes aunque prohibiciones esté limpia. Nunca se redacta
+    una declaración legal sobre un gravamen real — siempre manual_review."""
+    service = LegalVariableResolutionService()
+    result = service.extract_hipoteca_gravamen_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=GP_DOCUMENT_ID,
+        pages=[_gp_page(GP_PERALILLO_MIXED_TEXT)],
+    )
+    assert len(result) == 1
+    item = result[0]
+    assert item.classification == "manual_review"
+    assert "gp_certificate_encumbrance_detected" in item.reasons
+    assert "no se redacta" in item.proposal.value_text.lower()
+
+
+def test_hipoteca_gravamen_unrecognizable_text_requires_manual_review():
+    """Documento escaneado sin OCR disponible: sin texto, sin secciones
+    reconocibles. No debe fallar ni proponer datos inventados."""
+    service = LegalVariableResolutionService()
+    result = service.extract_hipoteca_gravamen_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=GP_DOCUMENT_ID,
+        pages=[_gp_page("   ")],
+    )
+    assert len(result) == 1
+    item = result[0]
+    assert item.classification == "manual_review"
+    assert "gp_certificate_no_recognizable_sections" in item.reasons
+
+
+def test_hipoteca_gravamen_clean_sections_without_cbr_metadata_requires_manual_review():
+    """Las tres secciones dan limpio pero no se puede extraer Conservador ni
+    fecha: nunca se inventa la cita, se escala a revisión manual."""
+    text = (
+        "revisados los registros de Hipotecas y Gravámenes, NO LE AFECTAN "
+        "HIPOTECAS NI GRAVÁMENES. revisados los registros de Interdicciones y "
+        "Prohibiciones, NO LE AFECTAN PROHIBICIONES. NO ESTÁ AFECTA A LITIGIOS."
+    )
+    service = LegalVariableResolutionService()
+    result = service.extract_hipoteca_gravamen_variables(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=GP_DOCUMENT_ID,
+        pages=[_gp_page(text)],
+    )
+    assert len(result) == 1
+    item = result[0]
+    assert item.classification == "manual_review"
+    assert "gp_certificate_cbr_or_fecha_not_extracted" in item.reasons
+
+
+def test_resolve_document_variables_dispatches_hipoteca_gravamen_to_gp_extractor():
+    service = LegalVariableResolutionService()
+    result = resolve_document_variables(
+        service,
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        legal_document_id=GP_DOCUMENT_ID,
+        document_type="hipoteca_gravamen",
+        pages=[_gp_page(GP_TENO_CLEAN_TEXT)],
+    )
+    assert len(result) == 1
+    assert result[0].proposal.variable_key == "evidencia.certificado_gp_referencia"
