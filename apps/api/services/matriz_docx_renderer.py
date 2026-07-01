@@ -148,11 +148,14 @@ def render_minuta_docx(
     normal.paragraph_format.space_after = Pt(6)
 
     if metadata:
-        title = str(metadata.get("title") or "Minuta de compraventa")
-        heading = document.add_paragraph()
-        heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = heading.add_run(title.upper())
-        run.bold = True
+        # SDD 013 (alineacion LOTE 29): portada con el criterio del
+        # Conservador ("vendedor A comprador"), una linea por parrafo.
+        title_lines = metadata.get("title_lines") or ["Minuta de compraventa"]
+        for line in title_lines:
+            heading = document.add_paragraph()
+            heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = heading.add_run(str(line).upper())
+            run.bold = True
 
         # SDD 011 (FR-008 / ADR-009): marca visible de borrador. Opt-in via
         # metadata (el endpoint la pasa siempre); ausente => DOCX sin cambios

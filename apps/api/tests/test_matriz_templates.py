@@ -52,6 +52,10 @@ class FakeQuery:
         self.filters.append((column, value))
         return self
 
+    def neq(self, column, value):
+        self.filters.append((column, ("__neq__", value)))
+        return self
+
     def in_(self, column, values):
         self.filters.append((column, ("__in__", [str(v) for v in values])))
         return self
@@ -71,6 +75,9 @@ class FakeQuery:
             value = row.get(column)
             if isinstance(expected, tuple) and expected[0] == "__in__":
                 if str(value) not in expected[1]:
+                    return False
+            elif isinstance(expected, tuple) and expected[0] == "__neq__":
+                if str(value) == str(expected[1]):
                     return False
             elif str(value) != str(expected):
                 return False
@@ -273,8 +280,8 @@ class TestTemplateLibrary:
             "comparecencia",
             "antecedentes_dominio",
             "subdivision_sag_plano",
-            "individualizacion_lote",
             "compraventa",
+            "precio_liquidacion",
         }
 
 
@@ -401,7 +408,7 @@ class TestPublish:
         assert response.status_code == 200
         body = response.json()
         assert body["status"] == "published"
-        assert body["clause_count"] == 21
+        assert body["clause_count"] == 20
 
     def test_publish_retires_previous_published_version(self, monkeypatch):
         store = FakeStore()
@@ -480,13 +487,13 @@ class TestSeedScript:
         )
         assert summary["status"] == "seeded"
         assert summary["version"] == 1
-        assert summary["clause_count"] == 21
+        assert summary["clause_count"] == 20
         templates = store.tables["escritura_templates"]
         assert templates[0]["status"] == "published"
         clauses = store.tables["escritura_template_clauses"]
         keys = {clause["clause_key"] for clause in clauses}
         assert "antecedentes_dominio" in keys
-        assert "titulos_inscripciones" in keys
+        assert "finiquito_promesa" in keys
 
     @pytest.mark.asyncio
     async def test_seed_is_idempotent_per_org(self):
@@ -502,3 +509,24 @@ class TestSeedScript:
         assert again["status"] == "skipped"
         assert again["reason"] == "already_published"
         assert len(store.tables["escritura_templates"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_seed_force_publishes_new_version_and_retires_previous(self):
+        from scripts.seed_matriz_template import seed_template
+
+        store = FakeStore()
+        first = await seed_template(
+            organization_id=ORG_ID, published_by=USER_ID, supabase=store
+        )
+        second = await seed_template(
+            organization_id=ORG_ID, published_by=USER_ID, supabase=store, force=True
+        )
+        assert second["status"] == "seeded"
+        assert second["version"] == 2
+        assert second["retired_previous"] is True
+
+        templates = store.tables["escritura_templates"]
+        by_id = {template["id"]: template for template in templates}
+        assert by_id[first["template_id"]]["status"] == "retired"
+        assert by_id[second["template_id"]]["status"] == "published"
+        assert sum(1 for t in templates if t["status"] == "published") == 1

@@ -8,12 +8,15 @@ labs/labs_escrituras/docs/template-draft.md with clause 2 replaced by the
 catalog, and publishes it.
 
 Idempotent per organization: if the organization already has a published
-version of the template name, the script exits without writing.
+version of the template name, the script exits without writing, unless
+``--force`` (or ``force=True``) is passed, in which case it publishes a new
+version from the current golden fixture and retires the previous published
+version (single-published-per-name invariant, same as the publish endpoint).
 
 Run from `apps/api/`:
 
     ./.venv/bin/python scripts/seed_matriz_template.py --organization-id <uuid> \
-        [--published-by <uuid>] [--dry-run]
+        [--published-by <uuid>] [--dry-run] [--force]
 """
 
 from __future__ import annotations
@@ -63,6 +66,7 @@ async def seed_template(
     published_by: str | None,
     supabase: Any | None = None,
     publish: bool = True,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Create + publish the golden template; returns a summary dict."""
     if supabase is None:
@@ -89,7 +93,7 @@ async def seed_template(
         )
     )
     existing = existing_result.data if isinstance(existing_result.data, list) else []
-    if existing:
+    if existing and not force:
         return {
             "status": "skipped",
             "reason": "already_published",
@@ -167,6 +171,20 @@ async def seed_template(
                 .execute()
             )
         )
+        if existing:
+            # Un solo published por (org, name): retira la version anterior,
+            # igual que el endpoint de publicacion (escritura_templates.py).
+            await asyncio.to_thread(
+                lambda: (
+                    supabase.table("escritura_templates")
+                    .update({"status": "retired"})
+                    .eq("organization_id", organization_id)
+                    .eq("name", name)
+                    .eq("status", "published")
+                    .neq("id", template_id)
+                    .execute()
+                )
+            )
 
     return {
         "status": "seeded",
@@ -174,6 +192,7 @@ async def seed_template(
         "version": next_version,
         "clause_count": len(clause_payloads),
         "published": publish,
+        "retired_previous": bool(existing) and publish,
     }
 
 
@@ -185,6 +204,11 @@ def main() -> int:
         "--dry-run",
         action="store_true",
         help="Validate the golden fixture without writing to the database.",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Publish a new version even if one is already published (retires it).",
     )
     args = parser.parse_args()
 
@@ -206,6 +230,7 @@ def main() -> int:
         seed_template(
             organization_id=args.organization_id,
             published_by=args.published_by,
+            force=args.force,
         )
     )
     print(json.dumps(summary, indent=2))

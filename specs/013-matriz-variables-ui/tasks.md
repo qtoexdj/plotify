@@ -140,3 +140,13 @@
 - **Estado actual**: T001–T022 y T026–T033 están cerradas; T023–T025 quedan como trazabilidad opcional/futura.
 - El motor no se toca (FR-011): toda acción usa endpoints existentes (PATCH variable, bulk-approve, by-key, legal-roles).
 - Commit después de cada tarea o grupo lógico.
+- **Excepción puntual y documentada a "el motor no se toca" (2026-06-30, alineación LOTE 29)**: se agregó
+  `services/legal_variable_resolution._ensure_authored_variable_gaps`, invocada desde
+  `get_project_variable_inventory` solo cuando `lot_id is None` (molde del proyecto). Corrige un bug verificado en
+  Supabase (proyecto Teno: cero filas en `variable_resolutions` para `mandato.*`/`evidencia.*`/`personeria.*`/
+  `clausulas.*` — todo el productor `authored` sin default de catálogo era invisible en la matriz aunque el
+  template publicado lo exigiera al renderizar). El paso es autosanador (corre en cada fetch, sin migración de
+  backfill), inserta únicamente filas `state=missing` para claves `authored` sin default referenciadas por el
+  template publicado y sin fila existente; no toca resolución, gates, snapshot, aprobación en bloque ni el
+  renderer. No es una reescritura del resolutor ni una feature nueva: es el cierre de un hueco de datos que el
+  propio SDD 013 dejó expuesto al exponer `producer` en el inventario.

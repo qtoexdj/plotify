@@ -51,6 +51,7 @@ from services.matriz_token_resolution import (
     UnknownNodeError,
     insertable_variables_catalog,
     resolve_matriz_clauses,
+    snapshot_entry,
     token_category,
     token_label,
 )
@@ -165,6 +166,22 @@ def _uuid_text_or_none(value: Any) -> str | None:
 
 def _utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _docx_cover_lines(variable_snapshot: dict[str, Any]) -> list[str]:
+    """Portada del DOCX: criterio del Conservador (indexa por "vendedor A
+    comprador"), no el nombre interno de la plantilla. SDD 013 (alineacion
+    LOTE 29)."""
+    vendedor = snapshot_entry(variable_snapshot, "vendedor.nombre")
+    comprador = snapshot_entry(variable_snapshot, "comprador.nombre")
+    vendedor_nombre = (vendedor or {}).get("value_text") or "VENDEDOR"
+    comprador_nombre = (comprador or {}).get("value_text") or "COMPRADOR"
+    return [
+        "Escritura Pública de Compraventa",
+        vendedor_nombre,
+        "A",
+        comprador_nombre,
+    ]
 
 
 def _truthy_snapshot_value(snapshot: dict[str, Any], key: str | None) -> bool | None:
@@ -1595,7 +1612,7 @@ async def _generate_minuta_row(
         docx_bytes = render_minuta_docx(
             clauses=rendered_clauses,
             metadata={
-                "title": f"Minuta {template['name']}",
+                "title_lines": _docx_cover_lines(variable_snapshot),
                 # FR-008 / ADR-009: todo entregable lleva la marca de borrador.
                 "draft_notice": ESCRITURA_BORRADOR_NOTICE,
             },

@@ -26,12 +26,14 @@ from schemas.legal_variables import (
 from services.legal_variable_catalog import (
     READINESS_REQUIRED_VARIABLES_BY_GATE,
     VARIABLE_STATES,
+    authored_variable_default,
     is_variable_group,
     VARIABLE_BLOCKING_STATES,
     is_source_type,
     is_variable_key,
     is_variable_state,
     variable_group_for_key,
+    variable_producer,
 )
 
 
@@ -1018,6 +1020,123 @@ def resolve_document_variables(
     return ()
 
 
+def _variable_token_keys(content_json: Any) -> set[str]:
+    """Claves `variable_token` de un `content_json` de clausula (excluye
+    `item.*`, que solo tiene sentido dentro de un `repeat_section`)."""
+    keys: set[str] = set()
+
+    def _walk(node: Any) -> None:
+        if not isinstance(node, dict):
+            return
+        if node.get("type") == "variable_token":
+            key = node.get("attrs", {}).get("variableKey")
+            if isinstance(key, str) and not key.startswith("item."):
+                keys.add(key)
+        for child in node.get("content") or []:
+            _walk(child)
+
+    _walk(content_json)
+    return keys
+
+
+async def _ensure_authored_variable_gaps(
+    *, supabase: Any, organization_id: str, project_id: str
+) -> None:
+    """SDD 013 (alineacion LOTE 29, excepcion puntual y acotada a "el motor no
+    se toca"): las variables `authored` sin default de catalogo (p. ej.
+    `mandato.rectificacion_nombre/rut`, `evidencia.certificado_gp_referencia`)
+    nunca reciben una fila en `variable_resolutions` a menos que alguien las
+    edite a mano — el resolutor solo las completa con el default al RENDERIZAR
+    la minuta (`matriz_token_resolution.authored_variable_default`), demasiado
+    tarde para que el abogado las revise en la matriz. Verificado en Supabase
+    (proyecto Teno): cero filas para `mandato.*`/`evidencia.*` pese a que el
+    template publicado las exige. Este paso es autosanador (corre en cada
+    fetch del inventario del proyecto, sin migracion de backfill) y solo
+    agrega filas `missing` que faltaban; no toca resolucion, gates, snapshot
+    ni el renderer.
+    """
+    template_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("escritura_templates")
+            .select("id")
+            .eq("organization_id", organization_id)
+            .eq("document_type", "compraventa")
+            .eq("status", "published")
+            .order("published_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    template = _first_row(template_result)
+    if not template:
+        return
+
+    clauses_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("escritura_template_clauses")
+            .select("content_json")
+            .eq("template_id", template["id"])
+            .execute()
+        )
+    )
+    referenced_keys: set[str] = set()
+    for clause in _rows(clauses_result):
+        referenced_keys |= _variable_token_keys(clause.get("content_json"))
+
+    gap_keys = sorted(
+        key
+        for key in referenced_keys
+        if variable_producer(key) == "authored" and authored_variable_default(key) is None
+    )
+    if not gap_keys:
+        return
+
+    existing_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("variable_resolutions")
+            .select("variable_key")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .is_("lot_id", "null")
+            .in_("variable_key", gap_keys)
+            .execute()
+        )
+    )
+    existing_keys = {row["variable_key"] for row in _rows(existing_result)}
+    missing_keys = [key for key in gap_keys if key not in existing_keys]
+    if not missing_keys:
+        return
+
+    payloads = [
+        {
+            "organization_id": organization_id,
+            "project_id": project_id,
+            "lot_id": None,
+            "escritura_case_id": None,
+            "variable_key": key,
+            "variable_group": variable_group_for_key(key),
+            "value_text": None,
+            "value_json": None,
+            "state": "missing",
+            "source_type": "legal_review",
+            "source_ref": {"seeded_by": "ensure_authored_variable_gaps"},
+            "confidence": None,
+            "extractor_name": None,
+            "approval_required": True,
+        }
+        for key in missing_keys
+    ]
+    await asyncio.to_thread(
+        lambda: supabase.table("variable_resolutions").insert(payloads).execute()
+    )
+    logger.info(
+        "authored_variable_gaps_seeded",
+        organization_id=organization_id,
+        project_id=project_id,
+        variable_keys=missing_keys,
+    )
+
+
 async def get_project_variable_inventory(
     *,
     project_id: str,
@@ -1040,6 +1159,12 @@ async def get_project_variable_inventory(
         project_id=project_id,
         lot_id=lot_id,
     )
+    if lot_id is None:
+        await _ensure_authored_variable_gaps(
+            supabase=client,
+            organization_id=organization_id,
+            project_id=project_id,
+        )
     variable_rows = await _fetch_variable_resolution_rows(
         supabase=client,
         organization_id=organization_id,

@@ -136,7 +136,7 @@ class TestGoldenTemplateFixture:
     def test_clause_inventory(self):
         template = _load("golden_template_clauses.json")
         clauses = template["clauses"]
-        assert len(clauses) == 21
+        assert len(clauses) == 20
         positions = [clause["position"] for clause in clauses]
         assert positions == sorted(positions) and len(set(positions)) == len(positions)
         keys = [clause["clause_key"] for clause in clauses]

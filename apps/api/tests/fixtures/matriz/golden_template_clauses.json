@@ -1,5 +1,5 @@
 {
-  "_comment": "SDD 008 T005: template golden del abogado (labs/labs_escrituras/docs/template-draft.md) como JSON de clausulas ProseMirror (research D2, schema_version 1). Deltas respecto del draft: la clausula 2 (antecedentes de dominio) se reemplaza por el block_token titulo.clausula_primero_texto (SC-010, claves matriz.adquisicion_*/matriz.inscripcion_* removidas); se agrega la clausula SEXTO 'titulos_inscripciones' con repeat_section sobre titulo.inscripciones[] (SC-001); sii.rol_asignado_lote del draft se cubre con lote.rol_tramite (mapeo research D11). Nodos custom: variable_token (inline, attrs variableKey/label/format?), block_token (bloque, attrs blockKey/label), repeat_section (attrs arrayKey, tokens item.*), conditional_section (attrs conditionKey/mode).",
+  "_comment": "SDD 008 T005, alineado 2026-06-30 contra escritura real LOTE 29 (Teno): template golden del abogado (labs/labs_escrituras/docs/template-draft.md) como JSON de clausulas ProseMirror (research D2, schema_version 1). La clausula antecedentes_dominio usa el block_token titulo.clausula_primero_texto (SC-010). Fusiones respecto de la version anterior: subdivision_sag_plano absorbe individualizacion_lote; cuerpo_cierto absorbe saneamiento_eviccion y gravamenes (incluida evidencia.certificado_gp_referencia). Se elimino titulos_inscripciones por redundante con el bloque de titulo. Se reordenaron servidumbre_transito y entrega_material para seguir el orden del ejemplo real. Se agregaron finiquito_promesa, factibilidad_servicios y declaracion_iva (esta ultima condicional, off por defecto). destino_predio quedo acotada a la prohibicion LGUC art. 55-56. lectura_firma perdio la nota de trazabilidad propia de Plotify para calzar con el cierre del ejemplo. Nodos custom: variable_token (inline, attrs variableKey/label/format?), block_token (bloque, attrs blockKey/label), repeat_section (attrs arrayKey, tokens item.*), conditional_section (attrs conditionKey/mode).",
   "name": "Compraventa predio rustico",
   "document_type": "compraventa",
   "clauses": [
@@ -18,45 +18,10 @@
           {
             "type": "paragraph",
             "content": [
-              { "type": "text", "text": "En " },
               {
-                "type": "variable_token",
-                "attrs": {
-                  "variableKey": "documento.ciudad_otorgamiento",
-                  "label": "Ciudad de otorgamiento"
-                }
-              },
-              { "type": "text", "text": ", República de Chile, a " },
-              {
-                "type": "variable_token",
-                "attrs": {
-                  "variableKey": "documento.fecha_otorgamiento",
-                  "label": "Fecha de otorgamiento",
-                  "format": "date_words"
-                }
-              },
-              { "type": "text", "text": ", ante mí, " },
-              {
-                "type": "variable_token",
-                "attrs": { "variableKey": "documento.notario.nombre", "label": "Notario" }
-              },
-              { "type": "text", "text": ", Notario Público de " },
-              {
-                "type": "variable_token",
-                "attrs": {
-                  "variableKey": "documento.notaria.jurisdiccion",
-                  "label": "Jurisdicción de la notaría"
-                }
-              },
-              { "type": "text", "text": ", con oficio en " },
-              {
-                "type": "variable_token",
-                "attrs": {
-                  "variableKey": "documento.notaria.direccion",
-                  "label": "Dirección de la notaría"
-                }
-              },
-              { "type": "text", "text": ", comparecen: por una parte, como vendedor:" }
+                "type": "text",
+                "text": "Comparecen: por una parte, como vendedor:"
+              }
             ]
           },
           {
@@ -69,12 +34,21 @@
           {
             "type": "paragraph",
             "content": [
-              { "type": "text", "text": "y por la otra, como comprador, " },
+              {
+                "type": "text",
+                "text": "y por la otra, como comprador, "
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "comprador.nombre", "label": "Nombre comprador" }
+                "attrs": {
+                  "variableKey": "comprador.nombre",
+                  "label": "Nombre comprador"
+                }
               },
-              { "type": "text", "text": ", " },
+              {
+                "type": "text",
+                "text": ", "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -82,7 +56,10 @@
                   "label": "Nacionalidad comprador"
                 }
               },
-              { "type": "text", "text": ", " },
+              {
+                "type": "text",
+                "text": ", "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -90,7 +67,10 @@
                   "label": "Estado civil comprador"
                 }
               },
-              { "type": "text", "text": ", " },
+              {
+                "type": "text",
+                "text": ", "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -98,7 +78,10 @@
                   "label": "Profesión comprador"
                 }
               },
-              { "type": "text", "text": ", cédula nacional de identidad número " },
+              {
+                "type": "text",
+                "text": ", cédula nacional de identidad número "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -107,10 +90,16 @@
                   "format": "rut_words"
                 }
               },
-              { "type": "text", "text": ", domiciliado en " },
+              {
+                "type": "text",
+                "text": ", domiciliado en "
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "comprador.domicilio", "label": "Domicilio comprador" }
+                "attrs": {
+                  "variableKey": "comprador.domicilio",
+                  "label": "Domicilio comprador"
+                }
               },
               {
                 "type": "text",
@@ -145,7 +134,7 @@
     },
     {
       "clause_key": "subdivision_sag_plano",
-      "title": "SUBDIVISIÓN, CERTIFICADO SAG Y PLANO",
+      "title": "SUBDIVISIÓN, CERTIFICADO SAG Y LOTE",
       "position": 3,
       "fixed_position": false,
       "condition_key": null,
@@ -170,7 +159,10 @@
                   "format": "words"
                 }
               },
-              { "type": "text", "text": ", de fecha " },
+              {
+                "type": "text",
+                "text": ", de fecha "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -179,7 +171,10 @@
                   "format": "date_words"
                 }
               },
-              { "type": "text", "text": ", expedido por " },
+              {
+                "type": "text",
+                "text": ", expedido por "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -187,12 +182,21 @@
                   "label": "Oficina sectorial SAG"
                 }
               },
-              { "type": "text", "text": ", relativo al proyecto " },
+              {
+                "type": "text",
+                "text": ", relativo al proyecto "
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "proyecto.nombre", "label": "Nombre del proyecto" }
+                "attrs": {
+                  "variableKey": "proyecto.nombre",
+                  "label": "Nombre del proyecto"
+                }
               },
-              { "type": "text", "text": ". El plano respectivo fue archivado bajo el número " },
+              {
+                "type": "text",
+                "text": ". El plano respectivo fue archivado bajo el número "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -201,7 +205,10 @@
                   "format": "words"
                 }
               },
-              { "type": "text", "text": ", año " },
+              {
+                "type": "text",
+                "text": ", año "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -210,7 +217,10 @@
                   "format": "words"
                 }
               },
-              { "type": "text", "text": ", en " },
+              {
+                "type": "text",
+                "text": ", en "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -223,31 +233,25 @@
                 "text": ". Las partes dejan constancia que la subdivisión no importa cambio de destino agrícola, ganadero o forestal del predio, sin perjuicio de las autorizaciones sectoriales que fueren legalmente procedentes."
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "clause_key": "individualizacion_lote",
-      "title": "INDIVIDUALIZACIÓN DEL LOTE",
-      "position": 4,
-      "fixed_position": false,
-      "condition_key": null,
-      "condition_mode": null,
-      "alert_tipo": null,
-      "content_json": {
-        "schema_version": 1,
-        "type": "doc",
-        "content": [
+          },
           {
             "type": "paragraph",
             "content": [
-              { "type": "text", "text": "Dentro de la subdivisión indicada se encuentra el Lote " },
+              {
+                "type": "text",
+                "text": "Dentro de la subdivisión indicada se encuentra el Lote "
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "lote.numero", "label": "N° de lote" }
+                "attrs": {
+                  "variableKey": "lote.numero",
+                  "label": "N° de lote"
+                }
               },
-              { "type": "text", "text": ", de una superficie de " },
+              {
+                "type": "text",
+                "text": ", de una superficie de "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -255,12 +259,21 @@
                   "label": "Superficie en palabras"
                 }
               },
-              { "type": "text", "text": " (" },
+              {
+                "type": "text",
+                "text": " ("
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "lote.superficie_m2", "label": "Superficie m²" }
+                "attrs": {
+                  "variableKey": "lote.superficie_m2",
+                  "label": "Superficie m²"
+                }
               },
-              { "type": "text", "text": " metros cuadrados), equivalente a " },
+              {
+                "type": "text",
+                "text": " metros cuadrados), equivalente a "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -268,17 +281,32 @@
                   "label": "Superficie en hectáreas (palabras)"
                 }
               },
-              { "type": "text", "text": ", rol de avalúo en trámite " },
+              {
+                "type": "text",
+                "text": ", rol de avalúo en trámite "
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "lote.rol_tramite", "label": "Rol en trámite" }
+                "attrs": {
+                  "variableKey": "lote.rol_tramite",
+                  "label": "Rol en trámite"
+                }
               },
-              { "type": "text", "text": ", que deslinda: " },
+              {
+                "type": "text",
+                "text": ", que deslinda: "
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "lote.deslindes", "label": "Deslindes del lote" }
+                "attrs": {
+                  "variableKey": "lote.deslindes",
+                  "label": "Deslindes del lote"
+                }
               },
-              { "type": "text", "text": ". De la superficie indicada, " },
+              {
+                "type": "text",
+                "text": ". De la superficie indicada, "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -286,7 +314,10 @@
                   "label": "Superficie servidumbre (palabras)"
                 }
               },
-              { "type": "text", "text": " (" },
+              {
+                "type": "text",
+                "text": " ("
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -306,7 +337,7 @@
     {
       "clause_key": "compraventa",
       "title": "COMPRAVENTA",
-      "position": 5,
+      "position": 4,
       "fixed_position": false,
       "condition_key": null,
       "condition_mode": null,
@@ -318,20 +349,38 @@
           {
             "type": "paragraph",
             "content": [
-              { "type": "text", "text": "Por el presente instrumento, " },
               {
-                "type": "variable_token",
-                "attrs": { "variableKey": "vendedor.nombre", "label": "Nombre vendedor" }
+                "type": "text",
+                "text": "Por el presente instrumento, "
               },
-              { "type": "text", "text": " vende, cede y transfiere a " },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "comprador.nombre", "label": "Nombre comprador" }
+                "attrs": {
+                  "variableKey": "vendedor.nombre",
+                  "label": "Nombre vendedor"
+                }
               },
-              { "type": "text", "text": ", quien compra, acepta y adquiere para sí, el Lote " },
+              {
+                "type": "text",
+                "text": " vende, cede y transfiere a "
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "lote.numero", "label": "N° de lote" }
+                "attrs": {
+                  "variableKey": "comprador.nombre",
+                  "label": "Nombre comprador"
+                }
+              },
+              {
+                "type": "text",
+                "text": ", quien compra, acepta y adquiere para sí, el Lote "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "lote.numero",
+                  "label": "N° de lote"
+                }
               },
               {
                 "type": "text",
@@ -356,7 +405,7 @@
     {
       "clause_key": "precio_liquidacion",
       "title": "PRECIO Y LIQUIDACIÓN",
-      "position": 6,
+      "position": 5,
       "fixed_position": false,
       "condition_key": null,
       "condition_mode": null,
@@ -379,12 +428,21 @@
                   "label": "Precio en palabras"
                 }
               },
-              { "type": "text", "text": " (" },
+              {
+                "type": "text",
+                "text": " ("
+              },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "transaccion.moneda", "label": "Moneda" }
+                "attrs": {
+                  "variableKey": "transaccion.moneda",
+                  "label": "Moneda"
+                }
               },
-              { "type": "text", "text": " " },
+              {
+                "type": "text",
+                "text": " "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -398,7 +456,10 @@
               },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "transaccion.forma_pago", "label": "Forma de pago" }
+                "attrs": {
+                  "variableKey": "transaccion.forma_pago",
+                  "label": "Forma de pago"
+                }
               },
               {
                 "type": "text",
@@ -408,31 +469,57 @@
           },
           {
             "type": "repeat_section",
-            "attrs": { "arrayKey": "transaccion.detalle_pago[]" },
+            "attrs": {
+              "arrayKey": "transaccion.detalle_pago[]"
+            },
             "content": [
               {
                 "type": "paragraph",
                 "content": [
                   {
                     "type": "variable_token",
-                    "attrs": { "variableKey": "item.concepto", "label": "Concepto del pago" }
+                    "attrs": {
+                      "variableKey": "item.concepto",
+                      "label": "Concepto del pago"
+                    }
                   },
-                  { "type": "text", "text": ": " },
+                  {
+                    "type": "text",
+                    "text": ": "
+                  },
                   {
                     "type": "variable_token",
-                    "attrs": { "variableKey": "item.monto_letras", "label": "Monto en palabras" }
+                    "attrs": {
+                      "variableKey": "item.monto_letras",
+                      "label": "Monto en palabras"
+                    }
                   },
-                  { "type": "text", "text": " ($ " },
+                  {
+                    "type": "text",
+                    "text": " ($ "
+                  },
                   {
                     "type": "variable_token",
-                    "attrs": { "variableKey": "item.monto_numeros", "label": "Monto en números" }
+                    "attrs": {
+                      "variableKey": "item.monto_numeros",
+                      "label": "Monto en números"
+                    }
                   },
-                  { "type": "text", "text": "), mediante " },
+                  {
+                    "type": "text",
+                    "text": "), mediante "
+                  },
                   {
                     "type": "variable_token",
-                    "attrs": { "variableKey": "item.medio", "label": "Medio de pago" }
+                    "attrs": {
+                      "variableKey": "item.medio",
+                      "label": "Medio de pago"
+                    }
                   },
-                  { "type": "text", "text": "." }
+                  {
+                    "type": "text",
+                    "text": "."
+                  }
                 ]
               }
             ]
@@ -451,65 +538,9 @@
                   "label": "Saldo pendiente"
                 }
               },
-              { "type": "text", "text": "." }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "clause_key": "titulos_inscripciones",
-      "title": "TÍTULOS E INSCRIPCIONES VIGENTES",
-      "position": 7,
-      "fixed_position": false,
-      "condition_key": null,
-      "condition_mode": null,
-      "alert_tipo": null,
-      "content_json": {
-        "schema_version": 1,
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
               {
                 "type": "text",
-                "text": "El dominio del vendedor sobre el predio matriz consta de las siguientes inscripciones conservatorias:"
-              }
-            ]
-          },
-          {
-            "type": "repeat_section",
-            "attrs": { "arrayKey": "titulo.inscripciones[]" },
-            "content": [
-              {
-                "type": "paragraph",
-                "content": [
-                  { "type": "text", "text": "Inscripción a fojas " },
-                  {
-                    "type": "variable_token",
-                    "attrs": { "variableKey": "item.fojas", "label": "Fojas", "format": "words" }
-                  },
-                  { "type": "text", "text": ", número " },
-                  {
-                    "type": "variable_token",
-                    "attrs": { "variableKey": "item.numero", "label": "Número", "format": "words" }
-                  },
-                  {
-                    "type": "text",
-                    "text": ", del Registro de Propiedad del Conservador de Bienes Raíces de "
-                  },
-                  {
-                    "type": "variable_token",
-                    "attrs": { "variableKey": "item.cbr", "label": "Conservador" }
-                  },
-                  { "type": "text", "text": ", correspondiente al año " },
-                  {
-                    "type": "variable_token",
-                    "attrs": { "variableKey": "item.anio", "label": "Año", "format": "words" }
-                  },
-                  { "type": "text", "text": "." }
-                ]
+                "text": "."
               }
             ]
           }
@@ -518,12 +549,12 @@
     },
     {
       "clause_key": "cuerpo_cierto",
-      "title": "CUERPO CIERTO Y CABIDA",
-      "position": 8,
+      "title": "CUERPO CIERTO, SANEAMIENTO Y GRAVÁMENES",
+      "position": 6,
       "fixed_position": false,
       "condition_key": null,
       "condition_mode": null,
-      "alert_tipo": null,
+      "alert_tipo": "gravamen",
       "content_json": {
         "schema_version": 1,
         "type": "doc",
@@ -536,22 +567,7 @@
                 "text": "La venta se hace como especie o cuerpo cierto, en el estado en que el comprador declara haber examinado el inmueble, con sus deslindes, cabida, usos, costumbres, derechos y servidumbres, sin perjuicio de las acciones que la ley concede en caso de evicción, vicios redhibitorios, dolo, error o infracción de normas imperativas, según corresponda. La cabida expresada se funda en los antecedentes técnicos y legales indicados en esta escritura y en el plano de subdivisión."
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "clause_key": "saneamiento_eviccion",
-      "title": "SANEAMIENTO, EVICCIÓN Y VICIOS REDHIBITORIOS",
-      "position": 9,
-      "fixed_position": false,
-      "condition_key": null,
-      "condition_mode": null,
-      "alert_tipo": null,
-      "content_json": {
-        "schema_version": 1,
-        "type": "doc",
-        "content": [
+          },
           {
             "type": "paragraph",
             "content": [
@@ -567,59 +583,7 @@
                 }
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      "clause_key": "exencion_eviccion",
-      "title": "EXENCIÓN O LIMITACIÓN EXPRESA DE EVICCIÓN",
-      "position": 10,
-      "fixed_position": false,
-      "condition_key": "clausulas.exencion_eviccion_aprobada",
-      "condition_mode": "omit",
-      "alert_tipo": null,
-      "content_json": {
-        "schema_version": 1,
-        "type": "doc",
-        "content": [
-          {
-            "type": "conditional_section",
-            "attrs": { "conditionKey": "clausulas.exencion_eviccion_aprobada", "mode": "omit" },
-            "content": [
-              {
-                "type": "paragraph",
-                "content": [
-                  {
-                    "type": "text",
-                    "text": "Las partes, debidamente instruidas y constando aprobación en revisión legal, acuerdan la siguiente exención o limitación de responsabilidad por evicción o vicios redhibitorios, la que no afecta normas de orden público ni derechos de terceros: "
-                  },
-                  {
-                    "type": "variable_token",
-                    "attrs": {
-                      "variableKey": "clausulas.exencion_eviccion_texto",
-                      "label": "Redacción aprobada de la exención"
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "clause_key": "gravamenes",
-      "title": "GRAVÁMENES, PROHIBICIONES Y LITIGIOS",
-      "position": 11,
-      "fixed_position": false,
-      "condition_key": null,
-      "condition_mode": null,
-      "alert_tipo": "gravamen",
-      "content_json": {
-        "schema_version": 1,
-        "type": "doc",
-        "content": [
+          },
           {
             "type": "paragraph",
             "content": [
@@ -651,9 +615,49 @@
       }
     },
     {
+      "clause_key": "exencion_eviccion",
+      "title": "EXENCIÓN O LIMITACIÓN EXPRESA DE EVICCIÓN",
+      "position": 7,
+      "fixed_position": false,
+      "condition_key": "clausulas.exencion_eviccion_aprobada",
+      "condition_mode": "omit",
+      "alert_tipo": null,
+      "content_json": {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+          {
+            "type": "conditional_section",
+            "attrs": {
+              "conditionKey": "clausulas.exencion_eviccion_aprobada",
+              "mode": "omit"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Las partes, debidamente instruidas y constando aprobación en revisión legal, acuerdan la siguiente exención o limitación de responsabilidad por evicción o vicios redhibitorios, la que no afecta normas de orden público ni derechos de terceros: "
+                  },
+                  {
+                    "type": "variable_token",
+                    "attrs": {
+                      "variableKey": "clausulas.exencion_eviccion_texto",
+                      "label": "Redacción aprobada de la exención"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "clause_key": "servidumbre_transito",
       "title": "SERVIDUMBRE DE TRÁNSITO",
-      "position": 12,
+      "position": 8,
       "fixed_position": false,
       "condition_key": "servidumbre.aplica",
       "condition_mode": "omit",
@@ -664,15 +668,24 @@
         "content": [
           {
             "type": "conditional_section",
-            "attrs": { "conditionKey": "servidumbre.aplica", "mode": "omit" },
+            "attrs": {
+              "conditionKey": "servidumbre.aplica",
+              "mode": "omit"
+            },
             "content": [
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "El Lote " },
+                  {
+                    "type": "text",
+                    "text": "El Lote "
+                  },
                   {
                     "type": "variable_token",
-                    "attrs": { "variableKey": "lote.numero", "label": "N° de lote" }
+                    "attrs": {
+                      "variableKey": "lote.numero",
+                      "label": "N° de lote"
+                    }
                   },
                   {
                     "type": "text",
@@ -708,40 +721,9 @@
       }
     },
     {
-      "clause_key": "destino_predio",
-      "title": "DESTINO DEL PREDIO Y NORMATIVA URBANÍSTICA",
-      "position": 13,
-      "fixed_position": false,
-      "condition_key": null,
-      "condition_mode": null,
-      "alert_tipo": "dl_3516",
-      "content_json": {
-        "schema_version": 1,
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
-              {
-                "type": "text",
-                "text": "Las partes declaran conocer que el inmueble proviene de una subdivisión de predio rústico y que su destino no puede alterarse sino en los casos y con las autorizaciones que contemplen las normas aplicables, especialmente la normativa de subdivisión de predios rústicos y las reglas de la Ley General de Urbanismo y Construcciones. El comprador declara conocer que cualquier edificación, urbanización, cambio de destino, acceso, factibilidad de agua, electricidad, alcantarillado u otros servicios requiere cumplir previamente las autorizaciones, permisos y factibilidades que correspondan. "
-              },
-              {
-                "type": "variable_token",
-                "attrs": {
-                  "variableKey": "clausulas.lguc_destino_suelo",
-                  "label": "Declaración LGUC / destino de suelo"
-                }
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
       "clause_key": "entrega_material",
       "title": "ENTREGA MATERIAL",
-      "position": 14,
+      "position": 9,
       "fixed_position": false,
       "condition_key": null,
       "condition_mode": null,
@@ -759,7 +741,10 @@
               },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "clausulas.entrega_fecha", "label": "Fecha de entrega" }
+                "attrs": {
+                  "variableKey": "clausulas.entrega_fecha",
+                  "label": "Fecha de entrega"
+                }
               },
               {
                 "type": "text",
@@ -780,7 +765,7 @@
     {
       "clause_key": "gastos",
       "title": "GASTOS, DERECHOS E IMPUESTOS",
-      "position": 15,
+      "position": 10,
       "fixed_position": false,
       "condition_key": null,
       "condition_mode": null,
@@ -798,9 +783,15 @@
               },
               {
                 "type": "variable_token",
-                "attrs": { "variableKey": "clausulas.gastos_cargo", "label": "Cargo de gastos" }
+                "attrs": {
+                  "variableKey": "clausulas.gastos_cargo",
+                  "label": "Cargo de gastos"
+                }
               },
-              { "type": "text", "text": ", salvo " },
+              {
+                "type": "text",
+                "text": ", salvo "
+              },
               {
                 "type": "variable_token",
                 "attrs": {
@@ -808,80 +799,9 @@
                   "label": "Excepciones de gastos"
                 }
               },
-              { "type": "text", "text": "." }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "clause_key": "rnda",
-      "title": "REGISTRO NACIONAL DE DEUDORES DE PENSIONES DE ALIMENTOS",
-      "position": 16,
-      "fixed_position": false,
-      "condition_key": null,
-      "condition_mode": null,
-      "alert_tipo": null,
-      "content_json": {
-        "schema_version": 1,
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
               {
                 "type": "text",
-                "text": "En cumplimiento de la normativa aplicable, el notario deberá verificar, cuando corresponda, la situación de los otorgantes respecto del Registro Nacional de Deudores de Pensiones de Alimentos. La constancia, certificado o resultado de dicha consulta será "
-              },
-              {
-                "type": "variable_token",
-                "attrs": {
-                  "variableKey": "clausulas.rnda_declaracion",
-                  "label": "Declaración RNDA"
-                }
-              },
-              { "type": "text", "text": "." }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "clause_key": "mandato_rectificacion",
-      "title": "MANDATO PARA RECTIFICAR, ACLARAR Y COMPLEMENTAR",
-      "position": 17,
-      "fixed_position": false,
-      "condition_key": null,
-      "condition_mode": null,
-      "alert_tipo": null,
-      "content_json": {
-        "schema_version": 1,
-        "type": "doc",
-        "content": [
-          {
-            "type": "paragraph",
-            "content": [
-              { "type": "text", "text": "Las partes confieren mandato especial a " },
-              {
-                "type": "variable_token",
-                "attrs": { "variableKey": "mandato.rectificacion_nombre", "label": "Mandatario" }
-              },
-              { "type": "text", "text": ", cédula nacional de identidad número " },
-              {
-                "type": "variable_token",
-                "attrs": {
-                  "variableKey": "mandato.rectificacion_rut",
-                  "label": "RUT mandatario",
-                  "format": "rut_words"
-                }
-              },
-              {
-                "type": "text",
-                "text": ", para que, actuando en nombre y representación de ellas, pueda suscribir escrituras aclaratorias, complementarias o rectificatorias destinadas exclusivamente a subsanar errores, omisiones o exigencias del Conservador de Bienes Raíces, Servicio de Impuestos Internos, Servicio Agrícola y Ganadero u otra autoridad competente, siempre que tales actos no alteren el precio, la cosa vendida, la voluntad esencial de las partes ni importen nuevas obligaciones sustanciales. "
-              },
-              {
-                "type": "variable_token",
-                "attrs": { "variableKey": "mandato.facultades", "label": "Facultades del mandato" }
+                "text": "."
               }
             ]
           }
@@ -891,7 +811,7 @@
     {
       "clause_key": "domicilio_competencia",
       "title": "DOMICILIO Y COMPETENCIA",
-      "position": 18,
+      "position": 11,
       "fixed_position": false,
       "condition_key": null,
       "condition_mode": null,
@@ -924,9 +844,255 @@
       }
     },
     {
+      "clause_key": "finiquito_promesa",
+      "title": "FINIQUITO DE PROMESA Y NEGOCIACIONES PREVIAS",
+      "position": 12,
+      "fixed_position": false,
+      "condition_key": null,
+      "condition_mode": null,
+      "alert_tipo": null,
+      "content_json": {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "clausulas.promesa_finiquito",
+                  "label": "Finiquito de la promesa"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "clause_key": "factibilidad_servicios",
+      "title": "FACTIBILIDAD DE SERVICIOS Y PERMISOS DEL COMPRADOR",
+      "position": 13,
+      "fixed_position": false,
+      "condition_key": null,
+      "condition_mode": null,
+      "alert_tipo": null,
+      "content_json": {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "a) Factibilidad de agua y electricidad: "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "clausulas.factibilidad_servicios",
+                  "label": "Factibilidad de servicios"
+                }
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "b) Permisos de construcción: "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "clausulas.permisos_construccion",
+                  "label": "Permisos de construcción"
+                }
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "c) Permisos de corta o tala de árboles: "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "clausulas.permisos_tala_arboles",
+                  "label": "Permisos de tala de árboles"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "clause_key": "declaracion_iva",
+      "title": "DECLARACIÓN SOBRE IMPUESTO A LAS VENTAS Y SERVICIOS",
+      "position": 14,
+      "fixed_position": false,
+      "condition_key": "clausulas.iva_no_afecto_aplica",
+      "condition_mode": "omit",
+      "alert_tipo": null,
+      "content_json": {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+          {
+            "type": "conditional_section",
+            "attrs": {
+              "conditionKey": "clausulas.iva_no_afecto_aplica",
+              "mode": "omit"
+            },
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "variable_token",
+                    "attrs": {
+                      "variableKey": "clausulas.iva_no_afecto_texto",
+                      "label": "Declaración de Impuesto a las Ventas y Servicios"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "clause_key": "mandato_rectificacion",
+      "title": "MANDATO PARA RECTIFICAR, ACLARAR Y COMPLEMENTAR",
+      "position": 15,
+      "fixed_position": false,
+      "condition_key": null,
+      "condition_mode": null,
+      "alert_tipo": null,
+      "content_json": {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Las partes confieren mandato especial a "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "mandato.rectificacion_nombre",
+                  "label": "Mandatario"
+                }
+              },
+              {
+                "type": "text",
+                "text": ", cédula nacional de identidad número "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "mandato.rectificacion_rut",
+                  "label": "RUT mandatario",
+                  "format": "rut_words"
+                }
+              },
+              {
+                "type": "text",
+                "text": ", para que, actuando en nombre y representación de ellas, pueda suscribir escrituras aclaratorias, complementarias o rectificatorias destinadas exclusivamente a subsanar errores, omisiones o exigencias del Conservador de Bienes Raíces, Servicio de Impuestos Internos, Servicio Agrícola y Ganadero u otra autoridad competente, siempre que tales actos no alteren el precio, la cosa vendida, la voluntad esencial de las partes ni importen nuevas obligaciones sustanciales. "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "mandato.facultades",
+                  "label": "Facultades del mandato"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "clause_key": "rnda",
+      "title": "REGISTRO NACIONAL DE DEUDORES DE PENSIONES DE ALIMENTOS",
+      "position": 16,
+      "fixed_position": false,
+      "condition_key": null,
+      "condition_mode": null,
+      "alert_tipo": null,
+      "content_json": {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "En cumplimiento de la normativa aplicable, el notario deberá verificar, cuando corresponda, la situación de los otorgantes respecto del Registro Nacional de Deudores de Pensiones de Alimentos. La constancia, certificado o resultado de dicha consulta será "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "clausulas.rnda_declaracion",
+                  "label": "Declaración RNDA"
+                }
+              },
+              {
+                "type": "text",
+                "text": "."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "clause_key": "destino_predio",
+      "title": "DESTINO DEL PREDIO Y NORMATIVA URBANÍSTICA",
+      "position": 17,
+      "fixed_position": false,
+      "condition_key": null,
+      "condition_mode": null,
+      "alert_tipo": "dl_3516",
+      "content_json": {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "El Lote materia del presente instrumento queda sujeto a la prohibición de cambiar el destino del uso del suelo, en conformidad a lo establecido en los artículos cincuenta y cinco y cincuenta y seis de la Ley General de Urbanismo y Construcciones. "
+              },
+              {
+                "type": "variable_token",
+                "attrs": {
+                  "variableKey": "clausulas.lguc_destino_suelo",
+                  "label": "Declaración LGUC / destino de suelo"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "clause_key": "personeria",
       "title": "PERSONERÍA",
-      "position": 19,
+      "position": 18,
       "fixed_position": false,
       "condition_key": "personeria.aplica",
       "condition_mode": "omit",
@@ -937,12 +1103,18 @@
         "content": [
           {
             "type": "conditional_section",
-            "attrs": { "conditionKey": "personeria.aplica", "mode": "omit" },
+            "attrs": {
+              "conditionKey": "personeria.aplica",
+              "mode": "omit"
+            },
             "content": [
               {
                 "type": "paragraph",
                 "content": [
-                  { "type": "text", "text": "La personería de " },
+                  {
+                    "type": "text",
+                    "text": "La personería de "
+                  },
                   {
                     "type": "variable_token",
                     "attrs": {
@@ -950,12 +1122,21 @@
                       "label": "Representantes del vendedor"
                     }
                   },
-                  { "type": "text", "text": " para representar a " },
+                  {
+                    "type": "text",
+                    "text": " para representar a "
+                  },
                   {
                     "type": "variable_token",
-                    "attrs": { "variableKey": "vendedor.nombre", "label": "Nombre vendedor" }
+                    "attrs": {
+                      "variableKey": "vendedor.nombre",
+                      "label": "Nombre vendedor"
+                    }
                   },
-                  { "type": "text", "text": " consta de " },
+                  {
+                    "type": "text",
+                    "text": " consta de "
+                  },
                   {
                     "type": "variable_token",
                     "attrs": {
@@ -963,10 +1144,16 @@
                       "label": "Constitución"
                     }
                   },
-                  { "type": "text", "text": " y de " },
+                  {
+                    "type": "text",
+                    "text": " y de "
+                  },
                   {
                     "type": "variable_token",
-                    "attrs": { "variableKey": "personeria.poder_texto", "label": "Poder" }
+                    "attrs": {
+                      "variableKey": "personeria.poder_texto",
+                      "label": "Poder"
+                    }
                   },
                   {
                     "type": "text",
@@ -979,7 +1166,10 @@
                       "label": "Estado de revisión de personería"
                     }
                   },
-                  { "type": "text", "text": ". " },
+                  {
+                    "type": "text",
+                    "text": ". "
+                  },
                   {
                     "type": "variable_token",
                     "attrs": {
@@ -997,7 +1187,7 @@
     {
       "clause_key": "portador_copia",
       "title": "PORTADOR DE COPIA E INSCRIPCIÓN",
-      "position": 20,
+      "position": 19,
       "fixed_position": false,
       "condition_key": null,
       "condition_mode": null,
@@ -1021,7 +1211,7 @@
     {
       "clause_key": "lectura_firma",
       "title": "LECTURA Y FIRMA",
-      "position": 21,
+      "position": 20,
       "fixed_position": false,
       "condition_key": null,
       "condition_mode": null,
@@ -1035,7 +1225,7 @@
             "content": [
               {
                 "type": "text",
-                "text": "Previa lectura de la presente escritura por los comparecientes, y declarando éstos haberla comprendido, aceptado y ratificado en todas sus partes, firman conjuntamente con el notario que autoriza. Se deja constancia que los datos variables, antecedentes legales, certificados y cláusulas especiales se encuentran respaldados en los documentos fuente indicados en el expediente de generación documental de Plotify."
+                "text": "Previa lectura de la presente escritura por los comparecientes, y declarando éstos haberla comprendido, aceptado y ratificado en todas sus partes, firman conjuntamente con el notario que autoriza."
               }
             ]
           }

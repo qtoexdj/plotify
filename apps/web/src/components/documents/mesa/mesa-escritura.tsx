@@ -139,6 +139,19 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
     })
   }
 
+  /** Interruptor manual de la cláusula (no aplica a las de posición fija). */
+  function handleToggleDisabled(clauseKey: string) {
+    setData((current) => {
+      if (!current) return current
+      const clauses = current.matriz.clauses.map((clause) =>
+        clause.clause_key === clauseKey && !clause.fixed_position
+          ? { ...clause, disabled: !clause.disabled }
+          : clause
+      )
+      return { ...current, matriz: { ...current.matriz, clauses } }
+    })
+  }
+
   function handleCambioClausula(clauseKey: string, content: ClauseContentJson) {
     setBorradores((current) => ({ ...current, [clauseKey]: { content_json: content } }))
   }
@@ -240,6 +253,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
           soloPendientes={soloPendientes}
           puedeReordenar={resumen.puedeEditar}
           onReordenar={handleReordenar}
+          onToggleDisabled={handleToggleDisabled}
         />
 
         <MesaDocumento

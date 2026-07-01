@@ -22,7 +22,7 @@ def _docx(bytes_: bytes) -> Document:
 def test_render_minuta_docx_preserves_order_and_title_block_verbatim():
     primero = "PRIMERO: El inmueble se encuentra inscrito a fojas ciento veinte."
     docx_bytes = render_minuta_docx(
-        metadata={"title": "Minuta de compraventa"},
+        metadata={"title_lines": ["Minuta de compraventa"]},
         clauses=[
             {
                 "clause_key": "comparecencia",
@@ -163,7 +163,7 @@ def test_render_minuta_docx_includes_draft_notice_when_requested():
     """La marca de borrador aparece visible en el DOCX entregable (FR-008)."""
     notice = "Borrador sujeto a revisión legal"
     docx_bytes = render_minuta_docx(
-        metadata={"title": "Minuta de compraventa", "draft_notice": notice},
+        metadata={"title_lines": ["Minuta de compraventa"], "draft_notice": notice},
         clauses=[_NOTICE_CLAUSE],
     )
     texts = [paragraph.text for paragraph in _docx(docx_bytes).paragraphs]
@@ -173,7 +173,7 @@ def test_render_minuta_docx_includes_draft_notice_when_requested():
 def test_render_minuta_docx_omits_draft_notice_by_default():
     """Sin draft_notice el DOCX no cambia: no-regresion del renderer."""
     docx_bytes = render_minuta_docx(
-        metadata={"title": "Minuta de compraventa"},
+        metadata={"title_lines": ["Minuta de compraventa"]},
         clauses=[_NOTICE_CLAUSE],
     )
     texts = [paragraph.text for paragraph in _docx(docx_bytes).paragraphs]

@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, LockKeyhole } from 'lucide-react'
+import { Eye, EyeOff, GripVertical, LockKeyhole } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
@@ -107,10 +107,18 @@ type FilaIndiceProps = {
   summary: ReturnType<typeof resumenSdd13DeClausula>
   omitida: boolean
   puedeReordenar: boolean
+  onToggleDisabled?: (clauseKey: string) => void
 }
 
-function FilaIndice({ clause, summary, omitida, puedeReordenar }: FilaIndiceProps) {
+function FilaIndice({
+  clause,
+  summary,
+  omitida,
+  puedeReordenar,
+  onToggleDisabled,
+}: FilaIndiceProps) {
   const arrastreDeshabilitado = !puedeReordenar || clause.fixed_position
+  const toggleDeshabilitado = !puedeReordenar || clause.fixed_position || !onToggleDisabled
   const {
     attributes,
     listeners,
@@ -134,8 +142,9 @@ function FilaIndice({ clause, summary, omitida, puedeReordenar }: FilaIndiceProp
       style={style}
       data-testid={`mesa-indice-${clause.clause_key}`}
       className={cn(
-        'grid grid-cols-[2rem_minmax(0,1fr)] items-stretch rounded-md border border-transparent text-sm transition-colors hover:bg-muted',
+        'grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-stretch rounded-md border border-transparent text-sm transition-colors hover:bg-muted',
         summary.porRevisar > 0 && 'border-amber-300 bg-amber-50/80 dark:bg-amber-950/20',
+        clause.disabled && 'opacity-60',
         isDragging && 'z-10 border-border opacity-70 shadow-sm'
       )}
     >
@@ -153,11 +162,19 @@ function FilaIndice({ clause, summary, omitida, puedeReordenar }: FilaIndiceProp
         {clause.fixed_position ? <LockKeyhole /> : <GripVertical />}
       </Button>
       <a href={`#clausula-${clause.clause_key}`} className="min-w-0 px-2 py-1.5">
-        <span className={cn('block truncate font-medium', omitida && 'text-muted-foreground')}>
+        <span
+          className={cn(
+            'block truncate font-medium',
+            (omitida || clause.disabled) && 'text-muted-foreground',
+            clause.disabled && 'line-through'
+          )}
+        >
           {clause.title}
         </span>
         <span className="mt-0.5 block text-xs text-muted-foreground">
-          {omitida ? (
+          {clause.disabled ? (
+            MESA_TEXT.clausulaDesactivada
+          ) : omitida ? (
             MESA_TEXT.noAplicaCorto
           ) : summary.porRevisar > 0 ? (
             <span className="font-medium text-amber-700 dark:text-amber-200">
@@ -168,6 +185,18 @@ function FilaIndice({ clause, summary, omitida, puedeReordenar }: FilaIndiceProp
           )}
         </span>
       </a>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        disabled={toggleDeshabilitado}
+        aria-label={clause.disabled ? MESA_TEXT.reactivarClausula : MESA_TEXT.desactivarClausula}
+        title={clause.disabled ? MESA_TEXT.reactivarClausula : MESA_TEXT.desactivarClausula}
+        className="h-full rounded-md text-muted-foreground"
+        onClick={() => onToggleDisabled?.(clause.clause_key)}
+      >
+        {clause.disabled ? <EyeOff /> : <Eye />}
+      </Button>
     </div>
   )
 }
@@ -179,6 +208,7 @@ type MesaIndiceProps = {
   soloPendientes?: boolean
   puedeReordenar: boolean
   onReordenar: (clausulas: MatrizClauseView[]) => void
+  onToggleDisabled?: (clauseKey: string) => void
 }
 
 export function MesaIndice({
@@ -188,6 +218,7 @@ export function MesaIndice({
   soloPendientes = false,
   puedeReordenar,
   onReordenar,
+  onToggleDisabled,
 }: MesaIndiceProps) {
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -237,6 +268,7 @@ export function MesaIndice({
                     summary={resumenSdd13DeClausula(clause, resolucion, scope)}
                     omitida={esClausulaOmitida(clause)}
                     puedeReordenar={puedeReordenar}
+                    onToggleDisabled={onToggleDisabled}
                   />
                 ))
               ) : (

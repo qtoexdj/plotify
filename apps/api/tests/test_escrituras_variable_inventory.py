@@ -123,6 +123,8 @@ class FakeSupabaseTable:
         self.supabase = supabase
         self.name = name
         self.filters: dict[str, object] = {}
+        self.op = "select"
+        self.payload: object = None
 
     def select(self, *_args):
         return self
@@ -135,7 +137,15 @@ class FakeSupabaseTable:
         self.filters[f"{column}__neq"] = value
         return self
 
-    def in_(self, *_args):
+    def in_(self, column, values):
+        self.filters[f"{column}__in"] = list(values)
+        return self
+
+    def is_(self, column, value):
+        self.filters[f"{column}__is"] = value
+        return self
+
+    def limit(self, *_args):
         return self
 
     def single(self):
@@ -144,13 +154,27 @@ class FakeSupabaseTable:
     def order(self, *_args, **_kwargs):
         return self
 
+    def insert(self, payload):
+        self.op = "insert"
+        self.payload = payload
+        return self
+
     def execute(self):
         return self.supabase.execute(self)
 
 
 class FakeSupabase:
-    def __init__(self, variable_rows: list[dict[str, object]] | None = None) -> None:
+    def __init__(
+        self,
+        variable_rows: list[dict[str, object]] | None = None,
+        *,
+        templates: list[dict[str, object]] | None = None,
+        template_clauses: list[dict[str, object]] | None = None,
+    ) -> None:
         self.variable_rows = variable_rows
+        self.templates = templates or []
+        self.template_clauses = template_clauses or []
+        self.inserted_variable_rows: list[dict[str, object]] = []
 
     def table(self, name: str) -> FakeSupabaseTable:
         return FakeSupabaseTable(self, name)
@@ -163,6 +187,14 @@ class FakeSupabase:
             if table.filters.get("id") == "00000000-0000-4000-8000-000000000099":
                 return SimpleNamespace(data=[])
             return SimpleNamespace(data={"id": table.filters.get("id"), "project_id": PROJECT_ID})
+        if table.name == "escritura_templates":
+            return SimpleNamespace(data=self.templates)
+        if table.name == "escritura_template_clauses":
+            return SimpleNamespace(data=self.template_clauses)
+        if table.name == "variable_resolutions" and table.op == "insert":
+            rows = table.payload if isinstance(table.payload, list) else [table.payload]
+            self.inserted_variable_rows.extend(rows)
+            return SimpleNamespace(data=rows)
         if table.name == "variable_resolutions":
             rows = self.variable_rows or [
                 {
@@ -365,6 +397,111 @@ async def test_get_project_variable_inventory_exposes_producer_by_group_and_key(
         "clausulas.saneamiento_eviccion": "authored",
         "documento.notario.nombre": "signing",
     }
+
+
+def _clause_content(variable_key: str) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "type": "doc",
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [
+                    {"type": "variable_token", "attrs": {"variableKey": variable_key}}
+                ],
+            }
+        ],
+    }
+
+
+async def test_get_project_variable_inventory_seeds_authored_gap_without_default():
+    """SDD 013 (alineacion LOTE 29): mandato.rectificacion_nombre es `authored`
+    sin default de catalogo; si el template publicado la referencia y el
+    proyecto no tiene fila, el inventario debe autosanar con un `missing`
+    antes de responder, para que deje de desaparecer de la mesa."""
+    from services.legal_variable_resolution import get_project_variable_inventory
+
+    fake = FakeSupabase(
+        variable_rows=[],
+        templates=[{"id": "tmpl-1"}],
+        template_clauses=[
+            {"content_json": _clause_content("mandato.rectificacion_nombre")},
+            {"content_json": _clause_content("mandato.rectificacion_rut")},
+            # authored CON default de catalogo: no debe sembrarse.
+            {"content_json": _clause_content("clausulas.gastos_cargo")},
+            # extracted: no es responsabilidad de este seeding.
+            {"content_json": _clause_content("vendedor.nombre")},
+        ],
+    )
+
+    await get_project_variable_inventory(
+        project_id=PROJECT_ID,
+        organization_id=ORG_ID,
+        supabase=fake,
+    )
+
+    seeded_keys = {row["variable_key"] for row in fake.inserted_variable_rows}
+    assert seeded_keys == {"mandato.rectificacion_nombre", "mandato.rectificacion_rut"}
+    for row in fake.inserted_variable_rows:
+        assert row["state"] == "missing"
+        assert row["variable_group"] == "mandato"
+        assert row["project_id"] == PROJECT_ID
+        assert row["lot_id"] is None
+
+
+async def test_get_project_variable_inventory_does_not_reseed_existing_gap():
+    from services.legal_variable_resolution import get_project_variable_inventory
+
+    fake = FakeSupabase(
+        variable_rows=[
+            {
+                "id": VARIABLE_ID,
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "variable_key": "mandato.rectificacion_nombre",
+                "variable_group": "mandato",
+                "value_text": "Juan Pérez",
+                "state": "resolved",
+                "source_type": "legal_review",
+                "source_ref": {},
+                "confidence": None,
+                "approval_required": True,
+            }
+        ],
+        templates=[{"id": "tmpl-1"}],
+        template_clauses=[
+            {"content_json": _clause_content("mandato.rectificacion_nombre")},
+        ],
+    )
+
+    await get_project_variable_inventory(
+        project_id=PROJECT_ID,
+        organization_id=ORG_ID,
+        supabase=fake,
+    )
+
+    assert fake.inserted_variable_rows == []
+
+
+async def test_get_project_variable_inventory_skips_seeding_for_lot_scope():
+    from services.legal_variable_resolution import get_project_variable_inventory
+
+    fake = FakeSupabase(
+        variable_rows=[],
+        templates=[{"id": "tmpl-1"}],
+        template_clauses=[
+            {"content_json": _clause_content("mandato.rectificacion_nombre")},
+        ],
+    )
+
+    await get_project_variable_inventory(
+        project_id=PROJECT_ID,
+        organization_id=ORG_ID,
+        lot_id="00000000-0000-4000-8000-000000000010",
+        supabase=fake,
+    )
+
+    assert fake.inserted_variable_rows == []
 
 
 async def test_get_project_variable_inventory_rejects_lot_outside_project_scope():
