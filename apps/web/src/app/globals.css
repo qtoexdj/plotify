@@ -61,6 +61,8 @@
   --space-16: 4rem;
   --background-image-brand-gradient: var(--brand-gradient);
   --animate-fade-in-up: fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-brand-sweep: brand-sweep 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  --animate-spinner-conveyor: spinner-conveyor 2.2s linear infinite;
 }
 
 :root {
@@ -183,5 +185,23 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes brand-sweep {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(96px);
+  }
+}
+
+@keyframes spinner-conveyor {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-38px);
   }
 }

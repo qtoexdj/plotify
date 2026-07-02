@@ -23,10 +23,10 @@ import {
   PlusSignIcon,
   Location01Icon,
   ExpandIcon,
-  Loading02Icon,
 } from '@hugeicons/core-free-icons'
 
 import { cn } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 
 const defaultStyles = {
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
@@ -850,7 +850,7 @@ function MapControls({
             disabled={waitingForLocation}
           >
             {waitingForLocation ? (
-              <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" />
+              <Spinner className="size-4" />
             ) : (
               <HugeiconsIcon icon={Location01Icon} className="size-4" />
             )}

@@ -3,7 +3,8 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Loading02Icon, FloppyDiskIcon, Cancel01Icon } from '@hugeicons/core-free-icons'
+import { FloppyDiskIcon, Cancel01Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 import type { GeoJSONGeometry } from '@/types/database.types'
@@ -176,7 +177,7 @@ export function LotEditForm({ lotDetails, onSave, onCancel }: LotEditFormProps) 
           <div className="flex gap-2 pt-2 border-t mt-2">
             <Button type="submit" disabled={isSaving} className="flex-1 h-9" size="sm">
               {isSaving ? (
-                <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 animate-spin mr-2" />
+                <Spinner className="w-4 h-4 mr-2" />
               ) : (
                 <HugeiconsIcon icon={FloppyDiskIcon} className="w-4 h-4 mr-2" />
               )}

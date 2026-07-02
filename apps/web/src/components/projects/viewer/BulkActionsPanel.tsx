@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Loading02Icon,
   Tick02Icon,
   Cancel01Icon,
   Money01Icon,
   Layers01Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -172,7 +172,7 @@ export function BulkActionsPanel({
               onClick={handleStateUpdate}
             >
               {isUpdatingState ? (
-                <HugeiconsIcon icon={Loading02Icon} className="w-3 h-3 animate-spin" />
+                <Spinner className="w-3 h-3" />
               ) : (
                 'Aplicar'
               )}
@@ -206,7 +206,7 @@ export function BulkActionsPanel({
               onClick={handlePriceUpdate}
             >
               {isUpdatingPrice ? (
-                <HugeiconsIcon icon={Loading02Icon} className="w-3 h-3 animate-spin" />
+                <Spinner className="w-3 h-3" />
               ) : (
                 'Aplicar'
               )}

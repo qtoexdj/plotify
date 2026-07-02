@@ -2,7 +2,7 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/012-agent-foundation/plan.md`
+`specs/014-servidumbre-precision-visor/plan.md`
 
 <!-- SPECKIT END -->
 
@@ -18,18 +18,18 @@ shell commands, and other important information, read the current plan:
 
 This repository uses Spec Kit SDD as the implementation authority. The active feature is:
 
-- `specs/012-agent-foundation/spec.md`
-- `specs/012-agent-foundation/plan.md`
-- `specs/012-agent-foundation/research.md`
-- `specs/012-agent-foundation/data-model.md`
-- `specs/012-agent-foundation/quickstart.md`
-- `specs/012-agent-foundation/contracts/`
-- `specs/012-agent-foundation/tasks.md` (created by `/speckit-tasks`)
+- `specs/014-servidumbre-precision-visor/spec.md`
+- `specs/014-servidumbre-precision-visor/plan.md`
+- `specs/014-servidumbre-precision-visor/research.md`
+- `specs/014-servidumbre-precision-visor/data-model.md`
+- `specs/014-servidumbre-precision-visor/quickstart.md`
+- `specs/014-servidumbre-precision-visor/contracts/`
+- `specs/014-servidumbre-precision-visor/tasks.md` (created by `/speckit-tasks`)
 - `.specify/memory/constitution.md`
 
 Before implementation:
 
-1. Read `specs/012-agent-foundation/tasks.md` and `plan.md`.
+1. Read `specs/014-servidumbre-precision-visor/tasks.md` and `plan.md`.
 2. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
 3. Do not start implementation while critical analyze findings remain unresolved.
 4. Run `git status --short` and `codegraph sync .`.
@@ -49,9 +49,9 @@ Canonical implementation prompt:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/012-agent-foundation/tasks.md.
+Implementa solo TXXX de specs/014-servidumbre-precision-visor/tasks.md.
 No avances a otra tarea.
-Lee specs/012-agent-foundation/tasks.md y plan.md.
+Lee specs/014-servidumbre-precision-visor/tasks.md y plan.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.
@@ -72,16 +72,16 @@ Marca la tarea como completada solo si pasa.
 - API changes: run `pnpm test:api`.
 - Database migration changes: run `pnpm verify:migrations`.
 
-## graphify
+## CodeGraph
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+This project uses CodeGraph as the local code intelligence index for project structure, symbol relationships, call graphs, and impact analysis.
 
-When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+When the user types `/codegraph`, use the CodeGraph CLI before doing anything else.
 
 Rules:
 
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- For codebase questions, first run `codegraph explore "<question>"` when the repository has a CodeGraph index. Use `codegraph query "<symbol-or-term>"` for symbol lookup, `codegraph files .` for structure, and `codegraph node "<symbol-or-file>"` for focused source context with line numbers.
+- Use `codegraph callers "<symbol>"`, `codegraph callees "<symbol>"`, and `codegraph impact "<symbol>"` for relationships, execution flow, and change impact. Prefer `--json` when machine-readable output helps.
+- Dirty `.codegraph/` files are expected after indexing or incremental updates; dirty graph files are not a reason to skip CodeGraph. Only skip CodeGraph if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- Use `codegraph status .` when you need to verify index health or coverage before relying on results.
+- After modifying code, run `codegraph sync .` to keep the graph current.

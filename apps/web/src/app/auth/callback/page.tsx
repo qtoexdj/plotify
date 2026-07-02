@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { BrandLoader } from '@/components/ui/brand-loader'
 
 /**
  * Auth Callback Page (Client-Side)
@@ -101,7 +102,7 @@ export default function AuthCallbackPage() {
           </>
         ) : (
           <>
-            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
+            <BrandLoader className="size-16 mx-auto" />
             <p className="text-gray-600 dark:text-gray-400 text-sm">Verificando invitación...</p>
           </>
         )}

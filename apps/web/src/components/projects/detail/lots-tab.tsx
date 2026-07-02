@@ -44,7 +44,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { File02Icon, PlusSignIcon, Loading02Icon } from '@hugeicons/core-free-icons'
+import { File02Icon, PlusSignIcon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import {
   LotWithRecord,
   LotRecordForm,
@@ -456,7 +457,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                   >
                     {isCreatingLot ? (
                       <>
-                        <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
+                        <Spinner className="w-4 h-4 mr-2" />
                         Guardando
                       </>
                     ) : (
@@ -725,7 +726,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                 <Button onClick={handleSaveLot} disabled={isSavingLot}>
                   {isSavingLot ? (
                     <>
-                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
+                      <Spinner className="w-4 h-4 mr-2" />
                       Guardando
                     </>
                   ) : (

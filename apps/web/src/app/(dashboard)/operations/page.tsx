@@ -2,8 +2,7 @@ import { Suspense } from 'react'
 import { getAllActiveLots } from '@/lib/services/operations.service'
 import { OperationsTable } from '@/components/operations/OperationsTable'
 import { KPICards } from '@/components/operations/KPICards'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { Loading02Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 // Force dynamic rendering since data changes frequently
 export const dynamic = 'force-dynamic'
@@ -28,7 +27,7 @@ export default async function OperationsPage() {
       <Suspense
         fallback={
           <div className="w-full h-32 flex items-center justify-center">
-            <HugeiconsIcon icon={Loading02Icon} className="animate-spin" />
+            <Spinner className="size-4" />
           </div>
         }
       >
@@ -42,7 +41,7 @@ export default async function OperationsPage() {
         <Suspense
           fallback={
             <div className="w-full h-64 flex items-center justify-center">
-              <HugeiconsIcon icon={Loading02Icon} className="animate-spin" />
+              <Spinner className="size-4" />
             </div>
           }
         >

@@ -7,10 +7,10 @@ import {
   Shield02Icon,
   Copy01Icon,
   FloppyDiskIcon,
-  Loading02Icon,
   Cancel01Icon,
   InformationSquareIcon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -771,7 +771,7 @@ export function LotVerificationPanel({
             title="Guarda el progreso sin marcar el lote como verificado"
           >
             {isSaving ? (
-              <HugeiconsIcon icon={Loading02Icon} className="w-3.5 h-3.5 mr-2 animate-spin" />
+              <Spinner className="w-3.5 h-3.5 mr-2" />
             ) : (
               <HugeiconsIcon icon={FloppyDiskIcon} className="w-3.5 h-3.5 mr-2" />
             )}
@@ -789,10 +789,7 @@ export function LotVerificationPanel({
                     className="w-full text-xs bg-emerald-600 hover:bg-emerald-700"
                   >
                     {isSaving ? (
-                      <HugeiconsIcon
-                        icon={Loading02Icon}
-                        className="w-3.5 h-3.5 mr-2 animate-spin"
-                      />
+                      <Spinner className="w-3.5 h-3.5 mr-2" />
                     ) : (
                       <HugeiconsIcon icon={Shield02Icon} className="w-3.5 h-3.5 mr-2" />
                     )}

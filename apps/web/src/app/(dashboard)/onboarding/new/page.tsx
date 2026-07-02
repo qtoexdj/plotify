@@ -19,7 +19,8 @@ import type { ProjectLegalDocumentUploadMetadata } from '@/lib/services/projects
 import type { ParsedFeature } from '@/types/onboarding.types'
 import type { Project } from '@/types/database.types'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Alert01Icon, Tick02Icon, Loading02Icon, Location01Icon } from '@hugeicons/core-free-icons'
+import { Alert01Icon, Tick02Icon, Location01Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 const projectSchema = z.object({
@@ -402,7 +403,7 @@ export default function OnboardingWizardPage() {
                 <Button type="submit" disabled={isSavingProject} className="min-w-40">
                   {isSavingProject ? (
                     <>
-                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />{' '}
+                      <Spinner className="w-4 h-4 mr-2" />{' '}
                       Creando...
                     </>
                   ) : (

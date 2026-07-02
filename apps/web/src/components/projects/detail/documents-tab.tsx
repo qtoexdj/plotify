@@ -18,10 +18,10 @@ import {
   Delete02Icon as Trash01Icon,
   Download01Icon,
   FileAttachmentIcon,
-  Loading02Icon,
   ViewIcon,
   Share01Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import type { ProjectWithMetrics } from '@/types/database.types'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -399,7 +399,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                 <Button variant="outline" size="sm" asChild disabled={isUploading === 'images'}>
                   <label htmlFor="image-upload" className="cursor-pointer">
                     {isUploading === 'images' ? (
-                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
+                      <Spinner className="w-4 h-4 mr-2" />
                     ) : (
                       <HugeiconsIcon icon={ImageAdd01Icon} className="w-4 h-4 mr-2" />
                     )}
@@ -538,10 +538,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                           <Button size="sm" asChild disabled={isUploading === doc.id}>
                             <label htmlFor={`upload-${doc.id}`} className="cursor-pointer">
                               {isUploading === doc.id ? (
-                                <HugeiconsIcon
-                                  icon={Loading02Icon}
-                                  className="w-4 h-4 mr-2 animate-spin"
-                                />
+                                <Spinner className="w-4 h-4 mr-2" />
                               ) : (
                                 <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-2" />
                               )}
@@ -610,10 +607,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                                       className="cursor-pointer"
                                     >
                                       {isUploading === `replace-${activeDocument.id}` ? (
-                                        <HugeiconsIcon
-                                          icon={Loading02Icon}
-                                          className="w-4 h-4 animate-spin"
-                                        />
+                                        <Spinner className="w-4 h-4" />
                                       ) : (
                                         'Reemplazar'
                                       )}
@@ -755,10 +749,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                           <Button size="sm" asChild disabled={isUploading === doc.id}>
                             <label htmlFor={`upload-${doc.id}`} className="cursor-pointer">
                               {isUploading === doc.id ? (
-                                <HugeiconsIcon
-                                  icon={Loading02Icon}
-                                  className="w-4 h-4 mr-2 animate-spin"
-                                />
+                                <Spinner className="w-4 h-4 mr-2" />
                               ) : (
                                 <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-2" />
                               )}

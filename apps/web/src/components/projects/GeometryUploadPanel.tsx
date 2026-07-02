@@ -11,9 +11,9 @@ import {
   FileUploadIcon,
   Tick02Icon,
   Alert01Icon,
-  Loading02Icon,
   Location01Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import type { ParsedFeature } from '@/types/onboarding.types'
 
 interface GeometryUploadPanelProps {
@@ -154,7 +154,7 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
         >
           {status === 'uploading' ? (
             <>
-              <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
+              <Spinner className="w-4 h-4 mr-2" />
               Procesando archivo...
             </>
           ) : (

@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { Loading02Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -277,7 +276,7 @@ export function LotReservationForm({
             </Button>
             <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting && (
-                <HugeiconsIcon icon={Loading02Icon} className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 h-4 w-4" />
               )}
               {mode === 'direct_sale' ? 'Confirmar Venta' : 'Solicitar Reserva'}
             </Button>

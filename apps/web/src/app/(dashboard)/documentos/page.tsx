@@ -10,12 +10,12 @@ import {
   FileAttachmentIcon,
   Folder02Icon,
   LayoutLeftIcon,
-  Loading02Icon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Spinner } from '@/components/ui/spinner'
 import {
   Select,
   SelectContent,
@@ -123,7 +123,7 @@ export default function DocumentosPage() {
         <BentoGrid>
           <BentoPanel className="md:col-span-12 p-6">
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <HugeiconsIcon icon={Loading02Icon} className="h-4 w-4 animate-spin" />
+              <Spinner className="h-4 w-4" />
               Cargando proyectos...
             </div>
           </BentoPanel>

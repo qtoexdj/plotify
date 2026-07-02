@@ -12,9 +12,9 @@ import {
   FileUploadIcon,
   Delete02Icon as Trash01Icon,
   Tick02Icon,
-  Loading02Icon,
   FileAttachmentIcon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { ProjectLegalDocumentUploadMetadata } from '@/lib/services/projects.service'
@@ -265,7 +265,7 @@ export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepP
         >
           {isUploading ? (
             <>
-              <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
+              <Spinner className="w-4 h-4 mr-2" />
               Subiendo...
             </>
           ) : uploadedPaths.images.length > 0 || Object.keys(uploadedPaths.docs).length > 0 ? (

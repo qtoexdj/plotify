@@ -2,7 +2,6 @@ node_modules
 .next
 .turbo
 .cache
-graphify-out
 .pytest_cache
 .mypy_cache
 .ruff_cache

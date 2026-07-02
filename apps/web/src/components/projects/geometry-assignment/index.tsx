@@ -10,8 +10,8 @@ import {
   Cancel01Icon,
   Layers01Icon,
   Location01Icon,
-  Loading02Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { combineLineStrings, combinePolygons } from '@/lib/geometry/utils'
 
 import { AssignmentMapPanel } from './AssignmentMapPanel'
@@ -436,7 +436,7 @@ export function GeometryAssignmentPanel({
     return (
       <div className="flex items-center justify-center h-150 bg-muted/50 rounded-xl border border-border">
         <div className="flex flex-col items-center gap-3">
-          <HugeiconsIcon icon={Loading02Icon} className="w-8 h-8 animate-spin text-primary" />
+          <Spinner className="w-8 h-8 text-primary" />
           <div className="h-3 w-40 rounded bg-muted animate-pulse" />
         </div>
       </div>
