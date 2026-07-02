@@ -19,7 +19,7 @@
 **Purpose**: preparar contexto, dependencia geoespacial y fixtures sin cambiar comportamiento productivo.
 
 - [x] T001 Confirmar feature activo `specs/014-servidumbre-precision-visor` en `/Users/matiasignacio/Developer/plotify/.specify/feature.json`
-- [ ] T002 Ejecutar `git status --short` y `codegraph sync .` desde `/Users/matiasignacio/Developer/plotify` antes de modificar codigo
+- [x] T002 Ejecutar `git status --short` y `codegraph sync .` desde `/Users/matiasignacio/Developer/plotify` antes de modificar codigo
 - [ ] T003 [P] Crear helpers de fixtures metricos WGS84 para tests en `/Users/matiasignacio/Developer/plotify/apps/web/tests/lib/geometry/servidumbre-fixtures.ts`
 - [ ] T004 [P] Agregar dependencia modular `@turf/union` en `/Users/matiasignacio/Developer/plotify/apps/web/package.json` y actualizar `/Users/matiasignacio/Developer/plotify/pnpm-lock.yaml`
 
