@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/input-group'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
-import { saveOfficialOverride, markLotVerified } from '@/actions/lot-verification.action'
+import { saveOfficialOverride, saveAndVerifyLot } from '@/actions/lot-verification.action'
 import type { LotDetails } from '@/types/viewer.types'
 import type { OfficialBoundaries, VerifiedStatus } from '@/types/database.types'
 import type { LegalMetrics } from '@/lib/geometry/utm'
@@ -381,19 +381,15 @@ export function LotVerificationPanel({
     const verifiedStatus: VerifiedStatus = isExact ? 'verified_exact' : 'verified_override'
 
     setIsSaving(true)
-    console.log('[DEBUG-PANEL] Enviando a markLotVerified:', {
-      boundaries_official: boundaries,
-      area_official_m2: areaNum,
-      perimeter_official_m: perimeterNum,
-      verified_status: verifiedStatus,
-    })
     try {
-      const result = await markLotVerified({
+      const result = await saveAndVerifyLot({
         projectId,
         lotId: lotDetails.id,
         verified_status: verifiedStatus,
         area_official_m2: areaNum,
         perimeter_official_m: perimeterNum,
+        servidumbre_m2: servidumbreOfficial ? parseFloat(servidumbreOfficial) : undefined,
+        servidumbre_ancho_m: servidumbreAncho ? parseFloat(servidumbreAncho) : undefined,
         boundaries_official: boundaries,
         calculated_snapshot: legalMetrics
           ? {
@@ -418,6 +414,8 @@ export function LotVerificationPanel({
     canVerify,
     areaOfficial,
     perimeterOfficial,
+    servidumbreOfficial,
+    servidumbreAncho,
     boundaries,
     legalMetrics,
     projectId,
@@ -435,10 +433,7 @@ export function LotVerificationPanel({
             <HugeiconsIcon icon={RulerIcon} className="w-4 h-4 text-primary" />
             Verificación Legal
           </CardTitle>
-          <Badge
-            variant={statusConfig.variant}
-            className={`text - [10px] ${statusConfig.className} `}
-          >
+          <Badge variant={statusConfig.variant} className={`text-[10px] ${statusConfig.className}`}>
             {statusConfig.label}
           </Badge>
         </div>
@@ -773,13 +768,14 @@ export function LotVerificationPanel({
             onClick={handleSave}
             disabled={isSaving || isPending}
             className="flex-1 text-xs"
+            title="Guarda el progreso sin marcar el lote como verificado"
           >
             {isSaving ? (
               <HugeiconsIcon icon={Loading02Icon} className="w-3.5 h-3.5 mr-2 animate-spin" />
             ) : (
               <HugeiconsIcon icon={FloppyDiskIcon} className="w-3.5 h-3.5 mr-2" />
             )}
-            Guardar
+            Guardar borrador
           </Button>
 
           <TooltipProvider>
@@ -800,7 +796,7 @@ export function LotVerificationPanel({
                     ) : (
                       <HugeiconsIcon icon={Shield02Icon} className="w-3.5 h-3.5 mr-2" />
                     )}
-                    Verificar
+                    Guardar y Verificar
                   </Button>
                 </span>
               </TooltipTrigger>
@@ -841,7 +837,7 @@ function DiffBadge({ diff }: { diff: number | null }) {
 
   return (
     <span
-      className={`text - [10px] font - mono font - semibold text - right px - 1.5 py - 0.5 rounded ${color} `}
+      className={`text-[10px] font-mono font-semibold text-right px-1.5 py-0.5 rounded ${color}`}
     >
       {sign}
       {diff.toFixed(1)}%

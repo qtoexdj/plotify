@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Lot, Geometry } from '@/types/database.types'
+import type { Lot, Geometry, GeoJSONGeometry } from '@/types/database.types'
 import type { LotDetails } from '@/types/viewer.types'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
@@ -11,6 +11,74 @@ import type {
 import { computeM2FromGeoJSON } from '@/lib/geometry/compute-m2'
 import { combineLineStrings } from '@/lib/geometry/utils'
 import { calculateServidumbre } from '@/lib/geometry/servidumbre'
+
+/**
+ * Calcula servidumbre para un lote contra un camino ya conocido y persiste el
+ * resultado. El ancho de servidumbre se pre-puebla desde el ancho del camino
+ * del proyecto solo cuando el lote realmente colinda con él (servidumbreM2 >
+ * 0); así no se sugiere un ancho falso en lotes que no tocan el camino.
+ */
+async function applyLotServidumbre(
+  supabase: SupabaseClient,
+  params: {
+    lotId: string
+    lotGeometry: GeoJSONGeometry
+    lotM2: number | null
+    roadGeometry: GeoJSONGeometry
+    roadWidth: number
+  }
+): Promise<void> {
+  const { lotId, lotGeometry, lotM2, roadGeometry, roadWidth } = params
+  const calc = calculateServidumbre(lotGeometry, roadGeometry, roadWidth)
+  const superficieNeta = lotM2 ? lotM2 - calc.servidumbreM2 : null
+
+  const updatePayload: Record<string, number | null> = {
+    servidumbre_m2: calc.servidumbreM2,
+    superficie_neta_m2: superficieNeta,
+  }
+  if (calc.servidumbreM2 > 0) {
+    updatePayload.servidumbre_ancho_m = roadWidth
+  }
+
+  const { error } = await supabase.from('lots').update(updatePayload).eq('id', lotId)
+  if (error) {
+    console.error(`[Servidumbre] ERROR al actualizar lote ${lotId}:`, error)
+  }
+}
+
+/**
+ * Recalcula la servidumbre de un lote recién asignado a una geometría,
+ * usando el camino unificado ya guardado en el proyecto (si existe). Antes
+ * la servidumbre solo se calculaba al guardar un camino, así que un lote
+ * asignado después de ese momento quedaba sin servidumbre para siempre.
+ */
+async function recalculateLotServidumbreOnAssign(
+  supabase: SupabaseClient,
+  params: { projectId: string; lotId: string; lotGeometry: GeoJSONGeometry; lotM2: number | null }
+): Promise<void> {
+  try {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('road_geometry, road_width_m')
+      .eq('id', params.projectId)
+      .single()
+
+    if (!project?.road_geometry) return // Aún no hay camino asignado al proyecto
+
+    await applyLotServidumbre(supabase, {
+      lotId: params.lotId,
+      lotGeometry: params.lotGeometry,
+      lotM2: params.lotM2,
+      roadGeometry: project.road_geometry,
+      roadWidth: project.road_width_m || 6,
+    })
+  } catch (err) {
+    console.error(
+      `[Servidumbre] Error recalculando al asignar geometría (lote ${params.lotId}):`,
+      err
+    )
+  }
+}
 
 export async function getLotsByProject(
   projectId: string,
@@ -165,6 +233,13 @@ export async function saveAndAssignGeometry(
     throw new Error('Error al asignar geometría al lote')
   }
 
+  await recalculateLotServidumbreOnAssign(supabase, {
+    projectId: payload.projectId,
+    lotId: payload.lotId,
+    lotGeometry: payload.geometry,
+    lotM2: m2,
+  })
+
   return geometry
 }
 
@@ -268,24 +343,13 @@ export async function saveInfrastructure(
               return
             }
 
-            const calc = calculateServidumbre(lotGeom, combinedRoad, roadWidth)
-            const superficieNeta = lot.m2 ? lot.m2 - calc.servidumbreM2 : null
-
-            console.log(
-              `[Servidumbre] Lote ${lot.id} => Servidumbre: ${calc.servidumbreM2}, Neta: ${superficieNeta}`
-            )
-
-            const { error: lotUpdateErr } = await supabase
-              .from('lots')
-              .update({
-                servidumbre_m2: calc.servidumbreM2,
-                superficie_neta_m2: superficieNeta,
-              })
-              .eq('id', lot.id)
-
-            if (lotUpdateErr) {
-              console.error(`[Servidumbre] ERROR al actualizar lote ${lot.id}:`, lotUpdateErr)
-            }
+            await applyLotServidumbre(supabase, {
+              lotId: lot.id,
+              lotGeometry: lotGeom as GeoJSONGeometry,
+              lotM2: lot.m2,
+              roadGeometry: combinedRoad,
+              roadWidth,
+            })
           })
 
           await Promise.all(updatePromises)
@@ -356,6 +420,13 @@ export async function assignGeometry(
     .from('lots')
     .update({ geometry_id: payload.geometryId, ...(m2 !== null && { m2 }) })
     .eq('id', payload.lotId)
+
+  await recalculateLotServidumbreOnAssign(supabase, {
+    projectId: lot.project_id,
+    lotId: payload.lotId,
+    lotGeometry: updatedGeometry.geometry,
+    lotM2: m2,
+  })
 
   return updatedGeometry
 }

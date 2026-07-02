@@ -126,6 +126,11 @@ export interface CreateSaleApprovalRequestParams {
     valor_final: number
     notaria?: string | null
     fecha_firma?: string | null
+    cliente_direccion?: string | null
+    cliente_estado_civil?: string | null
+    cliente_ocupacion?: string | null
+    cliente_email?: string | null
+    cliente_telefono?: string | null
   }
 }
 

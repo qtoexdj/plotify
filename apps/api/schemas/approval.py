@@ -11,6 +11,11 @@ class ReservationPayload(BaseModel):
     valor_reserva: float = Field(..., gt=0)
     notaria: Optional[str] = None
     fecha_firma: Optional[date] = None
+    cliente_direccion: Optional[str] = None
+    cliente_estado_civil: Optional[str] = None
+    cliente_ocupacion: Optional[str] = None
+    cliente_email: Optional[str] = None
+    cliente_telefono: Optional[str] = None
 
 
 class ReservationRequest(BaseModel):
@@ -33,6 +38,11 @@ class SalePayload(BaseModel):
     valor_final: float = Field(..., gt=0)
     notaria: Optional[str] = None
     fecha_firma: Optional[date] = None
+    cliente_direccion: Optional[str] = None
+    cliente_estado_civil: Optional[str] = None
+    cliente_ocupacion: Optional[str] = None
+    cliente_email: Optional[str] = None
+    cliente_telefono: Optional[str] = None
 
 
 class SaleRequest(BaseModel):

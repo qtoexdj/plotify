@@ -3856,15 +3856,70 @@
       "ReservationPayload": {
         "description": "Datos del cliente y la operación, almacenados como JSONB.",
         "properties": {
+          "cliente_direccion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Direccion"
+          },
+          "cliente_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Email"
+          },
+          "cliente_estado_civil": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Estado Civil"
+          },
           "cliente_nombre": {
             "minLength": 2,
             "title": "Cliente Nombre",
             "type": "string"
           },
+          "cliente_ocupacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Ocupacion"
+          },
           "cliente_run": {
             "minLength": 7,
             "title": "Cliente Run",
             "type": "string"
+          },
+          "cliente_telefono": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Telefono"
           },
           "fecha_firma": {
             "anyOf": [
@@ -4167,15 +4222,70 @@
       "SalePayload": {
         "description": "Datos del cliente y la operación de venta, almacenados como JSONB.",
         "properties": {
+          "cliente_direccion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Direccion"
+          },
+          "cliente_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Email"
+          },
+          "cliente_estado_civil": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Estado Civil"
+          },
           "cliente_nombre": {
             "minLength": 2,
             "title": "Cliente Nombre",
             "type": "string"
           },
+          "cliente_ocupacion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Ocupacion"
+          },
           "cliente_run": {
             "minLength": 7,
             "title": "Cliente Run",
             "type": "string"
+          },
+          "cliente_telefono": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Telefono"
           },
           "fecha_firma": {
             "anyOf": [

@@ -30,9 +30,15 @@ interface GeometryViewerProps {
   projectId: string
   refreshKey?: number
   projectName?: string
+  isAdmin?: boolean
 }
 
-export function GeometryViewer({ projectId, refreshKey = 0, projectName }: GeometryViewerProps) {
+export function GeometryViewer({
+  projectId,
+  refreshKey = 0,
+  projectName,
+  isAdmin = false,
+}: GeometryViewerProps) {
   const isMobile = useIsMobile()
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -365,6 +371,7 @@ export function GeometryViewer({ projectId, refreshKey = 0, projectName }: Geome
           }}
           onUpdateLot={handleUpdateLot}
           onLotUpdated={refreshLotDetails}
+          isAdmin={isAdmin}
         />
       )
     }

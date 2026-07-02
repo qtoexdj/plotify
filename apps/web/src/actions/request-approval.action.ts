@@ -303,6 +303,11 @@ export async function requestSaleApproval(
     valor_final: validData.valor_reserva, // valor final en la venta
     notaria: validData.notaria || null,
     fecha_firma: validData.fecha || null,
+    cliente_direccion: validData.cliente_direccion || null,
+    cliente_estado_civil: validData.cliente_estado_civil || null,
+    cliente_ocupacion: validData.cliente_ocupacion || null,
+    cliente_email: validData.cliente_email || null,
+    cliente_telefono: validData.cliente_telefono || null,
   }
 
   // 6. Crear solicitud de aprobación de venta

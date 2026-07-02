@@ -30,6 +30,8 @@ interface LotInfoViewProps {
   onEditClick: () => void
   onOpenReservation: (mode: 'reservation' | 'direct_sale') => void
   onLotUpdated?: () => void
+  /** La verificación legal (deslindes, servidumbre) es tarea de administrador; los vendedores no ven esa pestaña. */
+  isAdmin?: boolean
 }
 
 export function LotInfoView({
@@ -40,6 +42,7 @@ export function LotInfoView({
   onEditClick,
   onOpenReservation,
   onLotUpdated,
+  isAdmin = false,
 }: LotInfoViewProps) {
   const [activeTab, setActiveTab] = useState('general')
   const router = useRouter()
@@ -149,13 +152,15 @@ export function LotInfoView({
             <HugeiconsIcon icon={File02Icon} className="w-3.5 h-3.5" />
             General
           </TabsTrigger>
-          <TabsTrigger
-            value="legal"
-            className="flex-1 text-xs gap-1.5 py-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs dark:data-[state=active]:bg-input/30 rounded-md"
-          >
-            <HugeiconsIcon icon={RulerIcon} className="w-3.5 h-3.5" />
-            Legal
-          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger
+              value="legal"
+              className="flex-1 text-xs gap-1.5 py-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs dark:data-[state=active]:bg-input/30 rounded-md"
+            >
+              <HugeiconsIcon icon={RulerIcon} className="w-3.5 h-3.5" />
+              Legal
+            </TabsTrigger>
+          )}
           {showProcessTab && (
             <TabsTrigger
               value="proceso"
@@ -300,28 +305,30 @@ export function LotInfoView({
           )}
         </TabsContent>
 
-        {/* ─── Tab: Legal ─── */}
-        <TabsContent value="legal" className="space-y-3 mt-3">
-          {/* Verification Legal Panel (first) */}
-          {geometry && (
-            <LotVerificationPanel
-              projectId={projectId}
-              lotDetails={lotDetails}
-              legalMetrics={legalMetrics}
-              calculatedBoundaries={boundariesWithNeighbors}
-              onLotUpdated={onLotUpdated}
-            />
-          )}
+        {/* ─── Tab: Legal (solo administradores) ─── */}
+        {isAdmin && (
+          <TabsContent value="legal" className="space-y-3 mt-3">
+            {/* Verification Legal Panel (first) */}
+            {geometry && (
+              <LotVerificationPanel
+                projectId={projectId}
+                lotDetails={lotDetails}
+                legalMetrics={legalMetrics}
+                calculatedBoundaries={boundariesWithNeighbors}
+                onLotUpdated={onLotUpdated}
+              />
+            )}
 
-          {/* Empty state for legal tab */}
-          {!geometry && (
-            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-              <HugeiconsIcon icon={RulerIcon} className="w-8 h-8 opacity-20 mb-2" />
-              <p className="text-sm">No hay datos legales disponibles</p>
-              <p className="text-xs opacity-60 mt-1">Asigna una geometría para ver métricas</p>
-            </div>
-          )}
-        </TabsContent>
+            {/* Empty state for legal tab */}
+            {!geometry && (
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                <HugeiconsIcon icon={RulerIcon} className="w-8 h-8 opacity-20 mb-2" />
+                <p className="text-sm">No hay datos legales disponibles</p>
+                <p className="text-xs opacity-60 mt-1">Asigna una geometría para ver métricas</p>
+              </div>
+            )}
+          </TabsContent>
+        )}
 
         {/* ─── Tab: Proceso ─── */}
         {showProcessTab && (

@@ -616,8 +616,13 @@ export interface components {
       "organization_id": string
     }
     "ReservationPayload": {
+      "cliente_direccion"?: string | null
+      "cliente_email"?: string | null
+      "cliente_estado_civil"?: string | null
       "cliente_nombre": string
+      "cliente_ocupacion"?: string | null
       "cliente_run": string
+      "cliente_telefono"?: string | null
       "fecha_firma"?: string | null
       "notaria"?: string | null
       "valor_reserva": number
@@ -664,8 +669,13 @@ export interface components {
       "summary"?: Record<string, number>
     }
     "SalePayload": {
+      "cliente_direccion"?: string | null
+      "cliente_email"?: string | null
+      "cliente_estado_civil"?: string | null
       "cliente_nombre": string
+      "cliente_ocupacion"?: string | null
       "cliente_run": string
+      "cliente_telefono"?: string | null
       "fecha_firma"?: string | null
       "notaria"?: string | null
       "valor_final": number

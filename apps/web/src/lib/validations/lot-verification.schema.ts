@@ -44,31 +44,29 @@ export const officialOverrideSchema = z.object({
 
 export type OfficialOverrideInput = z.infer<typeof officialOverrideSchema>
 
-// ─── Mark Verified ──────────────────────────────────────────────────────────
+// ─── Save + Verify (unified) ────────────────────────────────────────────────
 
 /**
- * verified_exact: los valores calculados coinciden con los oficiales.
- *   - Requiere: area_official_m2 + boundaries_official
- *
- * verified_override: el usuario ingresó valores distintos a los calculados.
- *   - Requiere: area_official_m2 + perimeter_official_m + boundaries_official
+ * Une el guardado de valores oficiales y la verificación en una sola
+ * escritura atómica: antes "Guardar" y "Verificar" eran acciones separadas
+ * que podían pisarse entre sí (Guardar revertía a draft, Verificar no
+ * persistía servidumbre). Ahora ambas cosas ocurren en el mismo update.
  */
-export const markVerifiedSchema = z.object({
+export const saveAndVerifySchema = z.object({
   projectId: z.string().uuid('ID de proyecto inválido'),
   lotId: z.string().uuid('ID de lote inválido'),
   verified_status: z.enum(['verified_exact', 'verified_override'], {
     error: 'Estado de verificación inválido',
   }),
-  // Datos que deben existir ya en el lote al momento de verificar
   area_official_m2: z.coerce
     .number()
     .positive('La superficie oficial es obligatoria para verificar'),
   perimeter_official_m: z.coerce
     .number()
     .positive('El perímetro oficial es obligatorio para verificar'),
-
+  servidumbre_m2: z.coerce.number().nonnegative('La servidumbre no puede ser negativa').optional(),
+  servidumbre_ancho_m: z.coerce.number().positive('El ancho debe ser positivo').optional(),
   boundaries_official: officialBoundariesSchema,
-  // Snapshot de valores calculados para trazabilidad (se envía desde el cliente)
   calculated_snapshot: z
     .object({
       area_m2: z.number(),
@@ -77,4 +75,4 @@ export const markVerifiedSchema = z.object({
     .optional(),
 })
 
-export type MarkVerifiedInput = z.infer<typeof markVerifiedSchema>
+export type SaveAndVerifyInput = z.infer<typeof saveAndVerifySchema>

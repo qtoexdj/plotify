@@ -711,6 +711,11 @@ async def test_assigned_vendor_can_create_reservation_request_from_telegram():
         "valor_reserva": 500000.0,
         "notaria": None,
         "fecha_firma": None,
+        "cliente_direccion": None,
+        "cliente_estado_civil": None,
+        "cliente_ocupacion": None,
+        "cliente_email": None,
+        "cliente_telefono": None,
     }
     assert "approved" not in inserted_request.values()
     approvals_table.update.assert_not_called()

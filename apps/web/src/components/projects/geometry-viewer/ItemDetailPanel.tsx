@@ -17,6 +17,7 @@ interface ItemDetailPanelProps {
   onClose: () => void
   onUpdateLot: (id: string, data: LotUpdateInput) => Promise<boolean>
   onLotUpdated?: () => void
+  isAdmin?: boolean
 }
 
 export function ItemDetailPanel({
@@ -27,6 +28,7 @@ export function ItemDetailPanel({
   // onClose,
   onUpdateLot,
   onLotUpdated,
+  isAdmin = false,
 }: ItemDetailPanelProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [reservationMode, setReservationMode] = useState<'reservation' | 'direct_sale' | null>(null)
@@ -73,6 +75,7 @@ export function ItemDetailPanel({
           onEditClick={() => setIsEditing(true)}
           onOpenReservation={(mode) => setReservationMode(mode)}
           onLotUpdated={onLotUpdated}
+          isAdmin={isAdmin}
         />
 
         {/* Reservation Dialog */}

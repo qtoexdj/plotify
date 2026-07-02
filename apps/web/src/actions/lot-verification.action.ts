@@ -4,9 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import {
   officialOverrideSchema,
-  markVerifiedSchema,
+  saveAndVerifySchema,
   type OfficialOverrideInput,
-  type MarkVerifiedInput,
+  type SaveAndVerifyInput,
 } from '@/lib/validations/lot-verification.schema'
 import { logger } from '@/lib/logger'
 import { validateLotDocumentReadiness, type MinimalBoundary } from '@/lib/legal/readiness'
@@ -39,6 +39,31 @@ async function checkUserPermissions(supabase: any, projectId: string) {
   return { allowed: true, userId: user.id }
 }
 
+/**
+ * La verificación legal (deslindes, superficie, servidumbre) es tarea de
+ * administrador: RLS permite a un vendedor asignado hacer UPDATE en `lots`
+ * (para reservar/gestionar su venta), así que `checkUserPermissions` (que
+ * solo confirma acceso de lectura al proyecto) no alcanza para bloquear a un
+ * vendedor de editar deslindes oficiales. Se usan las RPCs `is_project_admin`
+ * / `is_super_admin` (las mismas que usan las RLS policies de `lots_update`)
+ * para exigir rol de administrador aquí en el servidor.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function checkAdminPermissions(supabase: any, projectId: string) {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+  if (authError || !user) return { allowed: false, userId: null as string | null }
+
+  const [{ data: isProjectAdmin }, { data: isSuperAdmin }] = await Promise.all([
+    supabase.rpc('is_project_admin', { target_project_id: projectId }),
+    supabase.rpc('is_super_admin'),
+  ])
+
+  return { allowed: Boolean(isProjectAdmin || isSuperAdmin), userId: user.id }
+}
+
 // ─── Save Official Override ─────────────────────────────────────────────────
 
 export async function saveOfficialOverride(
@@ -62,10 +87,13 @@ export async function saveOfficialOverride(
     boundaries_official,
   } = validation.data
 
-  // 2. Check permissions
-  const { allowed, userId } = await checkUserPermissions(supabase, projectId)
+  // 2. Check permissions (solo administradores editan datos legales)
+  const { allowed, userId } = await checkAdminPermissions(supabase, projectId)
   if (!allowed) {
-    return { success: false, error: 'No tienes permisos para realizar esta acción' }
+    return {
+      success: false,
+      error: 'Solo un administrador puede editar los datos legales del lote',
+    }
   }
 
   try {
@@ -95,8 +123,20 @@ export async function saveOfficialOverride(
 
     if (boundaries_official !== undefined) updatePayload.boundaries_official = boundaries_official
 
-    // If status was verified and data changes, revert to draft
-    if (currentLot.verified_status !== 'draft') {
+    // Solo revertir a draft si algún valor oficial realmente cambió respecto
+    // a lo ya guardado; re-guardar los mismos valores no debe desverificar
+    // el lote (antes esto pasaba siempre, incluso sin cambios).
+    const officialDataChanged =
+      (area_official_m2 !== undefined && area_official_m2 !== currentLot.area_official_m2) ||
+      (perimeter_official_m !== undefined &&
+        perimeter_official_m !== currentLot.perimeter_official_m) ||
+      (servidumbre_m2 !== undefined && servidumbre_m2 !== currentLot.servidumbre_m2) ||
+      (servidumbre_ancho_m !== undefined &&
+        servidumbre_ancho_m !== currentLot.servidumbre_ancho_m) ||
+      (boundaries_official !== undefined &&
+        JSON.stringify(boundaries_official) !== JSON.stringify(currentLot.boundaries_official))
+
+    if (currentLot.verified_status !== 'draft' && officialDataChanged) {
       updatePayload.verified_status = 'draft'
       updatePayload.verified_at = null
       updatePayload.verified_by = null
@@ -138,13 +178,20 @@ export async function saveOfficialOverride(
   }
 }
 
-// ─── Mark Lot as Verified ───────────────────────────────────────────────────
+// ─── Save + Verify Lot (unified) ────────────────────────────────────────────
 
-export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionResult> {
+/**
+ * Reemplaza el par Guardar/Verificar: persiste todos los valores oficiales
+ * (incluida servidumbre y su ancho, que antes solo guardaba el botón
+ * "Guardar") y marca el lote como verificado en una sola escritura atómica.
+ * Evita el catch-22 anterior donde verificar no guardaba servidumbre y
+ * guardar después revertía la verificación.
+ */
+export async function saveAndVerifyLot(input: SaveAndVerifyInput): Promise<ActionResult> {
   const supabase = await createClient()
 
   // 1. Validate input
-  const validation = markVerifiedSchema.safeParse(input)
+  const validation = saveAndVerifySchema.safeParse(input)
   if (!validation.success) {
     return { success: false, error: validation.error.issues[0].message }
   }
@@ -155,14 +202,16 @@ export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionR
     verified_status,
     area_official_m2,
     perimeter_official_m,
+    servidumbre_m2,
+    servidumbre_ancho_m,
     boundaries_official,
     calculated_snapshot,
   } = validation.data
 
-  // 2. Check permissions
-  const { allowed, userId } = await checkUserPermissions(supabase, projectId)
+  // 2. Check permissions (solo administradores verifican datos legales)
+  const { allowed, userId } = await checkAdminPermissions(supabase, projectId)
   if (!allowed) {
-    return { success: false, error: 'No tienes permisos para verificar este lote' }
+    return { success: false, error: 'Solo un administrador puede verificar este lote' }
   }
 
   try {
@@ -177,7 +226,7 @@ export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionR
       return { success: false, error: 'Lote no encontrado' }
     }
 
-    // 4. Ensure official data is saved first
+    // 4. Save official data + servidumbre + verification in one write
     const now = new Date().toISOString()
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,11 +241,13 @@ export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionR
       // Sync commercial area with official area on verification
       m2: area_official_m2,
     }
+    if (servidumbre_m2 !== undefined) updatePayload.servidumbre_m2 = servidumbre_m2
+    if (servidumbre_ancho_m !== undefined) updatePayload.servidumbre_ancho_m = servidumbre_ancho_m
 
     const { error: updateError } = await supabase.from('lots').update(updatePayload).eq('id', lotId)
 
     if (updateError) {
-      logger.error({ lotId, error: updateError }, 'mark_lot_verified_failed')
+      logger.error({ lotId, error: updateError }, 'save_and_verify_lot_failed')
       return { success: false, error: 'Error al verificar lote' }
     }
 
@@ -207,10 +258,13 @@ export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionR
       entity: 'lots',
       entity_id: lotId,
       payload: {
-        type: 'lot_verified',
+        type: 'lot_saved_and_verified',
         verified_status,
         official: {
           area_official_m2,
+          perimeter_official_m,
+          servidumbre_m2,
+          servidumbre_ancho_m,
           boundaries_official,
         },
         calculated_snapshot: calculated_snapshot ?? {
@@ -227,11 +281,11 @@ export async function markLotVerified(input: MarkVerifiedInput): Promise<ActionR
       success: true,
       message:
         verified_status === 'verified_exact'
-          ? 'Lote verificado (coincide con calculado)'
-          : 'Lote verificado con valores oficiales de plano',
+          ? 'Lote guardado y verificado (coincide con calculado)'
+          : 'Lote guardado y verificado con valores oficiales de plano',
     }
   } catch (err) {
-    logger.error({ lotId, error: err }, 'mark_lot_verified_error')
+    logger.error({ lotId, error: err }, 'save_and_verify_lot_error')
     return { success: false, error: 'Error del servidor' }
   }
 }

@@ -247,9 +247,9 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         </TabsContent>
 
         <TabsContent value="viewer">
-          {/* GeometryViewer ya maneja su propio estado interno, pero idealmente debería recibir datos 
+          {/* GeometryViewer ya maneja su propio estado interno, pero idealmente debería recibir datos
                o tener un bus de eventos si quisieramos sincronizar selección */}
-          <GeometryViewer projectId={projectId} projectName={project.name} />
+          <GeometryViewer projectId={projectId} projectName={project.name} isAdmin={isAdmin} />
         </TabsContent>
 
         <TabsContent value="documents">
