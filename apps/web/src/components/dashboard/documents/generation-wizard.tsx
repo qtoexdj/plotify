@@ -47,7 +47,7 @@ import { numberToWords } from '@/lib/legal/number-to-words'
 import { generateDeslindeText } from '@/lib/legal/deslinde-generator'
 import {
   generateServidumbreText,
-  generateServidumbreTextLegacy,
+  generateServidumbreTextFromOfficialBoundaries,
 } from '@/lib/legal/servidumbre-generator'
 import type { DocumentTemplate } from '@/types/v2'
 import type { OfficialBoundary, ServidumbreAnalysis } from '@/types/database.types'
@@ -63,6 +63,7 @@ interface LotWithRelations {
   area_official_m2: number | null
   servidumbre_m2: number | null
   servidumbre_ancho_m?: number | null
+  servidumbre_ancho_label?: string | null
   boundaries_official: OfficialBoundary[] | null
   servidumbre_analysis?: ServidumbreAnalysis | null
   precio: number | null
@@ -78,7 +79,6 @@ interface LotWithRelations {
     name: string
     commune: string | null
     region: string | null
-    road_width_m?: number | null
   } | null
 }
 
@@ -153,6 +153,12 @@ const WizardFormSchema = z.object({
 })
 
 type WizardFormValues = z.infer<typeof WizardFormSchema>
+
+type GenerateServidumbreTextWithOptions = (
+  analysis: ServidumbreAnalysis,
+  widthRoadMeters?: number,
+  options?: { widthLabel?: string | null }
+) => string
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -397,10 +403,12 @@ export function GenerationWizard({
   const handleGenerarServidumbre = useCallback(() => {
     let texto: string
     if (lot.servidumbre_analysis) {
-      const roadWidth = lot.servidumbre_ancho_m ?? lot.projects?.road_width_m ?? 6
-      texto = generateServidumbreText(lot.servidumbre_analysis, roadWidth)
+      const roadWidth = lot.servidumbre_ancho_m ?? 6
+      const widthLabel = lot.servidumbre_ancho_label?.trim() || null
+      const generateText = generateServidumbreText as GenerateServidumbreTextWithOptions
+      texto = generateText(lot.servidumbre_analysis, roadWidth, { widthLabel })
     } else {
-      texto = generateServidumbreTextLegacy({
+      texto = generateServidumbreTextFromOfficialBoundaries({
         numero_lote: lot.numero_lote,
         servidumbre_m2: lot.servidumbre_m2,
         boundaries_official: lot.boundaries_official,

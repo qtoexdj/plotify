@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -12,14 +12,9 @@ import {
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { generateDeslindeText } from '@/lib/legal/deslinde-generator'
-import {
-  generateServidumbreText,
-  generateServidumbreTextLegacy,
-} from '@/lib/legal/servidumbre-generator'
-import { analyzeServidumbreBoundaries } from '@/lib/geometry/servidumbre'
+import { generateServidumbreTextFromOfficialBoundaries } from '@/lib/legal/servidumbre-generator'
 import type { LotWithRecord } from '@/components/projects/detail/types'
-import type { ProjectWithMetrics, ServidumbreAnalysis } from '@/types/database.types'
-import type { ViewerFeatureCollection } from '@/types/viewer.types'
+import type { ProjectWithMetrics } from '@/types/database.types'
 import { LegalControlCenter } from './legal-control-center'
 
 interface LegalTabProps {
@@ -30,63 +25,8 @@ interface LegalTabProps {
 
 export function LegalTab({ lots, projectId, project }: LegalTabProps) {
   const [selectedLotId, setSelectedLotId] = useState<string>('')
-  const [featureCollection, setFeatureCollection] = useState<ViewerFeatureCollection | null>(null)
-  const [isLoadingFC, setIsLoadingFC] = useState(false)
-
-  // ── Fetch Feature Collection (geometrías) al montar ──
-  useEffect(() => {
-    let cancelled = false
-
-    const fetchFC = async () => {
-      setIsLoadingFC(true)
-      try {
-        const res = await fetch(`/api/viewer/${projectId}/feature-collection`)
-        if (res.ok && !cancelled) {
-          const data: ViewerFeatureCollection = await res.json()
-          setFeatureCollection(data)
-        }
-      } catch (err) {
-        console.error('[DEBUG-SERVIDUMBRE] Error al cargar feature collection:', err)
-      } finally {
-        if (!cancelled) setIsLoadingFC(false)
-      }
-    }
-
-    fetchFC()
-    return () => {
-      cancelled = true
-    }
-  }, [projectId])
 
   const selectedLot = lots.find((lot) => lot.id === selectedLotId)
-
-  // ── Computar ServidumbreAnalysis para el lote seleccionado ──
-  const servidumbreAnalysis = useMemo<ServidumbreAnalysis | null>(() => {
-    if (!selectedLot || !featureCollection || !project.road_geometry) return null
-
-    const lotFeature = featureCollection.features.find(
-      (f) => f.properties.lot_id === selectedLot.id && f.properties.geometry_type === 'lot'
-    )
-
-    if (!lotFeature) {
-      console.warn(
-        '[DEBUG-SERVIDUMBRE] No se encontró geometría para lote',
-        selectedLot.numero_lote
-      )
-      return null
-    }
-
-    const roadWidth = project.road_width_m || 6
-
-    return analyzeServidumbreBoundaries(
-      lotFeature.geometry,
-      project.road_geometry,
-      roadWidth,
-      selectedLot.numero_lote,
-      featureCollection.features,
-      selectedLot.id
-    )
-  }, [selectedLot, featureCollection, project.road_geometry, project.road_width_m])
 
   // ── Generador de deslindes ──
   const deslindesText = selectedLot
@@ -96,14 +36,8 @@ export function LegalTab({ lots, projectId, project }: LegalTabProps) {
   // ── Generador de servidumbre ──
   const servidumbreText = useMemo(() => {
     if (!selectedLot) return 'Selecciona un lote para generar la servidumbre.'
-    if (isLoadingFC) return 'Preparando geometrías del proyecto...'
-
-    if (servidumbreAnalysis) {
-      return generateServidumbreText(servidumbreAnalysis, project.road_width_m || 6)
-    }
-
-    return generateServidumbreTextLegacy(selectedLot)
-  }, [selectedLot, servidumbreAnalysis, isLoadingFC, project.road_width_m])
+    return generateServidumbreTextFromOfficialBoundaries(selectedLot)
+  }, [selectedLot])
 
   return (
     <div className="space-y-8">
@@ -152,8 +86,8 @@ export function LegalTab({ lots, projectId, project }: LegalTabProps) {
           <CardHeader>
             <CardTitle>Creador de Servidumbre</CardTitle>
             <CardDescription>
-              {servidumbreAnalysis
-                ? `Motor v2 · ${servidumbreAnalysis.isMultiTramo ? `Multi-tramo (${servidumbreAnalysis.tramos.length})` : 'Simple'} · ${servidumbreAnalysis.allEdges.length} aristas`
+              {selectedLot?.servidumbre_ancho_label
+                ? `Ancho ${selectedLot.servidumbre_ancho_label} m · ${selectedLot.servidumbre_m2 ?? 0} m²`
                 : 'Texto base para escritura con servidumbre del lote.'}
             </CardDescription>
           </CardHeader>

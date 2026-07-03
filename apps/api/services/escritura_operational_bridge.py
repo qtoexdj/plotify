@@ -52,6 +52,7 @@ LOT_GEOMETRY_VARIABLE_KEYS = (
     "lote.deslindes",
     "servidumbre.aplica",
     "servidumbre.superficie_m2",
+    "servidumbre.ancho_label",
 )
 DERIVED_VARIABLE_KEYS = (
     "transaccion.precio_letras",
@@ -202,6 +203,7 @@ def _lot_hash_fields(lot: dict[str, Any]) -> dict[str, Any]:
         "boundaries_official": lot.get("boundaries_official"),
         "servidumbre_m2": lot.get("servidumbre_m2"),
         "servidumbre_ancho_m": lot.get("servidumbre_ancho_m"),
+        "servidumbre_ancho_label": lot.get("servidumbre_ancho_label"),
     }
 
 
@@ -363,6 +365,7 @@ def map_lot_geometry_variables(lot: dict[str, Any]) -> BridgeMapping:
         boundaries if isinstance(boundaries, list) else None
     )
     servidumbre_m2 = lot.get("servidumbre_m2")
+    servidumbre_ancho_label = _clean(lot.get("servidumbre_ancho_label"))
     servidumbre_aplica = servidumbre_m2 is not None and servidumbre_m2 > 0
 
     variables = [
@@ -409,6 +412,14 @@ def map_lot_geometry_variables(lot: dict[str, Any]) -> BridgeMapping:
                 servidumbre_m2,
             )
         )
+        if servidumbre_ancho_label:
+            variables.append(
+                geometry_var(
+                    "servidumbre.ancho_label",
+                    servidumbre_ancho_label,
+                    servidumbre_ancho_label,
+                )
+            )
     mapped = tuple(variables)
     missing = tuple(var.variable_key for var in mapped if not var.has_value)
     return BridgeMapping(variables=mapped, missing_keys=missing)

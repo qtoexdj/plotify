@@ -21,7 +21,7 @@ Propuesta de tabla: `project_road_segments`
 | `width_m`            | numeric     | nullable | Requerido para `centerline` y `edge`; opcional para `footprint` si el poligono ya trae huella |
 | `edge_side`          | text        | nullable | `left`, `right`, `both`; requerido solo para `edge` si se implementa                          |
 | `footprint_geometry` | jsonb       | yes      | Polygon/MultiPolygon calculado o directo                                                      |
-| `source_type`        | text        | yes      | `kmz`, `manual`, `legacy`                                                                     |
+| `source_type`        | text        | yes      | `kmz`, `kml`, `dxf`, `dwg`, `manual`                                                          |
 | `status`             | text        | yes      | `ready`, `needs_review`, `invalid`                                                            |
 | `sort_order`         | integer     | nullable | Orden de presentacion                                                                         |
 | `created_at`         | timestamptz | yes      | Audit basica                                                                                  |
@@ -38,13 +38,13 @@ Validation:
 
 Resultado persistido en `lots`, ampliando columnas existentes.
 
-Campos legacy preservados:
+Campos existentes preservados como read-model:
 
-| Field                 | Type    | Behavior                                                                                 |
-| --------------------- | ------- | ---------------------------------------------------------------------------------------- |
-| `servidumbre_m2`      | numeric | Superficie afecta total calculada u oficial                                              |
-| `superficie_neta_m2`  | numeric | Superficie total base menos servidumbre                                                  |
-| `servidumbre_ancho_m` | numeric | Compatibilidad para ancho unico; null o primer ancho solo si se decide mantener fallback |
+| Field                 | Type    | Behavior                                                                             |
+| --------------------- | ------- | ------------------------------------------------------------------------------------ |
+| `servidumbre_m2`      | numeric | Superficie afecta total calculada u oficial                                          |
+| `superficie_neta_m2`  | numeric | Superficie total base menos servidumbre                                              |
+| `servidumbre_ancho_m` | numeric | Compatibilidad para ancho unico; null o primer ancho derivado del resultado canonico |
 
 Campos nuevos propuestos:
 
@@ -143,7 +143,7 @@ lot servitude
 
 ## Compatibility Rules
 
-- Existing projects without `project_road_segments` are adapted from `projects.road_geometry` and `projects.road_width_m` as one legacy centerline segment.
-- Existing `lots.servidumbre_ancho_m` continues to work for single-width projects.
+- Existing projects without `project_road_segments` must be reloaded or transformed into canonical road segments before servidumbre calculation.
+- Existing `lots.servidumbre_ancho_m` remains a derived/read-model field for single-width lots, not a project-wide calculation input.
 - New multi-width lots must use `servidumbre_widths_m` and `servidumbre_ancho_label`.
 - Any template or bridge that currently reads only `servidumbre_ancho_m` must prefer `servidumbre_ancho_label` when present.

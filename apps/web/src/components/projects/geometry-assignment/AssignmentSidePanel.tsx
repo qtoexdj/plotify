@@ -33,6 +33,14 @@ import {
 } from '@hugeicons/core-free-icons'
 import { Spinner } from '@/components/ui/spinner'
 import type { Lot, FilterType, AssignAsType } from './types'
+import type { RoadInputMode } from '@/types/database.types'
+
+type RoadAssignmentInputMode = Extract<RoadInputMode, 'centerline' | 'footprint'>
+
+const ROAD_INPUT_MODE_OPTIONS: Array<{ value: RoadAssignmentInputMode; label: string }> = [
+  { value: 'centerline', label: 'Eje' },
+  { value: 'footprint', label: 'Huella' },
+]
 
 // ─────────────────────────────────────────────────────────────────────────
 // Props
@@ -54,6 +62,8 @@ interface AssignmentSidePanelProps {
   filterType: FilterType
   assignAsType: AssignAsType
   infraName: string
+  roadInputMode: RoadAssignmentInputMode
+  roadWidthM: number
   isAssigning: boolean
   multiSelectMode: boolean
   hiddenShapeIds: Set<string>
@@ -63,6 +73,8 @@ interface AssignmentSidePanelProps {
   onFilterTypeChange: (t: FilterType) => void
   onAssignAsTypeChange: (t: AssignAsType) => void
   onInfraNameChange: (name: string) => void
+  onRoadInputModeChange: (mode: RoadAssignmentInputMode) => void
+  onRoadWidthMChange: (widthM: number) => void
   onSelectedLotIdChange: (id: string | null) => void
   onMultiSelectModeChange: (on: boolean) => void
   onAssignToLot: () => void
@@ -88,6 +100,8 @@ export function AssignmentSidePanel({
   filterType,
   assignAsType,
   infraName,
+  roadInputMode,
+  roadWidthM,
   isAssigning,
   multiSelectMode,
   hiddenShapeIds,
@@ -95,6 +109,8 @@ export function AssignmentSidePanel({
   totalCount,
   onAssignAsTypeChange,
   onInfraNameChange,
+  onRoadInputModeChange,
+  onRoadWidthMChange,
   onSelectedLotIdChange,
   onMultiSelectModeChange,
   onAssignToLot,
@@ -417,9 +433,47 @@ export function AssignmentSidePanel({
                           className="mt-1 h-8 text-sm"
                         />
                       </div>
+                      {assignAsType === 'road' && (
+                        <div className="rounded-md border border-amber-200 bg-card/70 p-2 space-y-2 dark:border-amber-800/80">
+                          <div>
+                            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                              Tipo de camino
+                            </p>
+                            <div className="mt-1 grid grid-cols-2 gap-1">
+                              {ROAD_INPUT_MODE_OPTIONS.map((option) => (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => onRoadInputModeChange(option.value)}
+                                  className={`h-8 rounded-md border text-xs font-medium transition-all ${
+                                    roadInputMode === option.value
+                                      ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                      : 'border-border bg-background text-muted-foreground hover:border-amber-300'
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                              Ancho camino (m)
+                            </label>
+                            <Input
+                              type="number"
+                              min="0.1"
+                              step="0.1"
+                              value={roadWidthM}
+                              onChange={(e) => onRoadWidthMChange(Number(e.target.value))}
+                              className="mt-1 h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
                       <Button
                         onClick={onSaveInfrastructure}
-                        disabled={isAssigning}
+                        disabled={isAssigning || (assignAsType === 'road' && roadWidthM <= 0)}
                         className={`w-full ${
                           assignAsType === 'road'
                             ? 'bg-amber-600 hover:bg-amber-700'

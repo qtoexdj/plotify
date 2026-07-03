@@ -10,7 +10,8 @@ import {
 } from '@/lib/validations/lot-verification.schema'
 import { logger } from '@/lib/logger'
 import { validateLotDocumentReadiness, type MinimalBoundary } from '@/lib/legal/readiness'
-import type { VerifiedStatus } from '@/types/database.types'
+import type { ServidumbreSource, VerifiedStatus } from '@/types/database.types'
+import { updateRoadSegmentWidthAndRecalculateServidumbres } from '@/lib/services/onboarding.service'
 
 interface NonReadyLotDetail {
   numero_lote: string
@@ -21,6 +22,103 @@ interface ActionResult {
   success: boolean
   message?: string
   error?: string
+}
+
+function isCanonicalRoadSegmentId(segmentId: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    segmentId
+  )
+}
+
+function getCanonicalRoadSegmentWidthTarget(
+  sources: ServidumbreSource[] | null | undefined,
+  requestedSegmentId?: string
+) {
+  if (!Array.isArray(sources)) return null
+
+  const sourceSegmentIds = sources
+    .map((source) => source.segment_id)
+    .filter(
+      (segmentId): segmentId is string => Boolean(segmentId) && isCanonicalRoadSegmentId(segmentId)
+    )
+
+  if (requestedSegmentId) {
+    const source = sources.find((item) => item.segment_id === requestedSegmentId)
+    return source && isCanonicalRoadSegmentId(requestedSegmentId)
+      ? { segmentId: requestedSegmentId, currentWidthM: source.width_m ?? null }
+      : null
+  }
+
+  const uniqueSegmentIds = Array.from(new Set(sourceSegmentIds))
+
+  if (uniqueSegmentIds.length !== 1) {
+    return null
+  }
+
+  const source = sources.find((item) => item.segment_id === uniqueSegmentIds[0])
+  return {
+    segmentId: uniqueSegmentIds[0],
+    currentWidthM: source?.width_m ?? null,
+  }
+}
+
+function hasWidthChanged(widthM: number | undefined, currentWidthM: number | null) {
+  if (widthM === undefined) return false
+  return currentWidthM == null || widthM !== currentWidthM
+}
+
+function resolveWidthTarget(
+  sources: ServidumbreSource[] | null | undefined,
+  widthM: number | undefined,
+  requestedSegmentId?: string
+) {
+  if (widthM === undefined) {
+    return { widthChanged: false, target: null }
+  }
+
+  const target = getCanonicalRoadSegmentWidthTarget(sources, requestedSegmentId)
+  return {
+    widthChanged: hasWidthChanged(widthM, target?.currentWidthM ?? null),
+    target,
+  }
+}
+
+function getWidthAuditValue(
+  sources: ServidumbreSource[] | null | undefined,
+  requestedSegmentId: string | undefined,
+  fallbackWidth: number | null
+) {
+  if (!requestedSegmentId) return fallbackWidth
+
+  return (
+    sources?.find((source) => source.segment_id === requestedSegmentId)?.width_m ?? fallbackWidth
+  )
+}
+
+async function recalculateServidumbresAfterCanonicalWidthChange(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  projectId: string,
+  roadSegmentId: string,
+  widthM: number | undefined
+): Promise<ActionResult | null> {
+  if (widthM === undefined) return null
+
+  try {
+    await updateRoadSegmentWidthAndRecalculateServidumbres(
+      projectId,
+      roadSegmentId,
+      widthM,
+      supabase
+    )
+    return null
+  } catch (error) {
+    logger.error(
+      { projectId, roadSegmentId, widthM, error },
+      'recalculate_servidumbres_after_width_change_failed'
+    )
+    return { success: false, error: 'Error al recalcular servidumbres con el nuevo ancho' }
+  }
 }
 
 // ─── Permissions Helper ─────────────────────────────────────────────────────
@@ -84,6 +182,7 @@ export async function saveOfficialOverride(
     perimeter_official_m,
     servidumbre_m2,
     servidumbre_ancho_m,
+    servidumbre_road_segment_id,
     boundaries_official,
   } = validation.data
 
@@ -101,7 +200,7 @@ export async function saveOfficialOverride(
     const { data: currentLot, error: fetchError } = await supabase
       .from('lots')
       .select(
-        'area_official_m2, perimeter_official_m, boundaries_official, verified_status, servidumbre_m2, servidumbre_ancho_m'
+        'area_official_m2, perimeter_official_m, boundaries_official, verified_status, servidumbre_m2, servidumbre_ancho_m, servidumbre_sources'
       )
       .eq('id', lotId)
       .single()
@@ -119,20 +218,30 @@ export async function saveOfficialOverride(
     if (perimeter_official_m !== undefined)
       updatePayload.perimeter_official_m = perimeter_official_m
     if (servidumbre_m2 !== undefined) updatePayload.servidumbre_m2 = servidumbre_m2
-    if (servidumbre_ancho_m !== undefined) updatePayload.servidumbre_ancho_m = servidumbre_ancho_m
 
     if (boundaries_official !== undefined) updatePayload.boundaries_official = boundaries_official
 
     // Solo revertir a draft si algún valor oficial realmente cambió respecto
     // a lo ya guardado; re-guardar los mismos valores no debe desverificar
     // el lote (antes esto pasaba siempre, incluso sin cambios).
+    const currentSources = currentLot.servidumbre_sources as ServidumbreSource[] | null
+    const currentWidthForAudit = getWidthAuditValue(
+      currentSources,
+      servidumbre_road_segment_id,
+      currentLot.servidumbre_ancho_m
+    )
+    const { widthChanged, target: widthTarget } = resolveWidthTarget(
+      currentSources,
+      servidumbre_ancho_m,
+      servidumbre_road_segment_id
+    )
+
     const officialDataChanged =
       (area_official_m2 !== undefined && area_official_m2 !== currentLot.area_official_m2) ||
       (perimeter_official_m !== undefined &&
         perimeter_official_m !== currentLot.perimeter_official_m) ||
       (servidumbre_m2 !== undefined && servidumbre_m2 !== currentLot.servidumbre_m2) ||
-      (servidumbre_ancho_m !== undefined &&
-        servidumbre_ancho_m !== currentLot.servidumbre_ancho_m) ||
+      widthChanged ||
       (boundaries_official !== undefined &&
         JSON.stringify(boundaries_official) !== JSON.stringify(currentLot.boundaries_official))
 
@@ -140,6 +249,13 @@ export async function saveOfficialOverride(
       updatePayload.verified_status = 'draft'
       updatePayload.verified_at = null
       updatePayload.verified_by = null
+    }
+
+    if (widthChanged && !widthTarget) {
+      return {
+        success: false,
+        error: 'El ancho se edita desde un tramo de camino canónico',
+      }
     }
 
     // 5. Update lot
@@ -162,16 +278,37 @@ export async function saveOfficialOverride(
           area_official_m2: currentLot.area_official_m2,
           perimeter_official_m: currentLot.perimeter_official_m,
           boundaries_official: currentLot.boundaries_official,
+          servidumbre_m2: currentLot.servidumbre_m2,
+          servidumbre_ancho_m: currentWidthForAudit,
         },
         next: {
           area_official_m2: area_official_m2 ?? currentLot.area_official_m2,
+          perimeter_official_m: perimeter_official_m ?? currentLot.perimeter_official_m,
+          servidumbre_m2: servidumbre_m2 ?? currentLot.servidumbre_m2,
+          servidumbre_ancho_m: servidumbre_ancho_m ?? currentWidthForAudit,
           boundaries_official: boundaries_official ?? currentLot.boundaries_official,
+          servidumbre_road_segment_id,
         },
       },
     })
 
+    if (widthChanged && widthTarget) {
+      const recalculateError = await recalculateServidumbresAfterCanonicalWidthChange(
+        supabase,
+        projectId,
+        widthTarget.segmentId,
+        servidumbre_ancho_m
+      )
+      if (recalculateError) return recalculateError
+    }
+
     revalidatePath(`/proyectos/${projectId}`)
-    return { success: true, message: 'Valores oficiales guardados correctamente' }
+    return {
+      success: true,
+      message: widthChanged
+        ? 'Ancho actualizado y servidumbres recalculadas correctamente'
+        : 'Valores oficiales guardados correctamente',
+    }
   } catch (err) {
     logger.error({ lotId, error: err }, 'save_official_override_error')
     return { success: false, error: 'Error del servidor' }
@@ -204,6 +341,7 @@ export async function saveAndVerifyLot(input: SaveAndVerifyInput): Promise<Actio
     perimeter_official_m,
     servidumbre_m2,
     servidumbre_ancho_m,
+    servidumbre_road_segment_id,
     boundaries_official,
     calculated_snapshot,
   } = validation.data
@@ -218,12 +356,27 @@ export async function saveAndVerifyLot(input: SaveAndVerifyInput): Promise<Actio
     // 3. Verify lot exists and get current state
     const { data: currentLot, error: fetchError } = await supabase
       .from('lots')
-      .select('area_official_m2, perimeter_official_m, boundaries_official, verified_status, m2')
+      .select(
+        'area_official_m2, perimeter_official_m, boundaries_official, verified_status, m2, servidumbre_ancho_m, servidumbre_sources'
+      )
       .eq('id', lotId)
       .single()
 
     if (fetchError || !currentLot) {
       return { success: false, error: 'Lote no encontrado' }
+    }
+
+    const { widthChanged, target: widthTarget } = resolveWidthTarget(
+      currentLot.servidumbre_sources as ServidumbreSource[] | null,
+      servidumbre_ancho_m,
+      servidumbre_road_segment_id
+    )
+
+    if (widthChanged && !widthTarget) {
+      return {
+        success: false,
+        error: 'El ancho se edita desde un tramo de camino canónico',
+      }
     }
 
     // 4. Save official data + servidumbre + verification in one write
@@ -242,7 +395,6 @@ export async function saveAndVerifyLot(input: SaveAndVerifyInput): Promise<Actio
       m2: area_official_m2,
     }
     if (servidumbre_m2 !== undefined) updatePayload.servidumbre_m2 = servidumbre_m2
-    if (servidumbre_ancho_m !== undefined) updatePayload.servidumbre_ancho_m = servidumbre_ancho_m
 
     const { error: updateError } = await supabase.from('lots').update(updatePayload).eq('id', lotId)
 
@@ -265,6 +417,7 @@ export async function saveAndVerifyLot(input: SaveAndVerifyInput): Promise<Actio
           perimeter_official_m,
           servidumbre_m2,
           servidumbre_ancho_m,
+          servidumbre_road_segment_id,
           boundaries_official,
         },
         calculated_snapshot: calculated_snapshot ?? {
@@ -275,6 +428,16 @@ export async function saveAndVerifyLot(input: SaveAndVerifyInput): Promise<Actio
         verified_at: now,
       },
     })
+
+    if (widthChanged && widthTarget) {
+      const recalculateError = await recalculateServidumbresAfterCanonicalWidthChange(
+        supabase,
+        projectId,
+        widthTarget.segmentId,
+        servidumbre_ancho_m
+      )
+      if (recalculateError) return recalculateError
+    }
 
     revalidatePath(`/proyectos/${projectId}`)
     return {

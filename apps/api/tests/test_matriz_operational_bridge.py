@@ -116,6 +116,18 @@ class TestLotGeometryMapping:
         assert by_key["servidumbre.superficie_m2"].value_json == 385.5
         assert mapping.missing_keys == ()
 
+    def test_servidumbre_width_label_maps_from_official_lot(self):
+        lot = _rows()["lot"]
+        lot["servidumbre_ancho_label"] = "5 y 10"
+        lot["servidumbre_ancho_m"] = 5
+
+        mapping = bridge.map_lot_geometry_variables(lot)
+        by_key = _by_key(mapping.variables)
+
+        assert by_key["servidumbre.ancho_label"].value_text == "5 y 10"
+        assert by_key["servidumbre.ancho_label"].value_json == "5 y 10"
+        assert by_key["servidumbre.ancho_label"].source_type == "geometry"
+
     def test_deslindes_compose_from_boundaries_official(self):
         lot = _rows()["lot"]
         mapping = bridge.map_lot_geometry_variables(lot)

@@ -9,68 +9,80 @@ import type {
   AssignGeometryPayload,
 } from '@/types/onboarding.types'
 import { computeM2FromGeoJSON } from '@/lib/geometry/compute-m2'
-import { combineLineStrings } from '@/lib/geometry/utils'
-import { calculateServidumbre } from '@/lib/geometry/servidumbre'
+import {
+  calculateLotServitude,
+  normalizeRoadSegmentToFootprint,
+  type RoadSegmentInput,
+} from '@/lib/geometry/servidumbre-footprints'
 
-/**
- * Calcula servidumbre para un lote contra un camino ya conocido y persiste el
- * resultado. El ancho de servidumbre se pre-puebla desde el ancho del camino
- * del proyecto solo cuando el lote realmente colinda con él (servidumbreM2 >
- * 0); así no se sugiere un ancho falso en lotes que no tocan el camino.
- */
-async function applyLotServidumbre(
-  supabase: SupabaseClient,
-  params: {
-    lotId: string
-    lotGeometry: GeoJSONGeometry
-    lotM2: number | null
-    roadGeometry: GeoJSONGeometry
-    roadWidth: number
-  }
-): Promise<void> {
-  const { lotId, lotGeometry, lotM2, roadGeometry, roadWidth } = params
-  const calc = calculateServidumbre(lotGeometry, roadGeometry, roadWidth)
-  const superficieNeta = lotM2 ? lotM2 - calc.servidumbreM2 : null
+const SERVIDUMBRE_CALCULATION_VERSION = 'sdd14.v1'
 
-  const updatePayload: Record<string, number | null> = {
-    servidumbre_m2: calc.servidumbreM2,
-    superficie_neta_m2: superficieNeta,
-  }
-  if (calc.servidumbreM2 > 0) {
-    updatePayload.servidumbre_ancho_m = roadWidth
-  }
+type AssignedLotRow = {
+  id: string
+  m2: number | null
+  geometry_id: string | null
+  servidumbre_calculation_status?: string | null
+}
 
-  const { error } = await supabase.from('lots').update(updatePayload).eq('id', lotId)
-  if (error) {
-    console.error(`[Servidumbre] ERROR al actualizar lote ${lotId}:`, error)
-  }
+type PersistedRoadSegment = {
+  id: string
+  name: string | null
+  input_geometry: GeoJSONGeometry
+  input_mode: RoadSegmentInput['mode']
+  width_m: number | null
+  edge_side?: 'left' | 'right' | 'both' | null
+  status: 'ready' | 'needs_review' | 'invalid'
+}
+
+export type RecalculateProjectServidumbresResult = {
+  projectId: string
+  roadSegments: number
+  lotsMatched: number
+  lotsUpdated: number
+  lotsSkipped: number
 }
 
 /**
  * Recalcula la servidumbre de un lote recién asignado a una geometría,
- * usando el camino unificado ya guardado en el proyecto (si existe). Antes
- * la servidumbre solo se calculaba al guardar un camino, así que un lote
- * asignado después de ese momento quedaba sin servidumbre para siempre.
+ * usando los tramos canónicos ya guardados en project_road_segments.
  */
 async function recalculateLotServidumbreOnAssign(
   supabase: SupabaseClient,
   params: { projectId: string; lotId: string; lotGeometry: GeoJSONGeometry; lotM2: number | null }
 ): Promise<void> {
   try {
-    const { data: project } = await supabase
-      .from('projects')
-      .select('road_geometry, road_width_m')
-      .eq('id', params.projectId)
-      .single()
+    const { data: readySegments } = await supabase
+      .from('project_road_segments')
+      .select(
+        `
+        id,
+        name,
+        input_geometry,
+        input_mode,
+        width_m,
+        edge_side,
+        footprint_geometry,
+        status
+      `
+      )
+      .eq('project_id', params.projectId)
+      .eq('status', 'ready')
 
-    if (!project?.road_geometry) return // Aún no hay camino asignado al proyecto
+    const roadSegments = readySegments
+      ? normalizePersistedRoadSegments(
+          readySegments as Array<
+            PersistedRoadSegment & { footprint_geometry?: GeoJSONGeometry | null }
+          >
+        )
+      : []
 
-    await applyLotServidumbre(supabase, {
+    if (roadSegments.length === 0) return
+
+    await persistLotServitudeFromRoadSegments(supabase, {
       lotId: params.lotId,
       lotGeometry: params.lotGeometry,
       lotM2: params.lotM2,
-      roadGeometry: project.road_geometry,
-      roadWidth: project.road_width_m || 6,
+      roadSegments,
     })
   } catch (err) {
     console.error(
@@ -78,6 +90,292 @@ async function recalculateLotServidumbreOnAssign(
       err
     )
   }
+}
+
+async function persistLotServitudeFromRoadSegments(
+  supabase: SupabaseClient,
+  params: {
+    lotId: string
+    lotGeometry: GeoJSONGeometry
+    lotM2: number | null
+    roadSegments: PersistedRoadSegment[]
+  }
+): Promise<boolean> {
+  const readySegments = params.roadSegments.filter((segment) => segment.status === 'ready')
+  const result = calculateLotServitude({
+    lotId: params.lotId,
+    lotGeometry: params.lotGeometry,
+    totalAreaM2: params.lotM2,
+    roadSegments: readySegments.map((segment) => ({
+      id: segment.id,
+      geometry: segment.input_geometry,
+      mode: segment.input_mode,
+      widthM: segment.width_m ?? undefined,
+      edgeSide: segment.edge_side ?? undefined,
+    })),
+  })
+
+  const { error } = await supabase
+    .from('lots')
+    .update(buildServitudeUpdatePayload(result, readySegments))
+    .eq('id', params.lotId)
+
+  if (error) {
+    console.error(`[Servidumbre] ERROR al actualizar lote ${params.lotId}:`, error)
+    return false
+  }
+
+  return true
+}
+
+async function recalculateLotsFromRoadSegments(
+  supabase: SupabaseClient,
+  params: {
+    projectId: string
+    roadSegments: PersistedRoadSegment[]
+  }
+): Promise<RecalculateProjectServidumbresResult> {
+  const readySegments = params.roadSegments.filter((segment) => segment.status === 'ready')
+  const result: RecalculateProjectServidumbresResult = {
+    projectId: params.projectId,
+    roadSegments: readySegments.length,
+    lotsMatched: 0,
+    lotsUpdated: 0,
+    lotsSkipped: 0,
+  }
+
+  if (readySegments.length === 0) {
+    return result
+  }
+
+  const { data: assignedLots, error: lotsErr } = await supabase
+    .from('lots')
+    .select(
+      `
+      id,
+      m2,
+      geometry_id,
+      servidumbre_calculation_status
+    `
+    )
+    .eq('project_id', params.projectId)
+    .not('geometry_id', 'is', null)
+
+  if (lotsErr) {
+    console.error('[Servidumbre] ERROR al obtener assignedLots:', lotsErr)
+    return result
+  }
+
+  if (!assignedLots) return result
+
+  const lots = assignedLots as AssignedLotRow[]
+  result.lotsMatched = lots.length
+
+  const geometryIds = [
+    ...new Set(lots.map((lot) => lot.geometry_id).filter((id): id is string => Boolean(id))),
+  ]
+
+  const geometriesById = await loadLotGeometriesById(supabase, geometryIds)
+
+  const updatePromises = lots.map(async (lot) => {
+    if (lot.servidumbre_calculation_status === 'official_override') {
+      return 'skipped' as const
+    }
+
+    const lotGeom = lot.geometry_id ? geometriesById.get(lot.geometry_id) : null
+
+    if (!lotGeom) {
+      console.warn(`[Servidumbre] Lote ${lot.id} omitido por no tener geometry`)
+      return 'skipped' as const
+    }
+
+    const updated = await persistLotServitudeFromRoadSegments(supabase, {
+      lotId: lot.id,
+      lotGeometry: lotGeom,
+      lotM2: lot.m2,
+      roadSegments: readySegments,
+    })
+
+    return updated ? ('updated' as const) : ('skipped' as const)
+  })
+
+  const outcomes = await Promise.all(updatePromises)
+  result.lotsUpdated = outcomes.filter((outcome) => outcome === 'updated').length
+  result.lotsSkipped = outcomes.filter((outcome) => outcome === 'skipped').length
+
+  return result
+}
+
+function buildServitudeUpdatePayload(
+  result: ReturnType<typeof calculateLotServitude>,
+  readySegments: PersistedRoadSegment[]
+) {
+  const primaryWidth = result.widthsM[0] ?? null
+
+  return {
+    servidumbre_m2: result.servidumbreM2,
+    superficie_neta_m2: result.superficieNetaM2,
+    servidumbre_ancho_m: primaryWidth,
+    servidumbre_widths_m: result.widthsM.length > 0 ? result.widthsM : null,
+    servidumbre_ancho_label: result.widthLabel,
+    servidumbre_geometry: result.intersectionGeometry,
+    servidumbre_sources:
+      result.sourceSegmentIds.length > 0
+        ? result.sourceSegmentIds.map((segmentId) => {
+            const segment = readySegments.find((item) => item.id === segmentId)
+            return {
+              segment_id: segmentId,
+              width_m: segment?.width_m ?? null,
+              input_mode: segment?.input_mode ?? null,
+              name: segment?.name ?? null,
+            }
+          })
+        : null,
+    servidumbre_calculation_status: result.status,
+    servidumbre_calculated_at: new Date().toISOString(),
+    servidumbre_calculation_version: SERVIDUMBRE_CALCULATION_VERSION,
+  }
+}
+
+async function loadReadyProjectRoadSegments(
+  supabase: SupabaseClient,
+  projectId: string
+): Promise<PersistedRoadSegment[]> {
+  const { data, error } = await supabase
+    .from('project_road_segments')
+    .select(
+      `
+      id,
+      name,
+      input_geometry,
+      input_mode,
+      width_m,
+      edge_side,
+      footprint_geometry,
+      status
+    `
+    )
+    .eq('project_id', projectId)
+    .eq('status', 'ready')
+
+  if (error) {
+    console.error('[Servidumbre] ERROR al leer project_road_segments:', error)
+    return []
+  }
+
+  if (!data || data.length === 0) {
+    return []
+  }
+
+  return normalizePersistedRoadSegments(
+    data as Array<PersistedRoadSegment & { footprint_geometry?: GeoJSONGeometry | null }>
+  )
+}
+
+function normalizePersistedRoadSegments(
+  segments: Array<PersistedRoadSegment & { footprint_geometry?: GeoJSONGeometry | null }>
+): PersistedRoadSegment[] {
+  return segments.map((segment) => ({
+    id: segment.id,
+    name: segment.name,
+    input_geometry: segment.footprint_geometry ?? segment.input_geometry,
+    input_mode: segment.footprint_geometry ? 'footprint' : segment.input_mode,
+    width_m: segment.width_m,
+    edge_side: segment.edge_side,
+    status: segment.status,
+  }))
+}
+
+async function loadLotGeometriesById(
+  supabase: SupabaseClient,
+  geometryIds: string[]
+): Promise<Map<string, GeoJSONGeometry>> {
+  if (geometryIds.length === 0) {
+    return new Map()
+  }
+
+  const { data, error } = await supabase
+    .from('geometries')
+    .select('id, geometry')
+    .in('id', geometryIds)
+
+  if (error) {
+    console.error('[Servidumbre] ERROR al obtener geometrías de lotes:', error)
+    return new Map()
+  }
+
+  const geometries = new Map<string, GeoJSONGeometry>()
+
+  for (const row of (data || []) as Array<{ id: string; geometry?: unknown }>) {
+    if (isGeoJSONGeometry(row.geometry)) {
+      geometries.set(row.id, row.geometry)
+    }
+  }
+
+  return geometries
+}
+
+function isGeoJSONGeometry(geometry: unknown): geometry is GeoJSONGeometry {
+  if (!geometry || typeof geometry !== 'object' || !('type' in geometry)) {
+    return false
+  }
+
+  return true
+}
+
+function inferRoadInputMode(payload: SaveInfrastructurePayload): RoadSegmentInput['mode'] {
+  if (payload.inputMode) return payload.inputMode
+
+  return payload.geometry.type === 'Polygon' || payload.geometry.type === 'MultiPolygon'
+    ? 'footprint'
+    : 'centerline'
+}
+
+async function loadProjectRoadSegmentsForCalculation(
+  supabase: SupabaseClient,
+  projectId: string
+): Promise<PersistedRoadSegment[]> {
+  const { data: readySegments, error: segmentError } = await supabase
+    .from('project_road_segments')
+    .select(
+      `
+      id,
+      name,
+      input_geometry,
+      input_mode,
+      width_m,
+      edge_side,
+      footprint_geometry,
+      status
+    `
+    )
+    .eq('project_id', projectId)
+    .eq('status', 'ready')
+
+  if (segmentError) {
+    console.error('[Servidumbre] ERROR al leer project_road_segments:', segmentError)
+  }
+
+  if (readySegments && readySegments.length > 0) {
+    return normalizePersistedRoadSegments(
+      readySegments as Array<PersistedRoadSegment & { footprint_geometry?: GeoJSONGeometry | null }>
+    )
+  }
+
+  return []
+}
+
+export async function recalculateProjectServidumbres(
+  projectId: string,
+  supabaseClient?: SupabaseClient
+): Promise<RecalculateProjectServidumbresResult> {
+  const supabase = supabaseClient || (await createClient())
+  const roadSegments = await loadProjectRoadSegmentsForCalculation(supabase, projectId)
+
+  return recalculateLotsFromRoadSegments(supabase, {
+    projectId,
+    roadSegments,
+  })
 }
 
 export async function getLotsByProject(
@@ -129,6 +427,60 @@ export async function getLotById(
   }
 
   return { ...lot, etapa_proceso } as LotDetails
+}
+
+export async function updateRoadSegmentWidthAndRecalculateServidumbres(
+  projectId: string,
+  roadSegmentId: string,
+  widthM: number,
+  supabaseClient?: SupabaseClient
+): Promise<RecalculateProjectServidumbresResult> {
+  const supabase = supabaseClient || (await createClient())
+
+  const { data: segment, error: segmentError } = await supabase
+    .from('project_road_segments')
+    .select(
+      `
+      id,
+      input_geometry,
+      input_mode,
+      edge_side
+    `
+    )
+    .eq('project_id', projectId)
+    .eq('id', roadSegmentId)
+    .single()
+
+  if (segmentError || !segment) {
+    console.error('[Servidumbre] ERROR al obtener project_road_segments:', segmentError)
+    throw new Error('Tramo de camino no encontrado')
+  }
+
+  const normalized = normalizeRoadSegmentToFootprint({
+    id: segment.id,
+    geometry: segment.input_geometry as GeoJSONGeometry,
+    mode: segment.input_mode,
+    widthM,
+    edgeSide: segment.edge_side ?? undefined,
+  })
+
+  const { error: updateError } = await supabase
+    .from('project_road_segments')
+    .update({
+      width_m: widthM,
+      footprint_geometry: normalized.geometry?.geometry ?? null,
+      status: normalized.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('project_id', projectId)
+    .eq('id', roadSegmentId)
+
+  if (updateError) {
+    console.error('[Servidumbre] ERROR al actualizar ancho de project_road_segments:', updateError)
+    throw new Error('Error al actualizar el ancho del tramo de camino')
+  }
+
+  return recalculateProjectServidumbres(projectId, supabase)
 }
 
 export async function updateLot(
@@ -269,92 +621,59 @@ export async function saveInfrastructure(
     throw new Error('Error al guardar infraestructura')
   }
 
-  // Si es un camino (road), actualizar el roadmap unificado del proyecto y recálculo de servidumbres
+  // Si es un camino (road), persistir su tramo canónico y recalcular servidumbres.
   if (payload.geometryType === 'road') {
     try {
-      // 1. Obtener todos los caminos asignados al proyecto
-      const { data: assignedRoads } = await supabase
-        .from('geometries')
-        .select('geometry')
-        .eq('project_id', payload.projectId)
-        .eq('geometry_type', 'road')
-        .eq('is_assigned', true)
+      const inputMode = inferRoadInputMode(payload)
+      const widthM = payload.widthM ?? 6
+      const normalized = normalizeRoadSegmentToFootprint({
+        id: data.id,
+        geometry: payload.geometry,
+        mode: inputMode,
+        widthM,
+        edgeSide: payload.edgeSide,
+      })
+      const segmentPayload = {
+        project_id: payload.projectId,
+        geometry_id: data.id,
+        name: payload.name,
+        input_geometry: payload.geometry,
+        input_mode: inputMode,
+        width_m: widthM,
+        edge_side: payload.edgeSide ?? null,
+        footprint_geometry: normalized.geometry?.geometry ?? null,
+        source_type: payload.sourceType,
+        status: normalized.status,
+      }
 
-      if (assignedRoads && assignedRoads.length > 0) {
-        // 2. Combinarlos en un solo MultiLineString
-        const combinedRoad = combineLineStrings(assignedRoads.map((r) => r.geometry))
+      const { data: roadSegment, error: roadSegmentError } = await supabase
+        .from('project_road_segments')
+        .insert(segmentPayload)
+        .select()
+        .single()
 
-        // 3. Obtener el ancho del camino configurado en el proyecto
-        const { data: project } = await supabase
-          .from('projects')
-          .select('road_width_m')
-          .eq('id', payload.projectId)
-          .single()
+      if (roadSegmentError) {
+        console.error('[Servidumbre] ERROR al guardar project_road_segments:', roadSegmentError)
+      }
 
-        const roadWidth = project?.road_width_m || 6 // Fallback a 6m
-
-        // 4. Guardar camino unificado en projects
-        console.log(
-          '[Servidumbre] Guardando camino combinado en projects:',
-          Object.keys(combinedRoad)
-        )
-        const { error: projUpdateErr } = await supabase
-          .from('projects')
-          .update({ road_geometry: combinedRoad })
-          .eq('id', payload.projectId)
-
-        if (projUpdateErr) {
-          console.error('[Servidumbre] ERROR al actualizar projects:', projUpdateErr)
+      if (roadSegment) {
+        const segmentForCalculation: PersistedRoadSegment = {
+          id: roadSegment.id,
+          name: roadSegment.name,
+          input_geometry:
+            (roadSegment.footprint_geometry as GeoJSONGeometry | null) ??
+            (roadSegment.input_geometry as GeoJSONGeometry),
+          input_mode: roadSegment.footprint_geometry ? 'footprint' : roadSegment.input_mode,
+          width_m: roadSegment.width_m,
+          edge_side: roadSegment.edge_side,
+          status: roadSegment.status,
         }
+        const readyRoadSegments = await loadReadyProjectRoadSegments(supabase, payload.projectId)
 
-        // 5. Recalcular servidumbres para todos los lotes asignados del proyecto
-        // Hacemos join con geometries para obtener la geometría del lote
-        const { data: assignedLots, error: lotsErr } = await supabase
-          .from('lots')
-          .select(
-            `
-            id,
-            m2,
-            geometry_id,
-            geometries:geometries!lots_geometry_id_fkey (
-              geometry
-            )
-          `
-          )
-          .eq('project_id', payload.projectId)
-          .not('geometry_id', 'is', null)
-
-        if (lotsErr) {
-          console.error('[Servidumbre] ERROR al obtener assignedLots:', lotsErr)
-        }
-
-        if (assignedLots) {
-          console.log(
-            `[Servidumbre] Encontrados ${assignedLots.length} lotes asignados para calcular`
-          )
-          // Procesar las actualizaciones en paralelo para mejor rendimiento
-          const updatePromises = assignedLots.map(async (lot) => {
-            const lotGeom = Array.isArray(lot.geometries)
-              ? lot.geometries[0]?.geometry
-              : (lot.geometries as unknown as { geometry: unknown })?.geometry
-
-            if (!lotGeom) {
-              console.warn(`[Servidumbre] Lote ${lot.id} omitido por no tener geometry`)
-              return
-            }
-
-            await applyLotServidumbre(supabase, {
-              lotId: lot.id,
-              lotGeometry: lotGeom as GeoJSONGeometry,
-              lotM2: lot.m2,
-              roadGeometry: combinedRoad,
-              roadWidth,
-            })
-          })
-
-          await Promise.all(updatePromises)
-          console.log('[Servidumbre] Finalizado actualización de lotes')
-        }
+        await recalculateLotsFromRoadSegments(supabase, {
+          projectId: payload.projectId,
+          roadSegments: readyRoadSegments.length > 0 ? readyRoadSegments : [segmentForCalculation],
+        })
       }
     } catch (infraError) {
       console.error('Error procesando servidumbres en saveInfrastructure:', infraError)

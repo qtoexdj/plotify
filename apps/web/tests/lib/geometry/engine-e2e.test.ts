@@ -438,7 +438,7 @@ describe('Motor End-to-End Plotify', () => {
       expect(result.servidumbreM2).toBeGreaterThan(0)
     })
 
-    it('el área de servidumbre se aproxima a largo_compartido × radio (100m × 3m = ~300 m²)', () => {
+    it('calcula área legal UTM redondeada para la servidumbre directa (~299 m²)', () => {
       const result = calculateServidumbre(loteObjetivo, camino, ROAD_WIDTH)
 
       // El borde sur del lote mide ~100m.
@@ -448,9 +448,22 @@ describe('Motor End-to-End Plotify', () => {
       // El radio del buffer es 3m (width/2), y el camino pasa exactamente
       // por el borde sur del lote, por lo que la intersección cubre
       // la mitad del buffer hacia adentro del lote → 100m × 3m ≈ 300 m²
-      // Con tolerancia para las tapas redondeadas de Turf
-      expect(result.servidumbreM2).toBeGreaterThan(250)
-      expect(result.servidumbreM2).toBeLessThan(360)
+      // La superficie persistible usa área legal UTM redondeada, no @turf/area.
+      expect(result.servidumbreM2).toBe(299)
+    })
+
+    it('respeta el ancho recibido por llamada y no usa un ancho global fijo', () => {
+      const servidumbre5m = calculateServidumbre(loteObjetivo, camino, 5)
+      const servidumbre10m = calculateServidumbre(loteObjetivo, camino, 10)
+
+      expect(servidumbre5m.intersectionPolygon).not.toBeNull()
+      expect(servidumbre10m.intersectionPolygon).not.toBeNull()
+      expect(servidumbre5m.servidumbreM2).toBeGreaterThan(230)
+      expect(servidumbre5m.servidumbreM2).toBeLessThan(270)
+      expect(servidumbre10m.servidumbreM2).toBeGreaterThan(475)
+      expect(servidumbre10m.servidumbreM2).toBeLessThan(525)
+      expect(servidumbre10m.servidumbreM2).toBeGreaterThan(servidumbre5m.servidumbreM2 * 1.9)
+      expect(servidumbre10m.servidumbreM2).toBeLessThan(servidumbre5m.servidumbreM2 * 2.1)
     })
 
     it('retorna resultado vacío si no hay intersección', () => {
@@ -606,14 +619,16 @@ describe('Motor End-to-End Plotify', () => {
 
       const texto = generateServidumbreText(analysis!, ROAD_WIDTH)
 
+      expect(analysis!.areaM2).toBe(299)
+
       // Debe iniciar con "LOTE UNO"
       expect(texto).toContain('LOTE UNO')
 
       // Debe contener "servidumbre de"
       expect(texto.toLowerCase()).toContain('servidumbre de')
 
-      // Debe contener "metros cuadrados"
-      expect(texto.toLowerCase()).toContain('metros cuadrados')
+      // Debe conservar la redacción legal usando el área UTM persistible.
+      expect(texto.toLowerCase()).toContain('doscientos noventa y nueve metros cuadrados')
 
       // Debe terminar con punto
       expect(texto.trim().endsWith('.')).toBe(true)

@@ -140,6 +140,12 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
         )
     )
     payment_data = payment_result.data or {}
+    servidumbre_ancho_label = (lot.get("servidumbre_ancho_label") or "").strip()
+    servidumbre_ancho_display = (
+        servidumbre_ancho_label
+        if servidumbre_ancho_label
+        else lot.get("servidumbre_ancho_m", 0)
+    )
 
     flat_vars = {
         # Lote
@@ -149,7 +155,8 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
         "area_official_m2": lot.get("area_official_m2", 0),
         "superficie_neta_m2": lot.get("superficie_neta_m2", 0),
         "servidumbre_m2": lot.get("servidumbre_m2", 0),
-        "servidumbre_ancho_m": lot.get("servidumbre_ancho_m", 0),
+        "servidumbre_ancho_m": servidumbre_ancho_display,
+        "servidumbre_ancho_label": servidumbre_ancho_label,
         "valor_reserva": lot.get("valor_reserva", 0),
         "estado": lot.get("estado", ""),
         # Cliente

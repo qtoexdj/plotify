@@ -106,6 +106,13 @@ export function LotInfoView({
 
   // Determine if process tab should be visible
   const showProcessTab = lotDetails.estado === 'reservado' && lotDetails.etapa_proceso
+  const servidumbreWidthLabel =
+    lotDetails.servidumbre_ancho_label ??
+    (lotDetails.servidumbre_ancho_m
+      ? Number.isInteger(lotDetails.servidumbre_ancho_m)
+        ? lotDetails.servidumbre_ancho_m.toString()
+        : lotDetails.servidumbre_ancho_m.toFixed(1)
+      : null)
 
   return (
     <div className="space-y-3">
@@ -203,6 +210,12 @@ export function LotInfoView({
                 {/* Servidumbre y Neta */}
                 {lotDetails.servidumbre_m2 ? (
                   <div className="mt-1.5 pt-1.5 border-t border-sidebar-border/50 text-[10px] space-y-0.5">
+                    {servidumbreWidthLabel ? (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Ancho:</span>
+                        <span>{servidumbreWidthLabel} m</span>
+                      </div>
+                    ) : null}
                     <div className="flex justify-between text-muted-foreground">
                       <span>Servidumbre:</span>
                       <span>

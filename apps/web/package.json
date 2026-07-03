@@ -41,6 +41,7 @@
     "@turf/length": "^7.3.4",
     "@turf/line-intersect": "^7.3.4",
     "@turf/line-to-polygon": "^7.3.4",
+    "@turf/union": "^7.3.4",
     "@xmldom/xmldom": "^0.9.10",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",

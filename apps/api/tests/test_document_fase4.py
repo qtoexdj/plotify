@@ -235,6 +235,34 @@ class TestResolveVariables:
         assert variables["org_rut"] == "76.543.210-K"
         assert variables["org_banco"] == "Banco Estado"
 
+    async def test_servidumbre_ancho_label_prefiere_label_sobre_numero_legacy(self):
+        """Las plantillas legacy que leen servidumbre_ancho_m reciben el label."""
+        lot = {
+            **FAKE_LOT,
+            "servidumbre_ancho_m": 5.0,
+            "servidumbre_ancho_label": "5 y 10",
+        }
+        supabase_mock = _make_supabase_mock(lot_data=lot)
+
+        with (
+            patch(
+                "services.document_engine.get_supabase_client",
+                return_value=supabase_mock,
+            ),
+            patch(
+                "asyncio.to_thread",
+                new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+            ),
+        ):
+            from services.document_engine import resolve_variables
+
+            variables = await resolve_variables(LOT_ID, ORG_ID)
+
+        assert variables["servidumbre_ancho_label"] == "5 y 10"
+        assert variables["servidumbre_ancho_m"] == "5 y 10"
+        assert variables["servidumbre"]["servidumbre_ancho_label"] == "5 y 10"
+        assert variables["servidumbre"]["servidumbre_ancho_m"] == "5 y 10"
+
     async def test_leve_not_found_lanza_valueerror(self):
         """resolve_variables debe lanzar ValueError si el lote no existe."""
         mock_result = MagicMock()

@@ -98,7 +98,7 @@ function formatGroupedBoundaries(boundaries: OfficialBoundary[]): string[] {
               ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`
               : names[0]
       } else {
-        // Fallback a compatibilidad legacy si no hay metadata
+        // Usar el texto oficial cuando no hay metadata enriquecida.
         colinda = b.colinda?.trim() ? convertLotNumbersInText(b.colinda.trim()) : BLANK
       }
 

@@ -1,4 +1,12 @@
-import type { GeoJSONGeometry, GeometryType, SourceType, Lot, Geometry } from './database.types'
+import type {
+  GeoJSONGeometry,
+  GeometryType,
+  SourceType,
+  Lot,
+  Geometry,
+  RoadEdgeSide,
+  RoadInputMode,
+} from './database.types'
 
 // Parsed feature from KMZ/KML upload (not yet saved to DB)
 export interface ParsedFeature {
@@ -42,6 +50,9 @@ export interface SaveInfrastructurePayload {
   sourceType: SourceType
   geometryType: 'road' | 'common_area'
   name: string
+  inputMode?: RoadInputMode
+  widthM?: number
+  edgeSide?: RoadEdgeSide
 }
 
 // Response from save operations

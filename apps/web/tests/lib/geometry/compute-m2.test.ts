@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { computeM2FromGeoJSON } from '@/lib/geometry/compute-m2'
 import type { GeoJSONGeometry } from '@/types/database.types'
+import { multiPolygonFromMeterRings, polygonFromMeterRings } from './servidumbre-fixtures'
 
 describe('computeM2FromGeoJSON', () => {
   // ~100x100m square near Santiago
@@ -86,5 +87,59 @@ describe('computeM2FromGeoJSON', () => {
 
     const m2 = computeM2FromGeoJSON(geometry)
     expect(m2).toBe(Math.round(m2!))
+  })
+
+  it('subtracts inner rings from Polygon legal area', () => {
+    const geometry = polygonFromMeterRings([
+      [
+        [0, 0],
+        [120, 0],
+        [120, 120],
+        [0, 120],
+      ],
+      [
+        [40, 40],
+        [80, 40],
+        [80, 80],
+        [40, 80],
+      ],
+    ])
+
+    const m2 = computeM2FromGeoJSON(geometry)
+    expect(m2).not.toBeNull()
+    expect(m2!).toBeGreaterThan(12_720)
+    expect(m2!).toBeLessThan(12_880)
+  })
+
+  it('sums all MultiPolygon components and subtracts component holes', () => {
+    const geometry = multiPolygonFromMeterRings([
+      [
+        [
+          [0, 0],
+          [60, 0],
+          [60, 60],
+          [0, 60],
+        ],
+      ],
+      [
+        [
+          [80, 0],
+          [140, 0],
+          [140, 60],
+          [80, 60],
+        ],
+        [
+          [100, 20],
+          [120, 20],
+          [120, 40],
+          [100, 40],
+        ],
+      ],
+    ])
+
+    const m2 = computeM2FromGeoJSON(geometry)
+    expect(m2).not.toBeNull()
+    expect(m2!).toBeGreaterThan(6_730)
+    expect(m2!).toBeLessThan(6_870)
   })
 })

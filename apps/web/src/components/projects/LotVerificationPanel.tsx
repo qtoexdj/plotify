@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useTransition } from 'react'
+import { useState, useMemo, useCallback, useTransition, useEffect, useRef } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   RulerIcon,
@@ -61,6 +61,23 @@ const STATUS_CONFIG: Record<
   },
 }
 
+interface NumericDraftField {
+  lotId: string
+  sourceValue: number | null
+  value: string
+}
+
+interface SegmentWidthDrafts {
+  lotId: string
+  values: Record<string, string>
+}
+
+interface ServitudeSegmentWidthRow {
+  segmentId: string
+  label: string
+  widthM: number | null
+}
+
 /** Maps calculated BoundaryWithNeighbor[] directly to editable OfficialBoundaries format 1:1 */
 function boundariesToOfficial(calculated: BoundaryWithNeighbor[]): OfficialBoundaries {
   console.log(
@@ -105,6 +122,49 @@ export const isServidumbreMatch = (colinda?: string) => {
   return keywords.some((k) => lower.includes(k))
 }
 
+function formatServitudeWidth(width: number) {
+  return Number.isInteger(width) ? width.toString() : width.toFixed(1).replace(/\.0$/, '')
+}
+
+function isCanonicalRoadSegmentId(segmentId: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    segmentId
+  )
+}
+
+function buildServitudeSegmentWidthRows(lotDetails: LotDetails): ServitudeSegmentWidthRow[] {
+  const rows: ServitudeSegmentWidthRow[] = []
+  const seenSegmentIds = new Set<string>()
+
+  for (const source of lotDetails.servidumbre_sources ?? []) {
+    if (
+      !source.segment_id ||
+      !isCanonicalRoadSegmentId(source.segment_id) ||
+      seenSegmentIds.has(source.segment_id)
+    ) {
+      continue
+    }
+
+    seenSegmentIds.add(source.segment_id)
+    rows.push({
+      segmentId: source.segment_id,
+      label: source.name?.trim() || `Tramo ${rows.length + 1}`,
+      widthM: source.width_m,
+    })
+  }
+
+  return rows
+}
+
+function buildSegmentWidthDraftValues(lotDetails: LotDetails) {
+  return Object.fromEntries(
+    buildServitudeSegmentWidthRows(lotDetails).map((row) => [
+      row.segmentId,
+      row.widthM != null ? row.widthM.toString() : '',
+    ])
+  )
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 interface LotVerificationPanelProps {
@@ -134,13 +194,24 @@ export function LotVerificationPanel({
     lotDetails.perimeter_official_m?.toString() ?? ''
   )
 
-  const [servidumbreOfficial, setServidumbreOfficial] = useState<string>(
-    lotDetails.servidumbre_m2?.toString() ?? ''
+  const [servidumbreOfficialDraft, setServidumbreOfficialDraft] = useState<NumericDraftField>(
+    () => ({
+      lotId: lotDetails.id,
+      sourceValue: lotDetails.servidumbre_m2,
+      value: lotDetails.servidumbre_m2?.toString() ?? '',
+    })
   )
 
-  const [servidumbreAncho, setServidumbreAncho] = useState<string>(
-    lotDetails.servidumbre_ancho_m?.toString() ?? ''
-  )
+  const [servidumbreAnchoDraft, setServidumbreAnchoDraft] = useState<NumericDraftField>(() => ({
+    lotId: lotDetails.id,
+    sourceValue: lotDetails.servidumbre_ancho_m,
+    value: lotDetails.servidumbre_ancho_m?.toString() ?? '',
+  }))
+
+  const [segmentWidthDrafts, setSegmentWidthDrafts] = useState<SegmentWidthDrafts>(() => ({
+    lotId: lotDetails.id,
+    values: buildSegmentWidthDraftValues(lotDetails),
+  }))
 
   const [boundaries, setBoundaries] = useState<OfficialBoundaries>(() => {
     // 1. Si hay oficiales guardados en DB → prioridad
@@ -194,6 +265,12 @@ export function LotVerificationPanel({
   })
 
   const [isSaving, setIsSaving] = useState(false)
+  const [isAutoSavingWidth, setIsAutoSavingWidth] = useState(false)
+  const widthAutoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastPersistedWidthRef = useRef<number | null>(lotDetails.servidumbre_ancho_m ?? null)
+  const segmentWidthAutoSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const lastPersistedSegmentWidthsRef = useRef<Record<string, number | null>>({})
+  const onLotUpdatedRef = useRef(onLotUpdated)
 
   const [deslindeAceptado, setDeslindeAceptado] = useState<boolean>(() => {
     return lotDetails.verified_status !== 'draft'
@@ -202,6 +279,111 @@ export function LotVerificationPanel({
   // ─── Derived Values ─────────────────────────────────────────────────
 
   const statusConfig = STATUS_CONFIG[lotDetails.verified_status ?? 'draft']
+
+  const servidumbreOfficial =
+    servidumbreOfficialDraft.lotId === lotDetails.id &&
+    servidumbreOfficialDraft.sourceValue === lotDetails.servidumbre_m2
+      ? servidumbreOfficialDraft.value
+      : (lotDetails.servidumbre_m2?.toString() ?? '')
+
+  const servidumbreAncho =
+    servidumbreAnchoDraft.lotId === lotDetails.id &&
+    servidumbreAnchoDraft.sourceValue === lotDetails.servidumbre_ancho_m
+      ? servidumbreAnchoDraft.value
+      : (lotDetails.servidumbre_ancho_m?.toString() ?? '')
+
+  const setServidumbreOfficial = useCallback(
+    (value: string) => {
+      setServidumbreOfficialDraft({
+        lotId: lotDetails.id,
+        sourceValue: lotDetails.servidumbre_m2,
+        value,
+      })
+    },
+    [lotDetails.id, lotDetails.servidumbre_m2]
+  )
+
+  const setServidumbreAncho = useCallback(
+    (value: string) => {
+      setServidumbreAnchoDraft({
+        lotId: lotDetails.id,
+        sourceValue: lotDetails.servidumbre_ancho_m,
+        value,
+      })
+    },
+    [lotDetails.id, lotDetails.servidumbre_ancho_m]
+  )
+
+  const setSegmentWidthDraft = useCallback(
+    (segmentId: string, value: string) => {
+      setSegmentWidthDrafts((prev) => ({
+        lotId: lotDetails.id,
+        values: {
+          ...(prev.lotId === lotDetails.id
+            ? prev.values
+            : buildSegmentWidthDraftValues(lotDetails)),
+          [segmentId]: value,
+        },
+      }))
+    },
+    [lotDetails]
+  )
+
+  const servitudeSegmentWidthRows = useMemo(
+    () => buildServitudeSegmentWidthRows(lotDetails),
+    [lotDetails]
+  )
+
+  const getSegmentWidthDraftValue = useCallback(
+    (row: ServitudeSegmentWidthRow) => {
+      if (segmentWidthDrafts.lotId !== lotDetails.id) {
+        return row.widthM != null ? row.widthM.toString() : ''
+      }
+
+      return (
+        segmentWidthDrafts.values[row.segmentId] ??
+        (row.widthM != null ? row.widthM.toString() : '')
+      )
+    },
+    [lotDetails.id, segmentWidthDrafts]
+  )
+
+  const calculatedServitudeWidths = useMemo(() => {
+    const sourceWidths = servitudeSegmentWidthRows
+      .map((row) => row.widthM)
+      .filter((width): width is number => typeof width === 'number')
+    const widths = [...(lotDetails.servidumbre_widths_m ?? []), ...sourceWidths]
+    return Array.from(
+      new Set(
+        widths.filter((width): width is number => {
+          return typeof width === 'number' && Number.isFinite(width) && width > 0
+        })
+      )
+    ).sort((a, b) => a - b)
+  }, [lotDetails.servidumbre_widths_m, servitudeSegmentWidthRows])
+
+  const hasMultipleServitudeWidths = calculatedServitudeWidths.length > 1
+  const canEditSingleServitudeWidth =
+    servitudeSegmentWidthRows.length === 1 && !hasMultipleServitudeWidths
+
+  const servitudeWidthLabel = useMemo(() => {
+    if (lotDetails.servidumbre_ancho_label) return lotDetails.servidumbre_ancho_label
+    if (calculatedServitudeWidths.length === 0) return null
+    return calculatedServitudeWidths.map(formatServitudeWidth).join(' y ')
+  }, [calculatedServitudeWidths, lotDetails.servidumbre_ancho_label])
+
+  const getSingleServitudeWidthInput = useCallback(() => {
+    if (!canEditSingleServitudeWidth) return undefined
+    const width = parseFloat(servidumbreAncho)
+    return Number.isFinite(width) && width > 0 ? width : undefined
+  }, [canEditSingleServitudeWidth, servidumbreAncho])
+
+  const singleServitudeWidthInput = getSingleServitudeWidthInput()
+  const displayedServitudeWidthLabel =
+    servitudeWidthLabel ??
+    (singleServitudeWidthInput !== undefined
+      ? formatServitudeWidth(singleServitudeWidthInput)
+      : null)
 
   /** Calculates the percentage difference between official and calculated */
   const areaDiff = useMemo(() => {
@@ -247,6 +429,107 @@ export function LotVerificationPanel({
     })
   }, [lotDetails.id, lotDetails.verified_status, perimeterOfficial, areaOfficial, boundaries])
 
+  useEffect(() => {
+    onLotUpdatedRef.current = onLotUpdated
+  }, [onLotUpdated])
+
+  useEffect(() => {
+    lastPersistedWidthRef.current = lotDetails.servidumbre_ancho_m ?? null
+  }, [lotDetails.id, lotDetails.servidumbre_ancho_m])
+
+  useEffect(() => {
+    const values = Object.fromEntries(
+      servitudeSegmentWidthRows.map((row) => [row.segmentId, row.widthM])
+    )
+
+    lastPersistedSegmentWidthsRef.current = values
+  }, [servitudeSegmentWidthRows])
+
+  useEffect(() => {
+    if (!canEditSingleServitudeWidth) return
+
+    const width = getSingleServitudeWidthInput()
+    if (width === undefined || lastPersistedWidthRef.current === width) return
+
+    if (widthAutoSaveTimerRef.current) {
+      clearTimeout(widthAutoSaveTimerRef.current)
+    }
+
+    widthAutoSaveTimerRef.current = setTimeout(async () => {
+      setIsAutoSavingWidth(true)
+      try {
+        const result = await saveOfficialOverride({
+          projectId,
+          lotId: lotDetails.id,
+          servidumbre_ancho_m: width,
+        })
+
+        if (result.success) {
+          lastPersistedWidthRef.current = width
+          onLotUpdatedRef.current?.()
+        } else {
+          toast.error(result.error ?? 'Error al recalcular servidumbre')
+        }
+      } catch {
+        toast.error('Error al recalcular servidumbre')
+      } finally {
+        setIsAutoSavingWidth(false)
+      }
+    }, 700)
+
+    return () => {
+      if (widthAutoSaveTimerRef.current) {
+        clearTimeout(widthAutoSaveTimerRef.current)
+      }
+    }
+  }, [canEditSingleServitudeWidth, getSingleServitudeWidthInput, lotDetails.id, projectId])
+
+  useEffect(() => {
+    if (servitudeSegmentWidthRows.length <= 1) return
+
+    for (const row of servitudeSegmentWidthRows) {
+      const width = parseFloat(getSegmentWidthDraftValue(row))
+      if (!Number.isFinite(width) || width <= 0) continue
+
+      if (lastPersistedSegmentWidthsRef.current[row.segmentId] === width) continue
+
+      if (segmentWidthAutoSaveTimersRef.current[row.segmentId]) {
+        clearTimeout(segmentWidthAutoSaveTimersRef.current[row.segmentId])
+      }
+
+      segmentWidthAutoSaveTimersRef.current[row.segmentId] = setTimeout(async () => {
+        setIsAutoSavingWidth(true)
+        try {
+          const result = await saveOfficialOverride({
+            projectId,
+            lotId: lotDetails.id,
+            servidumbre_ancho_m: width,
+            servidumbre_road_segment_id: row.segmentId,
+          })
+
+          if (result.success) {
+            lastPersistedSegmentWidthsRef.current[row.segmentId] = width
+            onLotUpdatedRef.current?.()
+          } else {
+            toast.error(result.error ?? 'Error al recalcular servidumbre')
+          }
+        } catch {
+          toast.error('Error al recalcular servidumbre')
+        } finally {
+          delete segmentWidthAutoSaveTimersRef.current[row.segmentId]
+          setIsAutoSavingWidth(false)
+        }
+      }, 700)
+    }
+
+    return () => {
+      for (const timer of Object.values(segmentWidthAutoSaveTimersRef.current)) {
+        clearTimeout(timer)
+      }
+      segmentWidthAutoSaveTimersRef.current = {}
+    }
+  }, [getSegmentWidthDraftValue, lotDetails.id, projectId, servitudeSegmentWidthRows])
+
   const generatedDeslindeText = useMemo(() => {
     return generateDeslindeText({
       numero_lote: lotDetails.numero_lote,
@@ -280,23 +563,10 @@ export function LotVerificationPanel({
             description: `${value} en ${next[index].distance?.toFixed(2) ?? '0'} m`,
           }
         }
-        // Auto-recalcular servidumbre si hay ancho
-        const ancho = parseFloat(servidumbreAncho)
-        if (!isNaN(ancho) && ancho > 0) {
-          const total = next
-            .filter((b) => isServidumbreMatch(b.colinda))
-            .reduce((sum, b) => sum + (b.distance ?? 0), 0)
-          if (total > 0) {
-            setServidumbreOfficial((ancho * total).toFixed(2))
-          } else {
-            // Si borraron el 'camino' de todos lados
-            setServidumbreOfficial('0.00')
-          }
-        }
         return next
       })
     },
-    [servidumbreAncho]
+    []
   )
 
   const handleAddBoundary = useCallback(() => {
@@ -316,7 +586,6 @@ export function LotVerificationPanel({
         area_official_m2: areaOfficial ? parseFloat(areaOfficial) : undefined,
         perimeter_official_m: perimeterOfficial ? parseFloat(perimeterOfficial) : undefined,
         servidumbre_m2: servidumbreOfficial ? parseFloat(servidumbreOfficial) : undefined,
-        servidumbre_ancho_m: servidumbreAncho ? parseFloat(servidumbreAncho) : undefined,
         boundaries_official: boundaries.length > 0 ? boundaries : undefined,
       })
 
@@ -337,7 +606,6 @@ export function LotVerificationPanel({
     areaOfficial,
     perimeterOfficial,
     servidumbreOfficial,
-    servidumbreAncho,
     boundaries,
     onLotUpdated,
   ])
@@ -353,7 +621,7 @@ export function LotVerificationPanel({
       setServidumbreOfficial(lotDetails.servidumbre_m2.toFixed(2))
     }
     toast.info('Valores calculados copiados como oficiales')
-  }, [legalMetrics, lotDetails.servidumbre_m2])
+  }, [legalMetrics, lotDetails.servidumbre_m2, setServidumbreOfficial])
 
   const handleUseCalculatedBoundaries = useCallback(() => {
     if (calculatedBoundaries.length === 0) {
@@ -389,7 +657,6 @@ export function LotVerificationPanel({
         area_official_m2: areaNum,
         perimeter_official_m: perimeterNum,
         servidumbre_m2: servidumbreOfficial ? parseFloat(servidumbreOfficial) : undefined,
-        servidumbre_ancho_m: servidumbreAncho ? parseFloat(servidumbreAncho) : undefined,
         boundaries_official: boundaries,
         calculated_snapshot: legalMetrics
           ? {
@@ -415,7 +682,6 @@ export function LotVerificationPanel({
     areaOfficial,
     perimeterOfficial,
     servidumbreOfficial,
-    servidumbreAncho,
     boundaries,
     legalMetrics,
     projectId,
@@ -551,43 +817,85 @@ export function LotVerificationPanel({
           {/* Ancho Servidumbre Row */}
           <div className="grid grid-cols-[1fr_70px_100px_60px] gap-0 items-center px-3 py-2.5 border-t border-border">
             <span className="text-xs font-medium text-foreground/70">Ancho Serv.</span>
-            <span className="text-[11px] text-muted-foreground text-right font-mono">—</span>
+            <span className="text-[11px] text-muted-foreground text-right font-mono">
+              {displayedServitudeWidthLabel ?? '—'}
+            </span>
             <div className="px-1 relative flex items-center">
-              <Input
-                type="number"
-                step="0.1"
-                value={servidumbreAncho}
-                onChange={(e) => {
-                  const newAncho = e.target.value
-                  setServidumbreAncho(newAncho)
-                  // Auto-recalcular servidumbre buscando palabras clave en colinda
-                  const ancho = parseFloat(newAncho)
-                  if (!isNaN(ancho) && ancho > 0) {
-                    const total = boundaries
-                      .filter((b) => isServidumbreMatch(b.colinda))
-                      .reduce((sum, b) => sum + (b.distance ?? 0), 0)
-
-                    if (total > 0) {
-                      setServidumbreOfficial((ancho * total).toFixed(2))
-                    } else {
-                      setServidumbreOfficial('0.00')
-                    }
-                  } else {
-                    // Si borran el ancho, se puede quedar como está o a 0
-                    if (newAncho === '') {
-                      setServidumbreOfficial('0.00')
-                    }
-                  }
-                }}
-                placeholder="0.0"
-                className="h-7 text-xs text-center pr-4 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
+              {!canEditSingleServitudeWidth ? (
+                <Input
+                  type="text"
+                  value={displayedServitudeWidthLabel ?? ''}
+                  readOnly
+                  disabled
+                  className="h-7 text-xs text-center pr-4"
+                />
+              ) : (
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={servidumbreAncho}
+                  onChange={(e) => setServidumbreAncho(e.target.value)}
+                  placeholder="0.0"
+                  className="h-7 text-xs text-center pr-4 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              )}
               <span className="absolute right-2 text-[9px] text-muted-foreground pointer-events-none">
                 m
               </span>
             </div>
-            <span className="text-[10px] text-muted-foreground text-right">ancho</span>
+            <span className="text-[10px] text-muted-foreground text-right">
+              {isAutoSavingWidth
+                ? 'calc.'
+                : hasMultipleServitudeWidths
+                  ? 'tramos'
+                  : canEditSingleServitudeWidth
+                    ? 'tramo'
+                    : 'calc.'}
+            </span>
           </div>
+
+          {servitudeSegmentWidthRows.length > 1 && (
+            <div className="border-t border-border bg-muted/20 px-3 py-2 space-y-2">
+              <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <span>Tramos de servidumbre</span>
+                <span>{isAutoSavingWidth ? 'recalculando' : 'ajuste fino'}</span>
+              </div>
+              <div className="space-y-1.5">
+                {servitudeSegmentWidthRows.map((row, index) => (
+                  <div
+                    key={row.segmentId}
+                    className="grid grid-cols-[1fr_70px_100px_60px] gap-0 items-center"
+                  >
+                    <span className="text-[11px] font-medium text-foreground/70 truncate pr-2">
+                      {row.label}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground text-right font-mono">
+                      {row.widthM != null ? formatServitudeWidth(row.widthM) : '—'}
+                    </span>
+                    <div className="px-1 relative flex items-center">
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={getSegmentWidthDraftValue(row)}
+                        onChange={(event) =>
+                          setSegmentWidthDraft(row.segmentId, event.target.value)
+                        }
+                        aria-label={`Ancho servidumbre tramo ${index + 1}`}
+                        placeholder="0.0"
+                        className="h-7 text-xs text-center pr-4 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="absolute right-2 text-[9px] text-muted-foreground pointer-events-none">
+                        m
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground text-right">
+                      tramo {index + 1}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ─── Copy Calculated Button ───────────────────────────── */}

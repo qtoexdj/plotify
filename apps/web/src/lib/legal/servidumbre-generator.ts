@@ -16,6 +16,10 @@ import type { ServidumbreAnalysis, ServidumbreEdge, OfficialBoundary } from '@/t
 
 const BLANK = '___________'
 
+interface GenerateServidumbreTextOptions {
+  widthLabel?: string | null
+}
+
 // ─── Helpers de Formato ─────────────────────────────────────────────────────
 
 /**
@@ -46,6 +50,11 @@ function convertLotNumbersInText(text: string): string {
  */
 function ordinalToWords(n: number): string {
   return numberToWordsLower(n).replace(/\bun\b/g, 'uno')
+}
+
+function formatWidthClause(widthLabel?: string | null): string {
+  const label = widthLabel?.trim()
+  return label ? `, de ${label} metros de ancho` : ''
 }
 
 // ─── Formateo de Aristas Individuales ──────────────────────────────────────
@@ -295,13 +304,15 @@ function renderGroupedBoundaries(groups: GroupedBoundary[]): string {
  */
 export function generateServidumbreText(
   analysis: ServidumbreAnalysis,
-  widthRoadMeters: number = 6
+  widthRoadMeters: number = 6,
+  options: GenerateServidumbreTextOptions = {}
 ): string {
   const lotName = lotNumberToWords(analysis.lotNumber)
   const areaText = analysis.areaM2 > 0 ? numberToWordsLower(analysis.areaM2) : BLANK
+  const widthClause = formatWidthClause(options.widthLabel)
 
   if (analysis.tramos.length === 0) {
-    return `LOTE ${lotName}. Tiene una servidumbre de ${areaText} metros cuadrados y deslinda: ${BLANK}.`
+    return `LOTE ${lotName}. Tiene una servidumbre de ${areaText} metros cuadrados${widthClause} y deslinda: ${BLANK}.`
   }
 
   // ─── Formato Simple (1 tramo) ─────────────────────────────────────────
@@ -313,7 +324,7 @@ export function generateServidumbreText(
     const deslindesStr = renderGroupedBoundaries(groups)
 
     return (
-      `LOTE ${lotName}. Tiene una servidumbre de ${areaText} metros cuadrados` +
+      `LOTE ${lotName}. Tiene una servidumbre de ${areaText} metros cuadrados${widthClause}` +
       ` y deslinda: ${deslindesStr}.`
     )
   }
@@ -332,7 +343,7 @@ export function generateServidumbreText(
   }
 
   const header =
-    `LOTE ${lotName}. Tiene una servidumbre de ${areaText} metros cuadrados, ` +
+    `LOTE ${lotName}. Tiene una servidumbre de ${areaText} metros cuadrados${widthClause}, ` +
     `la que tiene ${tramoCount} tramos que corren por el deslinde ${directionsStr}.`
 
   // Generar cada tramo
@@ -355,15 +366,13 @@ export function generateServidumbreText(
   return `${header} ${tramoParts.join(' ')}`
 }
 
-// ─── Compatibilidad Retroactiva ─────────────────────────────────────────────
+// ─── Texto Desde Deslindes Oficiales ────────────────────────────────────────
 
 /**
- * Genera texto de servidumbre desde los datos legacy (boundaries_official del lote).
- * Se mantiene para compatibilidad con lotes que aún no tienen ServidumbreAnalysis.
- *
- * @deprecated Usar generateServidumbreText(analysis) cuando se disponga de ServidumbreAnalysis
+ * Genera texto de servidumbre desde los datos oficiales persistidos del lote.
+ * Se usa cuando no existe un ServidumbreAnalysis geométrico para redactar tramos.
  */
-export function generateServidumbreTextLegacy(lot: {
+export function generateServidumbreTextFromOfficialBoundaries(lot: {
   numero_lote: string
   servidumbre_m2: number | null
   boundaries_official: OfficialBoundary[] | null

@@ -133,7 +133,7 @@ plotify/
 - **Componentes**: `KmzUploadPanel`, `GeometryAssignmentPanel`
 - **Auto-cálculo de superficie y servidumbre**: Al asignar una geometría o guardar infraestructura:
   - Se calcula `lots.m2` y áreas usando utilidades en `utm.ts`.
-  - Se calcula `servidumbre_m2` cruzando el lote con el camino (`projects.road_geometry`) usando `intersect` y `area` de Turf.js en `servidumbre.ts`.
+  - Se calcula `servidumbre_m2` cruzando el lote con las huellas canónicas de `project_road_segments`.
   - Se calcula `superficie_neta_m2 = m2 - servidumbre_m2`.
 - **Selección de lote (pestaña Asignar)**: La selección del lote objetivo se realiza mediante un **Combobox** (`shadcn/ui Command + Popover`) embebido directamente en la sección "Asignar al lote", sin necesidad de cambiar a la pestaña "Lotes". Incluye búsqueda instantánea client-side, feedback visual del lote seleccionado (con check verde) y solo muestra lotes no asignados (`availableLots = lots.filter(l => !assignedLotIds.has(l.id))`).
 - **Desasignación de Geometría**: El sistema permite revertir una asignación errónea. Al desasignar, se elimina el `geometry_id` del lote en la base de datos y se restaura el polígono a la lista de "disponibles" en la memoria del cliente (para DXF/KMZ).
@@ -160,7 +160,7 @@ plotify/
   - **Legal/Proyectado**: UTM (WGS84 Sur) vía `proj4` para conformidad con planos oficiales (SAG/CBR). Cálculo de deslindes UTM automáticos.
   - **Detección de Vecinos**: La utilidad `getBoundariesWithNeighbors` utiliza algoritmos de proximidad de segmentos (tolerancia de ~1m) para identificar lotes adyacentes.
     - **Suma Colineal (FaceLen)**: Para resolver fragmentación CAD en los polígonos de vecinos, el motor identifica todos los segmentos del vecino colineales al tramo actual (tolerancia 3°) y suma sus distancias. Esto permite calcular la longitud real de la cara del vecino (`FaceLen`) y compararla con el solape (`overlap`) de forma precisa.
-  - **Detección de Servidumbre (Caminos)**: Cada segmento del polígono se evalúa contra la geometría del camino (`road_geometry`) para determinar si toca una servidumbre. El algoritmo implementa:
+  - **Detección de Servidumbre (Caminos)**: Cada lote se evalúa contra las huellas canónicas de camino persistidas para determinar si toca una servidumbre. El algoritmo implementa:
     - **Distancia en metros reales**: Cálculo con corrección `cos(lat)` para evitar anisotropía entre ejes E-W y N-S (`DEG_TO_M_LAT`, `DEG_TO_M_LON`). Umbral configurable (`ROAD_THRESHOLD_M = 4m`).
     - **Muestreo multi-punto**: 3 puntos (0%, 50%, 100%) a lo largo de cada segmento para capturar contacto.
     - **Distinción `roadContactFull` vs `touchesRoad`**: Basado en el porcentaje de puntos que tocan el camino.
@@ -173,7 +173,7 @@ plotify/
 - **Filtro y Renderizado de Geometrías**: El visor implementa reglas críticas para la integridad visual:
   - Solo muestra geometrías de lote asignadas explícitamente (`lot_id NOT NULL`), eliminando "geometrías zombies".
   - Áreas comunes (`common_area`) se renderizan solo si `is_assigned = true`.
-  - **Caminos Unificados**: Los caminos se renderizan a partir de una única capa unificada guardada en `projects.road_geometry`, optimizando la persistencia y permitiendo el cálculo preciso de servidumbres.
+  - **Caminos Canónicos**: Los caminos se renderizan desde geometrías de infraestructura asignadas y su cálculo legal usa `project_road_segments`.
 - **Panel lateral**: Siempre visible al cargar (no colapsado). Muestra datos del lote seleccionado o mensaje de bienvenida.
 - **Superficie auto-calculada**: La card de Superficie muestra `area_official_m2` (si verificado) → `legalMetrics.area_legal_m2` (calculado en tiempo real) → "--" (sin geometría). Sin tooltip.
 - **Pestaña Legal**: Muestra únicamente el panel de **Verificación Legal** (deslindes oficiales editables, superficie oficial, estados de verificación). La sección "Deslindes Geodésicos" (tabla read-only) fue eliminada de la interfaz.
@@ -201,12 +201,12 @@ El visor de Onboarding (`GeometryAssignmentPanel`) aún usa Konva y mantiene las
 - **Responsabilidad**: Cálculo geométrico y generación textual de servidumbres de tránsito en formato legal chileno.
 - **Componente UI**: `src/components/projects/detail/legal-tab.tsx` (Client Component, pestaña "Legal" del proyecto)
 - **Pipeline completo**:
-  1. Fetch `ViewerFeatureCollection` desde `/api/viewer/[projectId]/feature-collection`
-  2. Cálculo client-side con `analyzeServidumbreBoundaries()` (Turf.js)
-  3. Caché por lote con `useRef<Map<lotId, ServidumbreAnalysis>>`
-  4. Generación de texto con `generateServidumbreText(analysis, widthRoadMeters)`
+  1. Persistencia de huellas y anchos por camino en `project_road_segments`
+  2. Cálculo server-side de la intersección lote x huellas en `onboarding.service.ts`
+  3. Render del overlay desde `lots.servidumbre_geometry`
+  4. Generación de texto desde `ServidumbreAnalysis` cuando existe, o desde deslindes oficiales persistidos
 - **Motor Geométrico** (`servidumbre.ts`):
-  - `calculateServidumbre()`: buffer sobre `road_geometry` a `width/2` metros → intersección con lote → área m²
+  - `calculateServidumbre()`: adaptador de firma para un camino directo; el flujo operativo usa `servidumbre-footprints.ts`
   - `sanitizeLotGeometry()`: convierte LineString/MultiLineString → Polygon (para lotes importados desde KMZ/CAD)
   - `analyzeServidumbreBoundaries()`: clasifica cada arista del mini-polígono como `internal` (lote propio), `neighbor` (lote vecino) o `external` (predio externo)
   - `fuseCollinearSegments()`: fusión colineal con tolerancia 3° (resiliencia a fragmentación de archivos CAD)
@@ -218,7 +218,7 @@ El visor de Onboarding (`GeometryAssignmentPanel`) aún usa Konva y mantiene las
   - `groupAndFormatEdges()`: consolida grupos por label cardinal con soporte multi-segmento
   - `renderGroupedBoundaries()`: genera texto legal ("en X metros con servidumbre que grava al lote N")
   - `generateServidumbreText(analysis, widthRoadMeters)`: orquesta simple y multi-tramo
-  - `generateServidumbreTextLegacy(lot)`: fallback para lotes sin `ServidumbreAnalysis` (**@deprecated**)
+  - `generateServidumbreTextFromOfficialBoundaries(lot)`: texto desde deslindes oficiales cuando no existe `ServidumbreAnalysis`
 - **Tipos** (`/types/database.types.ts`):
   ```typescript
   ServidumbreFrontierType // 'internal' | 'neighbor' | 'external'

@@ -55,7 +55,7 @@ Fuentes usadas:
 
 ### D4 — Persistencia explicita de segmentos y resultado por lote
 
-**Decision**: agregar estructura persistente para caminos/tramos y resultado calculado por lote, manteniendo columnas legacy para compatibilidad.
+**Decision**: agregar estructura persistente para caminos/tramos y resultado calculado por lote, manteniendo columnas existentes de resultado como read-model derivado.
 
 **Rationale**: guardar metadata de ancho/modo en `geometries.properties` seria opaco y dificil de validar con migraciones y tipos. La servidumbre es fundacional y necesita trazabilidad.
 
@@ -90,6 +90,6 @@ Fuentes usadas:
 
 - **Geometrias invalidas de KMZ/CAD**: normalizar/validar antes de guardar resultado y dejar calculo pendiente si falla.
 - **Union de MultiPolygon compleja**: agregar dependencia modular `@turf/union` o wrapper equivalente con tests de regresion.
-- **Migracion en tabla critica `lots`**: usar migracion incremental, campos nullable, compatibilidad legacy y `pnpm verify:migrations`.
-- **Documentos legacy esperan `servidumbre_ancho_m` numerico**: mantener campo legacy para ancho unico y agregar label/array para multiples; adaptar puente/documentos.
+- **Migracion en tabla critica `lots`**: usar migracion incremental, campos nullable, compatibilidad con columnas existentes y `pnpm verify:migrations`.
+- **Documentos existentes esperan `servidumbre_ancho_m` numerico**: mantener campo derivado para ancho unico y agregar label/array para multiples; adaptar puente/documentos.
 - **Rendimiento**: motor puro con bbox prefilter antes de union/intersect y tests de escala.

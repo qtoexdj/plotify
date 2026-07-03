@@ -5,6 +5,16 @@ export type GeometryType = 'lot' | 'road' | 'common_area'
 export type SourceType = 'kmz' | 'kml' | 'dxf' | 'dwg'
 export type EstadoLote = 'disponible' | 'reservado' | 'vendido'
 export type VerifiedStatus = 'draft' | 'verified_exact' | 'verified_override'
+export type RoadInputMode = 'centerline' | 'footprint' | 'edge'
+export type RoadEdgeSide = 'left' | 'right' | 'both'
+export type RoadSegmentStatus = 'ready' | 'needs_review' | 'invalid'
+export type RoadSegmentSourceType = SourceType | 'manual'
+export type ServidumbreCalculationStatus =
+  | 'not_calculated'
+  | 'calculated'
+  | 'needs_review'
+  | 'official_override'
+  | 'error'
 
 export interface NeighborMetadata {
   name: string
@@ -13,7 +23,7 @@ export interface NeighborMetadata {
 
 export interface OfficialBoundary {
   label: string // Orientación (e.g. "Suroriente")
-  description: string // Texto libre (legacy compat)
+  description: string // Texto libre
   distance?: number // Distancia en metros (editable)
   colinda?: string // Con quién colinda (editable, refleja plano oficial)
   es_servidumbre?: boolean // true = este deslinde toca el camino/servidumbre
@@ -205,6 +215,13 @@ export interface Lot {
   m2: number | null
   servidumbre_m2: number | null
   servidumbre_ancho_m: number | null
+  servidumbre_widths_m: number[] | null
+  servidumbre_ancho_label: string | null
+  servidumbre_geometry: GeoJSONFeature | null
+  servidumbre_sources: ServidumbreSource[] | null
+  servidumbre_calculation_status: ServidumbreCalculationStatus
+  servidumbre_calculated_at: string | null
+  servidumbre_calculation_version: string | null
   superficie_neta_m2: number | null
   reserved_at: string | null
   sold_at: string | null
@@ -215,6 +232,30 @@ export interface Lot {
   verified_status: VerifiedStatus
   verified_at: string | null
   verified_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ServidumbreSource {
+  segment_id: string
+  width_m: number | null
+  input_mode: RoadInputMode
+  name?: string | null
+}
+
+export interface ProjectRoadSegment {
+  id: string
+  project_id: string
+  geometry_id: string | null
+  name: string | null
+  input_geometry: GeoJSONGeometry
+  input_mode: RoadInputMode
+  width_m: number | null
+  edge_side: RoadEdgeSide | null
+  footprint_geometry: GeoJSONGeometry | null
+  source_type: RoadSegmentSourceType
+  status: RoadSegmentStatus
+  sort_order: number | null
   created_at: string
   updated_at: string
 }

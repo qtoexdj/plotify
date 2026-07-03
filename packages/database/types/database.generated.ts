@@ -1846,8 +1846,15 @@ export type Database = {
           precio: number | null
           project_id: string
           reserved_at: string | null
+          servidumbre_ancho_label: string | null
           servidumbre_ancho_m: number | null
+          servidumbre_calculated_at: string | null
+          servidumbre_calculation_status: string
+          servidumbre_calculation_version: string | null
+          servidumbre_geometry: Json | null
           servidumbre_m2: number | null
+          servidumbre_sources: Json | null
+          servidumbre_widths_m: number[] | null
           sold_at: string | null
           superficie_neta_m2: number | null
           updated_at: string
@@ -1871,8 +1878,15 @@ export type Database = {
           precio?: number | null
           project_id: string
           reserved_at?: string | null
+          servidumbre_ancho_label?: string | null
           servidumbre_ancho_m?: number | null
+          servidumbre_calculated_at?: string | null
+          servidumbre_calculation_status?: string
+          servidumbre_calculation_version?: string | null
+          servidumbre_geometry?: Json | null
           servidumbre_m2?: number | null
+          servidumbre_sources?: Json | null
+          servidumbre_widths_m?: number[] | null
           sold_at?: string | null
           superficie_neta_m2?: number | null
           updated_at?: string
@@ -1896,8 +1910,15 @@ export type Database = {
           precio?: number | null
           project_id?: string
           reserved_at?: string | null
+          servidumbre_ancho_label?: string | null
           servidumbre_ancho_m?: number | null
+          servidumbre_calculated_at?: string | null
+          servidumbre_calculation_status?: string
+          servidumbre_calculation_version?: string | null
+          servidumbre_geometry?: Json | null
           servidumbre_m2?: number | null
+          servidumbre_sources?: Json | null
+          servidumbre_widths_m?: number[] | null
           sold_at?: string | null
           superficie_neta_m2?: number | null
           updated_at?: string
@@ -2414,6 +2435,72 @@ export type Database = {
             columns: ["sii_roles_source_legal_document_id"]
             isOneToOne: false
             referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_road_segments: {
+        Row: {
+          created_at: string
+          edge_side: string | null
+          footprint_geometry: Json | null
+          geometry_id: string | null
+          id: string
+          input_geometry: Json
+          input_mode: string
+          name: string | null
+          project_id: string
+          sort_order: number | null
+          source_type: string
+          status: string
+          updated_at: string
+          width_m: number | null
+        }
+        Insert: {
+          created_at?: string
+          edge_side?: string | null
+          footprint_geometry?: Json | null
+          geometry_id?: string | null
+          id?: string
+          input_geometry: Json
+          input_mode: string
+          name?: string | null
+          project_id: string
+          sort_order?: number | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          width_m?: number | null
+        }
+        Update: {
+          created_at?: string
+          edge_side?: string | null
+          footprint_geometry?: Json | null
+          geometry_id?: string | null
+          id?: string
+          input_geometry?: Json
+          input_mode?: string
+          name?: string | null
+          project_id?: string
+          sort_order?: number | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          width_m?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_road_segments_geometry_id_fkey"
+            columns: ["geometry_id"]
+            isOneToOne: false
+            referencedRelation: "geometries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_road_segments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

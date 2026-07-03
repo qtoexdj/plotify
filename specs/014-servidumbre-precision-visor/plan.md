@@ -28,7 +28,7 @@ La entrega se divide en incrementos: primero motor puro + tests, luego persisten
 
 **Constraints**:
 
-- Mantener compatibilidad de lectura con `projects.road_geometry`, `projects.road_width_m`, `lots.servidumbre_m2`, `lots.servidumbre_ancho_m` y `lots.superficie_neta_m2`.
+- Usar `project_road_segments` como unica fuente de calculo/render de caminos; `projects.road_geometry` y `projects.road_width_m` no deben usarse como fallback.
 - No mezclar base de area geodesica de Turf con area legal UTM para valores persistidos.
 - No sobrescribir overrides oficiales de lote sin accion explicita de recalculo/aceptacion.
 - No usar parsing automatico del PDF como fuente de verdad; el PDF Teno es referencia de dominio para fixtures.
@@ -74,7 +74,7 @@ specs/014-servidumbre-precision-visor/
 ```text
 apps/web/src/lib/geometry/
 ├── compute-m2.ts                  # area legal Polygon/MultiPolygon con huecos
-├── servidumbre.ts                 # motor legacy + adaptadores
+├── servidumbre.ts                 # adaptadores de compatibilidad de firma
 ├── servidumbre-footprints.ts      # nuevo motor puro de huellas/intersecciones
 └── utm.ts                         # base legal UTM existente
 
@@ -99,7 +99,7 @@ apps/web/src/types/
 
 apps/api/services/
 ├── escritura_operational_bridge.py # si se exponen anchos multiples al caso
-└── document_engine.py              # si plantillas legacy requieren ancho label
+└── document_engine.py              # si plantillas actuales requieren ancho label
 
 packages/database/supabase/migrations/
 └── 20260702000100_servidumbre_precision.sql

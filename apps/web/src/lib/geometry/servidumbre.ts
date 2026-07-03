@@ -1,10 +1,7 @@
-import buffer from '@turf/buffer'
-import intersect from '@turf/intersect'
-import area from '@turf/area'
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import destination from '@turf/destination'
 import lineToPolygon from '@turf/line-to-polygon'
-import { featureCollection, point as turfPoint } from '@turf/helpers'
+import { point as turfPoint } from '@turf/helpers'
 import type { GeoJSONGeometry } from '@/types/database.types'
 import type {
   ServidumbreEdge,
@@ -22,6 +19,7 @@ import {
   getOutwardNormalBearing,
   getFeatureCoords,
 } from './utils'
+import { calculateLotServitude } from './servidumbre-footprints'
 
 export interface ServidumbreCalculationResult {
   servidumbreM2: number
@@ -109,50 +107,32 @@ export function calculateServidumbre(
       return { servidumbreM2: 0, intersectionPolygon: null }
     }
 
-    const lotFeature = toTurfFeature(sanitizedLotGeom)
-    const roadFeature = toTurfFeature(roadGeometry)
+    const result = calculateLotServitude({
+      lotId: 'direct-servitude',
+      lotGeometry: sanitizedLotGeom,
+      totalAreaM2: null,
+      roadSegments: [
+        {
+          id: 'direct-road',
+          geometry: roadGeometry,
+          mode:
+            roadGeometry.type === 'Polygon' || roadGeometry.type === 'MultiPolygon'
+              ? 'footprint'
+              : 'centerline',
+          widthM: widthRoadMeters,
+        },
+      ],
+    })
 
-    if (!lotFeature || !roadFeature) {
+    if (!result.intersectionGeometry) {
       return { servidumbreM2: 0, intersectionPolygon: null }
     }
 
-    // 1. Crear el buffer del camino (convierte línea a polígono con el ancho deseado)
-    // IMPORTANTE: turf.buffer espera RADIO, no diámetro.
-    // widthRoadMeters = ancho total de la calle → radio = ancho / 2
-    // Ej: calle de 6m → buffer de 3m a cada lado del eje
-    const radiusMeters = widthRoadMeters / 2
-    console.log('[Servidumbre] Buffer:', { widthRoadMeters, radiusMeters })
-    const bufferedRoad = buffer(roadFeature, radiusMeters, { units: 'meters' })
-
-    if (!bufferedRoad) {
-      return { servidumbreM2: 0, intersectionPolygon: null }
-    }
-
-    // 2. Intersectar el lote con el camino con buffer
-    const intersection = intersect(
-      featureCollection([
-        lotFeature as Feature<Polygon | MultiPolygon>,
-        bufferedRoad as Feature<Polygon | MultiPolygon>,
-      ])
-    )
-
-    if (!intersection) {
-      // No hay superposición
-      return { servidumbreM2: 0, intersectionPolygon: null }
-    }
-
-    // 3. Calcular el área resultante en m2 (1 decimal para precisión legal)
-    // NOTA: El buffer de Turf genera tapas redondeadas (semicírculos) en los
-    // extremos, lo que infla ligeramente el área real (~πr²). Para lotes con
-    // camino pasante (sin cabezas expuestas), el efecto es mínimo. Validar
-    // visualmente contra el plano topográfico de referencia.
-    const areaM2 = parseFloat(area(intersection).toFixed(1))
-
-    console.log(`[Servidumbre] Cálculo exitoso: ${areaM2} m2`)
+    console.log(`[Servidumbre] Cálculo exitoso: ${result.servidumbreM2} m2`)
 
     return {
-      servidumbreM2: areaM2,
-      intersectionPolygon: intersection as Feature<Polygon | MultiPolygon>,
+      servidumbreM2: result.servidumbreM2,
+      intersectionPolygon: result.intersectionGeometry,
     }
   } catch (error) {
     console.error('[Servidumbre] ERROR DE TURF:', error)

@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NextRequest } from 'next/server'
-import { saveAndAssignGeometry, saveInfrastructure } from '@/lib/services/onboarding.service'
+import {
+  recalculateProjectServidumbres,
+  saveAndAssignGeometry,
+  saveInfrastructure,
+} from '@/lib/services/onboarding.service'
 import { POST as POSTSaveAndAssign } from '../src/app/api/onboarding/save-and-assign/route'
 import { POST as POSTSaveInfrastructure } from '../src/app/api/onboarding/save-infrastructure/route'
+import { POST as POSTRecalculateServidumbres } from '../src/app/api/onboarding/recalculate-servidumbres/route'
 
 vi.mock('@/lib/services/onboarding.service', () => ({
+  recalculateProjectServidumbres: vi.fn(),
   saveAndAssignGeometry: vi.fn(),
   saveInfrastructure: vi.fn(),
 }))
@@ -32,6 +38,7 @@ function buildPostRequest(payload: unknown): NextRequest {
 describe('onboarding save routes', () => {
   const saveAndAssignGeometryMock = vi.mocked(saveAndAssignGeometry)
   const saveInfrastructureMock = vi.mocked(saveInfrastructure)
+  const recalculateProjectServidumbresMock = vi.mocked(recalculateProjectServidumbres)
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -93,5 +100,114 @@ describe('onboarding save routes', () => {
       geometry: { id: 'geometry-road-1' },
     })
     expect(saveInfrastructureMock).toHaveBeenCalledWith(payload)
+  })
+
+  it('saves road infrastructure with explicit interpretation metadata', async () => {
+    saveInfrastructureMock.mockResolvedValue({ id: 'geometry-road-2' } as Awaited<
+      ReturnType<typeof saveInfrastructure>
+    >)
+
+    const payload = {
+      projectId: 'project-1',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [0, 0],
+          [1, 1],
+        ],
+      },
+      properties: { name: 'Camino eje' },
+      sourceType: 'kmz',
+      geometryType: 'road',
+      name: 'Camino eje',
+      inputMode: 'centerline',
+      widthM: 10,
+    }
+
+    const response = await POSTSaveInfrastructure(buildPostRequest(payload))
+
+    expect(response.status).toBe(200)
+    expect(saveInfrastructureMock).toHaveBeenCalledWith(payload)
+  })
+
+  it('rejects road infrastructure with unsupported input mode', async () => {
+    const response = await POSTSaveInfrastructure(
+      buildPostRequest({
+        projectId: 'project-1',
+        geometry,
+        properties: { name: 'Camino raro' },
+        sourceType: 'kmz',
+        geometryType: 'road',
+        name: 'Camino raro',
+        inputMode: 'axis',
+      })
+    )
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'inputMode debe ser centerline, footprint o edge',
+    })
+    expect(saveInfrastructureMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects explicit centerline road infrastructure without positive width', async () => {
+    const response = await POSTSaveInfrastructure(
+      buildPostRequest({
+        projectId: 'project-1',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [0, 0],
+            [1, 1],
+          ],
+        },
+        properties: { name: 'Camino sin ancho' },
+        sourceType: 'kmz',
+        geometryType: 'road',
+        name: 'Camino sin ancho',
+        inputMode: 'centerline',
+      })
+    )
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'widthM debe ser un número positivo para caminos centerline o edge',
+    })
+    expect(saveInfrastructureMock).not.toHaveBeenCalled()
+  })
+
+  it('recalculates persisted servitudes for an existing project', async () => {
+    recalculateProjectServidumbresMock.mockResolvedValue({
+      projectId: 'project-1',
+      roadSegments: 1,
+      lotsMatched: 24,
+      lotsUpdated: 20,
+      lotsSkipped: 4,
+    })
+
+    const response = await POSTRecalculateServidumbres(buildPostRequest({ projectId: 'project-1' }))
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      message: 'Servidumbres recalculadas correctamente',
+      result: {
+        projectId: 'project-1',
+        roadSegments: 1,
+        lotsMatched: 24,
+        lotsUpdated: 20,
+        lotsSkipped: 4,
+      },
+    })
+    expect(recalculateProjectServidumbresMock).toHaveBeenCalledWith('project-1')
+  })
+
+  it('rejects recalculate requests without project id', async () => {
+    const response = await POSTRecalculateServidumbres(buildPostRequest({}))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'projectId es requerido',
+    })
+    expect(recalculateProjectServidumbresMock).not.toHaveBeenCalled()
   })
 })

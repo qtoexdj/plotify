@@ -19,6 +19,9 @@ import { AssignmentMapLayers } from './AssignmentMapLayers'
 import { AssignmentHoverCard } from './AssignmentHoverCard'
 import { AssignmentSidePanel } from './AssignmentSidePanel'
 import type { GeometryAssignmentProps, Lot, FilterType, AssignAsType, ParsedFeature } from './types'
+import type { RoadInputMode } from '@/types/database.types'
+
+type RoadAssignmentInputMode = Extract<RoadInputMode, 'centerline' | 'footprint'>
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -86,6 +89,14 @@ function buildFullFeatureCollection(
   }
 }
 
+function isLineGeometry(geometry: ParsedFeature['geometry']): boolean {
+  return geometry.type === 'LineString' || geometry.type === 'MultiLineString'
+}
+
+function isPolygonGeometry(geometry: ParsedFeature['geometry']): boolean {
+  return geometry.type === 'Polygon' || geometry.type === 'MultiPolygon'
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────
@@ -118,6 +129,8 @@ export function GeometryAssignmentPanel({
   const [filterType, setFilterType] = useState<FilterType>('all')
   const [assignAsType, setAssignAsType] = useState<AssignAsType>('lot')
   const [infraName, setInfraName] = useState('')
+  const [roadInputMode, setRoadInputMode] = useState<RoadAssignmentInputMode>('centerline')
+  const [roadWidthM, setRoadWidthM] = useState(6)
   const [hiddenShapeIds, setHiddenShapeIds] = useState<Set<string>>(new Set())
 
   // ─── Load lots + existing geometries ──────────────────────────────────
@@ -294,9 +307,23 @@ export function GeometryAssignmentPanel({
         combinedGeometry = selectedFeatures[0].geometry
       } else {
         combinedGeometry =
-          geometryType === 'road'
+          geometryType === 'road' && roadInputMode === 'centerline'
             ? combineLineStrings(selectedFeatures.map((s) => s.geometry))
             : combinePolygons(selectedFeatures.map((s) => s.geometry))
+      }
+
+      if (geometryType === 'road') {
+        if (roadInputMode === 'centerline' && !isLineGeometry(combinedGeometry)) {
+          throw new Error('El modo eje requiere una línea o multilínea')
+        }
+
+        if (roadInputMode === 'footprint' && !isPolygonGeometry(combinedGeometry)) {
+          throw new Error('El modo huella requiere un polígono o multipolígono')
+        }
+
+        if (!Number.isFinite(roadWidthM) || roadWidthM <= 0) {
+          throw new Error('El ancho del camino debe ser mayor que 0')
+        }
       }
 
       const response = await fetch('/api/onboarding/save-infrastructure', {
@@ -309,6 +336,12 @@ export function GeometryAssignmentPanel({
           sourceType,
           geometryType,
           name: infraName || `${geometryType}-${Date.now()}`,
+          ...(geometryType === 'road'
+            ? {
+                inputMode: roadInputMode,
+                widthM: roadWidthM,
+              }
+            : {}),
         }),
       })
 
@@ -344,6 +377,8 @@ export function GeometryAssignmentPanel({
     projectId,
     sourceType,
     infraName,
+    roadInputMode,
+    roadWidthM,
     onFeatureAssigned,
     onAssignmentComplete,
   ])
@@ -589,6 +624,8 @@ export function GeometryAssignmentPanel({
           filterType={filterType}
           assignAsType={assignAsType}
           infraName={infraName}
+          roadInputMode={roadInputMode}
+          roadWidthM={roadWidthM}
           isAssigning={isAssigning}
           multiSelectMode={multiSelectMode}
           hiddenShapeIds={hiddenShapeIds}
@@ -597,6 +634,8 @@ export function GeometryAssignmentPanel({
           onFilterTypeChange={setFilterType}
           onAssignAsTypeChange={setAssignAsType}
           onInfraNameChange={setInfraName}
+          onRoadInputModeChange={setRoadInputMode}
+          onRoadWidthMChange={setRoadWidthM}
           onSelectedLotIdChange={setSelectedLotId}
           onMultiSelectModeChange={setMultiSelectMode}
           onAssignToLot={handleAssignToLot}

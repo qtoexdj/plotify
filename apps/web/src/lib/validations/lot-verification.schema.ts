@@ -39,6 +39,7 @@ export const officialOverrideSchema = z.object({
   perimeter_official_m: z.coerce.number().positive('El perímetro debe ser positivo').optional(),
   servidumbre_m2: z.coerce.number().nonnegative('La servidumbre no puede ser negativa').optional(),
   servidumbre_ancho_m: z.coerce.number().positive('El ancho debe ser positivo').optional(),
+  servidumbre_road_segment_id: z.string().uuid('ID de tramo inválido').optional(),
   boundaries_official: officialBoundariesSchema.optional(),
 })
 
@@ -66,6 +67,7 @@ export const saveAndVerifySchema = z.object({
     .positive('El perímetro oficial es obligatorio para verificar'),
   servidumbre_m2: z.coerce.number().nonnegative('La servidumbre no puede ser negativa').optional(),
   servidumbre_ancho_m: z.coerce.number().positive('El ancho debe ser positivo').optional(),
+  servidumbre_road_segment_id: z.string().uuid('ID de tramo inválido').optional(),
   boundaries_official: officialBoundariesSchema,
   calculated_snapshot: z
     .object({

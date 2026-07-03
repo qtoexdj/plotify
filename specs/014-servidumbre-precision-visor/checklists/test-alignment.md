@@ -11,7 +11,7 @@
 - [x] CHK003 Are requirements defined for ambiguous line or border roads before calculation? [Completeness, Spec FR-016]
 - [x] CHK004 Are requirements defined for per-road widths instead of a single project width? [Completeness, Spec FR-002]
 - [x] CHK005 Are requirements defined for lots affected by more than one width? [Completeness, Spec FR-007]
-- [x] CHK006 Are requirements defined for preserving legacy projects with global road width? [Completeness, Spec FR-008]
+- [x] CHK006 Are requirements defined for rejecting project-level global road width as a calculation source? [Completeness, Spec FR-008]
 
 ## Requirement Clarity
 

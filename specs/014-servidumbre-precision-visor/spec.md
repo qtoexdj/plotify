@@ -136,7 +136,7 @@ El equipo implementador cuenta con una suite de pruebas que cubre los casos que 
 - **FR-005**: El sistema MUST evitar doble conteo cuando dos o mas huellas de camino se superponen dentro del mismo lote.
 - **FR-006**: El sistema MUST calcular superficie total, superficie de servidumbre y superficie util sobre la misma base legal de medicion.
 - **FR-007**: El sistema MUST soportar y persistir anchos multiples por lote, incluyendo la representacion "5 y 10".
-- **FR-008**: El sistema MUST mantener compatibilidad de lectura con proyectos existentes que solo tienen camino y ancho global.
+- **FR-008**: El sistema MUST impedir calculos nuevos desde ancho global de proyecto; los proyectos existentes deben transformarse o recargarse con `project_road_segments` antes de recalcular.
 - **FR-009**: El sistema MUST renderizar en el visor una capa diferenciada de huella afecta de servidumbre.
 - **FR-010**: El panel de lote MUST mostrar superficie total, servidumbre, superficie util y ancho(s) aplicables de forma coherente con el plano.
 - **FR-011**: El sistema MUST recalcular servidumbres cuando se asigna, cambia o elimina un camino que afecta al proyecto.
@@ -165,7 +165,7 @@ El equipo implementador cuenta con una suite de pruebas que cubre los casos que 
 - **SC-003**: Un lote afectado por caminos de 5 m y 10 m muestra "5 y 10" tanto en visor como en datos documentales.
 - **SC-004**: Ningun lote con caminos superpuestos registra mas area afecta que la union real de las huellas dentro del lote.
 - **SC-005**: El visor muestra una capa de servidumbre para todos los lotes con `servidumbre_m2 > 0` y no la muestra para lotes sin area afecta.
-- **SC-006**: Proyectos legacy con un unico camino y ancho global siguen calculando como antes, salvo por mejoras de precision y trazabilidad.
+- **SC-006**: Proyectos sin `project_road_segments` no calculan servidumbres desde `projects.road_geometry`; deben recargarse o transformarse a tramos canonicos con ancho explicito.
 - **SC-007**: La validacion tipo Teno incluye lotes con ancho 5, 10, 5 y 10, y lotes sin servidumbre.
 - **SC-008**: La implementacion no puede cerrarse hasta que pasen los tests de geometria, onboarding/persistencia, visor y documentos definidos en `tasks.md`.
 
@@ -176,4 +176,4 @@ El equipo implementador cuenta con una suite de pruebas que cubre los casos que 
 - Cuando el usuario marca un camino como eje, el ancho ingresado es el ancho total de la servidumbre.
 - Cuando el usuario no puede identificar si una linea es eje o borde, el sistema debe tratarla como ambigua y pedir confirmacion visual antes de persistir calculos.
 - El PDF Teno se usa como referencia de dominio y validacion, pero la implementacion se apoya en fixtures reproducibles, no en parsing automatico del PDF.
-- Se mantiene compatibilidad con `road_geometry`, `road_width_m`, `servidumbre_m2`, `servidumbre_ancho_m` y `superficie_neta_m2` mientras se incorporan campos/modelos nuevos.
+- `project_road_segments` es la fuente canonica para caminos y anchos; `road_geometry` y `road_width_m` pueden existir en base por historia, pero no participan en nuevos calculos ni en el render del visor SDD14.

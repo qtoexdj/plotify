@@ -110,13 +110,13 @@ Plotify es una plataforma SaaS B2B diseñada para **empresas inmobiliarias y des
 - **Ficha Técnica Mejorada**:
   - **Superficie (m²) Auto-Calculada**: Se calcula automáticamente. Muestra `area_official_m2` o `area_legal_m2`.
   - **Servidumbre y Superficie Neta**: Muestra los m² de servidumbre (caminos internos o de tránsito) y la Superficie Neta (Area Total - Servidumbre).
-  - **Motor de Servidumbre v2 (Geométrico)**: La servidumbre se calcula geométricamente mediante la intersección del polígono del lote con el buffer del camino (`road_geometry` del proyecto, con `road_width_m` metros de ancho). El resultado es el mini-polígono de servidumbre real. El motor clasifica cada arista del mini-polígono como:
+  - **Motor de Servidumbre SDD14 (Geométrico)**: La servidumbre se calcula geométricamente mediante la intersección del polígono del lote con las huellas canónicas de `project_road_segments`, cada una con su ancho propio. El resultado es el mini-polígono de servidumbre real. El motor clasifica cada arista del mini-polígono como:
     - **`internal`**: colinda con el lote propio ("con la misma propiedad, esto es, lote N")
     - **`neighbor`**: colinda con un lote vecino ("con servidumbre que grava al lote N")
     - **`external`**: colinda con predio externo ("con lote N de anterior subdivisión")
     - Detecta automáticamente escenarios **multi-tramo** (lotes esquina donde el camino aparece en dos deslindes).
-    - **Ocultamiento de cabezas**: Los lados cortos del mini-polígono (ancho del camino ≤ `road_width_m + 2`m) no llevan distancia en el texto legal, por norma notarial chilena.
-    - **Fallback legacy**: Si no hay `road_geometry` o el análisis falla, usa `generateServidumbreTextLegacy()` con `boundaries_official` del lote.
+    - **Ocultamiento de cabezas**: Los lados cortos del mini-polígono (ancho del camino + 2m) no llevan distancia en el texto legal, por norma notarial chilena.
+    - **Sin cálculo global**: Si un proyecto no tiene `project_road_segments`, debe recargarse o transformarse antes de recalcular servidumbres.
   - **Superficie read-only en edición**: El campo m2 está deshabilitado en el formulario de edición. Solo se modifica vía Verificación Legal o recálculo UTM / Servidumbre.
   - Precio (CLP) sigue siendo editable.
 - **Módulo Legal de Verificación** (Pestaña Legal):
@@ -160,7 +160,7 @@ Plotify es una plataforma SaaS B2B diseñada para **empresas inmobiliarias y des
 - **Tipos**: `lot`, `road`, `common_area`
 - Un lote puede tener **máximo 1 geometría** asignada.
 - **Filtrado Visual**: En el visor final, **solo se muestran las geometrías asignadas**.
-- **Arquitectura de Camino Unificado**: Toda la red de caminos del loteo se fusiona en un solo elemento (`road_geometry` dentro del proyecto) de tipo `MultiLineString` o `Polygon` al guardarse en el Onboarding. Esto facilita el cálculo por intersecciones (servidumbres).
+- **Arquitectura de Caminos Canónicos**: Cada camino/tramo asignado queda representado en `project_road_segments` con modo de interpretación, ancho y huella calculada. El cálculo de servidumbre no usa un ancho global del proyecto.
 - **Áreas Comunes**: Requieren marcarse con `is_assigned = true` en Onboarding para ser visibles en el visor.
 - Geometrías se clasifican automáticamente por:
   - `LineString/MultiLineString` → `road`

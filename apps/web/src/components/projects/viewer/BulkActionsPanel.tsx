@@ -1,11 +1,6 @@
 import { useState, useMemo } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  Tick02Icon,
-  Cancel01Icon,
-  Money01Icon,
-  Layers01Icon,
-} from '@hugeicons/core-free-icons'
+import { Tick02Icon, Cancel01Icon, Money01Icon, Layers01Icon } from '@hugeicons/core-free-icons'
 import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
@@ -171,11 +166,7 @@ export function BulkActionsPanel({
               disabled={!targetState || isUpdatingState}
               onClick={handleStateUpdate}
             >
-              {isUpdatingState ? (
-                <Spinner className="w-3 h-3" />
-              ) : (
-                'Aplicar'
-              )}
+              {isUpdatingState ? <Spinner className="w-3 h-3" /> : 'Aplicar'}
             </Button>
           </CardContent>
         </Card>
@@ -205,11 +196,7 @@ export function BulkActionsPanel({
               disabled={!targetPrice || isUpdatingPrice}
               onClick={handlePriceUpdate}
             >
-              {isUpdatingPrice ? (
-                <Spinner className="w-3 h-3" />
-              ) : (
-                'Aplicar'
-              )}
+              {isUpdatingPrice ? <Spinner className="w-3 h-3" /> : 'Aplicar'}
             </Button>
           </CardContent>
         </Card>
