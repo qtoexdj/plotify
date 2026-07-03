@@ -29,14 +29,7 @@ function Spinner({ className, ...props }: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 64 64" fill="none" aria-hidden="true" className={className} {...props}>
       <defs>
-        <linearGradient
-          id={gradientId}
-          x1="0"
-          y1="0"
-          x2="0"
-          y2="64"
-          gradientUnits="userSpaceOnUse"
-        >
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="white" stopOpacity="0" />
           <stop offset="22%" stopColor="white" stopOpacity="0" />
           <stop offset="38%" stopColor="white" stopOpacity="1" />

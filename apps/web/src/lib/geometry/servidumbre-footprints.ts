@@ -1,6 +1,6 @@
 import buffer from '@turf/buffer'
 import intersect from '@turf/intersect'
-import union from '@turf/union'
+import { union } from '@turf/union'
 import { featureCollection } from '@turf/helpers'
 import type { Feature, LineString, MultiLineString, MultiPolygon, Polygon, Position } from 'geojson'
 import type { GeoJSONGeometry } from '@/types/database.types'

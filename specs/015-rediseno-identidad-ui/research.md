@@ -25,7 +25,7 @@
   - `apps/web/src/components/ui/brand-loader.tsx` — mark en baja opacidad + barrido de luz; reservado a 1–2 momentos grandes (splash/auth).
   - `apps/web/src/components/ui/brand-mark-paths.tsx` — paths compartidos; **`#16A34A` hardcodeado** (a tokenizar con `var(--brand)`).
   - Keyframes `--animate-spinner-conveyor` y `--animate-brand-sweep` ya declarados en `@theme` de `globals.css`.
-- La migración ya está iniciada en ~20 archivos de la rama (auth/callback, documentos, operations, geometry-*, viewer, legal, dashboard forms, etc.). El SDD la completa y agrega el test de guardia.
+- La migración ya está iniciada en ~20 archivos de la rama (auth/callback, documentos, operations, geometry-\*, viewer, legal, dashboard forms, etc.). El SDD la completa y agrega el test de guardia.
 
 ### Iconos
 
@@ -45,16 +45,16 @@
 
 ## R2. Decisiones de diseño (proceso iterativo con el usuario, 2026-07-02)
 
-| # | Decisión | Alternativas descartadas |
-|---|----------|--------------------------|
-| D1 | Paleta "Tinta nítida": monocromo alto contraste + carmesí `#A93439`/`#C24444` | Verde/papel "escritorio de tierras"; cobalto/naranjo "plano maestro"; miel/grafito; vino/crema; bruma/coral; default shadcn actual |
-| D2 | El logo migrará de verde `#16A34A` a carmesí (decisión explícita del usuario al resolver el pendiente de `brand/colors.md`) → tokenizar `--brand` | Acento verde de marca; tinta neutra |
-| D3 | Sidebar flotante SIEMPRE oscuro, redondeado, plano de 6 ítems (referencia visual aportada por el usuario) | Grupos con etiquetas (actual); rail de iconos+panel |
-| D4 | Tipografía: Bricolage Grotesque + Onest + Geist Mono + Source Serif 4 (mesa) | Fraunces, Space Grotesk, Instrument Serif, Schibsted, Gabarito, Inter |
-| D5 | Búsqueda: command palette ⌘K; header sin input de búsqueda (rechazado explícitamente) | Barra en header; botón lupa |
-| D6 | Tema por defecto: sistema | Claro fijo; oscuro fijo |
-| D7 | Superficies sin hairlines: separación por contraste (panel `#F6F6F6`/`#161616`, tarjetas blancas/`#222`), radios 12–16 px | Bordes 0.5px estilo Linear |
-| D8 | Alcance: rediseño completo en un SDD, fases P1→P3 | Split fundaciones (015) + barrido (016) |
+| #   | Decisión                                                                                                                                          | Alternativas descartadas                                                                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Paleta "Tinta nítida": monocromo alto contraste + carmesí `#A93439`/`#C24444`                                                                     | Verde/papel "escritorio de tierras"; cobalto/naranjo "plano maestro"; miel/grafito; vino/crema; bruma/coral; default shadcn actual |
+| D2  | El logo migrará de verde `#16A34A` a carmesí (decisión explícita del usuario al resolver el pendiente de `brand/colors.md`) → tokenizar `--brand` | Acento verde de marca; tinta neutra                                                                                                |
+| D3  | Sidebar flotante SIEMPRE oscuro, redondeado, plano de 6 ítems (referencia visual aportada por el usuario)                                         | Grupos con etiquetas (actual); rail de iconos+panel                                                                                |
+| D4  | Tipografía: Bricolage Grotesque + Onest + Geist Mono + Source Serif 4 (mesa)                                                                      | Fraunces, Space Grotesk, Instrument Serif, Schibsted, Gabarito, Inter                                                              |
+| D5  | Búsqueda: command palette ⌘K; header sin input de búsqueda (rechazado explícitamente)                                                             | Barra en header; botón lupa                                                                                                        |
+| D6  | Tema por defecto: sistema                                                                                                                         | Claro fijo; oscuro fijo                                                                                                            |
+| D7  | Superficies sin hairlines: separación por contraste (panel `#F6F6F6`/`#161616`, tarjetas blancas/`#222`), radios 12–16 px                         | Bordes 0.5px estilo Linear                                                                                                         |
+| D8  | Alcance: rediseño completo en un SDD, fases P1→P3                                                                                                 | Split fundaciones (015) + barrido (016)                                                                                            |
 
 ## R3. Notas técnicas (context7 / Tailwind v4, verificado)
 
@@ -67,10 +67,10 @@
 
 ## R4. Riesgos
 
-| Riesgo | Mitigación |
-|--------|------------|
-| Barrido de 86 archivos introduce regresiones visuales silenciosas | Migrar por módulo con verificación claro/oscuro por módulo (preview) + gates por fase |
-| Carmesí primario vs destructive confundibles | Tokens separados, tabla AA en design.md v2, regla de uso documentada (US4/Edge) |
-| Tests existentes acoplados a clases/estructura del sidebar viejo | FR-017: actualizar tests en la misma fase; correr `pnpm test:web` por fase |
-| Cambio de fuentes altera métricas/line-height y rompe layouts densos (mesa, tablas) | Fase 1 incluye pasada visual por las 6 secciones antes de continuar |
-| `variant="inset"` cambia estructura DOM del layout (header dentro del inset) | Ajustar `(dashboard)/layout.tsx` y `(super-admin)/layout.tsx` juntos |
+| Riesgo                                                                              | Mitigación                                                                            |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Barrido de 86 archivos introduce regresiones visuales silenciosas                   | Migrar por módulo con verificación claro/oscuro por módulo (preview) + gates por fase |
+| Carmesí primario vs destructive confundibles                                        | Tokens separados, tabla AA en design.md v2, regla de uso documentada (US4/Edge)       |
+| Tests existentes acoplados a clases/estructura del sidebar viejo                    | FR-017: actualizar tests en la misma fase; correr `pnpm test:web` por fase            |
+| Cambio de fuentes altera métricas/line-height y rompe layouts densos (mesa, tablas) | Fase 1 incluye pasada visual por las 6 secciones antes de continuar                   |
+| `variant="inset"` cambia estructura DOM del layout (header dentro del inset)        | Ajustar `(dashboard)/layout.tsx` y `(super-admin)/layout.tsx` juntos                  |

@@ -275,9 +275,7 @@ export function LotReservationForm({
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-              {isSubmitting && (
-                <Spinner className="mr-2 h-4 w-4" />
-              )}
+              {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
               {mode === 'direct_sale' ? 'Confirmar Venta' : 'Solicitar Reserva'}
             </Button>
           </div>

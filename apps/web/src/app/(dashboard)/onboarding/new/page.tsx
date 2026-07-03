@@ -403,8 +403,7 @@ export default function OnboardingWizardPage() {
                 <Button type="submit" disabled={isSavingProject} className="min-w-40">
                   {isSavingProject ? (
                     <>
-                      <Spinner className="w-4 h-4 mr-2" />{' '}
-                      Creando...
+                      <Spinner className="w-4 h-4 mr-2" /> Creando...
                     </>
                   ) : (
                     'Guardar y continuar'
