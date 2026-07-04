@@ -39,7 +39,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Copy, Hammer, Plus, Star } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  Copy01Icon as Copy,
+  LegalHammerIcon as Hammer,
+  PlusSignIcon as Plus,
+  StarIcon as Star,
+} from '@hugeicons/core-free-icons'
 import { createTemplateAction, duplicateTemplateAction } from '@/actions/documents.action'
 import type { DocumentTemplate } from '@/types/v2'
 
@@ -52,29 +58,29 @@ const DOCUMENT_TYPE_CONFIG: Record<
   escritura: {
     label: 'Escritura',
     variant: 'default',
-    className: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100',
+    className: 'bg-info/15 text-info border-info/30 hover:bg-info/15',
   },
   reserva: {
     label: 'Reserva',
     variant: 'default',
-    className: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
+    className: 'bg-success/15 text-success border-success/30 hover:bg-success/15',
   },
   promesa: {
     label: 'Promesa',
     variant: 'default',
-    className: 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100',
+    className: 'bg-warning/15 text-warning border-warning/30 hover:bg-warning/15',
   },
   deslinde: {
     label: 'Deslinde',
     variant: 'default',
-    className: 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100',
+    className: 'bg-common-area/15 text-common-area border-common-area/30 hover:bg-common-area/15',
   },
 }
 
 function DocumentTypeBadge({ type }: { type: string }) {
   const config = DOCUMENT_TYPE_CONFIG[type] ?? {
     label: type,
-    className: 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-100',
+    className: 'bg-muted text-muted-foreground border-border hover:bg-muted',
   }
   return (
     <Badge variant="outline" className={config.className}>
@@ -242,8 +248,9 @@ function TemplateCard({ template, onDuplicated }: TemplateCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {template.is_default && (
-              <Star
-                className="h-4 w-4 shrink-0 fill-yellow-400 text-yellow-400"
+              <HugeiconsIcon
+                icon={Star}
+                className="h-4 w-4 shrink-0 fill-warning text-warning"
                 aria-label="Plantilla predeterminada"
               />
             )}
@@ -270,7 +277,7 @@ function TemplateCard({ template, onDuplicated }: TemplateCardProps) {
           size="sm"
           onClick={() => router.push(`/documentos/plantillas/${template.id}/builder`)}
         >
-          <Hammer className="h-3.5 w-3.5 mr-1.5" />
+          <HugeiconsIcon icon={Hammer} className="h-3.5 w-3.5 mr-1.5" />
           Construir
         </Button>
         <Button
@@ -280,7 +287,7 @@ function TemplateCard({ template, onDuplicated }: TemplateCardProps) {
           onClick={handleDuplicate}
           aria-label="Duplicar plantilla"
         >
-          <Copy className="h-3.5 w-3.5" />
+          <HugeiconsIcon icon={Copy} className="h-3.5 w-3.5" />
         </Button>
       </CardFooter>
     </Card>
@@ -314,7 +321,7 @@ export function TemplatesList({ initialTemplates, organizationId }: TemplatesLis
             Todavía no hay plantillas. Crea una para comenzar.
           </p>
           <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <HugeiconsIcon icon={Plus} className="h-4 w-4 mr-2" />
             Nueva Plantilla
           </Button>
         </div>
@@ -332,7 +339,7 @@ export function TemplatesList({ initialTemplates, organizationId }: TemplatesLis
             size="lg"
             onClick={() => setDialogOpen(true)}
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <HugeiconsIcon icon={Plus} className="h-5 w-5 mr-2" />
             Nueva Plantilla
           </Button>
         </>

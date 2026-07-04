@@ -19,9 +19,9 @@ export const DATO_CHIP_TESTID = {
 } as const satisfies Record<TokenResolutionStatus, string>
 
 const CLASES_CHIP = {
-  resolved: 'bg-emerald-50 text-emerald-900 ring-emerald-300 hover:bg-emerald-100',
-  blocked: 'bg-sky-50 text-sky-900 ring-sky-300 hover:bg-sky-100',
-  missing: 'bg-amber-50 text-amber-900 ring-amber-300 hover:bg-amber-100',
+  resolved: 'bg-success/10 text-success ring-success/30 hover:bg-success/15',
+  blocked: 'bg-info/10 text-info ring-info/30 hover:bg-info/15',
+  missing: 'bg-warning/10 text-warning ring-warning/30 hover:bg-warning/15',
 } as const satisfies Record<TokenResolutionStatus, string>
 
 /**

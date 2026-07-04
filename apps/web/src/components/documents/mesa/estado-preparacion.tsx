@@ -1,4 +1,5 @@
-import { Hammer } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { LegalHammerIcon as Hammer } from '@hugeicons/core-free-icons'
 import { Badge } from '@/components/ui/badge'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type { ApprovalBlocker, MatrizView } from '@/lib/documents/matriz-types'
@@ -40,13 +41,13 @@ export function EstadoPreparacion({ matriz, blockers }: EstadoPreparacionProps) 
     >
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <p className="min-w-0 truncate text-sm font-medium">{matriz.template.name}</p>
-        <Badge variant="outline" className="shrink-0 border-amber-200 bg-amber-50 text-amber-900">
+        <Badge variant="outline" className="shrink-0 border-warning/30 bg-warning/10 text-warning">
           {MESA_TEXT.preparacionEstado}
         </Badge>
       </div>
 
       <div className="px-6 py-6 text-center">
-        <Hammer aria-hidden className="mx-auto size-6 text-muted-foreground" />
+        <HugeiconsIcon icon={Hammer} aria-hidden className="mx-auto size-6 text-muted-foreground" />
         <h2 className="mt-2 text-base font-semibold">{MESA_TEXT.preparacionTitle}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {preparacionSubtitulo(blockers.length)}
@@ -61,7 +62,7 @@ export function EstadoPreparacion({ matriz, blockers }: EstadoPreparacionProps) 
             aria-label="Avance del expediente"
             className="mx-auto mt-4 h-1.5 w-full max-w-xs rounded-full bg-muted"
           >
-            <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${progreso}%` }} />
+            <div className="h-1.5 rounded-full bg-success" style={{ width: `${progreso}%` }} />
           </div>
         ) : null}
 

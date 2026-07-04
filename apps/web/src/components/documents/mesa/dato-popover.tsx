@@ -1,7 +1,8 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { ExternalLink } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { LinkSquare02Icon as ExternalLink } from '@hugeicons/core-free-icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -40,9 +41,9 @@ export function evidenciaDocumental(refs: MatrizEvidenceRef[]): DocumentEvidence
 }
 
 const BADGE_ESTADO = {
-  resolved: 'border-emerald-300 bg-emerald-50 text-emerald-900',
-  blocked: 'border-sky-300 bg-sky-50 text-sky-900',
-  missing: 'border-amber-300 bg-amber-50 text-amber-900',
+  resolved: 'border-success/30 bg-success/10 text-success',
+  blocked: 'border-info/30 bg-info/10 text-info',
+  missing: 'border-warning/30 bg-warning/10 text-warning',
 } as const satisfies Record<TokenResolutionStatus, string>
 
 type DatoPopoverProps = {
@@ -98,7 +99,7 @@ export function DatoPopover({
         <Button type="button" variant="outline" size="sm" asChild className="w-full">
           <a href={urlCorreccion(projectId, variableKey)}>
             {MESA_TEXT.corregirEnControlLegal}
-            <ExternalLink aria-hidden />
+            <HugeiconsIcon icon={ExternalLink} aria-hidden />
           </a>
         </Button>
       </PopoverContent>

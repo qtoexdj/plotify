@@ -9,6 +9,9 @@ import {
 import { HistorialGeneraciones } from '@/components/documents/mesa/historial-generaciones'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { EscrituraTabs } from '@/components/documents/escritura-tabs'
 
 type DocumentsHistoryPageProps = {
   searchParams?: Promise<{
@@ -33,7 +36,7 @@ export default async function DocumentsHistoryPage({ searchParams }: DocumentsHi
 
   if (!workspace) {
     return (
-      <div className="p-6">
+      <PageShell>
         <Card>
           <CardHeader>
             <CardTitle>Sin workspace activo</CardTitle>
@@ -42,7 +45,7 @@ export default async function DocumentsHistoryPage({ searchParams }: DocumentsHi
             </CardDescription>
           </CardHeader>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
@@ -55,14 +58,13 @@ export default async function DocumentsHistoryPage({ searchParams }: DocumentsHi
   })
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Historial de minutas</h1>
-          <p className="text-muted-foreground mt-1">
-            Minutas generadas desde escrituras aprobadas y expedientes vigentes.
-          </p>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Historial de minutas"
+        description="Minutas generadas desde escrituras aprobadas y expedientes vigentes."
+      />
+      <EscrituraTabs active="historial" />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-end">
         <form
           action="/documentos/historial"
           className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-end"
@@ -97,6 +99,6 @@ export default async function DocumentsHistoryPage({ searchParams }: DocumentsHi
       </div>
 
       <HistorialGeneraciones generations={generations} />
-    </div>
+    </PageShell>
   )
 }

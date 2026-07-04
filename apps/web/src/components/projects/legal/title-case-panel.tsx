@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -108,11 +108,11 @@ export function formatBlockingItem(item: TitleApproveBlockingItem): string {
 }
 
 const statusBadgeClassName: Partial<Record<TitleCasePanelState, string>> = {
-  not_started: 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  proposed: 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  needs_review: 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  failed: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400',
-  approved: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  not_started: 'border-warning/20 bg-warning/10 text-warning',
+  proposed: 'border-info/20 bg-info/10 text-info',
+  needs_review: 'border-warning/20 bg-warning/10 text-warning',
+  failed: 'border-destructive/20 bg-destructive/10 text-destructive',
+  approved: 'border-success/20 bg-success/10 text-success',
   llm_disabled: 'border-border bg-muted/20 text-muted-foreground',
   superseded: 'border-border bg-muted/20 text-muted-foreground',
 }
@@ -291,7 +291,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
       )}
 
       {state === 'failed' && analysis && (
-        <p className="rounded-md border border-red-500/20 bg-red-500/10 p-2 text-xs text-red-600 dark:text-red-400">
+        <p className="rounded-md border border-destructive/20 bg-destructive/10 p-2 text-xs text-destructive">
           El análisis falló{analysis.run ? ` (modelo ${analysis.run.model_name})` : ''}. Usa
           “Reanalizar” para reintentar.
         </p>
@@ -299,7 +299,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
 
       {state === 'llm_disabled' && (
         <p
-          className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400"
+          className="rounded-md border border-warning/20 bg-warning/10 p-2 text-xs text-warning"
           data-testid="title-manual-mode-banner"
         >
           Modo de ingreso manual: el agente de análisis de títulos está deshabilitado. Las variables
@@ -341,7 +341,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
               </span>
             )}
             {state === 'approved' && analysis.approved_at && (
-              <span className="text-emerald-600 dark:text-emerald-400">
+              <span className="text-success">
                 Aprobado el {new Date(analysis.approved_at).toLocaleDateString('es-CL')}
               </span>
             )}
@@ -385,7 +385,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
                           {owner.requiere_personeria && (
                             <Badge
                               variant="outline"
-                              className="border-amber-500/20 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400"
+                              className="border-warning/20 bg-warning/10 text-[10px] text-warning"
                             >
                               requiere personería
                             </Badge>
@@ -474,7 +474,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
                 </p>
                 {blocking.length > 0 && (
                   <ul
-                    className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-700 dark:text-amber-400"
+                    className="rounded-md border border-warning/20 bg-warning/10 p-2 text-[11px] text-warning"
                     data-testid="title-blocking-list"
                   >
                     {blocking.map((item, index) => (
@@ -490,13 +490,13 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
         </>
       )}
 
-      {actionError && <p className="text-[11px] text-red-600 dark:text-red-400">{actionError}</p>}
+      {actionError && <p className="text-[11px] text-destructive">{actionError}</p>}
 
       <AlertDialog open={showProcessing}>
         <AlertDialogContent className="sm:max-w-md" data-testid="title-processing-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin text-blue-600" aria-hidden="true" />
+              <Spinner className="size-4" />
               Analizando el título…
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -511,7 +511,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
             role="progressbar"
             aria-label="Procesando análisis de título"
           >
-            <div className="h-full w-full animate-pulse rounded-full bg-blue-600" />
+            <div className="h-full w-full animate-pulse rounded-full bg-info" />
           </div>
 
           {showProcessing && <ProcessingTimer />}

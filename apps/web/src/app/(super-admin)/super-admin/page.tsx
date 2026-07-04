@@ -7,6 +7,9 @@ import {
   Folder01Icon,
   Search01Icon,
 } from '@hugeicons/core-free-icons'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { EmptyState } from '@/components/dashboard/empty-state'
 
 function formatCount(value: number | null) {
   return value ?? 0
@@ -29,60 +32,59 @@ export default async function SuperAdminDashboard() {
     .limit(5)
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard Super Admin</h1>
-        <p className="text-slate-600 mt-1">Vista global de la plataforma</p>
-      </div>
+    <PageShell>
+      <PageHeader title="Dashboard Super Admin" description="Vista global de la plataforma" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm text-slate-600">Empresas</CardTitle>
-            <HugeiconsIcon icon={Building04Icon} className="w-5 h-5 text-slate-500" />
+            <CardTitle className="text-sm text-muted-foreground">Empresas</CardTitle>
+            <HugeiconsIcon icon={Building04Icon} className="w-5 h-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">
+            <div className="font-display text-3xl font-semibold text-foreground">
               {formatCount(organizations.count)}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm text-slate-600">Usuarios</CardTitle>
-            <HugeiconsIcon icon={UserGroupIcon} className="w-5 h-5 text-slate-500" />
+            <CardTitle className="text-sm text-muted-foreground">Usuarios</CardTitle>
+            <HugeiconsIcon icon={UserGroupIcon} className="w-5 h-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">
+            <div className="font-display text-3xl font-semibold text-foreground">
               {formatCount(profiles.count)}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm text-slate-600">Proyectos</CardTitle>
-            <HugeiconsIcon icon={Folder01Icon} className="w-5 h-5 text-slate-500" />
+            <CardTitle className="text-sm text-muted-foreground">Proyectos</CardTitle>
+            <HugeiconsIcon icon={Folder01Icon} className="w-5 h-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">
+            <div className="font-display text-3xl font-semibold text-foreground">
               {formatCount(projects.count)}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm text-slate-600">Auditoria</CardTitle>
-            <HugeiconsIcon icon={Search01Icon} className="w-5 h-5 text-slate-500" />
+            <CardTitle className="text-sm text-muted-foreground">Auditoría</CardTitle>
+            <HugeiconsIcon icon={Search01Icon} className="w-5 h-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">{formatCount(audits.count)}</div>
+            <div className="font-display text-3xl font-semibold text-foreground">
+              {formatCount(audits.count)}
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Ultimos eventos</CardTitle>
+          <CardTitle className="text-base">Últimos eventos</CardTitle>
         </CardHeader>
         <CardContent>
           {recentLogs && recentLogs.length > 0 ? (
@@ -90,22 +92,26 @@ export default async function SuperAdminDashboard() {
               {recentLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="flex flex-col gap-1 border border-slate-200 rounded-lg p-3"
+                  className="flex flex-col gap-1 border border-border rounded-lg p-3"
                 >
-                  <div className="text-sm text-slate-700">
+                  <div className="text-sm text-foreground">
                     <span className="font-medium">{log.action}</span> · {log.entity}
                   </div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-muted-foreground">
                     {log.actor || 'system'} · {log.created_at}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-sm text-slate-500">No hay eventos recientes.</div>
+            <EmptyState
+              icon={Search01Icon}
+              title="No hay eventos recientes"
+              description="Aún no se ha registrado actividad reciente en la plataforma."
+            />
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

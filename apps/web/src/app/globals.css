@@ -8,6 +8,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-serif: var(--font-serif);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -25,11 +27,23 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-destructive: var(--destructive);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
   --color-warning-foreground: var(--warning-foreground);
   --color-warning: var(--warning);
+  --color-info-foreground: var(--info-foreground);
+  --color-info: var(--info);
+  --color-common-area-foreground: var(--common-area-foreground);
+  --color-common-area: var(--common-area);
+  --color-status-available-foreground: var(--status-available-foreground);
+  --color-status-available: var(--status-available);
+  --color-status-reserved-foreground: var(--status-reserved-foreground);
+  --color-status-reserved: var(--status-reserved);
+  --color-status-sold-foreground: var(--status-sold-foreground);
+  --color-status-sold: var(--status-sold);
+  --color-brand: var(--brand);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -59,87 +73,132 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
-  --background-image-brand-gradient: var(--brand-gradient);
   --animate-fade-in-up: fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-spinner-conveyor: spinner-conveyor 1.6s linear infinite;
+  --animate-brand-sweep: brand-sweep 2.4s ease-in-out infinite;
 }
 
 :root {
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.13 0.028 261.692);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0.028 261.692);
-  --primary: oklch(0.488 0.243 264.376);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --success: oklch(0.52 0.14 150);
-  --success-foreground: oklch(0.985 0.002 247.839);
-  --warning: oklch(0.58 0.14 72);
-  --warning-foreground: oklch(0.985 0.002 247.839);
-  --accent: oklch(0.54 0.13 195);
-  --accent-foreground: oklch(0.985 0.002 247.839);
-  --muted: oklch(0.967 0.003 264.542);
-  --muted-foreground: oklch(0.551 0.027 264.364);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.928 0.006 264.531);
-  --input: oklch(0.928 0.006 264.531);
-  --ring: oklch(0.707 0.022 261.325);
-  --brand-gradient: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  /* Superficies: página/panel (mismo tono, sin separación de hairline) y tarjeta */
+  --background: #f6f6f6;
+  --foreground: #111111;
+  --card: #ffffff;
+  --card-foreground: #111111;
+  --popover: #ffffff;
+  --popover-foreground: #111111;
+
+  /* Acento carmesí — único acento de UI. --brand (verde) es la marca, no se mezclan */
+  --primary: #a93439;
+  --primary-foreground: #ffffff;
+
+  --secondary: #ececec;
+  --secondary-foreground: #111111;
+  --muted: #ececec;
+  --muted-foreground: #4b5563;
+  --accent: #e9e9e9;
+  --accent-foreground: #111111;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --success-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+  --info: #1d4ed8;
+  --info-foreground: #ffffff;
+  /* Identidad de "área común" (geometría de proyecto) — espeja lib/map/lot-colors.ts INFRA_COLORS.common_area */
+  --common-area: #7c3aed;
+  --common-area-foreground: #ffffff;
+
+  /* Estados de lote: disponible=success, reservado=warning, vendido=neutro (no destructive) */
+  --status-available: var(--success);
+  --status-available-foreground: var(--success-foreground);
+  --status-reserved: var(--warning);
+  --status-reserved-foreground: var(--warning-foreground);
+  --status-sold: #6b7280;
+  --status-sold-foreground: #ffffff;
+
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: rgba(169, 52, 57, 0.5);
+
+  /* Marca (isotipo): verde, invariante de tema — no confundir con --primary */
+  --brand: #16a34a;
+
   --chart-1: oklch(0.6 0.18 264);
   --chart-2: oklch(0.62 0.16 190);
   --chart-3: oklch(0.65 0.15 145);
   --chart-4: oklch(0.68 0.16 75);
   --chart-5: oklch(0.6 0.18 320);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0.002 247.839);
-  --sidebar-foreground: oklch(0.13 0.028 261.692);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.967 0.003 264.542);
-  --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
-  --sidebar-border: oklch(0.928 0.006 264.531);
-  --sidebar-ring: oklch(0.707 0.022 261.325);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.13 0.028 261.692);
+
+  /* Radio base 12px (tarjetas/botones); paneles usan rounded-xl = 16px */
+  --radius: 0.75rem;
+
+  /* Sidebar: siempre oscuro, en ambos temas */
+  --sidebar: #121212;
+  --sidebar-foreground: #f5f5f5;
+  --sidebar-primary: #e06565;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1f1f1f;
+  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #e06565;
 }
 
 .dark {
-  --background: oklch(0.13 0.028 261.692);
-  --foreground: oklch(0.985 0.002 247.839);
-  --card: oklch(0.21 0.034 264.665);
-  --card-foreground: oklch(0.985 0.002 247.839);
-  --popover: oklch(0.21 0.034 264.665);
-  --popover-foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.42 0.18 266);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --success: oklch(0.74 0.15 150);
-  --success-foreground: oklch(0.13 0.028 261.692);
-  --warning: oklch(0.78 0.14 75);
-  --warning-foreground: oklch(0.13 0.028 261.692);
-  --accent: oklch(0.73 0.13 195);
-  --accent-foreground: oklch(0.13 0.028 261.692);
-  --muted: oklch(0.278 0.033 256.848);
-  --muted-foreground: oklch(0.707 0.022 261.325);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --brand-gradient: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  --background: #161616;
+  --foreground: #f5f5f5;
+  --card: #222222;
+  --card-foreground: #f5f5f5;
+  --popover: #222222;
+  --popover-foreground: #f5f5f5;
+
+  --primary: #c24444;
+  --primary-foreground: #ffffff;
+
+  --secondary: #2a2a2a;
+  --secondary-foreground: #f5f5f5;
+  --muted: #2a2a2a;
+  --muted-foreground: #a1a1aa;
+  --accent: #2a2a2a;
+  --accent-foreground: #f5f5f5;
+
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --success: #4ade80;
+  --success-foreground: #052e14;
+  --warning: #fbbf24;
+  --warning-foreground: #1f1300;
+  --info: #60a5fa;
+  --info-foreground: #06264d;
+  --common-area: #a78bfa;
+  --common-area-foreground: #1e1033;
+
+  --status-available: var(--success);
+  --status-available-foreground: var(--success-foreground);
+  --status-reserved: var(--warning);
+  --status-reserved-foreground: var(--warning-foreground);
+  --status-sold: #9ca3af;
+  --status-sold-foreground: #161616;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: rgba(194, 68, 68, 0.5);
+
   --chart-1: oklch(0.65 0.18 264);
   --chart-2: oklch(0.68 0.16 190);
   --chart-3: oklch(0.7 0.15 145);
   --chart-4: oklch(0.73 0.16 75);
   --chart-5: oklch(0.65 0.18 320);
-  --sidebar: oklch(0.21 0.034 264.665);
-  --sidebar-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.278 0.033 256.848);
-  --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  --sidebar: #191919;
+  --sidebar-foreground: #f5f5f5;
+  --sidebar-primary: #e06565;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #242424;
+  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #e06565;
 }
 
 @layer base {
@@ -152,6 +211,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
   }
   .maplibregl-popup-content {
     @apply bg-transparent! shadow-none! p-0! rounded-none!;
@@ -183,5 +247,23 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes spinner-conveyor {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-38px);
+  }
+}
+
+@keyframes brand-sweep {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(120px);
   }
 }

@@ -114,7 +114,7 @@ export function TitleAlertsList({
             key={`${alert.tipo}-${index}`}
             className={cn(
               'rounded-lg border p-3',
-              pending ? 'border-amber-500/20 bg-amber-500/10' : 'border-border bg-muted/5'
+              pending ? 'border-warning/20 bg-warning/10' : 'border-border bg-muted/5'
             )}
           >
             <div className="flex items-start justify-between gap-2">
@@ -128,16 +128,14 @@ export function TitleAlertsList({
                     className={cn(
                       'px-1 py-0 text-[9px]',
                       pending
-                        ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                        : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        ? 'border-warning/20 bg-warning/10 text-warning'
+                        : 'border-success/20 bg-success/10 text-success'
                     )}
                   >
                     {ALERT_RESOLUTION_LABELS[alert.resolution]}
                   </Badge>
                   {pending && (
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400">
-                      bloquea la aprobación
-                    </span>
+                    <span className="text-[10px] text-warning">bloquea la aprobación</span>
                   )}
                 </div>
                 {alert.detalle && (
@@ -194,7 +192,7 @@ export function TitleAlertsList({
         )
       })}
 
-      {error && <p className="text-[11px] text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-[11px] text-destructive">{error}</p>}
 
       <Dialog
         open={pendingAction !== null}

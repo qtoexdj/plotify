@@ -31,44 +31,38 @@ const ESTADO_PROYECTO_CONFIG: Record<
     label: 'Borrador',
     description:
       'El proyecto está en creación. Falta cargar la geometría (KML/KMZ) e iniciar la verificación legal.',
-    className:
-      'border-slate-300 text-slate-700 bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:bg-slate-500/20 border outline-none',
+    className: 'border-border text-muted-foreground bg-muted border outline-none',
   },
   imported: {
     label: 'Geometría Importada',
     description:
       'Se han importado los lotes y caminos del archivo de geometría. Pendiente de verificación legal de cada lote.',
-    className:
-      'border-blue-300 text-blue-700 bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:bg-blue-500/20 border outline-none',
+    className: 'border-info/30 text-info bg-info/10 border outline-none',
   },
   validated: {
     label: 'Validado Legalmente',
     description:
       'Todos los lotes tienen sus deslindes y superficies verificados. Listo para ser publicado y habilitar ventas.',
-    className:
-      'border-violet-300 text-violet-700 bg-violet-50 dark:border-violet-600 dark:text-violet-400 dark:bg-violet-500/20 border outline-none',
+    className: 'border-info/30 text-info bg-info/10 border outline-none',
   },
   operational: {
     label: 'Operacional (Ventas Activas)',
     description:
       'Proyecto activo y operativo. Los vendedores asignados ya pueden reservar lotes y generar documentos.',
-    className:
-      'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-700 border outline-none',
+    className: 'bg-success/15 text-success border-success/30 border outline-none',
   },
   // Legacy backward-compatibility states
   activo: {
     label: 'Operacional (Activo)',
     description:
       'Proyecto activo y operativo. Los vendedores asignados ya pueden reservar lotes y generar documentos.',
-    className:
-      'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-700 border outline-none',
+    className: 'bg-success/15 text-success border-success/30 border outline-none',
   },
   inactivo: {
     label: 'Borrador (Inactivo)',
     description:
       'El proyecto está inactivo o en creación. Falta cargar la geometría (KML/KMZ) e iniciar la verificación legal.',
-    className:
-      'border-slate-300 text-slate-700 bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:bg-slate-500/20 border outline-none',
+    className: 'border-border text-muted-foreground bg-muted border outline-none',
   },
 }
 
@@ -151,28 +145,22 @@ export function OverviewTab({ project }: OverviewTabProps) {
             <CardTitle className="text-3xl">{project.total_lotes}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="bg-green-50 dark:bg-emerald-900/20 border-green-200 dark:border-emerald-500/50">
+        <Card className="bg-success/10 border-success/20">
           <CardHeader className="pb-3">
             <CardDescription>Disponibles</CardDescription>
-            <CardTitle className="text-3xl text-green-600 dark:text-emerald-400">
-              {project.lotes_libres}
-            </CardTitle>
+            <CardTitle className="text-3xl text-success">{project.lotes_libres}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="bg-yellow-50 dark:bg-amber-900/20 border-yellow-200 dark:border-amber-500/50">
+        <Card className="bg-warning/10 border-warning/20">
           <CardHeader className="pb-3">
             <CardDescription>Reservados</CardDescription>
-            <CardTitle className="text-3xl text-yellow-600 dark:text-amber-400">
-              {project.lotes_reservados}
-            </CardTitle>
+            <CardTitle className="text-3xl text-warning">{project.lotes_reservados}</CardTitle>
           </CardHeader>
         </Card>
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/50">
+        <Card className="bg-status-sold/10 border-status-sold/20">
           <CardHeader className="pb-3">
             <CardDescription>Vendidos</CardDescription>
-            <CardTitle className="text-3xl text-blue-600 dark:text-blue-400">
-              {project.lotes_vendidos}
-            </CardTitle>
+            <CardTitle className="text-3xl text-status-sold">{project.lotes_vendidos}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -182,12 +170,12 @@ export function OverviewTab({ project }: OverviewTabProps) {
         className={cn(
           'border overflow-hidden',
           project.estado === 'operational'
-            ? 'border-emerald-200 bg-emerald-500/5 dark:border-emerald-500/10'
+            ? 'border-success/20 bg-success/5'
             : project.estado === 'validated'
-              ? 'border-violet-200 bg-violet-500/5 dark:border-violet-500/10'
+              ? 'border-info/20 bg-info/5'
               : project.estado === 'imported'
-                ? 'border-blue-200 bg-blue-500/5 dark:border-blue-500/10'
-                : 'border-slate-200 bg-slate-500/5 dark:border-slate-600/10'
+                ? 'border-info/20 bg-info/5'
+                : 'border-border bg-muted/50'
         )}
       >
         <CardContent className="p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -220,7 +208,7 @@ export function OverviewTab({ project }: OverviewTabProps) {
               size="sm"
               onClick={handleMakeOperational}
               disabled={isPublishing || isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5 shrink-0 self-start md:self-center"
+              className="bg-success text-success-foreground hover:bg-success/90 font-semibold flex items-center gap-1.5 shrink-0 self-start md:self-center"
             >
               {isPublishing ? 'Publicando...' : 'Habilitar Ventas'}
             </Button>
@@ -237,21 +225,15 @@ export function OverviewTab({ project }: OverviewTabProps) {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="text-sm font-medium text-gray-600 dark:text-slate-400">
-                  Región
-                </label>
+                <label className="text-sm font-medium text-muted-foreground">Región</label>
                 <p className="text-lg">{project.region}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600 dark:text-slate-400">
-                  Comuna
-                </label>
+                <label className="text-sm font-medium text-muted-foreground">Comuna</label>
                 <p className="text-lg">{project.comuna}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600 dark:text-slate-400">
-                  Estado
-                </label>
+                <label className="text-sm font-medium text-muted-foreground">Estado</label>
                 <p className="text-lg mt-0.5">
                   <Badge className={ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.className}>
                     {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.label}
@@ -259,9 +241,7 @@ export function OverviewTab({ project }: OverviewTabProps) {
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600 dark:text-slate-400">
-                  Creado
-                </label>
+                <label className="text-sm font-medium text-muted-foreground">Creado</label>
                 <p className="text-lg flex items-center gap-2">
                   <HugeiconsIcon icon={Calendar01Icon} className="w-4 h-4" />
                   {/* Simplificamos para evitar hidratación mismatch por ahora, idealmente usar date-fns o similar en cliente */}
@@ -275,12 +255,8 @@ export function OverviewTab({ project }: OverviewTabProps) {
             <Separator />
 
             <div>
-              <label className="text-sm font-medium text-gray-600 dark:text-slate-400">
-                Descripción
-              </label>
-              <p className="text-gray-900 dark:text-slate-100 mt-1">
-                {project.descripcion || 'Sin descripción'}
-              </p>
+              <label className="text-sm font-medium text-muted-foreground">Descripción</label>
+              <p className="text-foreground mt-1">{project.descripcion || 'Sin descripción'}</p>
             </div>
           </CardContent>
         </Card>
@@ -329,10 +305,10 @@ export function OverviewTab({ project }: OverviewTabProps) {
                               <AvatarFallback>{initials}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                              <p className="text-sm font-semibold text-foreground">
                                 {vendor.nombre}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-slate-400">
+                              <p className="text-xs text-muted-foreground">
                                 {item.rol || 'Vendedor'}
                               </p>
                             </div>
@@ -341,7 +317,7 @@ export function OverviewTab({ project }: OverviewTabProps) {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => handleRemoveVendor(vendor.id)}
                               disabled={isPending}
                             >
@@ -354,9 +330,12 @@ export function OverviewTab({ project }: OverviewTabProps) {
                     )
                   })
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-48 text-center bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-dashed p-4">
-                    <HugeiconsIcon icon={UserAdd01Icon} className="w-8 h-8 text-slate-400 mb-2" />
-                    <p className="text-sm text-slate-500">Sin vendedores asignados</p>
+                  <div className="flex flex-col items-center justify-center h-48 text-center bg-muted/50 rounded-lg border border-dashed p-4">
+                    <HugeiconsIcon
+                      icon={UserAdd01Icon}
+                      className="w-8 h-8 text-muted-foreground/60 mb-2"
+                    />
+                    <p className="text-sm text-muted-foreground">Sin vendedores asignados</p>
                     {isAdmin && (
                       <Button
                         variant="link"

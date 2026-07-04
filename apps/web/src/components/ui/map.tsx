@@ -23,8 +23,8 @@ import {
   PlusSignIcon,
   Location01Icon,
   ExpandIcon,
-  Loading02Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 import { cn } from '@/lib/utils'
 
@@ -513,9 +513,7 @@ function MarkerContent({ children, className }: MarkerContentProps) {
 }
 
 function DefaultMarkerIcon() {
-  return (
-    <div className="relative h-4 w-4 rounded-full border-2 border-white bg-blue-500 shadow-lg" />
-  )
+  return <div className="relative h-4 w-4 rounded-full border-2 border-white bg-info shadow-lg" />
 }
 
 type MarkerPopupProps = {
@@ -850,7 +848,7 @@ function MapControls({
             disabled={waitingForLocation}
           >
             {waitingForLocation ? (
-              <HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" />
+              <Spinner className="size-4" />
             ) : (
               <HugeiconsIcon icon={Location01Icon} className="size-4" />
             )}

@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { PromptOpsTable } from '@/components/super-admin/prompt-ops/prompt-ops-table'
 import type { PromptWithActiveVersion } from '@/types/v2'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
 
 export default async function PromptOpsPage() {
   const { user, isSuperAdmin } = await getUserWithSuperAdmin()
@@ -30,15 +32,13 @@ export default async function PromptOpsPage() {
   }))
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Prompt Ops</h1>
-        <p className="text-slate-600 mt-1">
-          Gestiona los system prompts del agente IA — versiona, prueba y publica
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Prompt Ops"
+        description="Gestiona los system prompts del agente IA — versiona, prueba y publica"
+      />
 
       <PromptOpsTable prompts={promptsWithVersion} />
-    </div>
+    </PageShell>
   )
 }

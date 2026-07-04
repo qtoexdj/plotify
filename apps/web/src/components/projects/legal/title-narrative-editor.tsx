@@ -124,13 +124,13 @@ function BlockEditor({
   return (
     <div className="flex flex-col gap-3">
       {pendingNotice && (
-        <p className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-600 dark:text-amber-400">
+        <p className="rounded-md border border-warning/20 bg-warning/10 p-2 text-[11px] text-warning">
           Hay datos subyacentes pendientes de revisión; el texto generado puede estar incompleto.
         </p>
       )}
       {blockCheck && !blockCheck.ok && (
         <div
-          className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-700 dark:text-amber-400"
+          className="rounded-md border border-warning/20 bg-warning/10 p-2 text-[11px] text-warning"
           data-testid={`block-check-issues-${block}`}
         >
           <p className="font-medium">
@@ -170,9 +170,8 @@ function BlockEditor({
                 key={`${line.kind}-${index}`}
                 className={cn(
                   'whitespace-pre-wrap',
-                  line.kind === 'removed' && 'bg-red-500/10 text-red-600 dark:text-red-400',
-                  line.kind === 'added' &&
-                    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  line.kind === 'removed' && 'bg-destructive/10 text-destructive',
+                  line.kind === 'added' && 'bg-success/10 text-success'
                 )}
               >
                 {line.kind === 'removed' ? '− ' : line.kind === 'added' ? '+ ' : '  '}
@@ -199,7 +198,7 @@ function BlockEditor({
           aria-label={`Editar ${NARRATIVE_BLOCK_LABELS[block]}`}
         />
       </div>
-      {error && <p className="text-[11px] text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-[11px] text-destructive">{error}</p>}
       <div className="flex items-center justify-between">
         {edited ? (
           <Badge variant="outline" className="text-[10px] text-muted-foreground">

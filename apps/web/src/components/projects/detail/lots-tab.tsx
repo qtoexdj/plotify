@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { LotStatusBadge } from '@/components/projects/LotStatusBadge'
 import { SkeletonTable } from '@/components/dashboard/skeleton-card'
+import { EmptyState } from '@/components/dashboard/empty-state'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -44,7 +45,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { File02Icon, PlusSignIcon, Loading02Icon } from '@hugeicons/core-free-icons'
+import { File02Icon, PlusSignIcon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import {
   LotWithRecord,
   LotRecordForm,
@@ -322,7 +324,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
               <div className="max-h-[70vh] overflow-y-auto pr-2">
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-900">Lote</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Lote</h3>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Lote</Label>
@@ -385,7 +387,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                   </div>
 
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-900">Cliente</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Cliente</h3>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Nombre completo</Label>
@@ -447,16 +449,21 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                 </div>
               </div>
               <AlertDialogFooter>
-                {createLotError ? <p className="text-sm text-red-600">{createLotError}</p> : null}
+                {createLotError ? (
+                  <p className="text-sm text-destructive">{createLotError}</p>
+                ) : null}
                 <div className="flex gap-2">
-                  <AlertDialogCancel disabled={isCreatingLot}>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel className="min-h-11" disabled={isCreatingLot}>
+                    Cancelar
+                  </AlertDialogCancel>
                   <Button
                     onClick={handleCreateLotRecord}
                     disabled={isCreatingLot || !createLotForm.lot_id}
+                    className="min-h-11"
                   >
                     {isCreatingLot ? (
                       <>
-                        <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
+                        <Spinner className="w-4 h-4 mr-2" />
                         Guardando
                       </>
                     ) : (
@@ -475,17 +482,18 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
             <SkeletonTable />
           </div>
         ) : error ? (
-          <div className="text-center py-12 text-gray-600">
+          <div className="text-center py-12 text-muted-foreground">
             <p className="mb-4">{error}</p>
             <Button variant="outline" onClick={onRefresh}>
               Reintentar
             </Button>
           </div>
         ) : lots.length === 0 ? (
-          <div className="text-center py-12 text-gray-600">
-            <HugeiconsIcon icon={File02Icon} className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p>No hay lotes registrados</p>
-          </div>
+          <EmptyState
+            icon={File02Icon}
+            title="No hay lotes registrados"
+            description="Sube la geometría del proyecto para comenzar a gestionar sus lotes."
+          />
         ) : (
           <ScrollArea className="h-115 w-full rounded-md border">
             <div className="min-w-550">
@@ -540,7 +548,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                         <TableCell>{formatCurrency(record?.valor)}</TableCell>
                         <TableCell>{formatCurrency(record?.abono)}</TableCell>
                         <TableCell>{formatCurrency(record?.saldo)}</TableCell>
-                        <TableCell className="min-w-65 whitespace-normal text-sm text-gray-600">
+                        <TableCell className="min-w-65 whitespace-normal text-sm text-muted-foreground">
                           {record?.detalle_deuda || '—'}
                         </TableCell>
                         <TableCell>{record?.firma_estado || '—'}</TableCell>
@@ -552,13 +560,13 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                         <TableCell>{record?.cbr_estado || '—'}</TableCell>
                         <TableCell>{record?.cbr_numero_petitorio || '—'}</TableCell>
                         <TableCell>{record?.cbr_fecha_salida_estimada || '—'}</TableCell>
-                        <TableCell className="min-w-50 whitespace-normal text-sm text-gray-600">
+                        <TableCell className="min-w-50 whitespace-normal text-sm text-muted-foreground">
                           {record?.cbr_reparo || '—'}
                         </TableCell>
                         <TableCell>{record?.cliente_telefono || '—'}</TableCell>
                         <TableCell>{record?.cliente_email || '—'}</TableCell>
                         <TableCell>{formatCurrency(record?.comision_monto)}</TableCell>
-                        <TableCell className="text-xs text-gray-500">
+                        <TableCell className="text-xs text-muted-foreground">
                           {lot.vendedor_id || '—'}
                         </TableCell>
                         <TableCell className="text-right">
@@ -585,7 +593,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
             </SheetHeader>
             <div className="flex-1 overflow-y-auto px-6 pb-6 pt-2 space-y-6">
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">Datos del lote</h3>
+                <h3 className="text-sm font-semibold text-foreground">Datos del lote</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Número de lote</Label>
@@ -629,7 +637,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">Cliente</h3>
+                <h3 className="text-sm font-semibold text-foreground">Cliente</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Nombre completo</Label>
@@ -684,7 +692,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">Precios</h3>
+                <h3 className="text-sm font-semibold text-foreground">Precios</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Valor</Label>
@@ -716,16 +724,21 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                     pero la estructura está lista para recibirlos todos */}
             </div>
             <SheetFooter>
-              {saveLotError ? <p className="text-sm text-red-600">{saveLotError}</p> : null}
-              {saveLotSuccess ? <p className="text-sm text-green-600">Cambios guardados</p> : null}
+              {saveLotError ? <p className="text-sm text-destructive">{saveLotError}</p> : null}
+              {saveLotSuccess ? <p className="text-sm text-success">Cambios guardados</p> : null}
               <div className="flex gap-2">
-                <Button variant="outline" onClick={closeLotEditor} disabled={isSavingLot}>
+                <Button
+                  variant="outline"
+                  onClick={closeLotEditor}
+                  disabled={isSavingLot}
+                  className="min-h-11"
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleSaveLot} disabled={isSavingLot}>
+                <Button onClick={handleSaveLot} disabled={isSavingLot} className="min-h-11">
                   {isSavingLot ? (
                     <>
-                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
+                      <Spinner className="w-4 h-4 mr-2" />
                       Guardando
                     </>
                   ) : (

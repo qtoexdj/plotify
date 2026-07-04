@@ -16,7 +16,12 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { Plus, Save, Search } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  PlusSignIcon as Plus,
+  FloppyDiskIcon as Save,
+  SearchIcon as Search,
+} from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -49,12 +54,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 const CATEGORY_BADGE_CLASS: Record<string, string> = {
-  encabezado: 'bg-green-100 text-green-800 border-green-200',
-  articulo: 'bg-blue-100 text-blue-800 border-blue-200',
-  precio: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  clausula: 'bg-purple-100 text-purple-800 border-purple-200',
-  firma: 'bg-gray-100 text-gray-700 border-gray-200',
-  anexo: 'bg-orange-100 text-orange-800 border-orange-200',
+  encabezado: 'bg-success/15 text-success border-success/30',
+  articulo: 'bg-info/15 text-info border-info/30',
+  precio: 'bg-warning/15 text-warning border-warning/30',
+  clausula: 'bg-common-area/15 text-common-area border-common-area/30',
+  firma: 'bg-muted text-muted-foreground border-border',
+  anexo: 'bg-warning/15 text-warning border-warning/30',
 }
 
 function initItems(template: TemplateWithBlocks): ArticleItem[] {
@@ -109,7 +114,10 @@ function BlockLibrary({ blocks, onAdd }: BlockLibraryProps) {
 
       {/* Barra de búsqueda */}
       <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+        <HugeiconsIcon
+          icon={Search}
+          className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground"
+        />
         <Input
           className="pl-8 h-8 text-sm"
           placeholder="Buscar bloque..."
@@ -162,7 +170,7 @@ function BlockLibrary({ blocks, onAdd }: BlockLibraryProps) {
                         onClick={() => onAdd(block)}
                         aria-label={`Agregar ${block.name}`}
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <HugeiconsIcon icon={Plus} className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   ))}
@@ -355,7 +363,7 @@ export function TemplateBuilder({
               <span
                 className={`text-xs px-2.5 py-1.5 rounded-md border shrink-0 ${
                   activeMessage.includes('éxito')
-                    ? 'bg-green-50 text-green-700 border-green-200'
+                    ? 'bg-success/10 text-success border-success/20'
                     : 'bg-destructive/10 text-destructive border-destructive/20'
                 }`}
               >
@@ -418,12 +426,12 @@ export function TemplateBuilder({
           <div className="flex items-center gap-3 shrink-0 pt-2 border-t">
             {saveError && <p className="text-xs text-destructive flex-1">{saveError}</p>}
             {savedOk && (
-              <p className="text-xs text-green-600 flex-1">Estructura guardada correctamente.</p>
+              <p className="text-xs text-success flex-1">Estructura guardada correctamente.</p>
             )}
             {!saveError && !savedOk && <span className="flex-1" />}
 
             <Button onClick={handleSave} disabled={isSaving}>
-              <Save className="h-4 w-4 mr-2" />
+              <HugeiconsIcon icon={Save} className="h-4 w-4 mr-2" />
               {isSaving ? 'Guardando...' : 'Guardar estructura'}
             </Button>
           </div>

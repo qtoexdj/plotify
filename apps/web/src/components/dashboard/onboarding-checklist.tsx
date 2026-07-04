@@ -58,8 +58,8 @@ export function OnboardingChecklist({
 
   return (
     <Card className="border border-border/80 bg-gradient-to-br from-background via-background to-accent/5 shadow-md overflow-hidden relative group">
-      {/* Decorative Brand Gradient Accent Line */}
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-brand-gradient" />
+      {/* Decorative Accent Line */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-primary" />
 
       <CardHeader className="pb-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

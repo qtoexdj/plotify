@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import type { IconSvgElement } from '@hugeicons/react'
 import {
-  ChevronDown,
-  FileText,
-  LayoutTemplate,
-  Pencil,
-  PenLine,
-  ShoppingCart,
-  type LucideIcon,
-} from 'lucide-react'
+  ArrowDown01Icon as ChevronDown,
+  File02Icon as FileText,
+  Layout01Icon as LayoutTemplate,
+  PencilEdit02Icon as Pencil,
+  PencilEdit02Icon as PenLine,
+  ShoppingCart01Icon as ShoppingCart,
+} from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
@@ -26,13 +27,14 @@ import {
 import { VariableRow } from './variable-row'
 
 /** Icono y subtitulo por productor (eje de la matriz). */
-export const PRODUCER_META: Record<LegalVariableProducer, { icon: LucideIcon; hint: string }> = {
-  extracted: { icon: FileText, hint: 'la revisa el operador' },
-  manual: { icon: Pencil, hint: 'del plano / Conservador' },
-  authored: { icon: LayoutTemplate, hint: 'usa plantilla de la organización' },
-  sale_gap: { icon: ShoppingCart, hint: 'se completa en la venta' },
-  signing: { icon: PenLine, hint: 'datos de la notaría' },
-}
+export const PRODUCER_META: Record<LegalVariableProducer, { icon: IconSvgElement; hint: string }> =
+  {
+    extracted: { icon: FileText, hint: 'la revisa el operador' },
+    manual: { icon: Pencil, hint: 'del plano / Conservador' },
+    authored: { icon: LayoutTemplate, hint: 'usa plantilla de la organización' },
+    sale_gap: { icon: ShoppingCart, hint: 'se completa en la venta' },
+    signing: { icon: PenLine, hint: 'datos de la notaría' },
+  }
 
 interface ProducerGroupProps {
   section: ProducerSection
@@ -86,17 +88,13 @@ export function ProducerGroup({
       data-has-pending={hasPending ? 'true' : undefined}
       className={cn(
         'rounded-lg border bg-card text-card-foreground transition-colors',
-        hasPending
-          ? 'border-amber-300 shadow-sm shadow-amber-500/10 dark:border-amber-400/40'
-          : 'border-border'
+        hasPending ? 'border-warning/40 shadow-sm shadow-warning/10' : 'border-border'
       )}
     >
       <header
         className={cn(
           'grid gap-2 border-b px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center',
-          hasPending
-            ? 'border-amber-200 bg-amber-50/80 dark:border-amber-400/20 dark:bg-amber-950/20'
-            : 'border-border'
+          hasPending ? 'border-warning/20 bg-warning/10' : 'border-border'
         )}
       >
         {isCollapsible ? (
@@ -109,12 +107,10 @@ export function ProducerGroup({
               <span
                 className={cn(
                   'flex size-8 shrink-0 items-center justify-center rounded-md',
-                  hasPending
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200'
-                    : 'bg-muted text-muted-foreground'
+                  hasPending ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'
                 )}
               >
-                <Icon className="size-4" aria-hidden />
+                <HugeiconsIcon icon={Icon} className="size-4" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{section.label}</span>
@@ -122,7 +118,8 @@ export function ProducerGroup({
                   {PRODUCER_META[section.producer].hint}
                 </span>
               </span>
-              <ChevronDown
+              <HugeiconsIcon
+                icon={ChevronDown}
                 className={cn(
                   'size-4 shrink-0 text-muted-foreground transition-transform',
                   effectiveOpen && 'rotate-180'
@@ -136,12 +133,10 @@ export function ProducerGroup({
             <span
               className={cn(
                 'flex size-8 shrink-0 items-center justify-center rounded-md',
-                hasPending
-                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200'
-                  : 'bg-muted text-muted-foreground'
+                hasPending ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'
               )}
             >
-              <Icon className="size-4" aria-hidden />
+              <HugeiconsIcon icon={Icon} className="size-4" aria-hidden />
             </span>
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold">{section.label}</h3>
@@ -166,9 +161,7 @@ export function ProducerGroup({
           <span
             className={cn(
               'text-xs sm:justify-self-end',
-              hasPending
-                ? 'font-medium text-amber-700 dark:text-amber-200'
-                : 'text-muted-foreground'
+              hasPending ? 'font-medium text-warning' : 'text-muted-foreground'
             )}
           >
             {hasPending ? `${section.porRevisar} por revisar` : 'sin pendientes'}

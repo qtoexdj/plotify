@@ -28,16 +28,19 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
+import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Zap,
-  Download,
-} from 'lucide-react'
+  ArrowDown01Icon as ChevronDown,
+  ArrowRight01Icon as ChevronRight,
+  File02Icon as FileText,
+  CheckmarkCircle02Icon as CheckCircle2,
+  AlertCircleIcon as AlertCircle,
+  ZapIcon as Zap,
+  Download01Icon as Download,
+} from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
+import { File02Icon } from '@hugeicons/core-free-icons'
+import { EmptyState } from '@/components/dashboard/empty-state'
 import {
   generateDocumentAction,
   getVariablesStatusAction,
@@ -157,10 +160,10 @@ type WizardFormValues = z.infer<typeof WizardFormSchema>
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const TEMPLATE_TYPE_BADGE: Record<string, { label: string; className: string }> = {
-  escritura: { label: 'Escritura', className: 'bg-blue-100 text-blue-800 border-blue-200' },
-  reserva: { label: 'Reserva', className: 'bg-green-100 text-green-800 border-green-200' },
-  promesa: { label: 'Promesa', className: 'bg-orange-100 text-orange-800 border-orange-200' },
-  otro: { label: 'Otro', className: 'bg-gray-100 text-gray-700 border-gray-200' },
+  escritura: { label: 'Escritura', className: 'bg-info/15 text-info border-info/30' },
+  reserva: { label: 'Reserva', className: 'bg-success/15 text-success border-success/30' },
+  promesa: { label: 'Promesa', className: 'bg-warning/15 text-warning border-warning/30' },
+  otro: { label: 'Otro', className: 'bg-muted text-muted-foreground border-border' },
 }
 
 // ─── Step indicators ──────────────────────────────────────────────────────────
@@ -476,11 +479,11 @@ export function GenerationWizard({
               step === s.id
                 ? 'bg-primary text-primary-foreground'
                 : step > s.id
-                  ? 'bg-green-500 text-white'
+                  ? 'bg-success text-success-foreground'
                   : 'bg-muted text-muted-foreground'
             }`}
           >
-            {step > s.id ? <CheckCircle2 className="h-4 w-4" /> : s.id}
+            {step > s.id ? <HugeiconsIcon icon={CheckCircle2} className="h-4 w-4" /> : s.id}
           </div>
           <span
             className={`text-sm ${
@@ -489,7 +492,9 @@ export function GenerationWizard({
           >
             {s.label}
           </span>
-          {i < STEPS.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground mx-1" />}
+          {i < STEPS.length - 1 && (
+            <HugeiconsIcon icon={ChevronRight} className="h-4 w-4 text-muted-foreground mx-1" />
+          )}
         </div>
       ))}
     </div>
@@ -534,7 +539,7 @@ export function GenerationWizard({
                 )}
                 {isSelected && (
                   <div className="mt-3 flex items-center gap-1 text-primary text-xs font-medium">
-                    <CheckCircle2 className="h-3 w-3" />
+                    <HugeiconsIcon icon={CheckCircle2} className="h-3 w-3" />
                     Seleccionada
                   </div>
                 )}
@@ -544,16 +549,13 @@ export function GenerationWizard({
         })}
       </div>
       {templates.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>No hay plantillas disponibles.</p>
-          <p className="text-xs mt-1">
-            Crea una plantilla en{' '}
-            <a href="/documentos/plantillas" className="text-primary underline">
-              /documentos/plantillas
-            </a>
-          </p>
-        </div>
+        <EmptyState
+          icon={File02Icon}
+          title="No hay plantillas disponibles"
+          description="Crea una plantilla para poder generar documentos."
+          actionLabel="Ir a Plantillas"
+          actionHref="/documentos/plantillas"
+        />
       )}
     </div>
   )
@@ -576,7 +578,8 @@ export function GenerationWizard({
           <span>
             {icon} {title}
           </span>
-          <ChevronDown
+          <HugeiconsIcon
+            icon={ChevronDown}
             className={`h-4 w-4 transition-transform text-muted-foreground ${
               openSections[sectionKey] ? 'rotate-180' : ''
             }`}
@@ -736,7 +739,7 @@ export function GenerationWizard({
                     className="shrink-0 text-xs gap-1"
                     title="Generar desde geometría del lote"
                   >
-                    <Zap className="h-3 w-3" />
+                    <HugeiconsIcon icon={Zap} className="h-3 w-3" />
                     Generar
                   </Button>
                 }
@@ -786,7 +789,7 @@ export function GenerationWizard({
                         className="shrink-0 text-xs gap-1"
                         title="Generar desde análisis de geometría"
                       >
-                        <Zap className="h-3 w-3" />
+                        <HugeiconsIcon icon={Zap} className="h-3 w-3" />
                         Generar
                       </Button>
                     }
@@ -873,14 +876,14 @@ export function GenerationWizard({
         </p>
         {previewError && (
           <div className="flex items-start gap-2 text-destructive bg-destructive/10 rounded-md p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <HugeiconsIcon icon={AlertCircle} className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{previewError}</span>
           </div>
         )}
         <ScrollArea className="h-[60vh] border rounded-lg">
           {isLoadingPreview ? (
             <div className="flex h-[60vh] items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Spinner className="h-4 w-4 mr-2" />
               Generando vista previa...
             </div>
           ) : (
@@ -888,7 +891,8 @@ export function GenerationWizard({
               className="prose prose-sm max-w-none p-8 bg-white text-black [&_h2]:text-base [&_h3]:text-sm font-serif"
               dangerouslySetInnerHTML={{
                 __html:
-                  previewHtml || '<p class="text-gray-400 italic">Sin vista previa disponible.</p>',
+                  previewHtml ||
+                  '<p class="text-muted-foreground italic">Sin vista previa disponible.</p>',
               }}
             />
           )}
@@ -932,8 +936,8 @@ export function GenerationWizard({
               <span
                 className={
                   stats.filled < stats.total
-                    ? 'text-orange-500 font-medium'
-                    : 'text-green-600 font-medium'
+                    ? 'text-warning font-medium'
+                    : 'text-success font-medium'
                 }
               >
                 {stats.filled} / {stats.total}
@@ -945,7 +949,7 @@ export function GenerationWizard({
         {/* Validación de variables del backend */}
         {isLoadingVariables ? (
           <div className="flex items-center justify-center p-6 border rounded-lg bg-muted/20">
-            <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+            <Spinner className="h-5 w-5 mr-2" />
             <span className="text-sm text-muted-foreground">
               Validando variables requeridas por el template...
             </span>
@@ -955,7 +959,7 @@ export function GenerationWizard({
             {variableStatus.missing.length > 0 ? (
               <div className="space-y-3 p-4 border border-destructive/20 bg-destructive/5 rounded-lg">
                 <div className="flex items-center gap-2 text-destructive font-medium text-sm">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <HugeiconsIcon icon={AlertCircle} className="h-4 w-4 shrink-0" />
                   <span>Atención: Faltan variables requeridas por la plantilla</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 pt-1">
@@ -988,20 +992,20 @@ export function GenerationWizard({
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 p-3 border border-green-200 bg-green-50/50 text-green-700 rounded-lg text-sm">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <div className="flex items-center gap-2 p-3 border border-success/20 bg-success/5 text-success rounded-lg text-sm">
+                <HugeiconsIcon icon={CheckCircle2} className="h-4 w-4 shrink-0" />
                 <span>¡Todas las variables requeridas están completadas correctamente!</span>
               </div>
             )}
           </div>
         ) : variableStatusError ? (
           <div className="flex items-start gap-2 text-destructive bg-destructive/10 rounded-md p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <HugeiconsIcon icon={AlertCircle} className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{variableStatusError}</span>
           </div>
         ) : (
           <div className="flex items-start gap-2 text-destructive bg-destructive/10 rounded-md p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <HugeiconsIcon icon={AlertCircle} className="h-4 w-4 shrink-0 mt-0.5" />
             <span>No se pudo validar el estado de variables requeridas.</span>
           </div>
         )}
@@ -1064,15 +1068,15 @@ export function GenerationWizard({
         {/* Error de generación */}
         {generateError && (
           <div className="flex items-start gap-2 text-destructive bg-destructive/10 rounded-md p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <HugeiconsIcon icon={AlertCircle} className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{generateError}</span>
           </div>
         )}
 
         {/* Resultado exitoso */}
         {generatedUrl && (
-          <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-md p-3 text-sm">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <div className="flex items-center gap-2 text-success bg-success/10 rounded-md p-3 text-sm">
+            <HugeiconsIcon icon={CheckCircle2} className="h-4 w-4 shrink-0" />
             <span>Documento generado correctamente.</span>
             <a
               href={generatedUrl}
@@ -1080,7 +1084,7 @@ export function GenerationWizard({
               rel="noopener noreferrer"
               className="ml-auto flex items-center gap-1 text-primary underline font-medium"
             >
-              <Download className="h-4 w-4" />
+              <HugeiconsIcon icon={Download} className="h-4 w-4" />
               Descargar
             </a>
           </div>
@@ -1096,12 +1100,12 @@ export function GenerationWizard({
           >
             {isGenerating ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Spinner className="h-4 w-4 mr-2" />
                 Generando documento...
               </>
             ) : (
               <>
-                <FileText className="h-4 w-4 mr-2" />
+                <HugeiconsIcon icon={FileText} className="h-4 w-4 mr-2" />
                 Generar {format.toUpperCase()}
               </>
             )}

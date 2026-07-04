@@ -1,7 +1,7 @@
 'use client'
 
 import { useId } from 'react'
-import { MARK_TRANSFORM, PLANE_PATH, DATA_PATHS } from './brand-mark-paths'
+import { MARK_TRANSFORM, PLANE_PATH, PLANE_FILL, DATA_PATHS } from './brand-mark-paths'
 
 const PERIOD = 38
 
@@ -53,7 +53,7 @@ function Spinner({ className, ...props }: React.SVGProps<SVGSVGElement>) {
       </g>
 
       <g transform={MARK_TRANSFORM}>
-        <path fill="#16A34A" d={PLANE_PATH} />
+        <path fill={PLANE_FILL} d={PLANE_PATH} />
       </g>
     </svg>
   )

@@ -138,10 +138,10 @@ export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDet
             <div
               className={`flex items-center justify-center w-10 h-10 rounded-lg ${
                 skill.category === 'builtin'
-                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400'
+                  ? 'bg-info/15 text-info'
                   : skill.category === 'mcp'
-                    ? 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400'
-                    : 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
+                    ? 'bg-common-area/15 text-common-area'
+                    : 'bg-warning/15 text-warning'
               }`}
             >
               <HugeiconsIcon icon={getCategoryIcon(skill.category ?? 'custom')} size={20} />
@@ -176,7 +176,7 @@ export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDet
             {skill.requires_mcp && skill.mcp_provider && (
               <Badge
                 variant={skill.mcp_ready ? 'outline' : 'destructive'}
-                className={skill.mcp_ready ? 'border-purple-300 text-purple-600' : ''}
+                className={skill.mcp_ready ? 'border-common-area/40 text-common-area' : ''}
               >
                 {getMcpRequirementLabel(skill)}: {skill.mcp_provider}
               </Badge>
@@ -242,7 +242,7 @@ export function SkillDetailModal({ skill, enabled, onToggle, onClose }: SkillDet
                       <tr key={param.name} className={i % 2 === 0 ? '' : 'bg-muted/20'}>
                         <td className="px-3 py-2 font-mono">
                           {param.name}
-                          {param.required && <span className="text-red-500 ml-0.5">*</span>}
+                          {param.required && <span className="text-destructive ml-0.5">*</span>}
                         </td>
                         <td className="px-3 py-2 text-muted-foreground">{param.type}</td>
                         <td className="px-3 py-2 text-muted-foreground">{param.description}</td>

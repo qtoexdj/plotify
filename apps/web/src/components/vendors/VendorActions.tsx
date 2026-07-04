@@ -18,6 +18,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Mail01Icon, Delete01Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 interface VendorActionsProps {
   vendorId: string
@@ -84,10 +85,10 @@ export function VendorActions({
               size="icon"
               onClick={handleResend}
               disabled={resending}
-              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+              className="h-8 w-8 text-info hover:text-info hover:bg-info/10"
             >
               {resending ? (
-                <span className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                <Spinner className="h-4 w-4" />
               ) : (
                 <HugeiconsIcon icon={Mail01Icon} className="w-4 h-4" />
               )}
@@ -106,10 +107,10 @@ export function VendorActions({
                   variant="ghost"
                   size="icon"
                   disabled={deleting}
-                  className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   {deleting ? (
-                    <span className="animate-spin h-4 w-4 border-2 border-red-600 border-t-transparent rounded-full" />
+                    <Spinner className="h-4 w-4" />
                   ) : (
                     <HugeiconsIcon icon={Delete01Icon} className="w-4 h-4" />
                   )}
@@ -132,7 +133,7 @@ export function VendorActions({
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
               >
                 Sí, eliminar
               </AlertDialogAction>

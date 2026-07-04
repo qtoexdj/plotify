@@ -111,27 +111,21 @@ export function ItemDetailPanel({
         className={cn(
           'text-center p-6 rounded-xl border',
           geometryType === 'road'
-            ? 'bg-amber-500/10 border-amber-500/20'
-            : 'bg-violet-500/10 border-violet-500/20'
+            ? 'bg-warning/10 border-warning/20'
+            : 'bg-common-area/10 border-common-area/20'
         )}
       >
         <div className="flex justify-center mb-3">
           <div
             className={cn(
               'flex h-12 w-12 items-center justify-center rounded-xl',
-              geometryType === 'road' ? 'bg-amber-500/20' : 'bg-violet-500/20'
+              geometryType === 'road' ? 'bg-warning/20' : 'bg-common-area/20'
             )}
           >
             {geometryType === 'road' ? (
-              <HugeiconsIcon
-                icon={Road02Icon}
-                className="w-6 h-6 text-amber-600 dark:text-amber-400"
-              />
+              <HugeiconsIcon icon={Road02Icon} className="w-6 h-6 text-warning" />
             ) : (
-              <HugeiconsIcon
-                icon={Tree02Icon}
-                className="w-6 h-6 text-violet-600 dark:text-violet-400"
-              />
+              <HugeiconsIcon icon={Tree02Icon} className="w-6 h-6 text-common-area" />
             )}
           </div>
         </div>

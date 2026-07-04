@@ -30,7 +30,8 @@ import { toast } from 'sonner'
 import type { WorkspaceDetails } from '@/lib/services/workspace.service'
 import { updateWorkspaceAction } from '@/app/(dashboard)/settings/actions'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { FloppyDiskIcon, Loading02Icon, StarIcon } from '@hugeicons/core-free-icons'
+import { FloppyDiskIcon, StarIcon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -169,10 +170,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
                   >
                     {isPending ? (
                       <>
-                        <HugeiconsIcon
-                          icon={Loading02Icon}
-                          className="mr-2 h-4 w-4 animate-spin text-primary-foreground"
-                        />
+                        <Spinner className="mr-2 h-4 w-4" />
                         Guardando...
                       </>
                     ) : (
@@ -193,14 +191,11 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
       </Card>
 
       {isPersonal && isAdmin && (
-        <Card className="border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-xl shadow-xs">
+        <Card className="border-common-area/20 bg-common-area/5 rounded-xl shadow-xs">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <HugeiconsIcon
-                icon={StarIcon}
-                className="h-5 w-5 text-indigo-600 dark:text-indigo-400"
-              />
-              <CardTitle className="text-indigo-600 dark:text-indigo-400 text-lg font-bold tracking-tight">
+              <HugeiconsIcon icon={StarIcon} className="h-5 w-5 text-common-area" />
+              <CardTitle className="text-common-area text-lg font-bold tracking-tight">
                 Transformar a Cuenta Empresa
               </CardTitle>
             </div>
@@ -211,7 +206,7 @@ export function WorkspaceSettingsForm({ workspace }: WorkspaceSettingsFormProps)
           <CardFooter>
             <Button
               variant="outline"
-              className="border-indigo-500/30 hover:bg-indigo-500/10 hover:border-indigo-500/40 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs"
+              className="border-common-area/30 hover:bg-common-area/10 hover:border-common-area/40 text-common-area rounded-lg text-xs"
             >
               Mejorar Plan (Próximamente)
             </Button>

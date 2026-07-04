@@ -49,13 +49,12 @@ const SDD_011_ALLOWED_PRODUCT_TEXT = new Set([
   'Abrir variables',
 ])
 
-const TAILWIND_COLOR_HEX = {
-  'emerald-50': '#ecfdf5',
-  'emerald-900': '#064e3b',
-  'sky-50': '#f0f9ff',
-  'sky-900': '#0c4a6e',
-  'amber-50': '#fffbeb',
-  'amber-900': '#78350f',
+/** Tokens "Tinta nítida" (SDD 015) — valores de `globals.css` :root, sobre tarjeta blanca. */
+const TOKEN_HEX = {
+  success: '#15803d',
+  info: '#1d4ed8',
+  warning: '#b45309',
+  card: '#ffffff',
 } as const
 
 function assertHuman(text: string, origin: string) {
@@ -187,18 +186,12 @@ describe('SDD 010 — vocabulario de la mesa de escritura', () => {
       path.resolve(__dirname, '../src/components/documents/mesa/dato-chip.tsx'),
       'utf-8'
     )
-    const estados = [
-      ['emerald-900', 'emerald-50'],
-      ['sky-900', 'sky-50'],
-      ['amber-900', 'amber-50'],
-    ] as const
+    const estados = ['success', 'info', 'warning'] as const
 
-    for (const [text, background] of estados) {
-      expect(source).toContain(`text-${text}`)
-      expect(source).toContain(`bg-${background}`)
-      expect(
-        contrastRatio(TAILWIND_COLOR_HEX[text], TAILWIND_COLOR_HEX[background])
-      ).toBeGreaterThanOrEqual(4.5)
+    for (const token of estados) {
+      expect(source).toContain(`text-${token}`)
+      expect(source).toContain(`bg-${token}`)
+      expect(contrastRatio(TOKEN_HEX[token], TOKEN_HEX.card)).toBeGreaterThanOrEqual(4.5)
     }
 
     expect(source).toContain('sr-only')

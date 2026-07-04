@@ -8,8 +8,8 @@ import {
   InformationCircleIcon,
   Alert02Icon,
   MultiplicationSignCircleIcon,
-  Loading03Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = 'system' } = useTheme()
@@ -25,9 +25,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         error: (
           <HugeiconsIcon icon={MultiplicationSignCircleIcon} strokeWidth={2} className="size-4" />
         ),
-        loading: (
-          <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-4 animate-spin" />
-        ),
+        loading: <Spinner className="size-4" />,
       }}
       style={
         {

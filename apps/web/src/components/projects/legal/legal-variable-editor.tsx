@@ -188,7 +188,7 @@ function LegalVariableEditorContent({
                 rows={3}
               />
               {requiresReason && !trimmedReason ? (
-                <p className="text-xs text-amber-700">
+                <p className="text-xs text-warning">
                   Al resolver un conflicto conviene dejar una nota del motivo.
                 </p>
               ) : null}

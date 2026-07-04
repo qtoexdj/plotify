@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { LinkSquare02Icon as ExternalLink } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { VariableMatrix } from '@/components/projects/legal/variable-matrix/variable-matrix'
 
@@ -37,7 +38,7 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
           className="self-start md:self-auto"
         >
           <Link href={`/documentos/matriz/proyecto/${projectId}`}>
-            <ExternalLink className="size-4" aria-hidden />
+            <HugeiconsIcon icon={ExternalLink} className="size-4" aria-hidden />
             Ver matriz de escritura
           </Link>
         </Button>

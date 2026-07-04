@@ -45,12 +45,7 @@ function ChainField({ label, field, failure }: ChainFieldProps) {
   }
   const unverified = field.verified !== true || Boolean(failure)
   const value = (
-    <span
-      className={cn(
-        'text-xs',
-        unverified ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
-      )}
-    >
+    <span className={cn('text-xs', unverified ? 'text-warning' : 'text-foreground')}>
       {field.value}
     </span>
   )
@@ -91,7 +86,7 @@ function ChainField({ label, field, failure }: ChainFieldProps) {
         {unverified && (
           <Badge
             variant="outline"
-            className="border-amber-500/20 bg-amber-500/10 px-1 py-0 text-[9px] text-amber-600 dark:text-amber-400"
+            className="border-warning/20 bg-warning/10 px-1 py-0 text-[9px] text-warning"
           >
             {failure ? failure.reason : 'requiere revisión'}
           </Badge>

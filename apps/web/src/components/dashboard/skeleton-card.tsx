@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
 export function SkeletonCard() {
   return (
-    <Card className="animate-pulse overflow-hidden flex flex-col border-slate-200 dark:border-slate-800">
+    <Card className="animate-pulse overflow-hidden flex flex-col">
       {/* Cover Image Placeholder */}
       <div className="relative aspect-video w-full bg-muted border-b border-border shrink-0" />
 

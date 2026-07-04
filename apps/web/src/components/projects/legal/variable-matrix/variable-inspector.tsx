@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { CheckmarkCircle02Icon as CheckCircle2 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -120,9 +122,9 @@ export function VariableInspector({
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 {isDone ? (
-                  <CheckCircle2 className="size-5 text-emerald-500" aria-hidden />
+                  <HugeiconsIcon icon={CheckCircle2} className="size-5 text-success" aria-hidden />
                 ) : isRunning ? (
-                  <Loader2 className="size-5 animate-spin text-blue-600" aria-hidden />
+                  <Spinner className="size-5" />
                 ) : null}
                 {isDone
                   ? 'Aprobación lista'
@@ -149,7 +151,7 @@ export function VariableInspector({
                 aria-valuenow={approvalProgress}
               >
                 <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                  className="h-full rounded-full bg-success transition-all duration-300"
                   style={{ width: `${approvalProgress}%` }}
                 />
               </div>

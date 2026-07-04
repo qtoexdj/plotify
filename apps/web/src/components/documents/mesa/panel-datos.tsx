@@ -1,7 +1,14 @@
 'use client'
 
 import { useMemo } from 'react'
-import { AlertTriangle, CheckCircle2, PenLine, ShoppingCart, type LucideIcon } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import type { IconSvgElement } from '@hugeicons/react'
+import {
+  Alert02Icon as AlertTriangle,
+  CheckmarkCircle02Icon as CheckCircle2,
+  PencilEdit02Icon as PenLine,
+  ShoppingCart01Icon as ShoppingCart,
+} from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
 import { MESA_TEXT, datoStatusLabel } from '@/lib/documents/matriz-microcopy'
 import {
@@ -61,15 +68,15 @@ export function pendientesDelGrupo(grupo: GrupoDeDatos): number {
 }
 
 const PUNTO_ESTADO = {
-  resolved: 'bg-emerald-500',
-  blocked: 'bg-sky-500',
-  missing: 'bg-amber-500',
+  resolved: 'bg-success',
+  blocked: 'bg-info',
+  missing: 'bg-warning',
 } as const satisfies Record<TokenResolutionStatus, string>
 
 const TEXTO_ESTADO = {
-  resolved: 'text-emerald-700',
-  blocked: 'text-sky-700',
-  missing: 'text-amber-700',
+  resolved: 'text-success',
+  blocked: 'text-info',
+  missing: 'text-warning',
 } as const satisfies Record<TokenResolutionStatus, string>
 
 const GROUP_ICON = {
@@ -77,17 +84,14 @@ const GROUP_ICON = {
   venta: ShoppingCart,
   firma: PenLine,
   listas: CheckCircle2,
-} as const satisfies Record<MesaDatoBucket, LucideIcon>
+} as const satisfies Record<MesaDatoBucket, IconSvgElement>
 
 const GROUP_TONE = {
-  por_revisar:
-    'border-amber-300 bg-amber-50/80 text-amber-900 dark:border-amber-400/40 dark:bg-amber-950/20 dark:text-amber-100',
-  venta:
-    'border-sky-200 bg-sky-50/70 text-sky-900 dark:border-sky-400/30 dark:bg-sky-950/20 dark:text-sky-100',
+  por_revisar: 'border-warning/40 bg-warning/10 text-warning',
+  venta: 'border-info/30 bg-info/10 text-info',
   firma:
     'border-border bg-muted/60 text-foreground dark:border-border dark:bg-muted/30 dark:text-foreground',
-  listas:
-    'border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-400/30 dark:bg-emerald-950/20 dark:text-emerald-100',
+  listas: 'border-success/30 bg-success/10 text-success',
 } as const satisfies Record<MesaDatoBucket, string>
 
 function estadoDatoLabel(dato: TokenResolution, bucket: MesaDatoBucket): string {
@@ -157,7 +161,7 @@ function GrupoDatos({ grupo, projectId }: { grupo: MesaDatosGrupo; projectId: st
     >
       <header className="flex items-start gap-2 px-3 py-3">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-background/70 text-current">
-          <Icon aria-hidden className="size-4" />
+          <HugeiconsIcon icon={Icon} aria-hidden className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -203,9 +207,9 @@ export function PanelDatos({
     <section
       data-testid="panel-datos"
       aria-label={MESA_TEXT.datosTitle}
-      className="rounded-lg border border-border bg-card text-card-foreground"
+      className="rounded-2xl bg-card text-card-foreground shadow-xs"
     >
-      <h3 className="border-b border-border px-4 py-3 text-sm font-semibold">
+      <h3 className="px-4 pt-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {MESA_TEXT.datosTitle}
       </h3>
 

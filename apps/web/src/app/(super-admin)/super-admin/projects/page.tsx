@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { EmptyState } from '@/components/dashboard/empty-state'
+import { Folder01Icon } from '@hugeicons/core-free-icons'
 
 export default async function SuperAdminProjects() {
   const supabase = await createClient()
@@ -10,11 +14,8 @@ export default async function SuperAdminProjects() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Proyectos</h1>
-        <p className="text-slate-600 mt-1">Vista global de proyectos</p>
-      </div>
+    <PageShell>
+      <PageHeader title="Proyectos" description="Vista global de proyectos" />
 
       <Card>
         <CardHeader>
@@ -24,24 +25,24 @@ export default async function SuperAdminProjects() {
           {projects && projects.length > 0 ? (
             <div className="overflow-auto">
               <table className="w-full text-sm">
-                <thead className="text-left text-slate-500">
+                <thead className="text-left text-muted-foreground">
                   <tr>
                     <th className="pb-3">Proyecto</th>
                     <th className="pb-3">Estado</th>
-                    <th className="pb-3">Organizacion</th>
+                    <th className="pb-3">Organización</th>
                     <th className="pb-3">Creado</th>
                   </tr>
                 </thead>
-                <tbody className="text-slate-700">
+                <tbody className="text-foreground">
                   {projects.map((project) => (
-                    <tr key={project.id} className="border-t border-slate-100">
+                    <tr key={project.id} className="border-t border-border">
                       <td className="py-3 font-medium">{project.name}</td>
                       <td className="py-3">
                         <Badge variant={project.estado === 'activo' ? 'default' : 'secondary'}>
                           {project.estado}
                         </Badge>
                       </td>
-                      <td className="py-3 font-mono text-xs text-slate-500">
+                      <td className="py-3 font-mono text-xs text-muted-foreground">
                         {project.organization_id || '-'}
                       </td>
                       <td className="py-3">{project.created_at}</td>
@@ -51,10 +52,14 @@ export default async function SuperAdminProjects() {
               </table>
             </div>
           ) : (
-            <div className="text-sm text-slate-500">No hay proyectos registrados.</div>
+            <EmptyState
+              icon={Folder01Icon}
+              title="No hay proyectos registrados"
+              description="Aún no se ha registrado ningún proyecto en la plataforma."
+            />
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

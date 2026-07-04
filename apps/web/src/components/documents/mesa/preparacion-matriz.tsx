@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Check, Loader2, PencilLine } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  ArrowRight01Icon as ArrowRight,
+  Tick02Icon as Check,
+  PencilEdit02Icon as PencilLine,
+} from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { bulkApproveProjectVariables, upsertProjectVariable } from '@/lib/documents/matriz-client'
@@ -141,9 +147,9 @@ export function PreparacionMatriz({ projectId, blockers, onResolved }: Preparaci
                   onClick={() => aprobarSeccion(section, revisables)}
                 >
                   {aprobandoSeccion ? (
-                    <Loader2 className="size-3 animate-spin" />
+                    <Spinner className="size-3" />
                   ) : (
-                    <Check className="size-3" />
+                    <HugeiconsIcon icon={Check} className="size-3" />
                   )}
                   Aprobar revisados ({revisables.length})
                 </Button>
@@ -158,7 +164,7 @@ export function PreparacionMatriz({ projectId, blockers, onResolved }: Preparaci
                 return (
                   <li
                     key={item.key}
-                    className="rounded-md border border-amber-200 bg-background p-2.5"
+                    className="rounded-md border border-warning/30 bg-background p-2.5"
                   >
                     <p className="text-sm font-medium text-foreground">{pendienteTitle(item)}</p>
                     {item.description && item.description !== item.title ? (
@@ -181,7 +187,7 @@ export function PreparacionMatriz({ projectId, blockers, onResolved }: Preparaci
                           disabled={guardando || !valor.trim()}
                           onClick={() => guardarDato(item.key)}
                         >
-                          {guardando ? <Loader2 className="size-3 animate-spin" /> : 'Guardar'}
+                          {guardando ? <Spinner className="size-3" /> : 'Guardar'}
                         </Button>
                         <Button
                           type="button"
@@ -201,13 +207,13 @@ export function PreparacionMatriz({ projectId, blockers, onResolved }: Preparaci
                         {isManualEntry(item) ? (
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-info hover:underline"
                             onClick={() => {
                               setEditando(item.key)
                               setValor('')
                             }}
                           >
-                            <PencilLine className="size-3" />
+                            <HugeiconsIcon icon={PencilLine} className="size-3" />
                             Ingresar dato
                           </button>
                         ) : null}
@@ -217,7 +223,7 @@ export function PreparacionMatriz({ projectId, blockers, onResolved }: Preparaci
                             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline"
                           >
                             {item.action_label}
-                            <ArrowRight className="size-3" />
+                            <HugeiconsIcon icon={ArrowRight} className="size-3" />
                           </Link>
                         ) : null}
                       </div>

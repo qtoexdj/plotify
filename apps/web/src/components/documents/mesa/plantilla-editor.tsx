@@ -22,7 +22,17 @@ import { CSS } from '@dnd-kit/utilities'
 import { ProseKit, useDocChange } from '@prosekit/react'
 import { createEditor, defineKeyDownHandler, insertNode } from '@prosekit/core'
 import type { ProseMirrorNode } from '@prosekit/pm/model'
-import { Copy, FileText, GripVertical, Library, Plus, RefreshCw, Save, Upload } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  Copy01Icon as Copy,
+  File02Icon as FileText,
+  DragDropVerticalIcon as GripVertical,
+  LibraryIcon as Library,
+  PlusSignIcon as Plus,
+  Refresh01Icon as RefreshCw,
+  FloppyDiskIcon as Save,
+  Upload01Icon as Upload,
+} from '@hugeicons/core-free-icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -323,7 +333,7 @@ export function PlantillaEditor({ initialTemplates = [] }: PlantillaEditorProps)
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Library className="size-5 text-muted-foreground" />
+            <HugeiconsIcon icon={Library} className="size-5 text-muted-foreground" />
             <h2 className="text-xl font-semibold tracking-tight">
               {MESA_TEXT.bibliotecaPlantillas}
             </h2>
@@ -339,7 +349,7 @@ export function PlantillaEditor({ initialTemplates = [] }: PlantillaEditorProps)
             disabled={isBusy}
             onClick={() => refreshTemplates(selectedTemplateId ?? undefined)}
           >
-            <RefreshCw />
+            <HugeiconsIcon icon={RefreshCw} />
             {MESA_TEXT.recargar}
           </Button>
           <Button
@@ -348,11 +358,11 @@ export function PlantillaEditor({ initialTemplates = [] }: PlantillaEditorProps)
             disabled={!visibleTemplate || isBusy}
             onClick={() => visibleTemplate && handleCreateTemplate(visibleTemplate.id)}
           >
-            <Copy />
+            <HugeiconsIcon icon={Copy} />
             {MESA_TEXT.clonar}
           </Button>
           <Button type="button" disabled={!editable || isBusy} onClick={handlePublish}>
-            <Upload />
+            <HugeiconsIcon icon={Upload} />
             {MESA_TEXT.publicar}
           </Button>
         </div>
@@ -375,7 +385,7 @@ export function PlantillaEditor({ initialTemplates = [] }: PlantillaEditorProps)
                 placeholder={MESA_TEXT.nombrePlantilla}
               />
               <Button type="button" onClick={() => handleCreateTemplate()} disabled={isBusy}>
-                <Plus />
+                <HugeiconsIcon icon={Plus} />
               </Button>
             </div>
           </div>
@@ -424,7 +434,7 @@ export function PlantillaEditor({ initialTemplates = [] }: PlantillaEditorProps)
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={FileText} className="size-4 text-muted-foreground" />
                       <h3 className="truncate text-lg font-semibold">{visibleTemplate.name}</h3>
                       <Badge variant="outline">{formatTemplateVersion(visibleTemplate)}</Badge>
                       <Badge>{PLANTILLA_STATUS_LABELS[visibleTemplate.status]}</Badge>
@@ -583,7 +593,7 @@ function TemplateClauseRow({
         {...attributes}
         {...listeners}
       >
-        <GripVertical />
+        <HugeiconsIcon icon={GripVertical} />
       </Button>
       <button
         type="button"
@@ -704,7 +714,7 @@ function TemplateClauseComposer({
 
       {invalidKeys.length > 0 ? (
         <div
-          className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+          className="rounded-md border border-warning/30 bg-warning/10 text-sm text-warning"
           data-testid="template-invalid-keys"
         >
           <p className="mb-2 font-medium">{MESA_TEXT.erroresCatalogoTitle}</p>
@@ -757,7 +767,7 @@ function TemplateClauseComposer({
 
       <div className="flex justify-end">
         <Button type="button" onClick={handleSave} disabled={!editable || isSaving}>
-          <Save />
+          <HugeiconsIcon icon={Save} />
           {isSaving ? MESA_TEXT.guardando : MESA_TEXT.guardarClausula}
         </Button>
       </div>

@@ -24,8 +24,15 @@ vi.mock('@hugeicons/core-free-icons', () => ({
   Building03Icon: { __name: 'Building03Icon' },
   UserGroupIcon: { __name: 'UserGroupIcon' },
   Folder02Icon: { __name: 'Folder02Icon' },
+  File02Icon: { __name: 'File02Icon' },
   FileSearchIcon: { __name: 'FileSearchIcon' },
   AiMagicIcon: { __name: 'AiMagicIcon' },
+  AiChat01Icon: { __name: 'AiChat01Icon' },
+  Settings01Icon: { __name: 'Settings01Icon' },
+  UserStar01Icon: { __name: 'UserStar01Icon' },
+  Search01Icon: { __name: 'Search01Icon' },
+  Sun01Icon: { __name: 'Sun01Icon' },
+  Moon01Icon: { __name: 'Moon01Icon' },
 }))
 vi.mock('@/components/ui/badge', () => ({ Badge: vi.fn() }))
 vi.mock('@/components/ui/button', () => ({ Button: vi.fn() }))
@@ -168,18 +175,18 @@ describe('CATEGORY_BADGE', () => {
     expect(CATEGORY_BADGE).toHaveProperty('document')
   })
 
-  it('la categoría "agent" tiene badge azul', () => {
-    expect(CATEGORY_BADGE.agent.className).toContain('blue')
+  it('la categoría "agent" tiene badge de token "info"', () => {
+    expect(CATEGORY_BADGE.agent.className).toContain('info')
     expect(CATEGORY_BADGE.agent.label).toBeTruthy()
   })
 
-  it('la categoría "tool_instruction" tiene badge verde', () => {
-    expect(CATEGORY_BADGE.tool_instruction.className).toContain('green')
+  it('la categoría "tool_instruction" tiene badge de token "success"', () => {
+    expect(CATEGORY_BADGE.tool_instruction.className).toContain('success')
     expect(CATEGORY_BADGE.tool_instruction.label).toBeTruthy()
   })
 
-  it('la categoría "document" tiene badge naranja', () => {
-    expect(CATEGORY_BADGE.document.className).toContain('orange')
+  it('la categoría "document" tiene badge de token "warning"', () => {
+    expect(CATEGORY_BADGE.document.className).toContain('warning')
     expect(CATEGORY_BADGE.document.label).toBeTruthy()
   })
 })

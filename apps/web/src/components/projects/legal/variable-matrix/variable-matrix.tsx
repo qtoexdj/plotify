@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { PlusSignIcon as Plus } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { LegalVariableEditor } from '@/components/projects/legal/legal-variable-editor'
 import {
@@ -229,7 +230,7 @@ export function VariableMatrix({
 
       {effectivePendingFocus ? (
         <div
-          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-400/30 dark:bg-amber-950/30 dark:text-amber-100"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
           data-testid="pending-focus-banner"
         >
           <span className="font-medium">
@@ -250,7 +251,7 @@ export function VariableMatrix({
             className="min-h-10 w-full sm:w-auto"
             onClick={() => setManualOpen(true)}
           >
-            <Plus className="size-4" aria-hidden />
+            <HugeiconsIcon icon={Plus} className="size-4" aria-hidden />
             Ingresar dato manual
           </Button>
         </div>

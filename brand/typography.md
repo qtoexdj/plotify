@@ -9,13 +9,13 @@
 
 ## Jerarquía en piezas de marca
 
-| Nivel     | Fuente              | Peso | Uso                          |
-| --------- | ------------------- | ---- | ---------------------------- |
-| Display   | Bricolage Grotesque | 600  | Wordmark, titulares grandes  |
-| Título    | Bricolage Grotesque | 500  | Subtítulos, cifras           |
-| Cuerpo    | Onest               | 400  | Texto corrido                |
-| Etiqueta  | Onest               | 500  | Labels, botones              |
-| Datos     | Geist Mono          | 400  | ROL, folios, montos, códigos |
+| Nivel    | Fuente              | Peso | Uso                          |
+| -------- | ------------------- | ---- | ---------------------------- |
+| Display  | Bricolage Grotesque | 600  | Wordmark, titulares grandes  |
+| Título   | Bricolage Grotesque | 500  | Subtítulos, cifras           |
+| Cuerpo   | Onest               | 400  | Texto corrido                |
+| Etiqueta | Onest               | 500  | Labels, botones              |
+| Datos    | Geist Mono          | 400  | ROL, folios, montos, códigos |
 
 ## Nota sobre los SVG con texto
 

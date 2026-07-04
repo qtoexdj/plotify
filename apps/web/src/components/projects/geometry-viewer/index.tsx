@@ -10,9 +10,9 @@ import {
   Layers01Icon,
   Alert01Icon,
   Location01Icon,
-  Loading02Icon,
   ArrowRight01Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { createClient } from '@/lib/supabase/client'
 import { ItemDetailPanel } from './ItemDetailPanel'
 import { BulkActionsPanel } from '@/components/projects/viewer/BulkActionsPanel'
@@ -319,7 +319,7 @@ export function GeometryViewer({
     return (
       <div className="flex items-center justify-center h-[calc(100dvh-160px)] md:h-[calc(100vh-220px)] min-h-96 bg-muted/50 rounded-xl border border-border">
         <div className="flex flex-col items-center gap-3">
-          <HugeiconsIcon icon={Loading02Icon} className="w-8 h-8 animate-spin text-primary" />
+          <Spinner className="w-8 h-8" />
           <div className="h-3 w-32 rounded bg-muted animate-pulse" />
         </div>
       </div>
@@ -352,7 +352,7 @@ export function GeometryViewer({
     if (isLoadingLot && selectedIds.size === 1) {
       return (
         <div className="flex flex-col items-center justify-center py-12">
-          <HugeiconsIcon icon={Loading02Icon} className="w-8 h-8 text-primary animate-spin mb-3" />
+          <Spinner className="w-8 h-8 mb-3" />
           <div className="h-3 w-24 rounded bg-sidebar-accent animate-pulse" />
         </div>
       )
@@ -435,10 +435,10 @@ export function GeometryViewer({
                   <div
                     className={`w-2.5 h-2.5 rounded-sm border cursor-help ${
                       status === 'Disponible'
-                        ? 'bg-emerald-500 border-emerald-600'
+                        ? 'bg-status-available border-status-available'
                         : status === 'Reservado'
-                          ? 'bg-amber-500 border-amber-600'
-                          : 'bg-red-500 border-red-600'
+                          ? 'bg-status-reserved border-status-reserved'
+                          : 'bg-status-sold border-status-sold'
                     }`}
                   />
                 </TooltipTrigger>

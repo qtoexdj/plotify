@@ -104,7 +104,7 @@ export function PromptSandbox({ activeVersion, organizations, accessToken }: Pro
           <CardTitle className="text-base">Prompt del sandbox</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Edita el prompt para probarlo sin publicar. Los cambios aquí no afectan la versión
             activa.
           </p>
@@ -164,10 +164,10 @@ export function PromptSandbox({ activeVersion, organizations, accessToken }: Pro
         <Separator />
 
         <CardContent className="flex flex-col flex-1 pt-3 pb-3 gap-3">
-          <ScrollArea className="flex-1 h-64 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <ScrollArea className="flex-1 h-64 rounded-md border border-border bg-muted p-3">
             <div ref={scrollRef} className="space-y-3">
               {history.length === 0 && (
-                <p className="text-xs text-slate-400 text-center py-6">
+                <p className="text-xs text-muted-foreground text-center py-6">
                   Escribe un mensaje para probar el prompt
                 </p>
               )}
@@ -181,18 +181,18 @@ export function PromptSandbox({ activeVersion, organizations, accessToken }: Pro
                   <div
                     className={`max-w-[85%] rounded-lg px-3 py-2 text-xs whitespace-pre-wrap ${
                       msg.role === 'user'
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-white border border-slate-200 text-slate-800'
+                        ? 'bg-foreground text-background'
+                        : 'bg-card border border-border text-foreground'
                     }`}
                   >
                     {msg.content}
                   </div>
-                  <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
+                  <span className="text-[10px] text-muted-foreground">{msg.timestamp}</span>
                 </div>
               ))}
               {isPending && (
                 <div className="flex items-start">
-                  <div className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-400 italic">
+                  <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs text-muted-foreground italic">
                     Pensando…
                   </div>
                 </div>

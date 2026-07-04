@@ -7,10 +7,10 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   CheckmarkCircle02Icon,
   FloppyDiskIcon,
-  Loading02Icon,
   PlusSignIcon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 import {
   createCustomSkill,
@@ -218,10 +218,11 @@ export function CustomSkillEditor({ organizationId, availableTools }: CustomSkil
                 disabled={!canSave || isPending}
                 onClick={handleValidate}
               >
-                <HugeiconsIcon
-                  icon={isPending ? Loading02Icon : CheckmarkCircle02Icon}
-                  className={isPending ? 'size-4 animate-spin' : 'size-4'}
-                />
+                {isPending ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-4" />
+                )}
                 Validar
               </Button>
               <Button
@@ -231,10 +232,11 @@ export function CustomSkillEditor({ organizationId, availableTools }: CustomSkil
                 disabled={!canSave || isPending}
                 onClick={handleSave}
               >
-                <HugeiconsIcon
-                  icon={isPending ? Loading02Icon : FloppyDiskIcon}
-                  className="size-4"
-                />
+                {isPending ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <HugeiconsIcon icon={FloppyDiskIcon} className="size-4" />
+                )}
                 Guardar
               </Button>
               <Button
@@ -243,7 +245,11 @@ export function CustomSkillEditor({ organizationId, availableTools }: CustomSkil
                 disabled={!canSave || isPending}
                 onClick={handlePublish}
               >
-                <HugeiconsIcon icon={isPending ? Loading02Icon : Tick02Icon} className="size-4" />
+                {isPending ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <HugeiconsIcon icon={Tick02Icon} className="size-4" />
+                )}
                 Publicar
               </Button>
             </div>

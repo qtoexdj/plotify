@@ -4,6 +4,12 @@ import { useEffect, useRef } from 'react'
 import { useMap } from '@/components/ui/map'
 import { useTheme } from 'next-themes'
 import { ESTADO_CONFIG } from '@/lib/models/lot.model'
+import {
+  INFRA_COLORS as INFRA_CONFIG,
+  MAP_SELECTION_COLOR,
+  MAP_LABEL_TEXT_COLOR,
+  MAP_LABEL_SELECTED_TEXT_COLOR,
+} from '@/lib/map/lot-colors'
 import type { ViewerFeatureCollection } from '@/types/viewer.types'
 import type MapLibreGL from 'maplibre-gl'
 
@@ -18,11 +24,6 @@ const LOT_LABELS_LAYER = 'lot-labels'
 const ROAD_LAYER = 'road-line'
 const COMMON_AREA_FILL_LAYER = 'common-area-fill'
 const COMMON_AREA_OUTLINE_LAYER = 'common-area-outline'
-
-const INFRA_CONFIG = {
-  road: { stroke: '#f59e0b' },
-  common_area: { fill: '#a78bfa', stroke: '#7c3aed' },
-} as const
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -203,7 +204,7 @@ export function MapLotLayers({
         'text-ignore-placement': true,
       },
       paint: {
-        'text-color': isDark ? '#e5e7eb' : '#1f2937',
+        'text-color': isDark ? MAP_LABEL_TEXT_COLOR.dark : MAP_LABEL_TEXT_COLOR.light,
         'text-halo-color': isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)',
         'text-halo-width': 1.8,
       },
@@ -291,7 +292,7 @@ export function MapLotLayers({
         ['get', 'geometry_id'],
         ['literal', selectedArr.length > 0 ? selectedArr : ['__none__']],
       ],
-      '#1d4ed8', // selected blue
+      MAP_SELECTION_COLOR,
       ['get', '_stroke_color'], // default
     ])
     map.setPaintProperty(LOT_OUTLINE_LAYER, 'line-width', [
@@ -321,8 +322,10 @@ export function MapLotLayers({
     }
 
     // --- Label bold for selected lots (F10 + F13) ---
-    const defaultLabelColor = isDark ? '#f3f4f6' : '#1f2937'
-    const selectedLabelColor = isDark ? '#93c5fd' : '#1e3a8a'
+    const defaultLabelColor = isDark ? MAP_LABEL_TEXT_COLOR.dark : MAP_LABEL_TEXT_COLOR.light
+    const selectedLabelColor = isDark
+      ? MAP_LABEL_SELECTED_TEXT_COLOR.dark
+      : MAP_LABEL_SELECTED_TEXT_COLOR.light
 
     if (hasSelection) {
       map.setLayoutProperty(LOT_LABELS_LAYER, 'text-size', [

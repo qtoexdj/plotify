@@ -29,9 +29,7 @@ export function ModeToggle() {
       <HugeiconsIcon
         icon={Sun01Icon}
         className={`h-4 w-4 transition-all duration-300 ${
-          !isDark
-            ? 'text-amber-500 scale-110 drop-shadow-[0_0_4px_rgba(245,158,11,0.2)]'
-            : 'text-muted-foreground/50'
+          !isDark ? 'text-warning scale-110' : 'text-muted-foreground/50'
         }`}
       />
       <Switch
@@ -43,9 +41,7 @@ export function ModeToggle() {
       <HugeiconsIcon
         icon={Moon01Icon}
         className={`h-4 w-4 transition-all duration-300 ${
-          isDark
-            ? 'text-indigo-400 scale-110 drop-shadow-[0_0_4px_rgba(129,140,248,0.2)]'
-            : 'text-muted-foreground/50'
+          isDark ? 'text-info scale-110' : 'text-muted-foreground/50'
         }`}
       />
     </div>

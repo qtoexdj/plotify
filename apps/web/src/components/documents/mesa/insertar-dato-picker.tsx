@@ -1,6 +1,7 @@
 'use client'
 
-import { AtSign } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { MailAtSign01Icon as AtSign } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -73,7 +74,7 @@ export function InsertarDatoPicker({
     <Popover open={abierto} onOpenChange={onAbiertoChange}>
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" size="sm">
-          <AtSign />
+          <HugeiconsIcon icon={AtSign} />
           {MESA_TEXT.insertarDato}
         </Button>
       </PopoverTrigger>

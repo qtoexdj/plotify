@@ -1,9 +1,17 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { AlertTriangle, CheckCircle2, ListFilter, RefreshCw, Save } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  Alert02Icon as AlertTriangle,
+  CheckmarkCircle02Icon as CheckCircle2,
+  FilterIcon as ListFilter,
+  Refresh01Icon as RefreshCw,
+  FloppyDiskIcon as Save,
+} from '@hugeicons/core-free-icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { MESA_TEXT, mesaStatusLabel } from '@/lib/documents/matriz-microcopy'
 import { matrizEscrituraProgress } from '@/lib/documents/matriz-progress'
 import type { MatrizStatus, MatrizView, TokenResolution } from '@/lib/documents/matriz-types'
@@ -58,8 +66,8 @@ export function estadoDeMesa(matriz: Pick<MatrizView, 'scope' | 'status'>): stri
 
 const BADGE_ESTADO_MESA = {
   draft: 'border-border bg-muted text-foreground',
-  legal_review_pending: 'border-sky-300 bg-sky-50 text-sky-900',
-  approved: 'border-emerald-300 bg-emerald-50 text-emerald-900',
+  legal_review_pending: 'border-info/30 bg-info/10 text-info',
+  approved: 'border-success/30 bg-success/10 text-success',
   superseded: 'border-border bg-muted text-muted-foreground',
 } as const satisfies Record<MatrizStatus, string>
 
@@ -92,13 +100,18 @@ export function MesaEncabezado({
   return (
     <header
       data-testid="mesa-encabezado"
-      className="rounded-lg border border-border bg-card text-card-foreground"
+      className="rounded-none bg-transparent text-card-foreground"
     >
-      <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-lg font-semibold tracking-tight">{titulo}</h1>
-            <Badge variant="outline" className={BADGE_ESTADO_MESA[matriz.status]}>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              {titulo}
+            </h1>
+            <Badge
+              variant="outline"
+              className={cn('rounded-full px-3 py-1', BADGE_ESTADO_MESA[matriz.status])}
+            >
               {estado}
             </Badge>
           </div>
@@ -111,14 +124,14 @@ export function MesaEncabezado({
               data-testid="mesa-contador-pendientes"
               className={
                 pendientes > 0
-                  ? 'inline-flex items-center gap-1 font-medium text-amber-700'
-                  : 'inline-flex items-center gap-1 text-emerald-700'
+                  ? 'inline-flex items-center gap-1 font-medium text-warning'
+                  : 'inline-flex items-center gap-1 text-success'
               }
             >
               {pendientes > 0 ? (
-                <AlertTriangle aria-hidden className="size-3.5" />
+                <HugeiconsIcon icon={AlertTriangle} aria-hidden className="size-3.5" />
               ) : (
-                <CheckCircle2 aria-hidden className="size-3.5" />
+                <HugeiconsIcon icon={CheckCircle2} aria-hidden className="size-3.5" />
               )}
               {contadorPendientes(pendientes)}
             </span>
@@ -132,25 +145,33 @@ export function MesaEncabezado({
             <Button
               type="button"
               variant={soloPendientes ? 'secondary' : 'outline'}
-              size="sm"
+              size="lg"
+              className="min-h-11"
               onClick={() => onSoloPendientesChange?.(!soloPendientes)}
             >
-              <ListFilter />
+              <HugeiconsIcon icon={ListFilter} />
               {soloPendientes ? 'Ver todas' : 'Ver pendientes'}
             </Button>
           ) : null}
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="lg"
+            className="min-h-11"
             onClick={() => window.location.reload()}
           >
-            <RefreshCw />
-            {MESA_TEXT.recargar}
+            <HugeiconsIcon icon={RefreshCw} />
+            Verificar
           </Button>
-          <Button type="button" size="sm" onClick={onGuardar} disabled={!puedeGuardar || guardando}>
-            <Save />
-            {guardando ? MESA_TEXT.guardando : MESA_TEXT.guardar}
+          <Button
+            type="button"
+            size="lg"
+            className="min-h-11"
+            onClick={onGuardar}
+            disabled={!puedeGuardar || guardando}
+          >
+            <HugeiconsIcon icon={Save} />
+            {guardando ? MESA_TEXT.guardando : 'Generar escritura'}
           </Button>
         </div>
       </div>
@@ -158,9 +179,9 @@ export function MesaEncabezado({
       {matriz.snapshot_stale ? (
         <div
           data-testid="mesa-expediente-cambio"
-          className="flex items-start gap-2 border-t border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900"
+          className="mt-4 flex items-start gap-2 rounded-lg bg-warning/10 px-4 py-2.5 text-sm text-warning"
         >
-          <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
+          <HugeiconsIcon icon={AlertTriangle} aria-hidden className="mt-0.5 size-4 shrink-0" />
           <p>{MESA_TEXT.expedienteCambio}</p>
         </div>
       ) : null}

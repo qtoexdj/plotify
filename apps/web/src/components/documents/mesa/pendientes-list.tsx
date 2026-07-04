@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ArrowRight01Icon as ArrowRight } from '@hugeicons/core-free-icons'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type { ApprovalBlocker } from '@/lib/documents/matriz-types'
 
@@ -41,7 +42,7 @@ export function PendientesList({ blockers, compact = false }: PendientesListProp
         return (
           <li
             key={`${blocker.kind}-${index}`}
-            className={`rounded-md border border-amber-200 bg-card ${compact ? 'p-2.5' : 'p-3'}`}
+            className={`rounded-md border border-warning/30 bg-card ${compact ? 'p-2.5' : 'p-3'}`}
           >
             <p className="text-sm font-medium text-foreground">{pendienteTitle(blocker)}</p>
             {blocker.description && blocker.description !== blocker.title ? (
@@ -50,10 +51,10 @@ export function PendientesList({ blockers, compact = false }: PendientesListProp
             {href && blocker.action_label ? (
               <Link
                 href={href}
-                className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-info hover:underline"
               >
                 {blocker.action_label}
-                <ArrowRight className="size-3" />
+                <HugeiconsIcon icon={ArrowRight} className="size-3" />
               </Link>
             ) : null}
           </li>

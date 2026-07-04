@@ -21,7 +21,7 @@ export function DashboardKPIs({ kpis }: DashboardKPIsProps) {
           <HugeiconsIcon icon={Folder02Icon} className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{kpis.totalProjects}</div>
+          <div className="font-display text-2xl font-semibold">{kpis.totalProjects}</div>
           <p className="text-xs text-muted-foreground">Loteos gestionados en tu cuenta</p>
         </CardContent>
       </Card>
@@ -32,7 +32,7 @@ export function DashboardKPIs({ kpis }: DashboardKPIsProps) {
           <HugeiconsIcon icon={LayerIcon} className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{kpis.totalLots}</div>
+          <div className="font-display text-2xl font-semibold">{kpis.totalLots}</div>
           <p className="text-xs text-muted-foreground">Suma de lotes en todos los proyectos</p>
         </CardContent>
       </Card>
@@ -43,7 +43,9 @@ export function DashboardKPIs({ kpis }: DashboardKPIsProps) {
           <HugeiconsIcon icon={CheckmarkCircle02Icon} className="h-4 w-4 text-success" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-success">{kpis.availableLots}</div>
+          <div className="font-display text-2xl font-semibold text-success">
+            {kpis.availableLots}
+          </div>
           <p className="text-xs text-muted-foreground">Listos para la venta</p>
         </CardContent>
       </Card>
@@ -54,7 +56,7 @@ export function DashboardKPIs({ kpis }: DashboardKPIsProps) {
           <HugeiconsIcon icon={ShoppingBag01Icon} className="h-4 w-4 text-accent" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-accent">{kpis.soldLots}</div>
+          <div className="font-display text-2xl font-semibold text-accent">{kpis.soldLots}</div>
           <p className="text-xs text-muted-foreground">
             Con reserva pendiente:{' '}
             <span className="text-warning font-semibold">{kpis.reservedLots}</span> lotes

@@ -1,4 +1,3 @@
-import { PageHeader } from '@/components/dashboard/page-header'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { MesaEscritura } from '@/components/documents/mesa/mesa-escritura'
 
@@ -10,11 +9,7 @@ export default async function MesaPage({ params }: MesaPageProps) {
   const { caseId } = await params
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Mesa de escritura"
-        description="Revisa la escritura del caso con sus datos, su respaldo y sus pendientes."
-      />
+    <PageShell className="max-w-[1500px]">
       <MesaEscritura caseId={caseId} />
     </PageShell>
   )

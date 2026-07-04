@@ -1,4 +1,5 @@
-import { Download } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Download01Icon as Download } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type { MinutaGeneration } from '@/lib/documents/matriz-types'
@@ -97,7 +98,7 @@ export function HistorialGeneraciones({ generations }: HistorialGeneracionesProp
               {generation.download_url ? (
                 <Button type="button" variant="outline" size="sm" asChild>
                   <a href={generation.download_url}>
-                    <Download />
+                    <HugeiconsIcon icon={Download} />
                     {MESA_TEXT.descargarMinuta}
                   </a>
                 </Button>

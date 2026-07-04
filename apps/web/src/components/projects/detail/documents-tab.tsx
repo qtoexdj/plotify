@@ -18,10 +18,10 @@ import {
   Delete02Icon as Trash01Icon,
   Download01Icon,
   FileAttachmentIcon,
-  Loading02Icon,
   ViewIcon,
   Share01Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import type { ProjectWithMetrics } from '@/types/database.types'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -327,7 +327,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-green-600" />
+              <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-success" />
               Documentos de Escritura
             </CardTitle>
             <CardDescription>
@@ -349,7 +349,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                       <div className="flex items-center gap-3">
                         <Badge
                           variant="outline"
-                          className="text-green-700 bg-green-50 border-green-200 text-xs"
+                          className="text-success bg-success/10 border-success/20 text-xs"
                         >
                           Escritura Pendiente
                         </Badge>
@@ -374,7 +374,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <HugeiconsIcon icon={ImageAdd01Icon} className="w-5 h-5 text-blue-600" />
+              <HugeiconsIcon icon={ImageAdd01Icon} className="w-5 h-5 text-info" />
               Galería de Imágenes
             </CardTitle>
             <CardDescription>Hasta 10 imágenes del proyecto.</CardDescription>
@@ -399,7 +399,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                 <Button variant="outline" size="sm" asChild disabled={isUploading === 'images'}>
                   <label htmlFor="image-upload" className="cursor-pointer">
                     {isUploading === 'images' ? (
-                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />
+                      <Spinner className="w-4 h-4 mr-2" />
                     ) : (
                       <HugeiconsIcon icon={ImageAdd01Icon} className="w-4 h-4 mr-2" />
                     )}
@@ -412,7 +412,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
         </CardHeader>
         <CardContent>
           {!project.images || project.images.length === 0 ? (
-            <div className="py-10 text-center text-slate-500 border-2 border-dashed rounded-lg">
+            <div className="py-10 text-center text-muted-foreground border-2 border-dashed rounded-lg">
               No hay imágenes cargadas
             </div>
           ) : (
@@ -430,7 +430,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                       key={index}
                       className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/4"
                     >
-                      <div className="relative aspect-square rounded-lg overflow-hidden border bg-slate-100 group">
+                      <div className="relative aspect-square rounded-lg overflow-hidden border bg-muted group">
                         <Image
                           src={getFullUrl(path)}
                           alt={`img-${index}`}
@@ -456,7 +456,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-red-400 hover:text-red-500"
+                              className="text-destructive/60 hover:text-destructive"
                               onClick={() => handleDelete('images', path)}
                             >
                               <HugeiconsIcon icon={Trash01Icon} className="w-5 h-5" />
@@ -479,7 +479,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-blue-600" />
+            <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-info" />
             Documentos Legales
           </CardTitle>
           <CardDescription>Documentación oficial del proyecto.</CardDescription>
@@ -499,11 +499,11 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                 return (
                   <div
                     key={doc.id}
-                    className="p-4 border rounded-lg space-y-3 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
+                    className="p-4 border rounded-lg space-y-3 hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600">
+                        <div className="p-2 bg-info/10 rounded text-info">
                           <HugeiconsIcon icon={FileUploadIcon} className="w-5 h-5" />
                         </div>
                         <div>
@@ -511,7 +511,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                           {activeDocuments.length > 0 ? (
                             <Badge
                               variant="outline"
-                              className="text-green-600 bg-green-50 border-green-200"
+                              className="text-success bg-success/10 border-success/20"
                             >
                               {activeDocuments.length}{' '}
                               {activeDocuments.length === 1
@@ -519,7 +519,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                                 : 'documentos activos'}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-slate-400 bg-slate-50">
+                            <Badge variant="outline" className="text-muted-foreground bg-muted">
                               Pendiente
                             </Badge>
                           )}
@@ -538,10 +538,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                           <Button size="sm" asChild disabled={isUploading === doc.id}>
                             <label htmlFor={`upload-${doc.id}`} className="cursor-pointer">
                               {isUploading === doc.id ? (
-                                <HugeiconsIcon
-                                  icon={Loading02Icon}
-                                  className="w-4 h-4 mr-2 animate-spin"
-                                />
+                                <Spinner className="w-4 h-4 mr-2" />
                               ) : (
                                 <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-2" />
                               )}
@@ -568,7 +565,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                                 </Badge>
                                 <Badge
                                   variant="outline"
-                                  className="text-blue-600 bg-blue-50 border-blue-200 text-xs"
+                                  className="text-info bg-info/10 border-info/20 text-xs"
                                 >
                                   {LEGAL_EXTRACTION_STATUS_LABELS[activeDocument.extraction_status]}
                                 </Badge>
@@ -610,10 +607,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                                       className="cursor-pointer"
                                     >
                                       {isUploading === `replace-${activeDocument.id}` ? (
-                                        <HugeiconsIcon
-                                          icon={Loading02Icon}
-                                          className="w-4 h-4 animate-spin"
-                                        />
+                                        <Spinner className="w-4 h-4" />
                                       ) : (
                                         'Reemplazar'
                                       )}
@@ -625,7 +619,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="text-red-500"
+                                  className="text-destructive"
                                   onClick={() => handleDeleteLegalDocument(activeDocument)}
                                 >
                                   <HugeiconsIcon icon={Trash01Icon} className="w-4 h-4" />
@@ -640,7 +634,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                       <div className="flex items-center justify-between px-3 py-2 rounded-lg border">
                         <Badge
                           variant="outline"
-                          className="text-green-600 bg-green-50 border-green-200"
+                          className="text-success bg-success/10 border-success/20"
                         >
                           Cargado (sin registro legal)
                         </Badge>
@@ -660,7 +654,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-red-500"
+                              className="text-destructive"
                               onClick={() => handleDelete(doc.id, path)}
                             >
                               <HugeiconsIcon icon={Trash01Icon} className="w-4 h-4" />
@@ -675,10 +669,10 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
               return (
                 <div
                   key={doc.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-600">
+                    <div className="p-2 bg-info/10 rounded text-info">
                       <HugeiconsIcon icon={FileUploadIcon} className="w-5 h-5" />
                     </div>
                     <div>
@@ -687,21 +681,21 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                         <div className="flex flex-wrap gap-2">
                           <Badge
                             variant="outline"
-                            className="text-green-600 bg-green-50 border-green-200"
+                            className="text-success bg-success/10 border-success/20"
                           >
                             Cargado
                           </Badge>
                           {extractionStatus && (
                             <Badge
                               variant="outline"
-                              className="text-blue-600 bg-blue-50 border-blue-200"
+                              className="text-info bg-info/10 border-info/20"
                             >
                               {LEGAL_EXTRACTION_STATUS_LABELS[extractionStatus]}
                             </Badge>
                           )}
                         </div>
                       ) : (
-                        <Badge variant="outline" className="text-slate-400 bg-slate-50">
+                        <Badge variant="outline" className="text-muted-foreground bg-muted">
                           Pendiente
                         </Badge>
                       )}
@@ -734,7 +728,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-red-500"
+                            className="text-destructive"
                             onClick={() => handleDelete(doc.id, path)}
                           >
                             <HugeiconsIcon icon={Trash01Icon} className="w-4 h-4" />
@@ -755,10 +749,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
                           <Button size="sm" asChild disabled={isUploading === doc.id}>
                             <label htmlFor={`upload-${doc.id}`} className="cursor-pointer">
                               {isUploading === doc.id ? (
-                                <HugeiconsIcon
-                                  icon={Loading02Icon}
-                                  className="w-4 h-4 mr-2 animate-spin"
-                                />
+                                <Spinner className="w-4 h-4 mr-2" />
                               ) : (
                                 <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 mr-2" />
                               )}

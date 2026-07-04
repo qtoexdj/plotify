@@ -25,7 +25,8 @@ import { updateProfileAction } from '@/app/(dashboard)/settings/profile/actions'
 import imageCompression from 'browser-image-compression'
 import { createClient } from '@/lib/supabase/client'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Camera01Icon, Loading02Icon, FloppyDiskIcon } from '@hugeicons/core-free-icons'
+import { Camera01Icon, FloppyDiskIcon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 const profileFormSchema = z.object({
   first_name: z
@@ -180,10 +181,7 @@ export function ProfileSettingsForm({ profile, email }: ProfileSettingsFormProps
               >
                 {isUploadingAvatar ? (
                   <>
-                    <HugeiconsIcon
-                      icon={Loading02Icon}
-                      className="mr-2 h-4 w-4 animate-spin text-muted-foreground"
-                    />
+                    <Spinner className="mr-2 h-4 w-4" />
                     Subiendo...
                   </>
                 ) : (
@@ -372,10 +370,7 @@ export function ProfileSettingsForm({ profile, email }: ProfileSettingsFormProps
                   >
                     {isPending ? (
                       <>
-                        <HugeiconsIcon
-                          icon={Loading02Icon}
-                          className="mr-2 h-4 w-4 animate-spin text-primary-foreground"
-                        />
+                        <Spinner className="mr-2 h-4 w-4" />
                         Guardando...
                       </>
                     ) : (

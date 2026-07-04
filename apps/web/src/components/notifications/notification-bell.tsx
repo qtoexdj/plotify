@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Notification01Icon, Loading01Icon } from '@hugeicons/core-free-icons'
+import { Notification01Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -192,9 +193,7 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
               Notificaciones
               {counts.unread > 0 && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
             </h3>
-            {loading && (
-              <HugeiconsIcon icon={Loading01Icon} className="h-4 w-4 animate-spin text-primary" />
-            )}
+            {loading && <Spinner className="h-4 w-4" />}
           </div>
 
           <NotificationList

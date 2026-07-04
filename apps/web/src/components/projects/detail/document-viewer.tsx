@@ -31,7 +31,7 @@ export function DocumentViewer({ url, title }: DocumentViewerProps) {
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 w-full bg-slate-100/50 dark:bg-slate-900/50">
+        <div className="flex-1 w-full bg-muted/50">
           <iframe src={`${url}#view=FitH`} className="w-full h-full border-0 block" title={title} />
         </div>
       </DialogContent>

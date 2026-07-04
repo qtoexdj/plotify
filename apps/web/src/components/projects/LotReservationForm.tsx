@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { Loading02Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -102,7 +101,7 @@ export function LotReservationForm({
         <h3 className="text-lg font-medium">
           {mode === 'direct_sale' ? `Venta Lote ${lotNumber}` : `Reservar Lote ${lotNumber}`}
         </h3>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Complete los datos del cliente para solicitar la{' '}
           {mode === 'direct_sale' ? 'venta' : 'reserva'}.
         </p>
@@ -271,14 +270,12 @@ export function LotReservationForm({
               variant="outline"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="w-full sm:w-auto"
+              className="min-h-11 w-full sm:w-auto"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-              {isSubmitting && (
-                <HugeiconsIcon icon={Loading02Icon} className="mr-2 h-4 w-4 animate-spin" />
-              )}
+            <Button type="submit" disabled={isSubmitting} className="min-h-11 w-full sm:w-auto">
+              {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
               {mode === 'direct_sale' ? 'Confirmar Venta' : 'Solicitar Reserva'}
             </Button>
           </div>

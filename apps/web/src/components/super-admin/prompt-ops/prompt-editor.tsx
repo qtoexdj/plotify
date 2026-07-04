@@ -19,7 +19,7 @@ export function highlightPlaceholders(content: string): React.ReactNode[] {
   const parts = content.split(/(\{[^}]+\})/g)
   return parts.map((part, i) =>
     /^\{[^}]+\}$/.test(part) ? (
-      <mark key={i} className="bg-yellow-200 text-yellow-800 rounded-sm px-0.5">
+      <mark key={i} className="bg-warning/30 text-warning rounded-sm px-0.5">
         {part}
       </mark>
     ) : (
@@ -76,7 +76,7 @@ export function PromptEditor({ prompt, activeVersion, accessToken }: PromptEdito
             <CardTitle className="text-base">
               Contenido del prompt
               {activeVersion && (
-                <span className="ml-2 text-sm font-normal text-slate-500">
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
                   — versión activa: v{activeVersion.version}
                 </span>
               )}
@@ -88,7 +88,7 @@ export function PromptEditor({ prompt, activeVersion, accessToken }: PromptEdito
         </CardHeader>
         <CardContent>
           {showPreview ? (
-            <div className="min-h-100 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm whitespace-pre-wrap font-mono leading-relaxed">
+            <div className="min-h-100 rounded-md border border-border bg-muted p-4 text-sm whitespace-pre-wrap font-mono leading-relaxed">
               {highlightPlaceholders(content)}
             </div>
           ) : (

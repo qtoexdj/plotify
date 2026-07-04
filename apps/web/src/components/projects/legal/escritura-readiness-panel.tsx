@@ -21,12 +21,8 @@ import {
 } from '@/lib/legal/title-types'
 import { cn } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  CheckmarkCircle02Icon,
-  AlertCircleIcon,
-  Refresh01Icon,
-  File02Icon,
-} from '@hugeicons/core-free-icons'
+import { CheckmarkCircle02Icon, AlertCircleIcon, File02Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 interface EscrituraReadinessPanelProps {
   projectId: string
@@ -42,11 +38,9 @@ const gateStatusLabels = {
 } as const satisfies Record<ReadinessGateStatus, string>
 
 const gateStatusClassName = {
-  blocked: 'border-red-200 bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
-  needs_review:
-    'border-amber-200 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  ready:
-    'border-emerald-200 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  blocked: 'border-destructive/20 bg-destructive/10 text-destructive',
+  needs_review: 'border-warning/20 bg-warning/10 text-warning',
+  ready: 'border-success/20 bg-success/10 text-success',
 } as const satisfies Record<ReadinessGateStatus, string>
 
 function GateBlockingItem({ gate, item }: { gate: EscrituraReadinessGate; item: string }) {
@@ -230,7 +224,7 @@ export function EscrituraReadinessPanel({
           </div>
         ) : isLoading ? (
           <div className="py-8 flex flex-col items-center justify-center text-muted-foreground gap-2 border border-dashed border-border rounded-lg">
-            <HugeiconsIcon icon={Refresh01Icon} className="w-6 h-6 animate-spin text-primary" />
+            <Spinner className="w-6 h-6" />
             <p className="text-xs">Revisando las verificaciones del caso...</p>
           </div>
         ) : error && !readiness ? (
@@ -287,7 +281,7 @@ export function EscrituraReadinessPanel({
                 className="w-full h-8 text-xs flex items-center justify-center gap-1.5 transition-all duration-200"
               >
                 {isCreatingCase ? (
-                  <HugeiconsIcon icon={Refresh01Icon} className="w-3.5 h-3.5 animate-spin" />
+                  <Spinner className="w-3.5 h-3.5" />
                 ) : (
                   <HugeiconsIcon icon={CheckmarkCircle02Icon} className="w-3.5 h-3.5" />
                 )}
@@ -298,7 +292,7 @@ export function EscrituraReadinessPanel({
             </div>
 
             {blockingGates.length > 0 && (
-              <div className="flex items-start gap-1.5 text-[10px] text-red-600 dark:text-red-400 border border-red-500/10 bg-red-500/5 p-2 rounded-lg leading-normal">
+              <div className="flex items-start gap-1.5 text-[10px] text-destructive border border-destructive/10 bg-destructive/5 p-2 rounded-lg leading-normal">
                 <HugeiconsIcon icon={AlertCircleIcon} className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                 <span>
                   Hay verificaciones bloqueadas. Corrige los datos en el Centro de Control Legal.
@@ -314,7 +308,7 @@ export function EscrituraReadinessPanel({
             )}
 
             {createdCase && (
-              <div className="p-2.5 rounded-lg bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 text-[10px] border border-emerald-500/10 flex items-start gap-1.5 leading-normal">
+              <div className="p-2.5 rounded-lg bg-success/5 text-success text-[10px] border border-success/10 flex items-start gap-1.5 leading-normal">
                 <HugeiconsIcon
                   icon={CheckmarkCircle02Icon}
                   className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"

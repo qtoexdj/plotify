@@ -1,7 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, FileCheck2, Send, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  Download01Icon as Download,
+  FileValidationIcon as FileCheck2,
+  SentIcon as Send,
+  ThumbsDownIcon as ThumbsDown,
+  ThumbsUpIcon as ThumbsUp,
+} from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -129,7 +136,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
           disabled={!puedeEnviar(matriz)}
           onClick={() => abrir('enviar')}
         >
-          <Send />
+          <HugeiconsIcon icon={Send} />
           {MESA_TEXT.enviarRevision}
         </Button>
       ) : null}
@@ -143,7 +150,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
             disabled={!puedeRevisar(matriz)}
             onClick={() => abrir('rechazar')}
           >
-            <ThumbsDown />
+            <HugeiconsIcon icon={ThumbsDown} />
             {MESA_TEXT.rechazar}
           </Button>
           <Button
@@ -152,7 +159,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
             disabled={!puedeRevisar(matriz)}
             onClick={() => abrir('aprobar')}
           >
-            <ThumbsUp />
+            <HugeiconsIcon icon={ThumbsUp} />
             {MESA_TEXT.aprobar}
           </Button>
         </>
@@ -163,7 +170,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
           {generacion?.download_url ? (
             <Button type="button" variant="outline" size="sm" asChild>
               <a href={generacion.download_url}>
-                <Download />
+                <HugeiconsIcon icon={Download} />
                 {MESA_TEXT.descargarMinuta}
               </a>
             </Button>
@@ -174,7 +181,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
             disabled={!puedeGenerarMinuta(matriz)}
             onClick={() => abrir('generar')}
           >
-            <FileCheck2 />
+            <HugeiconsIcon icon={FileCheck2} />
             {MESA_TEXT.generarMinuta}
           </Button>
         </>

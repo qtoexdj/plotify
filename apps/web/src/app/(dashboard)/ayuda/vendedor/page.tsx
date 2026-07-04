@@ -1,33 +1,34 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { BookOpen, FileText, Landmark, ShieldCheck } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  File02Icon as FileText,
+  BankIcon as Landmark,
+  Shield02Icon as ShieldCheck,
+} from '@hugeicons/core-free-icons'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
 
 export default function SafeDocsPage() {
   return (
-    <div className="p-6 space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100 flex items-center gap-2">
-          <BookOpen className="h-8 w-8 text-primary" />
-          Centro de Ayuda y Operación para Vendedores
-        </h1>
-        <p className="text-gray-500 dark:text-slate-400">
-          Encuentra manuales, directrices de cumplimiento legal y flujos operativos oficiales de
-          Plotify.
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Centro de Ayuda y Operación para Vendedores"
+        description="Encuentra manuales, directrices de cumplimiento legal y flujos operativos oficiales de Plotify."
+      />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="border-muted bg-muted/40 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              <HugeiconsIcon icon={ShieldCheck} className="h-5 w-5 text-success" />
               Operaciones de Venta y Reserva
             </CardTitle>
             <CardDescription>
               Directrices paso a paso para el proceso de ingreso en la plataforma.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3.5 text-sm text-slate-600 dark:text-slate-300">
+          <CardContent className="space-y-3.5 text-sm text-muted-foreground">
             <p>
               Como vendedor asignado, cuentas con acceso a la gestión de lotes y reservas en tiempo
               real. Asegúrate siempre de:
@@ -43,12 +44,12 @@ export default function SafeDocsPage() {
         <Card className="border-muted bg-muted/40 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Landmark className="h-5 w-5 text-blue-600" />
+              <HugeiconsIcon icon={Landmark} className="h-5 w-5 text-info" />
               Aspectos Legales y Firmas
             </CardTitle>
             <CardDescription>Cumplimiento normativo y coordinación de notarías.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3.5 text-sm text-slate-600 dark:text-slate-300">
+          <CardContent className="space-y-3.5 text-sm text-muted-foreground">
             <p>
               Todas las promesas y escrituras de venta deben cumplir rigurosamente con los deslindes
               y cabezas calculadas de forma geométrica por el sistema.
@@ -70,7 +71,7 @@ export default function SafeDocsPage() {
       <Card className="border-muted bg-muted/40 shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
+            <HugeiconsIcon icon={FileText} className="h-5 w-5 text-primary" />
             Descarga de Plantillas Oficiales
           </CardTitle>
           <CardDescription>
@@ -89,6 +90,6 @@ export default function SafeDocsPage() {
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

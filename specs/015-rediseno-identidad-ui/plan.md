@@ -30,7 +30,7 @@ La entrega es incremental por user story: US1 (tokens+fuentes+marca) y US2 (nave
 
 - No cambiar URLs ni estructura de rutas (tabs = links a rutas existentes).
 - No tocar el motor de variables/escrituras ni servicios; solo presentación.
-- El color de marca debe quedar en un único token (`--brand`) — el usuario recoloreará `brand/*.svg` después.
+- El color de marca debe quedar en un único token (`--brand`), aunque su valor vigente se mantiene verde `#16A34A` (decisión 2026-07-03: el logo no migra a carmesí; ambos colores coexisten sin mezclarse).
 - Colores literales solo en el módulo de constantes de MapLibre (lista blanca).
 - El visor de proyecto (`geometry-viewer`) es patrón de referencia: prohibido regresionar su UX.
 - `design.md` conserva su protocolo de frontmatter YAML de tokens (estilo design-tokens) y se mantiene 1:1 con `globals.css`.

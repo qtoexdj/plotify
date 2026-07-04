@@ -19,7 +19,8 @@ import type { ProjectLegalDocumentUploadMetadata } from '@/lib/services/projects
 import type { ParsedFeature } from '@/types/onboarding.types'
 import type { Project } from '@/types/database.types'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Alert01Icon, Tick02Icon, Loading02Icon, Location01Icon } from '@hugeicons/core-free-icons'
+import { Alert01Icon, Tick02Icon, Location01Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 const projectSchema = z.object({
@@ -174,8 +175,8 @@ export default function OnboardingWizardPage() {
     <div className={currentStep === 3 ? 'px-4 py-6' : 'max-w-5xl mx-auto space-y-6 p-6'}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Nuevo proyecto</h1>
-          <p className="text-slate-600 dark:text-slate-400">
+          <h1 className="text-3xl font-bold text-foreground">Nuevo proyecto</h1>
+          <p className="text-muted-foreground">
             Completa el onboarding en pasos antes de ir al proyecto.
           </p>
         </div>
@@ -188,10 +189,10 @@ export default function OnboardingWizardPage() {
                 key={step.id}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${
                   isActive
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-900/20 dark:text-blue-400'
+                    ? 'border-info bg-info/10 text-info'
                     : isDone
-                      ? 'border-green-500 bg-green-50 text-green-700 dark:border-emerald-500/50 dark:bg-emerald-900/20 dark:text-emerald-400'
-                      : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400'
+                      ? 'border-success bg-success/10 text-success'
+                      : 'border-border bg-card text-muted-foreground'
                 }`}
               >
                 {isDone ? (
@@ -217,9 +218,7 @@ export default function OnboardingWizardPage() {
                 <div className="space-y-2">
                   <Label htmlFor="name">Nombre *</Label>
                   <Input id="name" {...register('name')} placeholder="Parcelas Los Aromos" />
-                  {errors.name && (
-                    <p className="text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
-                  )}
+                  {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="total_lotes">Total de lotes *</Label>
@@ -230,35 +229,29 @@ export default function OnboardingWizardPage() {
                     {...register('total_lotes', { valueAsNumber: true })}
                   />
                   {errors.total_lotes && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {errors.total_lotes.message}
-                    </p>
+                    <p className="text-sm text-destructive">{errors.total_lotes.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="region">Región *</Label>
                   <Input id="region" {...register('region')} placeholder="Valparaíso" />
                   {errors.region && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {errors.region.message}
-                    </p>
+                    <p className="text-sm text-destructive">{errors.region.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="comuna">Comuna *</Label>
                   <Input id="comuna" {...register('comuna')} placeholder="Quillota" />
                   {errors.comuna && (
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {errors.comuna.message}
-                    </p>
+                    <p className="text-sm text-destructive">{errors.comuna.message}</p>
                   )}
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <div className="flex flex-col gap-4 p-4 mt-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-col gap-4 p-4 mt-2 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label>Formato de nombre para lotes</Label>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                        <p className="text-sm text-muted-foreground">
                           Personaliza cómo se llamarán tus lotes automáticamente.
                         </p>
                       </div>
@@ -273,7 +266,7 @@ export default function OnboardingWizardPage() {
                     </div>
 
                     {usarPrefijo && (
-                      <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                      <div className="space-y-2 pt-2 border-t border-border">
                         <Label htmlFor="prefijo_lotes">Prefijo personalizado</Label>
                         <div className="flex gap-2 items-center">
                           <Input
@@ -282,7 +275,7 @@ export default function OnboardingWizardPage() {
                             placeholder="Ej: LOTE , RESTO LOTE , N "
                             className="max-w-62.5"
                           />
-                          <span className="text-sm text-slate-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                          <span className="text-sm text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
                             Vista previa: {prefijoLotes || ''}1
                           </span>
                         </div>
@@ -290,8 +283,8 @@ export default function OnboardingWizardPage() {
                     )}
 
                     {!usarPrefijo && (
-                      <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                        <span className="text-sm text-slate-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                      <div className="space-y-2 pt-2 border-t border-border">
+                        <span className="text-sm text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
                           Vista previa: 1
                         </span>
                       </div>
@@ -301,16 +294,16 @@ export default function OnboardingWizardPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
                   {/* Precio Block */}
-                  <div className="flex flex-col gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-col gap-4 p-4 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label>Precio de Venta</Label>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                        <p className="text-sm text-muted-foreground">
                           Establece el precio general de los lotes.
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-500 dark:text-slate-400">Variable</span>
+                        <span className="text-sm text-muted-foreground">Variable</span>
                         <Switch
                           checked={precioTipo === 'fijo'}
                           onCheckedChange={(checked) =>
@@ -323,7 +316,7 @@ export default function OnboardingWizardPage() {
                       </div>
                     </div>
                     {precioTipo === 'fijo' && (
-                      <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                      <div className="space-y-2 pt-2 border-t border-border">
                         <Label htmlFor="precio_valor">Monto ($)</Label>
                         <Input
                           id="precio_valor"
@@ -337,16 +330,16 @@ export default function OnboardingWizardPage() {
                   </div>
 
                   {/* Reserva Block */}
-                  <div className="flex flex-col gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-col gap-4 p-4 border border-border rounded-lg bg-muted/50">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label>Valor de Reserva</Label>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                        <p className="text-sm text-muted-foreground">
                           Monto a cobrar por resevar un lote.
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-500 dark:text-slate-400">Variable</span>
+                        <span className="text-sm text-muted-foreground">Variable</span>
                         <Switch
                           checked={reservaTipo === 'fijo'}
                           onCheckedChange={(checked) =>
@@ -362,7 +355,7 @@ export default function OnboardingWizardPage() {
                       </div>
                     </div>
                     {reservaTipo === 'fijo' && (
-                      <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                      <div className="space-y-2 pt-2 border-t border-border">
                         <Label htmlFor="reserva_valor">Monto de reserva ($)</Label>
                         <Input
                           id="reserva_valor"
@@ -388,22 +381,21 @@ export default function OnboardingWizardPage() {
               </div>
 
               {projectError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/50 rounded text-red-700 dark:text-red-400">
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded text-destructive">
                   <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4" />
                   <span>{projectError}</span>
                 </div>
               )}
 
               <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
                   Total lotes: {totalLotes || 0}
                 </div>
                 <Button type="submit" disabled={isSavingProject} className="min-w-40">
                   {isSavingProject ? (
                     <>
-                      <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 mr-2 animate-spin" />{' '}
-                      Creando...
+                      <Spinner className="w-4 h-4 mr-2" /> Creando...
                     </>
                   ) : (
                     'Guardar y continuar'
@@ -462,7 +454,7 @@ export default function OnboardingWizardPage() {
       {currentStep === 4 && project && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-slate-900">Paso 4: Asignar geometrías</h2>
+            <h2 className="text-xl font-semibold text-foreground">Paso 4: Asignar geometrías</h2>
             <div className="flex gap-2">
               <Button variant="outline" onClick={goPrev}>
                 Anterior
@@ -493,7 +485,7 @@ export default function OnboardingWizardPage() {
             <CardTitle>Paso 5: Confirmación</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded text-green-700">
+            <div className="flex items-center gap-3 p-3 bg-success/10 border border-success/20 rounded text-success">
               <HugeiconsIcon icon={Tick02Icon} className="w-5 h-5" />
               <div>
                 <p className="font-semibold">Proyecto listo</p>
@@ -502,11 +494,11 @@ export default function OnboardingWizardPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Card className="border-slate-200">
+              <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Resumen</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm text-slate-700">
+                <CardContent className="space-y-2 text-sm text-foreground">
                   <div>
                     <strong>Proyecto:</strong> {project.name}
                   </div>
@@ -522,11 +514,11 @@ export default function OnboardingWizardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-200">
+              <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Siguientes pasos</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm text-slate-700">
+                <CardContent className="space-y-2 text-sm text-foreground">
                   <p>Revisa el visor y edita lotes en la página del proyecto.</p>
                   <p>
                     Si faltan asignaciones, puedes completarlas luego en la pestaña de importación.

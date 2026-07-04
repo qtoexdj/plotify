@@ -345,7 +345,7 @@ describe('diálogo de carga mientras el análisis procesa', () => {
     const source = readSource('../src/components/projects/legal/title-case-panel.tsx')
     expect(source).toContain('title-processing-dialog')
     expect(source).toContain('<AlertDialog open={showProcessing}>')
-    expect(source).toContain('animate-spin')
+    expect(source).toContain('<Spinner')
     expect(source).toContain('role="progressbar"')
     expect(source).toContain("const showProcessing = reanalyzing || state === 'processing'")
   })

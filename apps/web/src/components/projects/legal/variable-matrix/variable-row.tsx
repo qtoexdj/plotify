@@ -34,8 +34,8 @@ function entryValue(entry: MatrixEntry): string {
 }
 
 const BUCKET_DOT = {
-  listo: 'bg-emerald-500',
-  por_revisar: 'bg-amber-500',
+  listo: 'bg-success',
+  por_revisar: 'bg-warning',
   no_editable: 'bg-muted-foreground/40',
 } as const
 
@@ -76,9 +76,7 @@ export function VariableRow({
       }}
       className={cn(
         'grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 border-t px-3 py-3 text-sm transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
-        pending
-          ? 'border-t-amber-200 bg-amber-50/70 dark:border-t-amber-400/20 dark:bg-amber-950/20'
-          : 'border-border',
+        pending ? 'border-t-warning/20 bg-warning/10' : 'border-border',
         selected && 'bg-primary/5'
       )}
     >
@@ -86,7 +84,7 @@ export function VariableRow({
         aria-hidden
         className={cn(
           'mt-1.5 shrink-0 rounded-full sm:mt-0',
-          pending ? 'size-2.5 ring-2 ring-amber-300/50' : 'size-1.5',
+          pending ? 'size-2.5 ring-2 ring-warning/40' : 'size-1.5',
           BUCKET_DOT[entry.bucket]
         )}
       />
@@ -102,7 +100,7 @@ export function VariableRow({
           <span className="shrink-0 font-mono text-xs text-muted-foreground">{confidence}</span>
         ) : null}
         {pending ? (
-          <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-400/15 dark:text-amber-100">
+          <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
             por aprobar
           </span>
         ) : null}

@@ -79,7 +79,7 @@ export function PromptHistory({ promptId, versions, accessToken }: PromptHistory
           <ScrollArea className="h-125">
             <div className="p-4 space-y-1">
               {versions.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-8">
+                <p className="text-sm text-muted-foreground text-center py-8">
                   No hay versiones registradas.
                 </p>
               )}
@@ -89,21 +89,25 @@ export function PromptHistory({ promptId, versions, accessToken }: PromptHistory
                     type="button"
                     onClick={() => setSelectedVersion(selectedVersion?.id === v.id ? null : v)}
                     className={`w-full text-left p-3 rounded-lg transition-colors text-sm ${
-                      selectedVersion?.id === v.id ? 'bg-slate-900 text-white' : 'hover:bg-slate-50'
+                      selectedVersion?.id === v.id
+                        ? 'bg-foreground text-background'
+                        : 'hover:bg-muted'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-semibold">v{v.version}</span>
                         {v.is_active && (
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-xs">
+                          <Badge className="bg-success/15 text-success hover:bg-success/15 text-xs">
                             Activa
                           </Badge>
                         )}
                       </div>
                       <span
                         className={`text-xs ${
-                          selectedVersion?.id === v.id ? 'text-slate-300' : 'text-slate-400'
+                          selectedVersion?.id === v.id
+                            ? 'text-background/70'
+                            : 'text-muted-foreground'
                         }`}
                       >
                         {v.created_at
@@ -118,7 +122,9 @@ export function PromptHistory({ promptId, versions, accessToken }: PromptHistory
                     {v.change_note && (
                       <p
                         className={`text-xs mt-1 truncate ${
-                          selectedVersion?.id === v.id ? 'text-slate-300' : 'text-slate-500'
+                          selectedVersion?.id === v.id
+                            ? 'text-background/70'
+                            : 'text-muted-foreground'
                         }`}
                       >
                         {v.change_note}
@@ -154,8 +160,8 @@ export function PromptHistory({ promptId, versions, accessToken }: PromptHistory
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-48 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <pre className="text-xs font-mono whitespace-pre-wrap text-slate-700">
+                <ScrollArea className="h-48 rounded-md border border-border bg-muted p-3">
+                  <pre className="text-xs font-mono whitespace-pre-wrap text-foreground">
                     {selectedVersion.content}
                   </pre>
                 </ScrollArea>
@@ -170,17 +176,17 @@ export function PromptHistory({ promptId, versions, accessToken }: PromptHistory
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-64 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <ScrollArea className="h-64 rounded-md border border-border bg-muted p-3">
                     <pre className="text-xs font-mono">
                       {diff.map((line, i) => (
                         <div
                           key={i}
                           className={
                             line.type === 'added'
-                              ? 'bg-green-100 text-green-800'
+                              ? 'bg-success/15 text-success'
                               : line.type === 'removed'
-                                ? 'bg-red-100 text-red-800'
-                                : 'text-slate-600'
+                                ? 'bg-destructive/15 text-destructive'
+                                : 'text-muted-foreground'
                           }
                         >
                           <span className="mr-2 select-none">
@@ -196,7 +202,7 @@ export function PromptHistory({ promptId, versions, accessToken }: PromptHistory
             )}
           </>
         ) : (
-          <div className="flex items-center justify-center h-48 text-sm text-slate-400">
+          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
             Selecciona una versión del historial para ver detalles
           </div>
         )}

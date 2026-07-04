@@ -6,7 +6,10 @@ import { getOrganizationMembers } from '@/lib/services/vendors.service'
 import { TelegramLinkCard } from '@/components/dashboard/telegram-link-card'
 import { TelegramBotSetup } from '@/components/dashboard/telegram-bot-setup'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { AiChat01Icon, SentIcon } from '@hugeicons/core-free-icons'
+import { SentIcon } from '@hugeicons/core-free-icons'
+import { AgenteTabs } from '@/components/agente/agente-tabs'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { PageShell } from '@/components/dashboard/page-shell'
 
 export const metadata = {
   title: 'Integraciones | Agente Plotify',
@@ -27,14 +30,18 @@ export default async function IntegrationsPage() {
 
   if (!profile || !workspace) {
     return (
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold">Integraciones</h1>
-        <div className="rounded-md bg-yellow-50 p-4 border border-yellow-200">
-          <p className="text-sm text-yellow-800">
+      <PageShell className="max-w-4xl">
+        <PageHeader
+          title="Integraciones"
+          description="Conecta tu Agente de Plotify con plataformas externas."
+        />
+        <AgenteTabs active="integraciones" />
+        <div className="rounded-md bg-warning/10 p-4 border border-warning/20">
+          <p className="text-sm text-warning">
             No se encontró tu perfil o workspace. Por favor, contacta a soporte.
           </p>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
@@ -42,28 +49,17 @@ export default async function IntegrationsPage() {
   const isAdmin = members.find((m) => m.id === user.id)?.role === 'admin'
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-      {/* Header con estilo premium */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-blue-600 mb-1">
-          <HugeiconsIcon icon={AiChat01Icon} size={20} />
-          <span className="text-sm font-semibold uppercase tracking-wider">Agente IA</span>
-        </div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-          Integraciones
-        </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl">
-          Conecta tu Agente de Plotify con plataformas externas para potenciar tus flujos de trabajo
-          y recibir notificaciones en tiempo real.
-        </p>
-      </div>
-
-      {/* Grid de Integraciones */}
+    <PageShell className="max-w-4xl">
+      <PageHeader
+        title="Integraciones"
+        description="Conecta tu Agente de Plotify con plataformas externas para potenciar tus flujos de trabajo y recibir notificaciones en tiempo real."
+      />
+      <AgenteTabs active="integraciones" />
       <div className="grid grid-cols-1 gap-8">
         <div className="space-y-4">
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2 pb-2 border-b border-border">
             <HugeiconsIcon icon={SentIcon} className="text-[#2AABEE]" size={24} />
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Telegram</h2>
+            <h2 className="font-display text-xl font-semibold text-foreground">Telegram</h2>
           </div>
 
           {/* Sección de Setup para Administradores de la Organización */}
@@ -85,12 +81,12 @@ export default async function IntegrationsPage() {
         </div>
 
         {/* Placeholder para futuras integraciones */}
-        <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-sm text-slate-500 text-center italic">
+        <div className="mt-8 pt-8 border-t border-border">
+          <p className="text-sm text-muted-foreground text-center italic">
             Próximamente: WhatsApp Business, Slack, Zapier y más...
           </p>
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

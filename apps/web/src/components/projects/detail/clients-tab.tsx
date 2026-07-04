@@ -11,8 +11,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { HugeiconsIcon } from '@hugeicons/react'
 import { UserIcon } from '@hugeicons/core-free-icons'
+import { EmptyState } from '@/components/dashboard/empty-state'
 import type { LotWithRecord } from './types'
 
 interface ClientsTabProps {
@@ -75,10 +75,11 @@ export function ClientsTab({ lots }: ClientsTabProps) {
       </CardHeader>
       <CardContent>
         {clients.length === 0 ? (
-          <div className="text-center py-12 text-gray-600">
-            <HugeiconsIcon icon={UserIcon} className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p>No hay clientes registrados en los lotes</p>
-          </div>
+          <EmptyState
+            icon={UserIcon}
+            title="No hay clientes registrados"
+            description="Aún no hay clientes registrados en los lotes de este proyecto."
+          />
         ) : (
           <Table>
             <TableHeader>
@@ -98,7 +99,7 @@ export function ClientsTab({ lots }: ClientsTabProps) {
                   <TableCell>
                     <div className="flex flex-col text-sm">
                       <span>{client.email}</span>
-                      <span className="text-gray-500">{client.telefono}</span>
+                      <span className="text-muted-foreground">{client.telefono}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-center">

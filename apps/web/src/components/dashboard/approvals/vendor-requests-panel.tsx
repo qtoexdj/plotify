@@ -1,7 +1,13 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { ClipboardList, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  ClipboardIcon as ClipboardList,
+  CheckmarkCircle02Icon as CheckCircle,
+  CancelCircleIcon as XCircle,
+} from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
@@ -134,7 +140,7 @@ export function VendorRequestsPanel({ userId, organizationId }: VendorRequestsPa
     return (
       <Card className="border-muted bg-muted/40">
         <CardContent className="h-[150px] flex items-center justify-center">
-          <Clock className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Spinner className="h-6 w-6" />
         </CardContent>
       </Card>
     )
@@ -144,12 +150,12 @@ export function VendorRequestsPanel({ userId, organizationId }: VendorRequestsPa
     <Card className="border-muted bg-muted/40 overflow-hidden relative shadow-sm">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <ClipboardList className="h-5 w-5 text-primary" />
+          <HugeiconsIcon icon={ClipboardList} className="h-5 w-5 text-primary" />
           Mis Solicitudes Recientes
           {requests.filter((r) => r.status === 'pending').length > 0 && (
             <Badge
               variant="outline"
-              className="ml-auto bg-amber-50 text-amber-700 border-amber-200"
+              className="ml-auto bg-warning/10 text-warning border-warning/20"
             >
               {requests.filter((r) => r.status === 'pending').length} en proceso
             </Badge>
@@ -163,8 +169,11 @@ export function VendorRequestsPanel({ userId, organizationId }: VendorRequestsPa
       <CardContent className="space-y-4">
         {requests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground animate-in fade-in duration-300">
-            <ClipboardList className="h-12 w-12 text-muted/60 mb-3 stroke-[1.2]" />
-            <p className="font-medium text-sm text-slate-700">Sin movimientos</p>
+            <HugeiconsIcon
+              icon={ClipboardList}
+              className="h-12 w-12 text-muted/60 mb-3 stroke-[1.2]"
+            />
+            <p className="font-medium text-sm text-foreground">Sin movimientos</p>
             <p className="text-xs max-w-xs mt-1">
               No tienes ingresos o solicitudes enviadas en este periodo.
             </p>
@@ -184,40 +193,41 @@ export function VendorRequestsPanel({ userId, organizationId }: VendorRequestsPa
                     >
                       {req.lot_label}
                     </Badge>
-                    <span className="text-[11px] font-bold text-slate-700">
+                    <span className="text-[11px] font-bold text-foreground">
                       {req.request_type === 'sale' ? 'Solicitud de Venta' : 'Solicitud de Reserva'}
                     </span>
                     <span className="text-[10px] text-muted-foreground font-medium">
                       {req.project_name}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600">
-                    <span className="font-semibold text-slate-500">Cliente:</span> {req.client_name}
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-muted-foreground">Cliente:</span>{' '}
+                    {req.client_name}
                   </p>
                 </div>
 
                 <Badge
                   className={`text-[10px] font-bold py-0.5 px-2 border shrink-0 transition-all duration-300 flex items-center gap-1 ${
                     req.status === 'pending'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      ? 'bg-warning/10 text-warning border-warning/20'
                       : req.status === 'approved'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-red-50 text-red-700 border-red-200'
+                        ? 'bg-success/10 text-success border-success/20'
+                        : 'bg-destructive/10 text-destructive border-destructive/20'
                   }`}
                 >
                   {req.status === 'pending' ? (
                     <>
-                      <Clock className="h-3 w-3 animate-spin" />
+                      <Spinner className="h-3 w-3" />
                       En Proceso
                     </>
                   ) : req.status === 'approved' ? (
                     <>
-                      <CheckCircle className="h-3 w-3" />
+                      <HugeiconsIcon icon={CheckCircle} className="h-3 w-3" />
                       Aprobada
                     </>
                   ) : (
                     <>
-                      <XCircle className="h-3 w-3" />
+                      <HugeiconsIcon icon={XCircle} className="h-3 w-3" />
                       No Aprobada
                     </>
                   )}

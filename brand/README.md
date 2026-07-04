@@ -8,16 +8,16 @@ Tres capas isométricas: la superior (verde, trazo sólido) es **el plano**; las
 
 ## Archivos
 
-| Archivo                    | Uso                                                       |
-| -------------------------- | --------------------------------------------------------- |
-| `mark.svg`                 | Símbolo solo, fondo claro (sidebar, loading, splash)      |
-| `mark-dark.svg`            | Símbolo solo, fondo oscuro                                |
-| `logo-horizontal[-dark].svg` | Lockup símbolo + wordmark (headers, docs)               |
-| `logo-vertical[-dark].svg` | Lockup vertical (portadas, pantallas de carga)            |
-| `favicon.svg`              | Versión simplificada en tile oscuro (2 capas, sin dashes) |
-| `colors.md` / `typography.md` | Especificación                                         |
-| `scripts/generate_assets.py` | Genera `dist/` y los assets de la web                   |
-| `dist/`                    | Generado — no editar                                      |
+| Archivo                       | Uso                                                       |
+| ----------------------------- | --------------------------------------------------------- |
+| `mark.svg`                    | Símbolo solo, fondo claro (sidebar, loading, splash)      |
+| `mark-dark.svg`               | Símbolo solo, fondo oscuro                                |
+| `logo-horizontal[-dark].svg`  | Lockup símbolo + wordmark (headers, docs)                 |
+| `logo-vertical[-dark].svg`    | Lockup vertical (portadas, pantallas de carga)            |
+| `favicon.svg`                 | Versión simplificada en tile oscuro (2 capas, sin dashes) |
+| `colors.md` / `typography.md` | Especificación                                            |
+| `scripts/generate_assets.py`  | Genera `dist/` y los assets de la web                     |
+| `dist/`                       | Generado — no editar                                      |
 
 ## Regla de simplificación
 

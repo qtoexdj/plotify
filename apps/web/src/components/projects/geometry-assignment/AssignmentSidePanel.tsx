@@ -26,12 +26,12 @@ import {
   Road02Icon,
   Tree02Icon,
   InformationSquareIcon,
-  Loading02Icon,
   SparklesIcon,
   ViewIcon,
   ViewOffIcon,
   ArrowUp02Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import type { Lot, FilterType, AssignAsType } from './types'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -193,10 +193,10 @@ export function AssignmentSidePanel({
                     <Badge
                       className={`${
                         selectedFeature.geometryType === 'lot'
-                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          ? 'bg-success/15 text-success hover:bg-success/15'
                           : selectedFeature.geometryType === 'road'
-                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400'
-                            : 'bg-violet-100 text-violet-700 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400'
+                            ? 'bg-warning/15 text-warning hover:bg-warning/15'
+                            : 'bg-common-area/15 text-common-area hover:bg-common-area/15'
                       }`}
                     >
                       {selectedFeature.geometryType === 'lot' && (
@@ -258,7 +258,7 @@ export function AssignmentSidePanel({
                 onClick={() => onMultiSelectModeChange(!multiSelectMode)}
                 className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                   multiSelectMode
-                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+                    ? 'bg-info/15 text-info border-2 border-info/30'
                     : 'bg-card text-muted-foreground border border-border hover:border-muted-foreground/30'
                 }`}
               >
@@ -278,24 +278,22 @@ export function AssignmentSidePanel({
                             ? {
                                 icon: Location01Icon,
                                 label: 'Lote',
-                                active:
-                                  'bg-emerald-50 border-emerald-400 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-400',
-                                hover: 'hover:border-emerald-300',
+                                active: 'bg-success/10 border-success/40 text-success',
+                                hover: 'hover:border-success/50',
                               }
                             : type === 'road'
                               ? {
                                   icon: Road02Icon,
                                   label: 'Camino',
-                                  active:
-                                    'bg-amber-50 border-amber-400 text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-400',
-                                  hover: 'hover:border-amber-300',
+                                  active: 'bg-warning/10 border-warning/40 text-warning',
+                                  hover: 'hover:border-warning/50',
                                 }
                               : {
                                   icon: Tree02Icon,
                                   label: 'Área',
                                   active:
-                                    'bg-violet-50 border-violet-400 text-violet-700 dark:bg-violet-900/30 dark:border-violet-700 dark:text-violet-400',
-                                  hover: 'hover:border-violet-300',
+                                    'bg-common-area/10 border-common-area/40 text-common-area',
+                                  hover: 'hover:border-common-area/50',
                                 }
                         return (
                           <button
@@ -317,17 +315,15 @@ export function AssignmentSidePanel({
 
                   {/* Assignment Form: Lot */}
                   {assignAsType === 'lot' ? (
-                    <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-700 space-y-3">
-                      <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                        Asignar al lote:
-                      </p>
+                    <div className="bg-success/10 rounded-lg p-3 border border-success/20 space-y-3">
+                      <p className="text-xs text-success font-medium">Asignar al lote:</p>
                       <Popover open={lotComboOpen} onOpenChange={setLotComboOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             role="combobox"
                             aria-expanded={lotComboOpen}
-                            className="w-full justify-between h-8 text-xs border-emerald-200 dark:border-emerald-700 hover:border-emerald-400 bg-card"
+                            className="w-full justify-between h-8 text-xs border-success/20 hover:border-success/50 bg-card"
                           >
                             {selectedLot ? selectedLot.numero_lote : 'Seleccionar lote...'}
                             <HugeiconsIcon
@@ -358,14 +354,14 @@ export function AssignmentSidePanel({
                                   >
                                     <HugeiconsIcon
                                       icon={Location01Icon}
-                                      className="w-3 h-3 mr-2 text-emerald-500"
+                                      className="w-3 h-3 mr-2 text-success"
                                     />
                                     {lot.numero_lote}
                                     <HugeiconsIcon
                                       icon={Tick02Icon}
                                       className={`ml-auto w-3 h-3 ${
                                         selectedLotId === lot.id
-                                          ? 'opacity-100 text-emerald-600'
+                                          ? 'opacity-100 text-success'
                                           : 'opacity-0'
                                       }`}
                                     />
@@ -379,14 +375,11 @@ export function AssignmentSidePanel({
                       <Button
                         onClick={onAssignToLot}
                         disabled={!selectedLotId || isAssigning}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700"
+                        className="w-full bg-success text-success-foreground hover:bg-success/90"
                         size="sm"
                       >
                         {isAssigning ? (
-                          <HugeiconsIcon
-                            icon={Loading02Icon}
-                            className="w-4 h-4 mr-2 animate-spin"
-                          />
+                          <Spinner className="w-4 h-4 mr-2" />
                         ) : (
                           <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4 mr-2" />
                         )}
@@ -397,16 +390,14 @@ export function AssignmentSidePanel({
                     <div
                       className={`rounded-lg p-3 border space-y-3 ${
                         assignAsType === 'road'
-                          ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700'
-                          : 'bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-700'
+                          ? 'bg-warning/10 border-warning/20'
+                          : 'bg-common-area/10 border-common-area/20'
                       }`}
                     >
                       <div>
                         <label
                           className={`text-xs font-medium ${
-                            assignAsType === 'road'
-                              ? 'text-amber-700 dark:text-amber-400'
-                              : 'text-violet-700 dark:text-violet-400'
+                            assignAsType === 'road' ? 'text-warning' : 'text-common-area'
                           }`}
                         >
                           Nombre (opcional):
@@ -425,16 +416,13 @@ export function AssignmentSidePanel({
                         disabled={isAssigning}
                         className={`w-full ${
                           assignAsType === 'road'
-                            ? 'bg-amber-600 hover:bg-amber-700'
-                            : 'bg-violet-600 hover:bg-violet-700'
+                            ? 'bg-warning text-warning-foreground hover:bg-warning/90'
+                            : 'bg-common-area text-common-area-foreground hover:bg-common-area/90'
                         }`}
                         size="sm"
                       >
                         {isAssigning ? (
-                          <HugeiconsIcon
-                            icon={Loading02Icon}
-                            className="w-4 h-4 mr-2 animate-spin"
-                          />
+                          <Spinner className="w-4 h-4 mr-2" />
                         ) : (
                           <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4 mr-2" />
                         )}
@@ -464,9 +452,9 @@ export function AssignmentSidePanel({
                         disabled={isAssigned}
                         className={`relative w-full h-10 p-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center ${
                           isAssigned
-                            ? 'bg-emerald-100 text-emerald-700 cursor-default dark:bg-emerald-900/30 dark:text-emerald-400'
+                            ? 'bg-success/15 text-success cursor-default'
                             : isSelected
-                              ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-400 dark:bg-blue-900/30 dark:text-blue-400'
+                              ? 'bg-info/15 text-info ring-2 ring-info/40'
                               : 'bg-muted text-foreground hover:bg-muted/80'
                         }`}
                       >
@@ -474,7 +462,7 @@ export function AssignmentSidePanel({
                         {isAssigned && (
                           <HugeiconsIcon
                             icon={Tick02Icon}
-                            className="w-3 h-3 absolute top-1 left-1 text-emerald-600 dark:text-emerald-400"
+                            className="w-3 h-3 absolute top-1 left-1 text-success"
                           />
                         )}
                       </button>
@@ -490,7 +478,7 @@ export function AssignmentSidePanel({
                               onUnassignLot(lot.id)
                             }
                           }}
-                          className="absolute top-1 right-1 bg-red-100 text-red-600 hover:bg-red-500 hover:text-white p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity border border-red-200 hover:border-red-600 z-10 flex items-center justify-center"
+                          className="absolute top-1 right-1 bg-destructive/15 text-destructive hover:bg-destructive hover:text-destructive-foreground p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity border border-destructive/20 hover:border-destructive z-10 flex items-center justify-center"
                           title="Revertir asignación"
                         >
                           <HugeiconsIcon
@@ -527,7 +515,7 @@ export function AssignmentSidePanel({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" />
+                      <div className="w-3 h-3 rounded bg-success/40 border border-success" />
                       <span className="text-xs text-muted-foreground">
                         Lotes ({lotCount - hiddenLotCount}/{lotCount})
                       </span>
@@ -540,7 +528,7 @@ export function AssignmentSidePanel({
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-0.5 bg-amber-500" />
+                      <div className="w-3 h-0.5 bg-warning" />
                       <span className="text-xs text-muted-foreground">
                         Caminos ({roadCount - hiddenRoadCount}/{roadCount})
                       </span>
@@ -553,7 +541,7 @@ export function AssignmentSidePanel({
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded bg-violet-200 border border-violet-400" />
+                      <div className="w-3 h-3 rounded bg-common-area/40 border border-common-area" />
                       <span className="text-xs text-muted-foreground">
                         Áreas ({commonAreaCount - hiddenAreaCount}/{commonAreaCount})
                       </span>
@@ -603,7 +591,7 @@ export function AssignmentSidePanel({
                         key={feature.tempId}
                         className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
                           isSelected
-                            ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700'
+                            ? 'bg-info/10 border-info/20'
                             : isHidden
                               ? 'bg-muted border-border opacity-60'
                               : 'bg-card border-border hover:border-muted-foreground/30'
@@ -613,10 +601,10 @@ export function AssignmentSidePanel({
                           <div
                             className={`w-2.5 h-2.5 rounded-sm shrink-0 ${
                               feature.geometryType === 'lot'
-                                ? 'bg-emerald-400'
+                                ? 'bg-success'
                                 : feature.geometryType === 'road'
-                                  ? 'bg-amber-500'
-                                  : 'bg-violet-400'
+                                  ? 'bg-warning'
+                                  : 'bg-common-area'
                             }`}
                           />
                           <span
@@ -674,7 +662,7 @@ export function AssignmentSidePanel({
         </div>
         <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
           <div
-            className="h-full bg-emerald-500 rounded-full transition-all"
+            className="h-full bg-success rounded-full transition-all"
             style={{ width: `${totalCount > 0 ? (assignedCount / totalCount) * 100 : 0}%` }}
           />
         </div>

@@ -3,6 +3,7 @@ import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { SuperAdminSidebar } from '@/components/super-admin/SuperAdminSidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { isEscriturasLabEnabled } from '@/lib/labs/escrituras.guard'
+import { CommandPaletteProvider } from '@/components/command-palette'
 
 export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isSuperAdmin } = await getUserWithSuperAdmin()
@@ -17,13 +18,15 @@ export default async function SuperAdminLayout({ children }: { children: React.R
 
   return (
     <SidebarProvider>
-      <SuperAdminSidebar
-        user={{ email: user.email }}
-        showEscriturasLab={isEscriturasLabEnabled()}
-      />
-      <SidebarInset className="bg-slate-50 flex flex-col min-h-svh">
-        <main className="flex-1 overflow-auto outline-none">{children}</main>
-      </SidebarInset>
+      <CommandPaletteProvider>
+        <SuperAdminSidebar
+          user={{ email: user.email }}
+          showEscriturasLab={isEscriturasLabEnabled()}
+        />
+        <SidebarInset className="flex flex-col min-h-svh">
+          <main className="flex-1 overflow-auto outline-none">{children}</main>
+        </SidebarInset>
+      </CommandPaletteProvider>
     </SidebarProvider>
   )
 }

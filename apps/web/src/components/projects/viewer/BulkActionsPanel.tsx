@@ -1,12 +1,7 @@
 import { useState, useMemo } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  Loading02Icon,
-  Tick02Icon,
-  Cancel01Icon,
-  Money01Icon,
-  Layers01Icon,
-} from '@hugeicons/core-free-icons'
+import { Tick02Icon, Cancel01Icon, Money01Icon, Layers01Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -171,11 +166,7 @@ export function BulkActionsPanel({
               disabled={!targetState || isUpdatingState}
               onClick={handleStateUpdate}
             >
-              {isUpdatingState ? (
-                <HugeiconsIcon icon={Loading02Icon} className="w-3 h-3 animate-spin" />
-              ) : (
-                'Aplicar'
-              )}
+              {isUpdatingState ? <Spinner className="w-3 h-3" /> : 'Aplicar'}
             </Button>
           </CardContent>
         </Card>
@@ -205,11 +196,7 @@ export function BulkActionsPanel({
               disabled={!targetPrice || isUpdatingPrice}
               onClick={handlePriceUpdate}
             >
-              {isUpdatingPrice ? (
-                <HugeiconsIcon icon={Loading02Icon} className="w-3 h-3 animate-spin" />
-              ) : (
-                'Aplicar'
-              )}
+              {isUpdatingPrice ? <Spinner className="w-3 h-3" /> : 'Aplicar'}
             </Button>
           </CardContent>
         </Card>
@@ -237,9 +224,9 @@ export function BulkActionsPanel({
                   <span
                     className={cn(
                       'w-2 h-2 rounded-full',
-                      f.properties?.estado === 'disponible' && 'bg-emerald-500',
-                      f.properties?.estado === 'reservado' && 'bg-amber-500',
-                      f.properties?.estado === 'vendido' && 'bg-red-500'
+                      f.properties?.estado === 'disponible' && 'bg-status-available',
+                      f.properties?.estado === 'reservado' && 'bg-status-reserved',
+                      f.properties?.estado === 'vendido' && 'bg-status-sold'
                     )}
                   />
                 </div>

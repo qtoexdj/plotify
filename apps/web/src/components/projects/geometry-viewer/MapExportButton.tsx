@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Download02Icon, Loading02Icon } from '@hugeicons/core-free-icons'
+import { Download02Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
@@ -257,7 +258,7 @@ export function MapExportButton({
           aria-label="Exportar plano como PDF"
         >
           {isExporting ? (
-            <HugeiconsIcon icon={Loading02Icon} className="w-4 h-4 animate-spin" />
+            <Spinner className="w-4 h-4" />
           ) : (
             <HugeiconsIcon icon={Download02Icon} className="w-4 h-4" />
           )}

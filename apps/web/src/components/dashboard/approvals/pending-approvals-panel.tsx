@@ -1,17 +1,20 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Check,
-  X,
-  Loader2,
-  ClipboardList,
-  User,
-  MapPin,
-  DollarSign,
-  Calendar,
-  Landmark,
-} from 'lucide-react'
+  Tick02Icon as Check,
+  Cancel01Icon as X,
+  ClipboardIcon as ClipboardList,
+  UserIcon as User,
+  Location01Icon as MapPin,
+  Dollar01Icon as DollarSign,
+  Calendar01Icon as Calendar,
+  BankIcon as Landmark,
+} from '@hugeicons/core-free-icons'
+import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
+import { EmptyState } from '@/components/dashboard/empty-state'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -156,7 +159,7 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
     return (
       <Card className="border-muted bg-muted/40">
         <CardContent className="h-[250px] flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Spinner className="h-8 w-8" />
         </CardContent>
       </Card>
     )
@@ -166,7 +169,7 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
     <Card className="border-muted bg-muted/40 overflow-hidden relative shadow-sm">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <ClipboardList className="h-5 w-5 text-primary" />
+          <HugeiconsIcon icon={ClipboardList} className="h-5 w-5 text-primary" />
           Aprobaciones Pendientes
           {approvals.length > 0 && (
             <Badge variant="destructive" className="ml-auto animate-pulse">
@@ -182,13 +185,11 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
 
       <CardContent className="space-y-4">
         {approvals.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground animate-in fade-in duration-300">
-            <ClipboardList className="h-12 w-12 text-muted/60 mb-3 stroke-[1.2]" />
-            <p className="font-medium text-sm text-slate-700">Todo al día</p>
-            <p className="text-xs max-w-xs mt-1">
-              No hay solicitudes de aprobación pendientes para tu organización en este momento.
-            </p>
-          </div>
+          <EmptyState
+            icon={CheckmarkCircle02Icon}
+            title="Todo al día"
+            description="No hay solicitudes de aprobación pendientes para tu organización en este momento."
+          />
         ) : (
           <div className="grid gap-4 max-h-[500px] overflow-y-auto pr-1">
             {approvals.map((approval) => {
@@ -231,8 +232,8 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
                           variant="outline"
                           className={
                             approval.sale_mode === 'direct'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-purple-50 text-purple-700 border-purple-200'
+                              ? 'bg-info/10 text-info border-info/20'
+                              : 'bg-common-area/10 text-common-area border-common-area/20'
                           }
                         >
                           {approval.sale_mode === 'direct' ? 'Venta Directa' : 'Venta s/ Reserva'}
@@ -240,7 +241,7 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
                       ) : (
                         <Badge
                           variant="outline"
-                          className="bg-emerald-50 text-emerald-700 border-emerald-200"
+                          className="bg-success/10 text-success border-success/20"
                         >
                           Reserva
                         </Badge>
@@ -250,32 +251,47 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-slate-600">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="font-semibold text-slate-700">Cliente:</span>{' '}
+                        <HugeiconsIcon
+                          icon={User}
+                          className="h-3.5 w-3.5 text-muted-foreground/60"
+                        />
+                        <span className="font-semibold text-foreground">Cliente:</span>{' '}
                         {approval.payload.cliente_nombre} ({approval.payload.cliente_run})
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <DollarSign className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="font-semibold text-slate-700">
+                        <HugeiconsIcon
+                          icon={DollarSign}
+                          className="h-3.5 w-3.5 text-muted-foreground/60"
+                        />
+                        <span className="font-semibold text-foreground">
                           {isSale ? 'Valor Final:' : 'Monto Reserva:'}
                         </span>{' '}
                         {valorStr}
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="font-semibold text-slate-700">Vendedor:</span>{' '}
+                        <HugeiconsIcon
+                          icon={MapPin}
+                          className="h-3.5 w-3.5 text-muted-foreground/60"
+                        />
+                        <span className="font-semibold text-foreground">Vendedor:</span>{' '}
                         {approval.vendor_name}
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="font-semibold text-slate-700">Firma:</span> {fechaFirma}
+                        <HugeiconsIcon
+                          icon={Calendar}
+                          className="h-3.5 w-3.5 text-muted-foreground/60"
+                        />
+                        <span className="font-semibold text-foreground">Firma:</span> {fechaFirma}
                       </div>
                       {approval.payload.notaria && (
                         <div className="flex items-center gap-1.5 sm:col-span-2">
-                          <Landmark className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="font-semibold text-slate-700">Notaría:</span>{' '}
+                          <HugeiconsIcon
+                            icon={Landmark}
+                            className="h-3.5 w-3.5 text-muted-foreground/60"
+                          />
+                          <span className="font-semibold text-foreground">Notaría:</span>{' '}
                           {approval.payload.notaria}
                         </div>
                       )}
@@ -288,12 +304,12 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
                       size="sm"
                       onClick={() => handleDecision(approval.id, 'reject')}
                       disabled={actionLoading !== null}
-                      className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-medium h-9 px-3.5 flex items-center gap-1.5 flex-1 md:flex-initial justify-center"
+                      className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive font-medium h-9 px-3.5 flex items-center gap-1.5 flex-1 md:flex-initial justify-center"
                     >
                       {actionLoading === approval.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Spinner className="h-4 w-4" />
                       ) : (
-                        <X className="h-4 w-4" />
+                        <HugeiconsIcon icon={X} className="h-4 w-4" />
                       )}
                       Rechazar
                     </Button>
@@ -301,12 +317,12 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
                       size="sm"
                       onClick={() => handleDecision(approval.id, 'approve')}
                       disabled={actionLoading !== null}
-                      className="bg-green-600 hover:bg-green-700 text-white font-medium h-9 px-3.5 flex items-center gap-1.5 flex-1 md:flex-initial justify-center"
+                      className="bg-success text-success-foreground hover:bg-success/90 font-medium h-9 px-3.5 flex items-center gap-1.5 flex-1 md:flex-initial justify-center"
                     >
                       {actionLoading === approval.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Spinner className="h-4 w-4" />
                       ) : (
-                        <Check className="h-4 w-4" />
+                        <HugeiconsIcon icon={Check} className="h-4 w-4" />
                       )}
                       Aprobar
                     </Button>
