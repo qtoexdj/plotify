@@ -41,7 +41,9 @@ describe('T009 - Documentos por proyecto', () => {
     const legalCenter = read('src/components/projects/detail/legal-control-center.tsx')
 
     expect(projectPage).toContain('useSearchParams')
-    expect(projectPage).toContain("requestedTab === 'legal'")
+    expect(projectPage).toContain("'legal'")
+    expect(projectPage).toContain('validTabs.includes(requestedTab)')
+    expect(projectPage).toContain('?tab=${value}')
     expect(legalCenter).toContain('id="variables-legales"')
   })
 

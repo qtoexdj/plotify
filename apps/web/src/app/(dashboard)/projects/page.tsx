@@ -9,8 +9,21 @@ import type { ProjectWithMetrics } from '@/types/database.types'
 import { SkeletonCard } from '@/components/dashboard/skeleton-card'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
 import { BentoGrid } from '@/components/dashboard/bento-grid'
 import { StatusBadge } from '@/components/ui/status-badge'
+
+const projectStatusConfig: Record<
+  string,
+  { label: string; variant: 'success' | 'info' | 'warning' | 'neutral' }
+> = {
+  operational: { label: 'Operacional', variant: 'success' },
+  validated: { label: 'Validado', variant: 'info' },
+  imported: { label: 'Importado', variant: 'info' },
+  draft: { label: 'Borrador', variant: 'neutral' },
+  activo: { label: 'Activo', variant: 'success' },
+  inactivo: { label: 'Inactivo', variant: 'neutral' },
+}
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectWithMetrics[]>([])
@@ -76,6 +89,21 @@ export default function ProjectsPage() {
 
   return (
     <PageShell>
+      <PageHeader
+        title="Proyectos"
+        description="Administra tus loteos, disponibilidad y avance comercial."
+        action={
+          isAdmin ? (
+            <Button asChild size="lg" className="min-h-11 px-5 font-semibold">
+              <Link href="/onboarding/new">
+                <HugeiconsIcon icon={PlusSignIcon} />
+                Nuevo Proyecto
+              </Link>
+            </Button>
+          ) : null
+        }
+      />
+
       {projects.length === 0 ? (
         <EmptyState
           icon={Folder02Icon}
@@ -86,32 +114,12 @@ export default function ProjectsPage() {
         />
       ) : (
         <section className="rounded-2xl bg-background/70 p-4 shadow-sm ring-1 ring-border/40 sm:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0 space-y-3">
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <span>Proyectos</span>
-                <span>/</span>
-                <span className="font-medium text-foreground">Portafolio</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
-                  Proyectos
-                </h1>
-                <StatusBadge variant="available">{totals.available} disponibles</StatusBadge>
-              </div>
-            </div>
-
-            {isAdmin ? (
-              <Link href="/onboarding/new">
-                <Button size="lg" className="min-h-11 px-5 font-semibold">
-                  <HugeiconsIcon icon={PlusSignIcon} />
-                  Nuevo Proyecto
-                </Button>
-              </Link>
-            ) : null}
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>Portafolio</span>
+            <StatusBadge variant="available">{totals.available} disponibles</StatusBadge>
           </div>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-2xl bg-card px-5 py-4 shadow-xs">
               <p className="text-sm text-muted-foreground">Lotes totales</p>
               <p className="mt-1 font-display text-3xl font-semibold text-foreground">
@@ -179,11 +187,12 @@ export default function ProjectsPage() {
                         <StatusBadge variant="reserved">{project.lotes_reservados}</StatusBadge>
                       </td>
                       <td>
-                        <StatusBadge
-                          variant={project.estado === 'operational' ? 'success' : 'neutral'}
-                        >
-                          {project.estado}
-                        </StatusBadge>
+                        {(() => {
+                          const status =
+                            projectStatusConfig[project.estado ?? 'draft'] ??
+                            projectStatusConfig.draft
+                          return <StatusBadge variant={status.variant}>{status.label}</StatusBadge>
+                        })()}
                       </td>
                       <td className="text-right">
                         <Button asChild variant="outline" size="sm" className="min-h-11">

@@ -2,7 +2,7 @@
 
 import { use, useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Delete02Icon, PencilEdit02Icon, PlusSignIcon } from '@hugeicons/core-free-icons'
+import { Delete02Icon, PlusSignIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GeometryViewer } from '@/components/projects/geometry-viewer'
@@ -14,6 +14,8 @@ import { DocumentsTab } from '@/components/projects/detail/documents-tab'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/ui/status-badge'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,20 +43,24 @@ const lotStatusConfig = {
   vendido: { label: 'Vendido', variant: 'sold' },
 } as const
 
-function ProjectWireframeSummary({
+const projectStatusConfig: Record<
+  string,
+  { label: string; variant: 'success' | 'info' | 'warning' | 'neutral' }
+> = {
+  operational: { label: 'Operacional', variant: 'success' },
+  validated: { label: 'Validado', variant: 'info' },
+  imported: { label: 'Importado', variant: 'info' },
+  draft: { label: 'Borrador', variant: 'neutral' },
+  activo: { label: 'Activo', variant: 'success' },
+  inactivo: { label: 'Inactivo', variant: 'neutral' },
+}
+
+function ProjectSummaryPanel({
   project,
   lots,
-  onNewSale,
-  isAdmin,
-  isDeleting,
-  onDelete,
 }: {
   project: ProjectWithMetrics
   lots: LotWithRecord[]
-  onNewSale: () => void
-  isAdmin: boolean
-  isDeleting: boolean
-  onDelete: () => void
 }) {
   const tableLots = lots
     .filter((lot) => lot.estado !== 'disponible' || lot.lot_records?.cliente_nombre)
@@ -62,73 +68,24 @@ function ProjectWireframeSummary({
   const enMesa = lots.filter((lot) => lot.verified_status === 'draft').length
   const revenue = lots.reduce((sum, lot) => sum + (lot.lot_records?.valor ?? lot.precio ?? 0), 0)
   const revenueUf = revenue > 0 ? Math.round(revenue / 39000) : 0
+  const status = projectStatusConfig[project.estado ?? 'draft'] ?? projectStatusConfig.draft
 
   return (
-    <section className="rounded-2xl bg-background/70 p-4 shadow-sm ring-1 ring-border/40 sm:p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span>Proyectos</span>
-            <span>/</span>
-            <span className="font-medium text-foreground">{project.name}</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
-              {project.name}
-            </h1>
+    <section className="rounded-2xl bg-background/70 p-3 shadow-sm ring-1 ring-border/40 sm:p-4">
+      <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_1fr_1fr]">
+        <div className="rounded-2xl bg-card px-4 py-3 shadow-xs">
+          <p className="text-sm text-muted-foreground">Estado del proyecto</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <StatusBadge variant={status.variant}>{status.label}</StatusBadge>
             <StatusBadge variant="available">{project.lotes_libres} disponibles</StatusBadge>
           </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {project.region} / {project.comuna}
+          </p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button className="min-h-11 px-5 font-semibold" onClick={onNewSale}>
-            <HugeiconsIcon icon={PlusSignIcon} />
-            Nueva venta
-          </Button>
-          {isAdmin ? (
-            <>
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-11 md:hidden"
-                aria-label="Editar"
-              >
-                <HugeiconsIcon icon={PencilEdit02Icon} />
-              </Button>
-              <Button variant="outline" className="hidden min-h-11 md:flex">
-                <HugeiconsIcon icon={PencilEdit02Icon} />
-                Editar
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={isDeleting} className="min-h-11">
-                    <HugeiconsIcon icon={Delete02Icon} />
-                    <span className="hidden sm:inline">Eliminar</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar proyecto?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta acción no se puede deshacer. Se eliminarán todos los datos asociados
-                      incluidos lotes, geometrías y clientes.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDelete}>Eliminar</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl bg-card px-5 py-4 shadow-xs">
+        <div className="rounded-2xl bg-card px-4 py-3 shadow-xs">
           <p className="text-sm text-muted-foreground">Ventas registradas</p>
-          <p className="mt-1 font-display text-3xl font-semibold text-foreground">
+          <p className="mt-1 font-display text-2xl font-semibold text-foreground">
             {revenueUf > 0
               ? `UF ${revenueUf.toLocaleString('es-CL')}`
               : `${project.lotes_vendidos}`}
@@ -137,9 +94,9 @@ function ProjectWireframeSummary({
             {revenueUf > 0 ? 'valor acumulado' : 'lotes vendidos'}
           </p>
         </div>
-        <div className="rounded-2xl bg-card px-5 py-4 shadow-xs">
+        <div className="rounded-2xl bg-card px-4 py-3 shadow-xs">
           <p className="text-sm text-muted-foreground">Reservados</p>
-          <p className="mt-1 font-display text-3xl font-semibold text-foreground">
+          <p className="mt-1 font-display text-2xl font-semibold text-foreground">
             {project.lotes_reservados}
           </p>
           <p className="text-sm font-medium text-warning">
@@ -148,29 +105,29 @@ function ProjectWireframeSummary({
               : `${project.lotes_reservados} por revisar`}
           </p>
         </div>
-        <div className="rounded-2xl bg-primary px-5 py-4 text-primary-foreground shadow-xs">
+        <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-xs">
           <p className="text-sm text-primary-foreground/80">En mesa</p>
-          <p className="mt-1 font-display text-3xl font-semibold">{enMesa}</p>
+          <p className="mt-1 font-display text-2xl font-semibold">{enMesa}</p>
           <p className="text-sm font-medium text-primary-foreground/85">
             {enMesa === 1 ? '1 bloqueada — revisar' : `${enMesa} bloqueadas — revisar`}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl bg-card shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
-            <thead className="text-muted-foreground">
-              <tr className="[&_th]:px-5 [&_th]:py-3 [&_th]:font-medium">
-                <th>Lote</th>
-                <th>Comprador</th>
-                <th>ROL</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {tableLots.length > 0 ? (
-                tableLots.map((lot) => {
+      {tableLots.length > 0 ? (
+        <div className="mt-3 overflow-hidden rounded-2xl bg-card shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[620px] text-left text-sm">
+              <thead className="text-muted-foreground">
+                <tr className="[&_th]:px-5 [&_th]:py-3 [&_th]:font-medium">
+                  <th>Lote</th>
+                  <th>Comprador</th>
+                  <th>ROL</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {tableLots.map((lot) => {
                   const status = lotStatusConfig[lot.estado] ?? lotStatusConfig.disponible
                   return (
                     <tr key={lot.id} className="[&_td]:px-5 [&_td]:py-3">
@@ -184,18 +141,12 @@ function ProjectWireframeSummary({
                       </td>
                     </tr>
                   )
-                })
-              ) : (
-                <tr>
-                  <td className="px-5 py-10 text-center text-muted-foreground" colSpan={4}>
-                    Aún no hay ventas o reservas registradas.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : null}
     </section>
   )
 }
@@ -204,6 +155,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { projectId } = use(params)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const viewerSectionRef = useRef<HTMLDivElement>(null)
 
   // Data State
   const [project, setProject] = useState<ProjectWithMetrics | null>(null)
@@ -320,7 +272,10 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
   const requestedTab = searchParams.get('tab')
   const [selectedTab, setSelectedTab] = useState('overview')
-  const activeTab = requestedTab === 'legal' ? 'legal' : selectedTab
+  const validTabs = isAdmin
+    ? ['overview', 'lots', 'viewer', 'documents', 'clients', 'legal']
+    : ['overview', 'lots', 'viewer', 'documents']
+  const activeTab = requestedTab && validTabs.includes(requestedTab) ? requestedTab : selectedTab
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -345,29 +300,34 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
   const handleTabChange = (value: string) => {
     setSelectedTab(value)
-    if (requestedTab) {
-      router.replace(`/projects/${projectId}`, { scroll: false })
-    }
+    router.replace(`/projects/${projectId}${value === 'overview' ? '' : `?tab=${value}`}`, {
+      scroll: false,
+    })
     if (value === 'legal') {
       fetchLots()
     }
   }
 
+  const handleStartSale = () => {
+    handleTabChange('viewer')
+    window.setTimeout(() => {
+      viewerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }
+
   if (isLoading) {
     return (
-      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-6 w-48 md:h-8 md:w-64" />
-            <Skeleton className="h-4 w-40" />
-          </div>
-          <Skeleton className="h-9 w-20 md:h-10 md:w-24" />
-        </div>
+      <PageShell>
+        <PageHeader
+          title="Cargando proyecto"
+          description="Preparando resumen, lotes y visor del proyecto."
+          action={<Skeleton className="h-11 w-32" />}
+        />
         <div className="space-y-2">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-48 md:h-64 w-full" />
         </div>
-      </div>
+      </PageShell>
     )
   }
 
@@ -376,15 +336,48 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   }
 
   return (
-    <div className="space-y-5 p-3 md:p-6">
-      <ProjectWireframeSummary
-        project={project}
-        lots={lots}
-        onNewSale={() => handleTabChange('viewer')}
-        isAdmin={isAdmin}
-        isDeleting={isDeleting}
-        onDelete={handleDelete}
+    <PageShell className="py-4 sm:py-5">
+      <PageHeader
+        title={project.name}
+        description={`${project.region} / ${project.comuna}`}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button className="min-h-11 px-5 font-semibold" onClick={handleStartSale}>
+              <HugeiconsIcon icon={PlusSignIcon} />
+              Nueva venta
+            </Button>
+            {isAdmin ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={isDeleting}
+                    className="min-h-11 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} />
+                    <span className="hidden sm:inline">Eliminar</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Eliminar proyecto?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción no se puede deshacer. Se eliminarán todos los datos asociados
+                      incluidos lotes, geometrías y clientes.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
+          </div>
+        }
       />
+
+      <ProjectSummaryPanel project={project} lots={lots} />
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 md:space-y-6">
         <div className="flex overflow-x-auto px-1">
@@ -430,9 +423,11 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         </TabsContent>
 
         <TabsContent value="viewer">
-          {/* GeometryViewer ya maneja su propio estado interno, pero idealmente debería recibir datos
-               o tener un bus de eventos si quisieramos sincronizar selección */}
-          <GeometryViewer projectId={projectId} projectName={project.name} isAdmin={isAdmin} />
+          <div ref={viewerSectionRef}>
+            {/* GeometryViewer ya maneja su propio estado interno, pero idealmente debería recibir datos
+                 o tener un bus de eventos si quisieramos sincronizar selección */}
+            <GeometryViewer projectId={projectId} projectName={project.name} isAdmin={isAdmin} />
+          </div>
         </TabsContent>
 
         <TabsContent value="documents">
@@ -451,6 +446,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           </TabsContent>
         )}
       </Tabs>
-    </div>
+    </PageShell>
   )
 }

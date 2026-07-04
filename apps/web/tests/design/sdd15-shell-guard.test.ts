@@ -43,12 +43,15 @@ describe('SDD 015 shell and responsive guardrails', () => {
     expect(appSidebar).toContain('text-sidebar-foreground/60')
   })
 
-  it('keeps project detail aligned to the dashboard wireframe summary', () => {
+  it('keeps project detail aligned to the operational viewer summary', () => {
     const projectPage = readSrc('app/(dashboard)/projects/[projectId]/page.tsx')
 
-    expect(projectPage).toContain('ProjectWireframeSummary')
-    expect(projectPage).toContain('Proyectos')
+    expect(projectPage).toContain('PageShell')
+    expect(projectPage).toContain('PageHeader')
+    expect(projectPage).toContain('ProjectSummaryPanel')
     expect(projectPage).toContain('Nueva venta')
+    expect(projectPage).toContain('handleStartSale')
+    expect(projectPage).toContain('scrollIntoView')
     expect(projectPage).toContain('Ventas registradas')
     expect(projectPage).toContain('Reservados')
     expect(projectPage).toContain('En mesa')
