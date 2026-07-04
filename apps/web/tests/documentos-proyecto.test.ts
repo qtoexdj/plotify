@@ -42,6 +42,7 @@ describe('T009 - Documentos por proyecto', () => {
 
     expect(projectPage).toContain('useSearchParams')
     expect(projectPage).toContain("requestedTab === 'legal'")
+    expect(projectPage).toContain("requestedTab === 'documents'")
     expect(legalCenter).toContain('id="variables-legales"')
   })
 

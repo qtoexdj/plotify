@@ -223,10 +223,10 @@ describe('T029 — llm_disabled manual mode and superseded banner', () => {
     expect(panelSource).toContain('reemplazado por una versión más reciente')
   })
 
-  it('keeps the title panel out of the simplified legal control center', () => {
+  it('mounts the title panel in the legal control center', () => {
     const centerSource = readSource('../src/components/projects/detail/legal-control-center.tsx')
-    expect(centerSource).not.toContain('TitleCasePanel')
-    expect(centerSource).not.toContain('@/components/projects/legal/title-case-panel')
+    expect(centerSource).toContain('TitleCasePanel')
+    expect(centerSource).toContain('@/components/projects/legal/title-case-panel')
   })
 })
 

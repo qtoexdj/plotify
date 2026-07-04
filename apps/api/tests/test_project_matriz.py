@@ -28,9 +28,15 @@ class _FakeResult:
 
 
 class _FakeQuery:
-    def __init__(self, store: dict[str, list[dict]], table: str) -> None:
+    def __init__(
+        self,
+        store: dict[str, list[dict]],
+        table: str,
+        none_result_tables: set[str] | None = None,
+    ) -> None:
         self._store = store
         self._table = table
+        self._none_result_tables = none_result_tables or set()
         self._action = "select"
         self._payload: Any = None
         self._single = False
@@ -66,6 +72,8 @@ class _FakeQuery:
         return self
 
     def execute(self) -> _FakeResult:
+        if self._table in self._none_result_tables:
+            return None  # type: ignore[return-value]
         rows = self._store.setdefault(self._table, [])
         if self._action == "insert":
             items = self._payload if isinstance(self._payload, list) else [self._payload]
@@ -82,11 +90,16 @@ class _FakeQuery:
 
 
 class _FakeSupabase:
-    def __init__(self, tables: dict[str, list[dict]]) -> None:
+    def __init__(
+        self,
+        tables: dict[str, list[dict]],
+        none_result_tables: set[str] | None = None,
+    ) -> None:
         self._store = {name: list(rows) for name, rows in tables.items()}
+        self._none_result_tables = none_result_tables or set()
 
     def table(self, name: str) -> _FakeQuery:
-        return _FakeQuery(self._store, name)
+        return _FakeQuery(self._store, name, self._none_result_tables)
 
 
 # ─── Clasificacion de huecos ──────────────────────────────────────────────────
@@ -203,3 +216,34 @@ async def test_project_snapshot_omits_sale_data_and_injects_project_sii() -> Non
     assert snapshot["sii.rol_matriz"]["value_text"] == "123-45"
     assert snapshot["sii.rol_matriz"]["state"] == "approved"
     assert snapshot["sii.comuna"]["value_text"] == "Teno"
+
+
+async def test_project_snapshot_tolerates_missing_project_sii_response() -> None:
+    tables = {
+        "variable_resolutions": [
+            {
+                "id": "v1",
+                "variable_key": "vendedor.nombre",
+                "state": "approved",
+                "value_text": "Inmobiliaria Teno SpA",
+                "value_json": None,
+                "source_type": "manual",
+                "source_ref": {},
+                "confidence": 1.0,
+                "reviewed_at": None,
+            },
+        ],
+        "project_legal_data": [],
+        "title_analyses": [],
+        "legal_documents": [],
+        "document_evidence": [],
+    }
+    supabase = _FakeSupabase(tables, none_result_tables={"project_legal_data"})
+
+    snapshot, _evidence = await fetch_project_matriz_snapshot(
+        organization_id="org-1", project_id="proj-1", supabase=supabase
+    )
+
+    assert snapshot["vendedor.nombre"]["value_text"] == "Inmobiliaria Teno SpA"
+    assert "sii.rol_matriz" not in snapshot
+    assert "sii.comuna" not in snapshot

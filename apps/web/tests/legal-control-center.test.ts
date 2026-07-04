@@ -5,6 +5,7 @@ import path from 'path'
 import { LegalControlCenter } from '@/components/projects/detail/legal-control-center'
 import { LegalEvidenceViewer } from '@/components/projects/legal/legal-evidence-viewer'
 import { LegalVariableEditor } from '@/components/projects/legal/legal-variable-editor'
+import { TitleCasePanel } from '@/components/projects/legal/title-case-panel'
 import { VariableMatrix } from '@/components/projects/legal/variable-matrix/variable-matrix'
 
 const centerPath = path.resolve(
@@ -26,11 +27,13 @@ describe('SDD 013 US4 - Centro de Control Legal unificado', () => {
     expect(LegalControlCenter).toBeTypeOf('function')
     expect(LegalVariableEditor).toBeTypeOf('function')
     expect(LegalEvidenceViewer).toBeTypeOf('function')
+    expect(TitleCasePanel).toBeTypeOf('function')
     expect(VariableMatrix).toBeTypeOf('function')
   })
 
-  it('monta solo la matriz de variables y el acceso a la escritura en el centro legal', () => {
+  it('monta el panel de título, la matriz de variables y el acceso a la escritura en el centro legal', () => {
     const centerSource = fs.readFileSync(centerPath, 'utf8')
+    expect(centerSource).toContain('TitleCasePanel')
     expect(centerSource).toContain('<VariableMatrix')
     expect(centerSource).toContain('/documentos/matriz/proyecto/')
     expect(centerSource).not.toContain('SagArticleTwoPanel')
@@ -38,7 +41,6 @@ describe('SDD 013 US4 - Centro de Control Legal unificado', () => {
     expect(centerSource).not.toContain('Roles SII por lote')
     expect(centerSource).not.toContain('LegalDocumentStatusPanel')
     expect(centerSource).not.toContain('EscrituraReadinessPanel')
-    expect(centerSource).not.toContain('TitleCasePanel')
     expect(centerSource).not.toContain('/legal-documents')
     expect(centerSource).not.toContain('/legal-roles')
   })

@@ -162,7 +162,8 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
   const requestedTab = searchParams.get('tab')
   const [selectedTab, setSelectedTab] = useState('overview')
-  const activeTab = requestedTab === 'legal' ? 'legal' : selectedTab
+  const activeTab =
+    requestedTab === 'legal' || requestedTab === 'documents' ? requestedTab : selectedTab
 
   const handleTabChange = (value: string) => {
     setSelectedTab(value)

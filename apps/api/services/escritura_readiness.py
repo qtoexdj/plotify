@@ -580,7 +580,7 @@ async def _fetch_project_sii_common_data(
             )
             return None
         raise
-    return _first_row(result.data)
+    return _first_row(getattr(result, "data", None))
 
 
 async def _fetch_active_sii_certificate_ids(

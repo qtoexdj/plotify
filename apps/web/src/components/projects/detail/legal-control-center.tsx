@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TitleCasePanel } from '@/components/projects/legal/title-case-panel'
 import { VariableMatrix } from '@/components/projects/legal/variable-matrix/variable-matrix'
 
 /**
@@ -18,6 +20,8 @@ interface LegalControlCenterProps {
 }
 
 export function LegalControlCenter({ projectId, projectName }: LegalControlCenterProps) {
+  const router = useRouter()
+
   return (
     <section id="variables-legales" className="space-y-6" aria-label="Centro de Control Legal">
       <div className="flex flex-col gap-2 border-b border-border pb-4 md:flex-row md:items-center md:justify-between">
@@ -42,6 +46,11 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
           </Link>
         </Button>
       </div>
+
+      <TitleCasePanel
+        projectId={projectId}
+        onNavigateToDocuments={() => router.push(`/projects/${projectId}?tab=documents`)}
+      />
 
       <VariableMatrix projectId={projectId} projectName={projectName} />
     </section>
