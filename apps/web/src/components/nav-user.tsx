@@ -78,7 +78,7 @@ export function NavUser({
               <HugeiconsIcon
                 icon={isDark ? Moon01Icon : Sun01Icon}
                 className={`h-4 w-4 transition-all duration-300 ${
-                  isDark ? 'text-indigo-400 scale-105' : 'text-amber-500 scale-105'
+                  isDark ? 'text-info scale-105' : 'text-warning scale-105'
                 }`}
               />
               <span className="text-xs font-semibold text-muted-foreground">
@@ -102,7 +102,7 @@ export function NavUser({
               <HugeiconsIcon
                 icon={isDark ? Moon01Icon : Sun01Icon}
                 className={`h-4 w-4 transition-all duration-300 rotate-0 scale-100 hover:scale-110 active:scale-95 ${
-                  isDark ? 'text-indigo-400' : 'text-amber-500'
+                  isDark ? 'text-info' : 'text-warning'
                 }`}
               />
             </SidebarMenuButton>

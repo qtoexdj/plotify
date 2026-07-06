@@ -42,9 +42,7 @@ export function HeaderTitle({ workspaceName, userRole }: HeaderTitleProps) {
       <Badge
         variant="outline"
         className={`hidden sm:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border-none shadow-none ${
-          userRole === 'admin'
-            ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 dark:bg-indigo-500/15'
-            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-500/15'
+          userRole === 'admin' ? 'bg-info/10 text-info' : 'bg-success/10 text-success'
         }`}
       >
         {userRole === 'admin' ? 'Administrador' : 'Vendedor'}

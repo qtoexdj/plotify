@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +40,7 @@ export function GeometryViewer({
   isAdmin = false,
 }: GeometryViewerProps) {
   const isMobile = useIsMobile()
+  const viewerRef = useRef<HTMLDivElement | null>(null)
 
   // ─────────────────────────────────────────────────────────────────────────
   // State
@@ -64,8 +65,9 @@ export function GeometryViewer({
   const [isLoadingLot, setIsLoadingLot] = useState(false)
 
   // UI
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false)
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true)
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false)
+  const [viewerHeight, setViewerHeight] = useState<number | null>(null)
 
   // ─────────────────────────────────────────────────────────────────────────
   // Effects
@@ -194,6 +196,36 @@ export function GeometryViewer({
     return () => window.clearTimeout(timeoutId)
   }, [loadLotDetails])
 
+  useEffect(() => {
+    if (isLoading || error || !featureCollection) {
+      return
+    }
+
+    let frameId: number | null = null
+
+    const updateHeight = () => {
+      if (frameId !== null) window.cancelAnimationFrame(frameId)
+
+      frameId = window.requestAnimationFrame(() => {
+        const top = viewerRef.current?.getBoundingClientRect().top ?? 0
+        const bottomGap = 16
+        const availableHeight = Math.floor(window.innerHeight - top - bottomGap)
+
+        setViewerHeight(Math.max(320, availableHeight))
+      })
+    }
+
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    window.addEventListener('orientationchange', updateHeight)
+
+    return () => {
+      if (frameId !== null) window.cancelAnimationFrame(frameId)
+      window.removeEventListener('resize', updateHeight)
+      window.removeEventListener('orientationchange', updateHeight)
+    }
+  }, [error, featureCollection, isLoading])
+
   // ─────────────────────────────────────────────────────────────────────────
   // Computed Values
   // ─────────────────────────────────────────────────────────────────────────
@@ -319,7 +351,7 @@ export function GeometryViewer({
     return (
       <div className="flex items-center justify-center h-[calc(100dvh-160px)] md:h-[calc(100vh-220px)] min-h-96 bg-muted/50 rounded-xl border border-border">
         <div className="flex flex-col items-center gap-3">
-          <Spinner className="w-8 h-8 text-primary" />
+          <Spinner className="w-8 h-8" />
           <div className="h-3 w-32 rounded bg-muted animate-pulse" />
         </div>
       </div>
@@ -352,7 +384,7 @@ export function GeometryViewer({
     if (isLoadingLot && selectedIds.size === 1) {
       return (
         <div className="flex flex-col items-center justify-center py-12">
-          <Spinner className="w-8 h-8 text-primary mb-3" />
+          <Spinner className="w-8 h-8 mb-3" />
           <div className="h-3 w-24 rounded bg-sidebar-accent animate-pulse" />
         </div>
       )
@@ -415,7 +447,7 @@ export function GeometryViewer({
   // ─── TOP BAR ────────────────────────────────────────────────────────────
 
   const topBar = (
-    <div className="flex items-center justify-between px-3 md:px-4 py-2 bg-muted/50 border-b border-border z-10 relative flex-wrap gap-y-1.5">
+    <div className="relative z-10 flex flex-wrap items-center justify-between gap-y-1.5 border-b border-border bg-muted/50 px-3 py-2 dark:border-white/10 dark:bg-card/95 md:px-4">
       {/* Left: Title + Legend */}
       <div className="flex items-center gap-2 md:gap-4 flex-wrap">
         <div className="flex items-center gap-2">
@@ -424,7 +456,7 @@ export function GeometryViewer({
         </div>
 
         {/* Legend: hidden on very small screens */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-card rounded-md border border-border">
+        <div className="hidden items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 dark:border-white/10 dark:bg-muted/40 sm:flex">
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
             Leyenda:
           </span>
@@ -435,10 +467,10 @@ export function GeometryViewer({
                   <div
                     className={`w-2.5 h-2.5 rounded-sm border cursor-help ${
                       status === 'Disponible'
-                        ? 'bg-emerald-500 border-emerald-600'
+                        ? 'bg-status-available border-status-available'
                         : status === 'Reservado'
-                          ? 'bg-amber-500 border-amber-600'
-                          : 'bg-red-500 border-red-600'
+                          ? 'bg-status-reserved border-status-reserved'
+                          : 'bg-status-sold border-status-sold'
                     }`}
                   />
                 </TooltipTrigger>
@@ -454,13 +486,13 @@ export function GeometryViewer({
       {/* Right: Stats badges */}
       <div className="flex items-center gap-1 flex-wrap">
         <Badge className="bg-success/10 text-success border-success/25 dark:bg-success/15 dark:border-success/30 text-xs">
-          {stats.disponibles} <span className="hidden sm:inline ml-1">disp.</span>
+          {stats.disponibles} <span className="ml-1">disp.</span>
         </Badge>
         <Badge className="bg-warning/10 text-warning border-warning/25 dark:bg-warning/15 dark:border-warning/30 text-xs">
-          {stats.reservados} <span className="hidden sm:inline ml-1">res.</span>
+          {stats.reservados} <span className="ml-1">res.</span>
         </Badge>
         <Badge className="bg-destructive/10 text-destructive border-destructive/25 dark:bg-destructive/15 dark:border-destructive/30 text-xs">
-          {stats.vendidos} <span className="hidden sm:inline ml-1">vend.</span>
+          {stats.vendidos} <span className="ml-1">vend.</span>
         </Badge>
       </div>
     </div>
@@ -526,7 +558,11 @@ export function GeometryViewer({
   if (isMobile) {
     return (
       <TooltipProvider>
-        <div className="flex flex-col h-[calc(100dvh-130px)] min-h-96 bg-muted/20 rounded-xl overflow-hidden text-foreground">
+        <div
+          ref={viewerRef}
+          className="flex h-[calc(100dvh-130px)] min-h-80 flex-col overflow-hidden rounded-lg border border-border bg-muted/20 text-foreground shadow-sm ring-1 ring-border/40 dark:border-white/10 dark:bg-background/70 dark:ring-white/10"
+          style={viewerHeight ? { height: `${viewerHeight}px` } : undefined}
+        >
           {/* Top Bar */}
           {topBar}
 
@@ -579,10 +615,14 @@ export function GeometryViewer({
 
   return (
     <TooltipProvider>
-      <div className="flex h-[calc(100vh-220px)] min-h-125 bg-muted/25 rounded-xl overflow-hidden text-foreground">
+      <div
+        ref={viewerRef}
+        className="flex h-[calc(100dvh-220px)] min-h-80 overflow-hidden rounded-lg border border-border bg-muted/25 text-foreground shadow-sm ring-1 ring-border/40 dark:border-white/10 dark:bg-background/70 dark:ring-white/10"
+        style={viewerHeight ? { height: `${viewerHeight}px` } : undefined}
+      >
         {/* Left Side: Map Card */}
         <div className="flex-1 p-2 flex flex-col min-w-0">
-          <div className="flex-1 flex flex-col w-full h-full bg-card rounded-xl border border-border shadow-sm overflow-hidden relative">
+          <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden rounded-md border border-border bg-card shadow-sm dark:border-white/10 dark:bg-card">
             {/* Top Bar */}
             {topBar}
             {/* Map Area */}
@@ -594,13 +634,13 @@ export function GeometryViewer({
         <div
           className={cn(
             'p-2 transition-all duration-300 ease-in-out shrink-0',
-            isPanelCollapsed ? 'w-15' : 'w-96 lg:w-112.5'
+            isPanelCollapsed ? 'w-16' : 'w-96 lg:w-112.5'
           )}
         >
-          <div className="h-full bg-card rounded-xl shadow-lg ring-1 ring-border flex flex-col overflow-hidden">
+          <div className="flex h-full flex-col overflow-hidden rounded-md bg-card shadow-lg ring-1 ring-border dark:bg-card dark:ring-white/10">
             <div
               className={cn(
-                'h-14 flex items-center border-b border-border/70',
+                'h-14 flex items-center border-b border-border/70 dark:border-white/10',
                 isPanelCollapsed ? 'justify-center px-2' : 'px-4'
               )}
             >
@@ -624,9 +664,14 @@ export function GeometryViewer({
                 </div>
               )}
               <button
+                type="button"
                 onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
+                aria-label={
+                  isPanelCollapsed ? 'Expandir panel de detalles' : 'Colapsar panel de detalles'
+                }
+                aria-expanded={!isPanelCollapsed}
                 className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors',
+                  'flex size-11 min-w-11 items-center justify-center rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   !isPanelCollapsed && 'ml-auto'
                 )}
                 title={isPanelCollapsed ? 'Expandir panel' : 'Colapsar panel'}
@@ -648,7 +693,7 @@ export function GeometryViewer({
             ) : (
               <div className="flex-1 flex flex-col items-center pt-4 gap-2">
                 {selectedIds.size > 0 && (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10">
                     {selectedIds.size > 1 ? (
                       <HugeiconsIcon icon={Layers01Icon} className="w-4 h-4 text-primary" />
                     ) : (

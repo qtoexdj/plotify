@@ -39,7 +39,7 @@ describe('lots.service', () => {
     const result = await getLotsWithRecords('project-1')
 
     expect(from).toHaveBeenCalledWith('lots')
-    expect(select).toHaveBeenCalledWith('*, lot_records (*)')
+    expect(select).toHaveBeenCalledWith('*, lot_records (*), vendors (id, nombre)')
     expect(eq).toHaveBeenCalledWith('project_id', 'project-1')
     expect(order).toHaveBeenCalledWith('numero_lote', { ascending: true })
     expect(result[0].lot_records).toEqual({

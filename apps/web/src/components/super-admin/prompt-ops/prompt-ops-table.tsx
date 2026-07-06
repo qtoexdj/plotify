@@ -12,15 +12,15 @@ interface PromptOpsTableProps {
 export const CATEGORY_BADGE: Record<string, { label: string; className: string }> = {
   agent: {
     label: 'Agente',
-    className: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
+    className: 'bg-info/15 text-info hover:bg-info/15',
   },
   tool_instruction: {
     label: 'Tool',
-    className: 'bg-green-100 text-green-700 hover:bg-green-100',
+    className: 'bg-success/15 text-success hover:bg-success/15',
   },
   document: {
     label: 'Documento',
-    className: 'bg-orange-100 text-orange-700 hover:bg-orange-100',
+    className: 'bg-warning/15 text-warning hover:bg-warning/15',
   },
 }
 
@@ -30,7 +30,7 @@ export function PromptOpsTable({ prompts }: PromptOpsTableProps) {
   if (prompts.length === 0) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-slate-500 text-sm">
+        <CardContent className="py-12 text-center text-muted-foreground text-sm">
           No hay prompts registrados.
         </CardContent>
       </Card>
@@ -45,7 +45,7 @@ export function PromptOpsTable({ prompts }: PromptOpsTableProps) {
       <CardContent className="p-0">
         <div className="overflow-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500 border-b border-slate-200">
+            <thead className="bg-muted text-left text-muted-foreground border-b border-border">
               <tr>
                 <th className="px-6 py-3 font-medium">Nombre (slug)</th>
                 <th className="px-6 py-3 font-medium">Descripción</th>
@@ -58,32 +58,32 @@ export function PromptOpsTable({ prompts }: PromptOpsTableProps) {
               {prompts.map((prompt) => {
                 const badge = CATEGORY_BADGE[prompt.category] ?? {
                   label: prompt.category,
-                  className: 'bg-slate-100 text-slate-700 hover:bg-slate-100',
+                  className: 'bg-muted text-muted-foreground hover:bg-muted',
                 }
 
                 return (
                   <tr
                     key={prompt.id}
                     onClick={() => router.push(`/super-admin/prompt-ops/${prompt.id}`)}
-                    className="cursor-pointer hover:bg-slate-50 transition-colors"
+                    className="cursor-pointer hover:bg-muted transition-colors"
                   >
-                    <td className="px-6 py-4 font-medium text-slate-900 font-mono text-xs">
+                    <td className="px-6 py-4 font-medium text-foreground font-mono text-xs">
                       {prompt.slug}
                     </td>
-                    <td className="px-6 py-4 text-slate-600 max-w-xs truncate">
+                    <td className="px-6 py-4 text-muted-foreground max-w-xs truncate">
                       {prompt.description ?? '—'}
                     </td>
                     <td className="px-6 py-4">
                       <Badge className={badge.className}>{badge.label}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-slate-700">
+                    <td className="px-6 py-4 text-foreground">
                       {prompt.active_version ? (
                         <span>v{prompt.active_version.version}</span>
                       ) : (
-                        <span className="text-slate-400 italic">Sin versión activa</span>
+                        <span className="text-muted-foreground italic">Sin versión activa</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-muted-foreground">
                       {prompt.updated_at
                         ? new Date(prompt.updated_at).toLocaleDateString('es-CL', {
                             year: 'numeric',

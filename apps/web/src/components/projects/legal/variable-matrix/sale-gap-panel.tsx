@@ -1,6 +1,7 @@
 'use client'
 
-import { ShoppingCart } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ShoppingCart01Icon as ShoppingCart } from '@hugeicons/core-free-icons'
 import { LEGAL_VARIABLE_GROUP_LABELS } from '@/lib/legal/variable-resolution-types'
 
 /**
@@ -20,7 +21,7 @@ export function SaleGapPanel() {
     >
       <div className="flex items-center gap-2.5">
         <span className="flex size-7 items-center justify-center rounded-md bg-background text-muted-foreground">
-          <ShoppingCart className="size-4" aria-hidden />
+          <HugeiconsIcon icon={ShoppingCart} className="size-4" aria-hidden />
         </span>
         <div>
           <h3 className="text-sm font-semibold">Se completa en la venta</h3>

@@ -181,7 +181,7 @@ export function ProfileSettingsForm({ profile, email }: ProfileSettingsFormProps
               >
                 {isUploadingAvatar ? (
                   <>
-                    <Spinner className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <Spinner className="mr-2 h-4 w-4" />
                     Subiendo...
                   </>
                 ) : (
@@ -370,7 +370,7 @@ export function ProfileSettingsForm({ profile, email }: ProfileSettingsFormProps
                   >
                     {isPending ? (
                       <>
-                        <Spinner className="mr-2 h-4 w-4 text-primary-foreground" />
+                        <Spinner className="mr-2 h-4 w-4" />
                         Guardando...
                       </>
                     ) : (

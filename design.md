@@ -1,159 +1,267 @@
 ---
 name: 'Plotify Design System'
-version: '1.0.0'
+version: '2.0.0'
 author: 'Antigravity & Plotify Team'
 license: 'Apache-2.0'
 tokens:
   color:
-    # Colores Globales Base (Light Mode)
+    # Colores Globales Base (Light Mode) — dirección "Tinta nítida"
     light:
       background:
-        value: 'oklch(1 0 0)'
-        description: 'Fondo principal de la aplicación, blanco puro'
+        value: '#f6f6f6'
+        description: 'Superficie de página/panel, gris muy claro (no blanco puro) para separar del contenido por contraste, sin hairlines'
       foreground:
-        value: 'oklch(0.13 0.028 261.692)'
-        description: 'Texto principal, un azul grisáceo extremadamente oscuro que evita la fatiga del negro puro'
+        value: '#111111'
+        description: 'Tinta — texto principal, casi negro'
       card:
-        value: 'oklch(1 0 0)'
-        description: 'Fondo de tarjetas y contenedores elevados'
+        value: '#ffffff'
+        description: 'Fondo de tarjetas, blanco puro, sin borde — se separa del panel por contraste de superficie'
       card-foreground:
-        value: 'oklch(0.13 0.028 261.692)'
-        description: 'Texto dentro de tarjetas y contenedores'
+        value: '#111111'
+        description: 'Texto dentro de tarjetas'
       popover:
-        value: 'oklch(1 0 0)'
+        value: '#ffffff'
         description: 'Fondo de menús emergentes y popovers'
       popover-foreground:
-        value: 'oklch(0.13 0.028 261.692)'
+        value: '#111111'
         description: 'Texto de menús emergentes y popovers'
       primary:
-        value: 'oklch(0.488 0.243 264.376)'
-        description: 'Color de marca e interactivo principal, un azul eléctrico de alta saturación y croma'
+        value: '#a93439'
+        description: 'Carmesí — único acento de interactividad de la UI (botones, focus, ítem activo). Distinto de --brand (verde de marca) y de --destructive'
       primary-foreground:
-        value: 'oklch(0.97 0.014 254.604)'
-        description: 'Texto sobre botones y fondos primarios, un blanco frío con tinte azul'
+        value: '#ffffff'
+        description: 'Texto sobre fondos primarios — 6.5:1 AA'
       secondary:
-        value: 'oklch(0.967 0.001 286.375)'
-        description: 'Color secundario para elementos interactivos sutiles o secundarios'
+        value: '#ececec'
+        description: 'Fondo secundario para botones/controles sutiles'
       secondary-foreground:
-        value: 'oklch(0.21 0.006 285.885)'
+        value: '#111111'
         description: 'Texto sobre elementos secundarios'
       muted:
-        value: 'oklch(0.967 0.003 264.542)'
-        description: 'Color de fondo para elementos inactivos, deshabilitados o sutiles'
+        value: '#ececec'
+        description: 'Fondo para elementos inactivos o deshabilitados'
       muted-foreground:
-        value: 'oklch(0.551 0.027 264.364)'
-        description: 'Texto secundario, etiquetas e indicaciones sutiles'
+        value: '#4b5563'
+        description: 'Texto secundario — calibrado a 7:1 sobre --background (un tono más oscuro que el gris medio de marca para no fallar AA fuera de tarjetas)'
       accent:
-        value: 'oklch(0.967 0.003 264.542)'
-        description: 'Fondo para elementos con estado hover o destacados de forma sutil'
+        value: '#e9e9e9'
+        description: 'Fondo hover/destacado sutil'
       accent-foreground:
-        value: 'oklch(0.21 0.034 264.665)'
-        description: 'Texto en elementos con estado hover o destacados sutilmente'
+        value: '#111111'
+        description: 'Texto en estado hover'
       destructive:
-        value: 'oklch(0.577 0.245 27.325)'
-        description: 'Color para acciones críticas o de peligro, rojo de alta visibilidad'
+        value: '#dc2626'
+        description: 'Rojo para acciones críticas — token propio, no confundir con el carmesí de marca (--primary)'
+      destructive-foreground:
+        value: '#ffffff'
+        description: 'Texto sobre fondos destructivos — 4.8:1 AA'
+      success:
+        value: '#15803d'
+        description: 'Verde AA-safe para texto/badges de éxito (más oscuro que --brand para pasar 4.5:1 sobre blanco)'
+      success-foreground:
+        value: '#ffffff'
+        description: 'Texto/ícono sobre fondo success — 5:1 AA'
+      warning:
+        value: '#b45309'
+        description: 'Ámbar AA-safe para texto/badges de advertencia'
+      warning-foreground:
+        value: '#ffffff'
+        description: 'Texto sobre fondo warning — 5:1 AA'
+      info:
+        value: '#1d4ed8'
+        description: 'Azul para mensajes informativos'
+      info-foreground:
+        value: '#ffffff'
+        description: 'Texto sobre fondo info'
+      status-available:
+        value: 'var(--success)'
+        description: 'Estado de lote disponible — alias de --success'
+      status-available-foreground:
+        value: 'var(--success-foreground)'
+        description: 'Foreground de estado disponible'
+      status-reserved:
+        value: 'var(--warning)'
+        description: 'Estado de lote reservado — alias de --warning'
+      status-reserved-foreground:
+        value: 'var(--warning-foreground)'
+        description: 'Foreground de estado reservado'
+      status-sold:
+        value: '#6b7280'
+        description: 'Estado de lote vendido — neutro (no destructive; vendido es un cierre exitoso, no un error)'
+      status-sold-foreground:
+        value: '#ffffff'
+        description: 'Foreground de estado vendido — 4.8:1 AA'
       border:
-        value: 'oklch(0.928 0.006 264.531)'
-        description: 'Líneas divisorias y bordes de componentes'
+        value: '#e5e5e5'
+        description: 'Borde sutil — reservado a inputs y controles de formulario, no a separación de tarjetas/paneles'
       input:
-        value: 'oklch(0.928 0.006 264.531)'
-        description: 'Borde de inputs y elementos de formulario en estado de reposo'
+        value: '#e5e5e5'
+        description: 'Borde de inputs en reposo'
       ring:
-        value: 'oklch(0.707 0.022 261.325)'
-        description: 'Borde de enfoque (focus-ring) para accesibilidad con teclado'
+        value: 'rgba(169, 52, 57, 0.5)'
+        description: 'Anillo de foco, tono carmesí translúcido'
+      brand:
+        value: '#16a34a'
+        description: 'Verde de marca — color del plano del isotipo (Spinner/BrandLoader/BrandMark). Invariante de tema; nunca se usa como color de UI (botones, badges, estados)'
       sidebar:
-        value: 'oklch(0.985 0.002 247.839)'
-        description: 'Fondo del sidebar lateral'
+        value: '#121212'
+        description: 'Sidebar SIEMPRE oscuro, en ambos temas — panel flotante'
       sidebar-foreground:
-        value: 'oklch(0.13 0.028 261.692)'
-        description: 'Texto del sidebar lateral'
+        value: '#f5f5f5'
+        description: 'Texto del sidebar'
+      sidebar-primary:
+        value: '#e06565'
+        description: 'Carmesí claro — color del ícono en el ítem activo del sidebar'
+      sidebar-primary-foreground:
+        value: '#ffffff'
+        description: 'Foreground de sidebar-primary'
+      sidebar-accent:
+        value: '#1f1f1f'
+        description: 'Fondo elevado del ítem activo/hover del sidebar'
+      sidebar-accent-foreground:
+        value: '#f5f5f5'
+        description: 'Texto del ítem activo/hover'
+      sidebar-border:
+        value: 'rgba(255, 255, 255, 0.08)'
+        description: 'Borde sutil del panel del sidebar'
+      sidebar-ring:
+        value: '#e06565'
+        description: 'Anillo de foco dentro del sidebar'
 
     # Colores Globales Base (Dark Mode)
     dark:
       background:
-        value: 'oklch(0.13 0.028 261.692)'
-        description: 'Fondo principal en modo oscuro, el mismo azul grisáceo oscuro del foreground en modo claro'
+        value: '#161616'
+        description: 'Panel oscuro — no es gris azulado, es la variante oscura calibrada de la misma superficie'
       foreground:
-        value: 'oklch(0.985 0.002 247.839)'
-        description: 'Texto principal en modo oscuro, un blanco-azul frío extremadamente suave'
+        value: '#f5f5f5'
+        description: 'Tinta invertida — blanco suave'
       card:
-        value: 'oklch(0.21 0.034 264.665)'
-        description: 'Fondo de tarjetas elevadas en modo oscuro'
+        value: '#222222'
+        description: 'Tarjetas en modo oscuro, sin borde'
       card-foreground:
-        value: 'oklch(0.985 0.002 247.839)'
-        description: 'Texto dentro de tarjetas elevadas en modo oscuro'
+        value: '#f5f5f5'
+        description: 'Texto dentro de tarjetas oscuras'
       popover:
-        value: 'oklch(0.21 0.034 264.665)'
-        description: 'Fondo de popovers y menús en modo oscuro'
+        value: '#222222'
+        description: 'Fondo de popovers en modo oscuro'
       popover-foreground:
-        value: 'oklch(0.985 0.002 247.839)'
-        description: 'Texto en popovers y menús en modo oscuro'
+        value: '#f5f5f5'
+        description: 'Texto de popovers en modo oscuro'
       primary:
-        value: 'oklch(0.42 0.18 266)'
-        description: 'Azul primario adaptado para mayor legibilidad y menor fatiga en modo oscuro'
+        value: '#c24444'
+        description: 'Carmesí calibrado más claro para fondos oscuros — 5:1 AA con texto blanco'
       primary-foreground:
-        value: 'oklch(0.97 0.014 254.604)'
-        description: 'Texto sobre fondos primarios en modo oscuro'
+        value: '#ffffff'
+        description: 'Texto sobre primary en modo oscuro'
       secondary:
-        value: 'oklch(0.274 0.006 286.033)'
+        value: '#2a2a2a'
         description: 'Fondo secundario en modo oscuro'
       secondary-foreground:
-        value: 'oklch(0.985 0 0)'
+        value: '#f5f5f5'
         description: 'Texto secundario en modo oscuro'
       muted:
-        value: 'oklch(0.278 0.033 256.848)'
-        description: 'Fondo apagado o desactivado en modo oscuro'
+        value: '#2a2a2a'
+        description: 'Fondo apagado en modo oscuro'
       muted-foreground:
-        value: 'oklch(0.707 0.022 261.325)'
-        description: 'Texto secundario o atenuado en modo oscuro'
+        value: '#a1a1aa'
+        description: 'Texto secundario en modo oscuro — 7:1 AA sobre --background'
       accent:
-        value: 'oklch(0.278 0.033 256.848)'
-        description: 'Fondo destacado o hover en modo oscuro'
+        value: '#2a2a2a'
+        description: 'Fondo hover en modo oscuro'
       accent-foreground:
-        value: 'oklch(0.985 0.002 247.839)'
-        description: 'Texto de elementos hover o destacados en modo oscuro'
+        value: '#f5f5f5'
+        description: 'Texto hover en modo oscuro'
       destructive:
-        value: 'oklch(0.704 0.191 22.216)'
-        description: 'Rojo de peligro calibrado para fondos oscuros'
+        value: '#b91c1c'
+        description: 'Rojo de peligro calibrado para fondos oscuros — 6.5:1 AA con texto blanco'
+      destructive-foreground:
+        value: '#ffffff'
+        description: 'Texto sobre destructive en modo oscuro'
+      success:
+        value: '#4ade80'
+        description: 'Verde claro para modo oscuro'
+      success-foreground:
+        value: '#052e14'
+        description: 'Texto oscuro sobre success — 8.5:1 AA'
+      warning:
+        value: '#fbbf24'
+        description: 'Ámbar claro para modo oscuro'
+      warning-foreground:
+        value: '#1f1300'
+        description: 'Texto oscuro sobre warning'
+      info:
+        value: '#60a5fa'
+        description: 'Azul claro para modo oscuro'
+      info-foreground:
+        value: '#06264d'
+        description: 'Texto oscuro sobre info'
+      status-available:
+        value: 'var(--success)'
+        description: 'Estado disponible en modo oscuro'
+      status-available-foreground:
+        value: 'var(--success-foreground)'
+        description: 'Foreground de disponible'
+      status-reserved:
+        value: 'var(--warning)'
+        description: 'Estado reservado en modo oscuro'
+      status-reserved-foreground:
+        value: 'var(--warning-foreground)'
+        description: 'Foreground de reservado'
+      status-sold:
+        value: '#9ca3af'
+        description: 'Estado vendido en modo oscuro — neutro'
+      status-sold-foreground:
+        value: '#161616'
+        description: 'Foreground de vendido — 8.3:1 AA'
       border:
-        value: 'oklch(1 0 0 / 10%)'
-        description: 'Borde translúcido en modo oscuro para efectos sofisticados'
+        value: 'rgba(255, 255, 255, 0.1)'
+        description: 'Borde translúcido en modo oscuro, solo en inputs'
       input:
-        value: 'oklch(1 0 0 / 15%)'
-        description: 'Borde de formularios translúcido en modo oscuro'
+        value: 'rgba(255, 255, 255, 0.12)'
+        description: 'Borde de inputs en modo oscuro'
       ring:
-        value: 'oklch(0.551 0.027 264.364)'
-        description: 'Borde de foco en modo oscuro'
+        value: 'rgba(194, 68, 68, 0.5)'
+        description: 'Anillo de foco en modo oscuro'
       sidebar:
-        value: 'oklch(0.21 0.034 264.665)'
-        description: 'Fondo del sidebar en modo oscuro'
+        value: '#191919'
+        description: 'Sidebar oscuro en tema oscuro (tono ligeramente distinto al de tema claro)'
       sidebar-foreground:
-        value: 'oklch(0.985 0.002 247.839)'
+        value: '#f5f5f5'
         description: 'Texto del sidebar en modo oscuro'
-
-    # Paletas de Estado Específicas (KPIs y Lotes)
-    status:
-      total:
-        light: 'oklch(0.967 0.003 264.542)'
-        dark: 'oklch(0.278 0.033 256.848)'
-      available:
-        light: 'oklch(0.95 0.08 140)' # Verde suave
-        dark: 'oklch(0.25 0.07 140)'
-      reserved:
-        light: 'oklch(0.95 0.08 70)' # Ámbar suave
-        dark: 'oklch(0.25 0.07 70)'
-      sold:
-        light: 'oklch(0.94 0.08 250)' # Azul suave
-        dark: 'oklch(0.22 0.06 250)'
+      sidebar-primary:
+        value: '#e06565'
+        description: 'Mismo carmesí claro — el sidebar no cambia de iluminación entre temas'
+      sidebar-primary-foreground:
+        value: '#ffffff'
+        description: 'Foreground de sidebar-primary'
+      sidebar-accent:
+        value: '#242424'
+        description: 'Fondo elevado del ítem activo en modo oscuro'
+      sidebar-accent-foreground:
+        value: '#f5f5f5'
+        description: 'Texto del ítem activo en modo oscuro'
+      sidebar-border:
+        value: 'rgba(255, 255, 255, 0.08)'
+        description: 'Borde sutil del sidebar en modo oscuro'
+      sidebar-ring:
+        value: '#e06565'
+        description: 'Anillo de foco del sidebar en modo oscuro'
 
   typography:
     family:
+      display:
+        value: 'var(--font-display), system-ui, sans-serif'
+        description: 'Bricolage Grotesque 500/600 — h1-h3, cifras KPI, wordmark'
       sans:
         value: 'var(--font-sans), system-ui, -apple-system, sans-serif'
-        description: 'Fuente sans-serif principal optimizada para interfaces densas e interactivas'
+        description: 'Onest 400/500 — UI, cuerpo, etiquetas'
+      serif:
+        value: 'var(--font-serif), Georgia, serif'
+        description: 'Source Serif 4 — exclusivo del documento de la mesa de escritura'
       mono:
         value: 'var(--font-geist-mono), monospace'
-        description: 'Fuente monoespaciada para datos técnicos, coordenadas, lotes o código'
+        description: 'Geist Mono — ROL, folios, montos, códigos'
     size:
       xs:
         value: '0.75rem' # 12px
@@ -173,7 +281,7 @@ tokens:
       normal: '400'
       medium: '500'
       semibold: '600'
-      bold: '700'
+      bold: '700' # solo Onest/Geist Mono — Bricolage Grotesque solo carga 500/600, nunca usar font-bold junto a font-display
 
   spacing:
     scale:
@@ -187,18 +295,18 @@ tokens:
 
   radius:
     default:
-      value: '0.625rem' # 10px
-      description: 'Radio base para tarjetas, botones medianos e inputs. Da una apariencia moderna pero profesional'
+      value: '0.75rem' # 12px
+      description: 'Radio base para tarjetas, botones e inputs'
     sm:
-      value: 'calc(var(--radius) - 4px)' # 6px
+      value: 'calc(var(--radius) - 4px)' # 8px
     md:
-      value: 'calc(var(--radius) - 2px)' # 8px
+      value: 'calc(var(--radius) - 2px)' # 10px
     lg:
-      value: 'var(--radius)' # 10px
+      value: 'var(--radius)' # 12px
     xl:
-      value: 'calc(var(--radius) + 4px)' # 14px
+      value: 'calc(var(--radius) + 4px)' # 16px — radio de paneles (SidebarInset, BentoPanel)
     xxl:
-      value: 'calc(var(--radius) + 8px)' # 18px
+      value: 'calc(var(--radius) + 8px)' # 20px
 
   elevation:
     shadows:
@@ -208,126 +316,104 @@ tokens:
       lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)'
 ---
 
-# Auditoría y Guía del Sistema de Diseño UI/UX de Plotify
+# Sistema de Diseño de Plotify — "Tinta y Marca" (v2.0.0)
 
 ## 1. Visión General del Diseño (Overview)
 
-Plotify es una plataforma monorepo enfocada en la gestión de loteos inmobiliarios, ventas y automatización operativa. La experiencia visual de la plataforma está pensada para ser **altamente interactiva, moderna, profesional y premium**.
+Plotify es una plataforma monorepo enfocada en la gestión de loteos inmobiliarios, ventas y automatización operativa. A partir de la v2.0.0 (SDD 015, jul 2026) la identidad visual se rediseñó completa bajo la dirección **"Tinta nítida"**: monocromo de alto contraste con un único acento carmesí, sidebar flotante siempre oscuro, y tipografía de marca propia.
 
 ### Fundamentos Tecnológicos
 
-- **UI Framework**: `shadcn/ui` como base atómica de componentes interactivos (dialogs, sidebars, selectores, comboboxes, etc.), garantizando que la accesibilidad (WAI-ARIA) y el comportamiento sean óptimos desde el primer día.
-- **Engine de Estilos**: **Tailwind CSS v4** integrado directamente mediante la directiva `@theme` en `globals.css` que prescinde del viejo `tailwind.config.js`.
-- **Modo de Color Estricto**: Uso nativo de la escala cromática **OKLCH**, ofreciendo una calibración de brillo y contraste matemáticamente perfecta para pantallas HDR y previniendo la fatiga visual en temas claros y oscuros.
-- **Iconografía**: La biblioteca oficial es **Hugeicons** en su versión gratuita (`@hugeicons/core-free-icons` y `@hugeicons/react`). Todos los componentes y flujos de navegación deben priorizar estos iconos para mantener uniformidad formal.
+- **UI Framework**: `shadcn/ui` como base atómica de componentes interactivos.
+- **Engine de Estilos**: **Tailwind CSS v4** vía `@theme inline` en `globals.css`, sin `tailwind.config.js`.
+- **Modo de Color**: valores hex directos calibrados a AA (no OKLCH) para que la calibración de contraste sea auditable a simple vista; excepción: los `chart-*` heredados quedan en OKLCH (fuera de alcance de este rediseño).
+- **Iconografía**: **Hugeicons** (`@hugeicons/core-free-icons` + `@hugeicons/react`) es la única librería en código de producto. Excepción: las primitivas `components/ui/*` generadas por shadcn traen `lucide-react` internamente.
+- **Tipografía de marca**: Bricolage Grotesque (display), Onest (UI/cuerpo), Geist Mono (datos), Source Serif 4 (documento de la mesa).
 
 ---
 
 ## 2. Paleta de Colores y Calibración (Colors)
 
-Plotify cuenta con un sistema de dos temas completamente calibrados basados en variables CSS semánticas:
+### Dirección "Tinta nítida"
 
-### Light Mode (Tema Claro)
+- **Monocromo de alto contraste**: superficies en gris muy claro/muy oscuro (`--background`/`--card`), tinta casi negra/blanca (`--foreground`). Sin hairlines: la separación entre panel y tarjeta es por contraste de superficie, no por bordes.
+- **Un solo acento de UI — carmesí (`--primary`)**: `#a93439` claro / `#c24444` oscuro. Es el color de botones primarios, focus, ítems activos.
+- **Marca vs UI — no se mezclan**: el isotipo de Plotify (`--brand`, `#16a34a`) es **verde** y se mantiene así; es un color de marca, nunca de interfaz. El carmesí nunca aparece en el logo; el verde nunca aparece en botones/badges/estados. Conviven en el mismo sidebar sin conflicto porque ocupan roles distintos.
+- **Carmesí vs destructive**: `--primary` (carmesí, marca/interactividad) y `--destructive` (rojo, acciones críticas) son tokens **distintos**, elegidos con hue distinguible a simple vista. Regla de uso: una tarjeta de alerta carmesí nunca contiene un botón primario carmesí (evita que el usuario confunda "acento de marca" con "algo va a romperse"); las acciones destructivas siempre usan `--destructive` + confirmación.
+- **Sidebar siempre oscuro**: `#121212` (tema claro) / `#191919` (tema oscuro) — no cambia a claro nunca, en ningún tema. El ítem activo usa fondo elevado (`--sidebar-accent`) + ícono en carmesí claro (`--sidebar-primary`, `#e06565`).
+- **Estados de lote**: `disponible` = `--success` (verde AA-safe, no el verde de marca), `reservado` = `--warning` (ámbar), `vendido` = neutro (`--status-sold`, gris) — **no** destructive/rojo, porque una venta cerrada es un éxito, no un error.
 
-- **Fondo de Marca (`--background`)**: Blanco puro (`oklch(1 0 0)`), proporcionando un lienzo limpio para destacar los mapas satelitales y los datos de venta.
-- **Textos Principales (`--foreground`)**: Un gris azulado sumamente oscuro (`oklch(0.13 0.028 261.692)`). El color de base fría reduce drásticamente el contraste extremo del negro puro en pantallas brillantes.
-- **Color Primario (`--primary`)**: Un azul eléctrico de alto croma e impacto visual (`oklch(0.488 0.243 264.376)`). Utilizado como el principal acento de interactividad, botones primarios y estados activos.
+### Tabla de contraste AA (verificado, WCAG 2.1)
 
-### Dark Mode (Tema Oscuro)
+| Par                                                    | Tema   | Ratio  | Umbral              | Resultado |
+| ------------------------------------------------------ | ------ | ------ | ------------------- | --------- |
+| `--foreground` sobre `--background`                    | Claro  | 17.5:1 | 4.5:1               | PASS      |
+| `--muted-foreground` sobre `--background`              | Claro  | 7.0:1  | 4.5:1               | PASS      |
+| `--primary-foreground` sobre `--primary`               | Claro  | 6.5:1  | 4.5:1               | PASS      |
+| `--destructive-foreground` sobre `--destructive`       | Claro  | 4.8:1  | 4.5:1               | PASS      |
+| `--success-foreground` sobre `--success`               | Claro  | 5.0:1  | 4.5:1               | PASS      |
+| `--warning-foreground` sobre `--warning`               | Claro  | 5.0:1  | 4.5:1               | PASS      |
+| `--status-sold-foreground` sobre `--status-sold`       | Claro  | 4.8:1  | 4.5:1               | PASS      |
+| `--sidebar-foreground` sobre `--sidebar`               | Ambos  | 17.2:1 | 4.5:1               | PASS      |
+| `--sidebar-accent-foreground` sobre `--sidebar-accent` | Ambos  | 15.1:1 | 4.5:1               | PASS      |
+| `--sidebar-primary` (ícono) sobre `--sidebar-accent`   | Ambos  | 4.9:1  | 3:1 (UI no textual) | PASS      |
+| `--muted-foreground` sobre `--background`              | Oscuro | 7.1:1  | 4.5:1               | PASS      |
+| `--primary-foreground` sobre `--primary`               | Oscuro | 5.0:1  | 4.5:1               | PASS      |
+| `--destructive-foreground` sobre `--destructive`       | Oscuro | 6.5:1  | 4.5:1               | PASS      |
+| `--success-foreground` sobre `--success`               | Oscuro | 8.5:1  | 4.5:1               | PASS      |
+| `--status-sold-foreground` sobre `--status-sold`       | Oscuro | 8.3:1  | 4.5:1               | PASS      |
 
-- El modo oscuro de Plotify destaca por su cohesión cromática. En lugar de usar gris oscuro plano, el fondo principal de la aplicación (`--background`) se convierte exactamente en el foreground del modo claro (`oklch(0.13 0.028 261.692)`), logrando una simetría perfecta.
-- **Textos (`--foreground`)**: Un blanco frío atenuado (`oklch(0.985 0.002 247.839)`).
-- **Primario (`--primary`)**: Calibrado ligeramente a un azul de croma más bajo (`oklch(0.42 0.18 266)`) para cumplir estrictamente con los estándares de contraste WCAG en fondos oscuros sin quemar la vista del usuario.
-
-### Estados de Lotes (Código de Colores Semántico)
-
-Para que la interfaz y el mapa interactivo de loteos sean intuitivos a golpe de vista, se ha establecido la siguiente convención:
-
-- **Total de Lotes**: Color neutral / secundario (`bg-slate-50` / `dark:bg-slate-800/50`).
-- **Lotes Disponibles**: Verde esmeralda (`emerald-50` / `emerald-600` / `dark:text-emerald-400`). Indica libertad y oportunidad.
-- **Lotes Reservados**: Ámbar / Dorado (`amber-50` / `amber-600` / `dark:text-amber-400`). Indica urgencia o estado de transacción.
-- **Lotes Vendidos**: Azul frío (`blue-50` / `blue-600` / `dark:text-blue-400`). Indica consolidación y propiedad.
+Nota de calibración: `--muted-foreground` claro se ajustó de `#6b7280` (gris medio de `brand/colors.md`, pensado para piezas de marca sobre blanco) a `#4b5563`, porque sobre `--background` (`#f6f6f6`, no blanco puro) el primero caía a 4.47:1 — bajo el umbral. El gris de marca se mantiene sin cambios en `brand/colors.md` (es correcto para piezas de marca sobre blanco puro); la UI usa su propio tono ligeramente más oscuro.
 
 ---
 
 ## 3. Disposición del Layout e Interacción (Layout & Hierarchy)
 
-El layout de la aplicación sigue una disposición de dos paneles responsivos:
-
-1. **Sidebar Lateral (Panel de Control)**:
-   - Utiliza la primitiva reactiva `Sidebar` de `shadcn/ui`.
-   - Soporta estado colapsable tipo "icono" para maximizar el área de trabajo en pantallas de laptop.
-   - Ofrece transiciones suaves (`transition-[width,height] ease-linear duration-200`).
-   - El selector superior de Workspace ofrece una inicialización elegante de la organización con un avatar tipográfico estilizado (`flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-600`).
-
-2. **Panel Principal (`SidebarInset` y `main`)**:
-   - Un header superior fijo de `h-16` (64px) que agrupa:
-     - Control de colapso del sidebar (`SidebarTrigger`).
-     - Alertas globales / Campana de Notificaciones (`NotificationBell`).
-     - Interruptor de tema (`ModeToggle`).
-     - Badge de salud del sistema / Backend (`BackendStatusBadge`), que informa dinámicamente si los microservicios FastAPI están sincronizados.
-   - El contenedor de contenido principal (`main`) utiliza un scroll independiente (`flex-1 overflow-auto`) y un padding uniforme de `p-6` (24px) con espaciado vertical consistente de `space-y-6` o `space-y-8`.
+1. **Sidebar flotante (`variant="inset"`)**: lista plana de 6 destinos (Panel, Proyectos, Escrituras, Leads, Vendedores, Agente) + "Buscar ⌘K" arriba + Configuración/usuario abajo. Sin grupos con etiqueta ni submenús. Siempre oscuro, en ambos temas.
+2. **Panel Principal (`SidebarInset`)**: header limpio (`SidebarTrigger` + breadcrumb/título + `NotificationBell` + avatar, sin búsqueda ni toggle de tema), radio de panel `rounded-xl` (16px).
+3. **Command palette (⌘K)**: búsqueda global de navegación, proyectos y acciones rápidas (cambiar tema). Reemplaza cualquier input de búsqueda en header.
+4. **Tabs internos**: Escrituras (Mesa · Historial · Plantillas) y Agente (Chat · Skills · Integraciones) — links que conservan las URLs actuales.
 
 ---
 
-## 4. Auditoría UI/UX: Fortalezas y Áreas de Oportunidad
+## 4. Do's and Don'ts para Agentes de Código (Do's & Don'ts)
 
-### Fortalezas del Diseño Actual
+### Do's
 
-1. **Calidad de Paleta (Excelente)**: El uso de OKLCH en Tailwind CSS v4 dota a la web de una iluminación vibrante e impecable en ambos temas. La elección de tonos no es la clásica de plantillas genéricas.
-2. **Consistencia de Bordes**: El radio unificado `--radius: 0.625rem` (10px) le da a las tarjetas (`Card`), inputs y botones una apariencia suave, moderna y premium sin llegar a ser demasiado informal o infantil.
-3. **Métricas Claras**: Las tarjetas de KPIs y la grilla de resumen de lotes en los proyectos usan una distribución de columnas altamente legible con micro-tarjetas diferenciadas por color semántico.
-4. **Diseño Adaptable (Responsive)**: Las grillas cambian perfectamente de `grid-cols-1` en dispositivos móviles a `md:grid-cols-2` y `lg:grid-cols-3` en pantallas de escritorio.
-5. **Transiciones Estéticas**: El uso de clases como `animate-in fade-in duration-500` en las vistas principales suaviza la carga de datos del lado del cliente, evitando parpadeos bruscos.
+- **Usa variables CSS semánticas**: `bg-background`, `text-foreground`, `bg-primary`, `bg-status-available`, etc. Nunca clases crudas (`bg-blue-500`, `text-slate-400`).
+- **`--brand` solo en componentes de marca**: `Spinner`, `BrandLoader`, `BrandMark`. Nunca en botones, badges o estados de la UI.
+- **Distingue `--primary` de `--destructive`**: el carmesí es interactividad/marca, el rojo es peligro. No los intercambies.
+- **Tipografía**: `font-display` en h1-h3 y cifras KPI (ya heredado globalmente para h1-h3), `font-mono` en ROL/montos/folios, `font-serif` solo en el documento de la mesa. Bricolage Grotesque solo tiene pesos 500/600 — nunca combines `font-display` con `font-bold` (700); usa `font-semibold` (600) como máximo.
+- **Superficies sin hairline**: separa panel/tarjeta por contraste de fondo (`bg-card` sobre `bg-background`), no agregues `border` decorativo salvo en inputs/formularios.
+- **Radios**: `rounded-lg` (12px) en tarjetas/botones, `rounded-xl` (16px) en paneles (`SidebarInset`, `BentoPanel`).
+- **Mantén Hugeicons como estándar**: `<HugeiconsIcon icon={Icono} />`.
+- **Iconos de solo-ícono**: siempre `aria-label`.
 
-### Áreas de Mejora Identificadas (UX/UI Audit)
+### Don'ts
 
-1. **Micro-interacciones en KPIs**: Las tarjetas de KPIs y resúmenes globales en `dashboard/page.tsx` no tienen estados de hover activos. Debería agregarse un sutil escalado visual o cambio en el color del borde para hacerlas sentir vivas.
-2. **Contraste de Mapas**: La integración de Maplibre GL en `components/ui/map.tsx` requiere que los popups y marcadores respeten estrictamente el modo oscuro de la aplicación principal. Los popups del mapa deben cambiar su background a `oklch(0.21 0.034 264.665)` cuando la clase `.dark` esté activa.
-3. **Filtros en Listas**: La vista de proyectos (`projects/page.tsx`) carece de controles interactivos visibles para buscar por texto o filtrar por comuna/estado (Disponible, Reservado, Vendido). Añadir un input de búsqueda con un `Combobox` interactivo mejoraría notablemente la UX con catálogos grandes.
-4. **Carga (Skeleton UI)**: Actualmente la pantalla de carga de proyectos muestra un simple texto `"Cargando proyectos..."` centrado. Debería implementarse un componente de Skeleton de tarjetas utilizando el componente `<Skeleton />` de `shadcn/ui` para reducir la percepción del tiempo de carga.
-
----
-
-## 5. Do's and Don'ts para Agentes de Código (Do's & Don'ts)
-
-### Do's (Lo que DEBES hacer)
-
-- **Usa variables CSS semánticas**: Utiliza siempre clases como `bg-background`, `text-foreground`, `bg-primary`, `border-border`, en lugar de colores arbitrarios como `bg-blue-500` o `text-black`.
-- **Calibra para Tema Oscuro**: Asegúrate de que cada componente nuevo que desarrolles tenga soporte de tema oscuro usando el prefijo `dark:`. Prueba siempre ambos modos.
-- **Mantén Hugeicons como estándar**: Para cualquier elemento visual interactivo que requiera iconos, importa desde `@hugeicons/core-free-icons` y usa la envoltura `<HugeiconsIcon icon={Icono} />` o impórtalos de forma nativa.
-- **Usa transiciones y micro-animaciones**: Agrega clases de Tailwind como `transition-all duration-200 ease-in-out` en botones, enlaces y tarjetas. Aprovecha los estados `:hover` y `:focus-visible`.
-- **Conserva el radio `--radius`**: Al crear contenedores o componentes personalizados, hereda el radio de borde del tema mediante clases como `rounded-xl` (tarjetas), `rounded-lg` (botones) o `rounded-md` (inputs).
-
-### Don'ts (Lo que NUNCA debes hacer)
-
-- **NO uses colores planos arbitrarios**: Evita agregar clases como `bg-red-500`, `bg-green-600` sin soporte semántico o soporte para modo oscuro. El diseño se rompería visualmente.
-- **NO omitas validaciones en el Cliente**: No crees flujos de carga que dejen la pantalla vacía o con un loader feo de navegador. Diseña siempre estados vacíos ("Empty States") elegantes y Skeletons de carga.
-- **NO mezcles librerías de iconos**: No importes iconos de `lucide-react`, `heroicons` o `font-awesome` a menos que sea estrictamente necesario y no exista un equivalente en Hugeicons.
-- **NO hardcodees radios de esquina**: No uses clases como `rounded-[30px]` o `rounded-none` de manera aleatoria. Toda la web debe respirar consistencia formal.
-- **NO sobrepases la densidad visual**: Mantén el espaciado y márgenes consistentes (`p-4` o `p-6` para contenedores interactivos) para dar "aire" al diseño y facilitar la lectura en dispositivos móviles.
+- **NO reintroduzcas colores planos arbitrarios** (`bg-red-500`, `bg-emerald-600`, etc.) fuera de `lib/map/lot-colors.ts` (única lista blanca, constantes de capas MapLibre).
+- **NO uses `Loader2`, `LoaderCircle`, `Loading02Icon`/`Loading03Icon` ni `div` con `animate-spin`**: usa `Spinner` (contenido/botones) o `BrandLoader` (pantalla completa) o `Skeleton` (listas/Suspense).
+- **NO mezcles `--brand` (verde) con `--primary` (carmesí)** en el mismo elemento de UI.
+- **NO uses `lucide-react`** fuera de `components/ui/*`.
+- **NO agregues bordes hairline** a tarjetas/paneles para "separarlos" — usa contraste de superficie.
+- **NO regresiones el visor de proyecto** (`geometry-viewer`): es el patrón de oro responsive, prohibido cambiar su UX.
 
 ---
 
-## 6. Layout Bento y Políticas de Encabezados (Layout Bento & Headers)
+## 5. Layout Bento y Políticas de Encabezados (Layout Bento & Headers)
 
-A partir de la unificación del diseño visual en junio de 2026 (SDD 5), se establecen las siguientes políticas estructurales obligatorias para todas las pantallas del dashboard:
+_(Vigente desde SDD 5, sin cambios de fondo en SDD 015 — solo la superficie subyacente cambia de OKLCH azulado a la paleta "Tinta nítida")_
 
 ### Layout de Página y Contenedor Principal (`PageShell`)
 
-- Toda página autenticada del dashboard debe renderizarse dentro del componente común `PageShell`.
-- Se prohíben layouts de página aislados con paddings o anchos personalizados a nivel de ruta (como `p-6 max-w-4xl mx-auto`).
-- `PageShell` centraliza el padding responsivo (mínimo en mobile, holgado en desktop), el ancho máximo del área de trabajo (`max-w-[1600px]`) y aplica una animación de entrada estándar (`animate-fade-in-up`).
+- Toda página autenticada del dashboard debe renderizarse dentro de `PageShell`. Prohibidos paddings/anchos aislados por ruta.
+- `PageShell` centraliza el padding responsivo, `max-w-[1600px]` y `animate-fade-in-up`, ahora sobre la superficie de panel (`bg-background` = `#f6f6f6`/`#161616`).
 
 ### Encabezados de Página Estandarizados (`PageHeader`)
 
-- Toda página debe utilizar `PageHeader` para renderizar su título principal y descripción.
-- **Títulos sin iconos por defecto**: Los `h1` principales del encabezado son estrictamente textuales y no deben incluir iconos decorativos. Esto asegura una transición limpia y sin saltos visuales al navegar por el menú.
-- La iconografía queda estrictamente reservada para botones de acción (ej. en el slot `action`), estados vacíos (`EmptyState`), elementos de navegación interna, insignias (`Badge`) y estados de tarjetas.
+- Todo `h1` usa `PageHeader`, con `font-display font-semibold`. Sin iconos decorativos en el título.
 
 ### Sistema Bento Grid (`BentoGrid` y `BentoPanel`)
 
-- Las vistas complejas que agrupen tablas, formularios, métricas o mapas deben utilizar el sistema de rejilla `BentoGrid` (de 12 columnas en desktop y 1 columna en mobile).
-- Para agrupar secciones lógicas (paneles de datos, resúmenes, listados de configuración) se debe utilizar el contenedor `BentoPanel`.
-- **BentoPanel** encapsula el borde, fondo y sombras consistentes (`rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden`), evitando la anidación innecesaria de múltiples tarjetas visualmente pesadas.
-- Los formularios de configuración y edición en páginas de settings deben alinearse a este carril Bento ocupando una extensión óptima para lectura (usualmente `xl:col-span-8`), evitando la sensación de "isla" aislada.
+- `BentoPanel` encapsula fondo `bg-card` y radio `rounded-xl` (16px), **sin borde** (se retira `border-border` del estilo por defecto — la separación es por contraste de superficie contra el panel).
+- Los formularios de configuración se alinean a `xl:col-span-8`.

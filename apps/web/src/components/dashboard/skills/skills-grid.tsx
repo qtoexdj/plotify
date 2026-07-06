@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { LockIcon, PuzzleIcon, ZapIcon, DatabaseIcon } from '@hugeicons/core-free-icons'
+import { EmptyState } from '@/components/dashboard/empty-state'
 import { SkillDetailModal } from './skill-detail-modal'
 import { toggleOrgSkill } from '@/actions/agent-skills.action'
 import { toast } from 'sonner'
@@ -172,10 +173,10 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
                           <div
                             className={`flex items-center justify-center w-8 h-8 rounded-lg shrink-0 ${
                               category === 'builtin'
-                                ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400'
+                                ? 'bg-info/15 text-info'
                                 : category === 'mcp'
-                                  ? 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400'
-                                  : 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
+                                  ? 'bg-common-area/15 text-common-area'
+                                  : 'bg-warning/15 text-warning'
                             }`}
                           >
                             <HugeiconsIcon icon={getCategoryIcon(category)} size={16} />
@@ -274,7 +275,7 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
                             variant={skill.mcp_ready ? 'outline' : 'destructive'}
                             className={
                               skill.mcp_ready
-                                ? 'text-xs border-purple-300 text-purple-600'
+                                ? 'text-xs border-common-area/40 text-common-area'
                                 : 'text-xs'
                             }
                           >
@@ -291,10 +292,11 @@ export function SkillsGrid({ skills, organizationId }: SkillsGridProps) {
         ))}
 
         {skills.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <HugeiconsIcon icon={PuzzleIcon} size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No hay skills disponibles</p>
-          </div>
+          <EmptyState
+            icon={PuzzleIcon}
+            title="No hay skills disponibles"
+            description="Aún no hay skills configuradas para esta organización."
+          />
         )}
       </div>
 

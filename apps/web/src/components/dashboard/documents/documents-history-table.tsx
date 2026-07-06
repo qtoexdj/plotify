@@ -142,7 +142,7 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-blue-600" />
+          <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-info" />
           Documentos Generados
         </CardTitle>
         <CardDescription>
@@ -205,7 +205,7 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
         {/* ── Tabla ─────────────────────────────────────────────────── */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground gap-3">
-            <HugeiconsIcon icon={File02Icon} className="w-12 h-12 text-gray-300" />
+            <HugeiconsIcon icon={File02Icon} className="w-12 h-12 text-muted-foreground/40" />
             <p className="text-sm">
               {documents.length === 0
                 ? 'Aún no se han generado documentos.'
@@ -283,7 +283,7 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
                           >
                             <HugeiconsIcon
                               icon={CheckmarkSquare01Icon}
-                              className="w-4 h-4 text-amber-500"
+                              className="w-4 h-4 text-warning"
                             />
                           </span>
                         ) : (
@@ -293,7 +293,7 @@ export function DocumentsHistoryTable({ documents }: DocumentsHistoryTableProps)
                           >
                             <HugeiconsIcon
                               icon={CancelSquareIcon}
-                              className="w-4 h-4 text-green-500"
+                              className="w-4 h-4 text-success"
                             />
                           </span>
                         )}

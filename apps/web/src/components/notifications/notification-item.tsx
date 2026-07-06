@@ -5,13 +5,13 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Tick02Icon,
   Cancel01Icon,
-  Loading01Icon,
   Task01Icon,
   UserIcon,
   Location01Icon,
   Calendar01Icon,
   SparklesIcon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { NotificationItem as NotificationItemType } from '@/lib/services/notifications.service'
@@ -196,7 +196,7 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
             className="border-destructive/20 text-destructive hover:bg-destructive/10 font-semibold h-8 text-[11px] px-3 flex items-center gap-1.5 flex-1 justify-center rounded-lg shadow-sm"
           >
             {deciding === 'reject' ? (
-              <HugeiconsIcon icon={Loading01Icon} className="h-3.5 w-3.5 animate-spin" />
+              <Spinner className="h-3.5 w-3.5" />
             ) : (
               <HugeiconsIcon icon={Cancel01Icon} className="h-3.5 w-3.5" />
             )}
@@ -213,7 +213,7 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
             className="bg-success text-success-foreground hover:bg-success/90 font-semibold h-8 text-[11px] px-3 flex items-center gap-1.5 flex-1 justify-center rounded-lg shadow-sm"
           >
             {deciding === 'approve' ? (
-              <HugeiconsIcon icon={Loading01Icon} className="h-3.5 w-3.5 animate-spin" />
+              <Spinner className="h-3.5 w-3.5" />
             ) : (
               <HugeiconsIcon icon={Tick02Icon} className="h-3.5 w-3.5" />
             )}

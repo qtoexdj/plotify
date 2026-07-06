@@ -19,7 +19,8 @@ import {
   type LegalExtractionStatus,
 } from '@/lib/legal/variable-resolution-types'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { File02Icon, AlertCircleIcon, Refresh01Icon } from '@hugeicons/core-free-icons'
+import { File02Icon, AlertCircleIcon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 type LegalDocumentStatusItem = LegalDocumentListItem | LegalDocument
 
@@ -32,15 +33,14 @@ interface LegalDocumentStatusPanelProps {
 }
 
 const statusClassName: Record<LegalExtractionStatus, string> = {
-  pending: 'border-slate-200/50 bg-slate-500/10 text-slate-600 dark:text-slate-400',
-  queued: 'border-sky-200/50 bg-sky-500/10 text-sky-600 dark:text-sky-400',
-  processing: 'border-blue-200/50 bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  text_extracted: 'border-indigo-200/50 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
-  variables_proposed:
-    'border-emerald-200/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  needs_review: 'border-amber-200/50 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  failed: 'border-red-200/50 bg-red-500/10 text-red-600 dark:text-red-400',
-  superseded: 'border-zinc-200/50 bg-zinc-500/10 text-zinc-500 dark:text-zinc-400',
+  pending: 'border-border bg-muted text-muted-foreground',
+  queued: 'border-info/20 bg-info/10 text-info',
+  processing: 'border-info/20 bg-info/10 text-info',
+  text_extracted: 'border-info/20 bg-info/10 text-info',
+  variables_proposed: 'border-success/20 bg-success/10 text-success',
+  needs_review: 'border-warning/20 bg-warning/10 text-warning',
+  failed: 'border-destructive/20 bg-destructive/10 text-destructive',
+  superseded: 'border-border bg-muted text-muted-foreground',
 }
 
 function getUploadedAt(document: LegalDocumentStatusItem) {
@@ -104,7 +104,7 @@ export function LegalDocumentStatusPanel({
       <div className="p-6">
         {isLoading ? (
           <div className="py-8 flex flex-col items-center justify-center text-muted-foreground gap-2 border border-dashed border-border rounded-lg">
-            <HugeiconsIcon icon={Refresh01Icon} className="w-6 h-6 animate-spin text-primary" />
+            <Spinner className="w-6 h-6" />
             <p className="text-xs">Cargando documentos legales...</p>
           </div>
         ) : error ? (

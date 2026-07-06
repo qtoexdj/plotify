@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { EmptyState } from '@/components/dashboard/empty-state'
+import { FileSearchIcon } from '@hugeicons/core-free-icons'
 
 export default async function SuperAdminAuditLogs() {
   const supabase = await createClient()
@@ -10,34 +14,31 @@ export default async function SuperAdminAuditLogs() {
     .limit(50)
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Auditoria</h1>
-        <p className="text-slate-600 mt-1">Eventos registrados por el sistema</p>
-      </div>
+    <PageShell>
+      <PageHeader title="Auditoría" description="Eventos registrados por el sistema" />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Ultimos eventos</CardTitle>
+          <CardTitle className="text-base">Últimos eventos</CardTitle>
         </CardHeader>
         <CardContent>
           {logs && logs.length > 0 ? (
             <div className="overflow-auto">
               <table className="w-full text-sm">
-                <thead className="text-left text-slate-500">
+                <thead className="text-left text-muted-foreground">
                   <tr>
-                    <th className="pb-3">Accion</th>
+                    <th className="pb-3">Acción</th>
                     <th className="pb-3">Entidad</th>
                     <th className="pb-3">Actor</th>
                     <th className="pb-3">Fecha</th>
                   </tr>
                 </thead>
-                <tbody className="text-slate-700">
+                <tbody className="text-foreground">
                   {logs.map((log) => (
-                    <tr key={log.id} className="border-t border-slate-100">
+                    <tr key={log.id} className="border-t border-border">
                       <td className="py-3 font-medium">{log.action}</td>
                       <td className="py-3">{log.entity}</td>
-                      <td className="py-3 text-slate-500">{log.actor || 'system'}</td>
+                      <td className="py-3 text-muted-foreground">{log.actor || 'system'}</td>
                       <td className="py-3">{log.created_at}</td>
                     </tr>
                   ))}
@@ -45,10 +46,14 @@ export default async function SuperAdminAuditLogs() {
               </table>
             </div>
           ) : (
-            <div className="text-sm text-slate-500">No hay eventos registrados.</div>
+            <EmptyState
+              icon={FileSearchIcon}
+              title="No hay eventos registrados"
+              description="Aún no se ha registrado actividad de auditoría en el sistema."
+            />
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

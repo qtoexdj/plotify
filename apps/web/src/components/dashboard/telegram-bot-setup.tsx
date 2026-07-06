@@ -25,7 +25,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { BotIcon, ChevronRight, Loader2, Trash2, WebhookIcon } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  BotIcon,
+  ArrowRight01Icon as ChevronRight,
+  Delete02Icon as Trash2,
+  WebhookIcon,
+} from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 interface BotStatus {
   bot_username: string
@@ -120,7 +127,7 @@ export function TelegramBotSetup({
     return (
       <Card className="border-border">
         <CardContent className="flex justify-center items-center py-10">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Spinner className="h-6 w-6" />
         </CardContent>
       </Card>
     )
@@ -132,14 +139,14 @@ export function TelegramBotSetup({
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <BotIcon className="h-5 w-5 text-primary" />
+              <HugeiconsIcon icon={BotIcon} className="h-5 w-5 text-primary" />
               <CardTitle>Bot Configurado</CardTitle>
             </div>
             <Badge
               variant="default"
-              className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20"
+              className="bg-success/10 text-success hover:bg-success/20 border-success/20"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500 mr-2 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-success mr-2 animate-pulse" />
               Activo
             </Badge>
           </div>
@@ -152,7 +159,7 @@ export function TelegramBotSetup({
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" className="w-full sm:w-auto">
-                <Trash2 className="h-4 w-4 mr-2" />
+                <HugeiconsIcon icon={Trash2} className="h-4 w-4 mr-2" />
                 Eliminar Configuración
               </Button>
             </AlertDialogTrigger>
@@ -170,7 +177,7 @@ export function TelegramBotSetup({
                   onClick={handleDelete}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sí, eliminar bot'}
+                  {isSubmitting ? <Spinner className="h-4 w-4" /> : 'Sí, eliminar bot'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -220,7 +227,7 @@ export function TelegramBotSetup({
               onClick={() => window.open('https://t.me/BotFather', '_blank')}
             >
               Ir a @BotFather
-              <ChevronRight className="h-4 w-4 ml-2" />
+              <HugeiconsIcon icon={ChevronRight} className="h-4 w-4 ml-2" />
             </Button>
           </CardContent>
         </Card>
@@ -264,12 +271,12 @@ export function TelegramBotSetup({
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Spinner className="h-4 w-4 mr-2" />
                   Validando...
                 </>
               ) : (
                 <>
-                  <WebhookIcon className="h-4 w-4 mr-2" />
+                  <HugeiconsIcon icon={WebhookIcon} className="h-4 w-4 mr-2" />
                   Validar y Conectar
                 </>
               )}

@@ -28,7 +28,7 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 overflow-hidden">
+    <div className="relative min-h-screen flex items-center justify-center bg-background px-4 overflow-hidden">
       <InteractiveGridPattern
         className={cn('mask-[radial-gradient(600px_circle_at_center,white,transparent)]')}
         width={20}
@@ -59,9 +59,7 @@ export default async function OnboardingPage() {
             className="mb-4 hidden dark:block"
             priority
           />
-          <p className="text-slate-600 dark:text-slate-400">
-            ¡Bienvenido! Completa tu perfil para comenzar
-          </p>
+          <p className="text-muted-foreground">¡Bienvenido! Completa tu perfil para comenzar</p>
         </div>
         <OnboardingForm />
       </div>

@@ -7,6 +7,8 @@ import { PromptEditor } from '@/components/super-admin/prompt-ops/prompt-editor'
 import { PromptHistory } from '@/components/super-admin/prompt-ops/prompt-history'
 import { PromptSandbox } from '@/components/super-admin/prompt-ops/prompt-sandbox'
 import type { PromptVersion, SystemPrompt } from '@/types/v2'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
 
 interface Props {
   params: Promise<{ promptId: string }>
@@ -51,20 +53,15 @@ export default async function PromptDetailPage({ params }: Props) {
   const promptTyped = prompt as SystemPrompt
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
-          <Link href="/super-admin/prompt-ops" className="hover:underline">
-            Prompt Ops
-          </Link>
-          <span>/</span>
-          <span className="font-mono text-slate-700">{promptTyped.slug}</span>
-        </div>
-        <h1 className="text-2xl font-bold text-slate-900">{promptTyped.name}</h1>
-        {promptTyped.description && (
-          <p className="text-slate-600 mt-1">{promptTyped.description}</p>
-        )}
+    <PageShell>
+      <div className="flex items-center gap-2 text-muted-foreground text-sm">
+        <Link href="/super-admin/prompt-ops" className="hover:underline">
+          Prompt Ops
+        </Link>
+        <span>/</span>
+        <span className="font-mono text-foreground">{promptTyped.slug}</span>
       </div>
+      <PageHeader title={promptTyped.name} description={promptTyped.description ?? undefined} />
 
       <Tabs defaultValue="editor" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-3">
@@ -94,6 +91,6 @@ export default async function PromptDetailPage({ params }: Props) {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   )
 }

@@ -130,7 +130,10 @@ export interface ApprovalRequestPayload {
   fecha_firma?: string
   // Campos extra para popular lot_records al aprobar
   cliente_direccion?: string
+  cliente_region?: string
+  cliente_comuna?: string
   cliente_estado_civil?: string
+  cliente_nacionalidad?: string
   cliente_ocupacion?: string
   cliente_email?: string
   cliente_telefono?: string
@@ -396,5 +399,5 @@ export interface ProjectWithMetrics extends Project {
   lotes_libres: number
   lotes_reservados: number
   lotes_vendidos: number
-  vendedores?: { id: string; nombre: string }[]
+  vendedores?: { id: string; nombre: string; avatar_url?: string | null }[]
 }

@@ -92,18 +92,18 @@ export default function AuthCallbackPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center space-y-4">
         {error ? (
           <>
-            <div className="text-red-500 text-lg font-medium">Error de autenticación</div>
-            <p className="text-gray-500 text-sm">{error}</p>
-            <p className="text-gray-400 text-xs">Redirigiendo al login...</p>
+            <div className="text-destructive text-lg font-medium">Error de autenticación</div>
+            <p className="text-muted-foreground text-sm">{error}</p>
+            <p className="text-muted-foreground/70 text-xs">Redirigiendo al login...</p>
           </>
         ) : (
           <>
             <BrandLoader className="size-16 mx-auto" />
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Verificando invitación...</p>
+            <p className="text-muted-foreground text-sm">Verificando invitación...</p>
           </>
         )}
       </div>

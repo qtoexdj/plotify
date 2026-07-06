@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { EmptyState } from '@/components/dashboard/empty-state'
+import { UserGroupIcon } from '@hugeicons/core-free-icons'
 
 export default async function SuperAdminUsers() {
   const supabase = await createClient()
@@ -10,11 +14,8 @@ export default async function SuperAdminUsers() {
     .order('updated_at', { ascending: false })
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Usuarios</h1>
-        <p className="text-slate-600 mt-1">Perfiles activos en la plataforma</p>
-      </div>
+    <PageShell>
+      <PageHeader title="Usuarios" description="Perfiles activos en la plataforma" />
 
       <Card>
         <CardHeader>
@@ -24,7 +25,7 @@ export default async function SuperAdminUsers() {
           {profiles && profiles.length > 0 ? (
             <div className="overflow-auto">
               <table className="w-full text-sm">
-                <thead className="text-left text-slate-500">
+                <thead className="text-left text-muted-foreground">
                   <tr>
                     <th className="pb-3">ID</th>
                     <th className="pb-3">Usuario</th>
@@ -32,10 +33,10 @@ export default async function SuperAdminUsers() {
                     <th className="pb-3">Actualizado</th>
                   </tr>
                 </thead>
-                <tbody className="text-slate-700">
+                <tbody className="text-foreground">
                   {profiles.map((profile) => (
-                    <tr key={profile.id} className="border-t border-slate-100">
-                      <td className="py-3 font-mono text-xs text-slate-500">{profile.id}</td>
+                    <tr key={profile.id} className="border-t border-border">
+                      <td className="py-3 font-mono text-xs text-muted-foreground">{profile.id}</td>
                       <td className="py-3">{profile.username || 'sin-username'}</td>
                       <td className="py-3">
                         {profile.is_super_admin ? (
@@ -51,10 +52,14 @@ export default async function SuperAdminUsers() {
               </table>
             </div>
           ) : (
-            <div className="text-sm text-slate-500">No hay perfiles registrados.</div>
+            <EmptyState
+              icon={UserGroupIcon}
+              title="No hay perfiles registrados"
+              description="Aún no hay perfiles de usuario registrados en la plataforma."
+            />
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

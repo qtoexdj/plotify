@@ -12,10 +12,10 @@ import {
   LayoutLeftIcon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
 import {
   Select,
   SelectContent,
@@ -27,6 +27,7 @@ import { PageShell } from '@/components/dashboard/page-shell'
 import { PageHeader } from '@/components/dashboard/page-header'
 import { BentoGrid, BentoPanel } from '@/components/dashboard/bento-grid'
 import { EmptyState } from '@/components/dashboard/empty-state'
+import { EscrituraTabs } from '@/components/documents/escritura-tabs'
 import type { ProjectWithMetrics } from '@/types/database.types'
 
 const ACCESOS = [
@@ -35,16 +36,16 @@ const ACCESOS = [
     description: 'Revisa las minutas generadas desde escrituras aprobadas.',
     href: '/documentos/historial',
     icon: FileAttachmentIcon,
-    color: 'text-emerald-700',
-    bg: 'bg-emerald-50',
+    color: 'text-success',
+    bg: 'bg-success/10',
   },
   {
     title: 'Plantillas',
     description: 'Redacta cláusulas, condiciones y alertas con nombres claros.',
     href: '/documentos/plantillas',
     icon: LayoutLeftIcon,
-    color: 'text-sky-700',
-    bg: 'bg-sky-50',
+    color: 'text-info',
+    bg: 'bg-info/10',
   },
 ] as const
 
@@ -118,6 +119,7 @@ export default function DocumentosPage() {
         title="Documentos legales"
         description="Matrices, variables legales e historial documental por proyecto."
       />
+      <EscrituraTabs active="mesa" />
 
       {isLoading ? (
         <BentoGrid>
@@ -198,7 +200,7 @@ export default function DocumentosPage() {
             <div className="flex h-full flex-col justify-between gap-6 p-5">
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-sky-50 text-sky-700">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-info/10 text-info">
                     <HugeiconsIcon icon={File02Icon} className="h-5 w-5" />
                   </div>
                   <Badge variant="outline" className="rounded-md">
@@ -216,11 +218,11 @@ export default function DocumentosPage() {
                 </div>
                 <div className="grid gap-2 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4 text-emerald-600" />
+                    <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4 text-success" />
                     Vendedor, predio y título del proyecto
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <HugeiconsIcon icon={FileAttachmentIcon} className="h-4 w-4 text-amber-600" />
+                    <HugeiconsIcon icon={FileAttachmentIcon} className="h-4 w-4 text-warning" />
                     Comprador, lote y precio al validar venta
                   </div>
                 </div>
@@ -235,7 +237,7 @@ export default function DocumentosPage() {
             <div className="flex h-full flex-col justify-between gap-6 p-5">
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-success/10 text-success">
                     <HugeiconsIcon icon={DatabaseIcon} className="h-5 w-5" />
                   </div>
                   <Badge variant="outline" className="rounded-md">

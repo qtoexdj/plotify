@@ -63,9 +63,10 @@ export async function getAllActiveLots(organizationId?: string): Promise<Operati
   let lots = (data as OperationLotRow[]).map((lot) => {
     // Find active record (latest)
     // Sort records by created_at desc
-    const records = [...(lot.lot_records || [])].sort(
-      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-    )
+    const rawRecords = lot.lot_records
+    const records = [
+      ...(Array.isArray(rawRecords) ? rawRecords : rawRecords ? [rawRecords] : []),
+    ].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
     const activeRecord = records[0]
 
     return {

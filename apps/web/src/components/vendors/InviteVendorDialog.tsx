@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { UserAdd01Icon, Mail01Icon } from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 
 interface InviteVendorDialogProps {
   organizationId: string
@@ -65,7 +66,7 @@ export function InviteVendorDialog({ organizationId }: InviteVendorDialogProps) 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <HugeiconsIcon icon={Mail01Icon} className="w-5 h-5 text-blue-600" />
+            <HugeiconsIcon icon={Mail01Icon} className="w-5 h-5 text-info" />
             Invitar Vendedor
           </DialogTitle>
           <DialogDescription>
@@ -96,7 +97,7 @@ export function InviteVendorDialog({ organizationId }: InviteVendorDialogProps) 
             <Button type="submit" disabled={loading} className="gap-2">
               {loading ? (
                 <>
-                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  <Spinner className="h-4 w-4" />
                   Enviando...
                 </>
               ) : (

@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { ProseKit, useDocChange } from '@prosekit/react'
 import { createEditor, defineKeyDownHandler, insertNode } from '@prosekit/core'
 import type { ProseMirrorNode } from '@prosekit/pm/model'
-import { Check, LockKeyhole } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Tick02Icon as Check, LockKeyIcon as LockKeyhole } from '@hugeicons/core-free-icons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -127,7 +128,7 @@ export function ClausulaEditorInline({
               />
             )}
             <Button type="button" variant="outline" size="sm" onClick={onCerrar}>
-              <Check />
+              <HugeiconsIcon icon={Check} />
               {MESA_TEXT.cerrarEditor}
             </Button>
           </div>
@@ -150,12 +151,9 @@ export function ClausulaEditorInline({
             data-testid="editor-bloque-titulo-nota"
             className="flex flex-wrap items-center gap-1.5 border-t border-border px-4 py-2.5 font-sans text-xs text-muted-foreground"
           >
-            <LockKeyhole aria-hidden className="size-3.5 shrink-0 text-purple-700" />
+            <HugeiconsIcon icon={LockKeyhole} aria-hidden className="size-3.5 shrink-0 text-info" />
             {MESA_TEXT.bloqueTitulo}. {MESA_TEXT.bloqueTituloAyuda}{' '}
-            <Link
-              href={urlCorreccion(projectId)}
-              className="font-medium text-blue-600 hover:underline"
-            >
+            <Link href={urlCorreccion(projectId)} className="font-medium text-info hover:underline">
               {MESA_TEXT.irAlPanelTitulo}
             </Link>
           </p>

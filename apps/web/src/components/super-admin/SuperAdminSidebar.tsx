@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/sidebar'
 import { BackendStatusBadge } from '@/components/system/BackendStatusBadge'
 import { UserMenu } from '@/components/auth/UserMenu'
+import { BrandMark } from '@/components/brand/brand-mark'
+import { CommandPaletteTrigger } from '@/components/command-palette'
 
 export const NAV_ITEMS = [
   {
@@ -84,48 +86,27 @@ export function SuperAdminSidebar({
   const navItems = getNavItems(showEscriturasLab)
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" variant="inset" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="Plotify Admin">
               <Link href="/super-admin">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-brand-gradient shadow-md transition-all duration-300 hover:scale-105">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="size-4 text-white"
-                  >
-                    <path
-                      d="M12 2L2 7L12 12L22 7L12 2Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M2 17L12 22L22 17"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M2 12L12 17L22 12"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <BrandMark className="size-6" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold text-foreground">Plotify Admin</span>
-                  <span className="truncate text-xs text-accent font-semibold">Control global</span>
+                  <span className="truncate font-display font-semibold text-sidebar-foreground">
+                    Plotify Admin
+                  </span>
+                  <span className="truncate text-xs text-sidebar-foreground/60 font-medium">
+                    Control global
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <CommandPaletteTrigger />
         </SidebarMenu>
       </SidebarHeader>
 
@@ -147,7 +128,7 @@ export function SuperAdminSidebar({
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border space-y-3">
+      <SidebarFooter className="p-4 space-y-3">
         <BackendStatusBadge />
         <UserMenu user={{ email: user?.email ?? undefined }} />
       </SidebarFooter>

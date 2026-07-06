@@ -34,8 +34,8 @@ export function VendorsList({ vendors }: VendorsListProps) {
               className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
             >
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <HugeiconsIcon icon={UserCircleIcon} className="h-6 w-6 text-slate-500" />
+                <div className="h-10 w-10 shrink-0 rounded-full bg-muted flex items-center justify-center">
+                  <HugeiconsIcon icon={UserCircleIcon} className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-medium leading-none">{vendor.nombre}</p>
@@ -65,17 +65,14 @@ export function VendorsList({ vendors }: VendorsListProps) {
                   <span className="text-xs text-muted-foreground">Reservas</span>
                   <Badge
                     variant="outline"
-                    className="mt-1 text-amber-600 bg-amber-50 dark:bg-amber-950/30 border-amber-200"
+                    className="mt-1 text-warning bg-warning/10 border-warning/20"
                   >
                     {vendor.reservedLots}
                   </Badge>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="text-xs text-muted-foreground">Ventas</span>
-                  <Badge
-                    variant="secondary"
-                    className="mt-1 text-blue-600 bg-blue-50 dark:bg-blue-950/30"
-                  >
+                  <Badge variant="secondary" className="mt-1 text-info bg-info/10">
                     {vendor.soldLots}
                   </Badge>
                 </div>

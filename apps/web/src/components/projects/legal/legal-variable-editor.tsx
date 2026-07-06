@@ -22,6 +22,7 @@ import {
   type LegalVariableEditPayload,
   type VariableInventoryItem,
 } from '@/lib/legal/variable-resolution-types'
+import { legalVariableDescription, legalVariableDisplayLabel } from '@/lib/legal/variable-labels'
 import { LegalEvidenceViewer } from './legal-evidence-viewer'
 
 interface LegalVariableEditorProps {
@@ -133,8 +134,8 @@ function LegalVariableEditorContent({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-2xl">
         <SheetHeader>
-          <SheetTitle>{variable.label ?? variable.variable_key}</SheetTitle>
-          <SheetDescription>{variable.description ?? variable.variable_key}</SheetDescription>
+          <SheetTitle>{legalVariableDisplayLabel(variable)}</SheetTitle>
+          <SheetDescription>{legalVariableDescription(variable)}</SheetDescription>
         </SheetHeader>
 
         <ScrollArea className="min-h-0 flex-1 px-6">
@@ -188,7 +189,7 @@ function LegalVariableEditorContent({
                 rows={3}
               />
               {requiresReason && !trimmedReason ? (
-                <p className="text-xs text-amber-700">
+                <p className="text-xs text-warning">
                   Al resolver un conflicto conviene dejar una nota del motivo.
                 </p>
               ) : null}

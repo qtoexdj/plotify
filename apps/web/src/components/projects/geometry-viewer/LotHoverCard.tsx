@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useMap } from '@/components/ui/map'
-import { ESTADO_CONFIG } from '@/lib/models/lot.model'
+import { ESTADO_CONFIG, estadoToStatusVariant } from '@/lib/models/lot.model'
+import { StatusBadge } from '@/components/ui/status-badge'
 import type { ViewerFeature } from '@/types/viewer.types'
 
 interface LotHoverCardProps {
@@ -68,11 +69,9 @@ export function LotHoverCard({ feature }: LotHoverCardProps) {
           <span className="text-sm font-semibold text-card-foreground">
             Lote {numero_lote || '—'}
           </span>
-          <span
-            className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${config.bgClass} ${config.textClass}`}
-          >
+          <StatusBadge variant={estadoToStatusVariant(stateKey)} className="text-[10px] py-0">
             {config.label}
-          </span>
+          </StatusBadge>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           {m2 != null && <span>{m2.toLocaleString()} m²</span>}

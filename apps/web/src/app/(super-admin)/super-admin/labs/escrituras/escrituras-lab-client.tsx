@@ -1,23 +1,26 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Upload,
-  RefreshCw,
-  FileText,
-  Database,
-  FlaskConical,
-  FileCog,
-  Binary,
-  LoaderCircle,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-} from 'lucide-react'
+  Upload01Icon as Upload,
+  Refresh01Icon as RefreshCw,
+  File02Icon as FileText,
+  DatabaseIcon as Database,
+  TestTube01Icon as FlaskConical,
+  FileSyncIcon as FileCog,
+  BinaryCodeIcon as Binary,
+  CheckmarkCircle02Icon as CheckCircle2,
+  Alert02Icon as AlertTriangle,
+  CancelCircleIcon as XCircle,
+} from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { PageHeader } from '@/components/dashboard/page-header'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -397,59 +400,55 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <PageShell>
       <LabOperationDialog operation={operation} onClose={() => setOperation(null)} />
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-            <FlaskConical className="size-4" />
-            Laboratorio local
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900">Laboratorio de Escrituras</h1>
-          <p className="mt-1 max-w-3xl text-sm text-slate-600">
-            Sube documentos legales PDF, DOCX, DOC o RTF para analizarlos fuera del runtime
-            productivo. El Markdown vive en Supabase local bajo <code>lab_escrituras</code>; los
-            exports a carpeta son opcionales.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={handleProcessPending}
-            disabled={isProcessing || isEmbedding || pendingCount === 0 || payload.setupRequired}
-          >
-            <FileCog className="size-4" />
-            {isProcessing ? 'Procesando' : `Procesar pendientes (${pendingCount})`}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleGenerateEmbeddings}
-            disabled={
-              isEmbedding ||
-              isProcessing ||
-              payload.setupRequired ||
-              payload.embeddingStats.pendingChunks === 0
-            }
-          >
-            <Binary className="size-4" />
-            {isEmbedding
-              ? 'Vectorizando'
-              : `Embeddings pendientes (${payload.embeddingStats.pendingChunks})`}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => loadLabData()}
-            disabled={isLoading || isProcessing || isEmbedding}
-          >
-            <RefreshCw className="size-4" />
-            Actualizar
-          </Button>
-        </div>
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <HugeiconsIcon icon={FlaskConical} className="size-4" />
+        Laboratorio local
       </div>
+      <PageHeader
+        title="Laboratorio de Escrituras"
+        description="Sube documentos legales PDF, DOCX, DOC o RTF para analizarlos fuera del runtime productivo. El Markdown vive en Supabase local bajo lab_escrituras; los exports a carpeta son opcionales."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={handleProcessPending}
+              disabled={isProcessing || isEmbedding || pendingCount === 0 || payload.setupRequired}
+            >
+              <HugeiconsIcon icon={FileCog} className="size-4" />
+              {isProcessing ? 'Procesando' : `Procesar pendientes (${pendingCount})`}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleGenerateEmbeddings}
+              disabled={
+                isEmbedding ||
+                isProcessing ||
+                payload.setupRequired ||
+                payload.embeddingStats.pendingChunks === 0
+              }
+            >
+              <HugeiconsIcon icon={Binary} className="size-4" />
+              {isEmbedding
+                ? 'Vectorizando'
+                : `Embeddings pendientes (${payload.embeddingStats.pendingChunks})`}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => loadLabData()}
+              disabled={isLoading || isProcessing || isEmbedding}
+            >
+              <HugeiconsIcon icon={RefreshCw} className="size-4" />
+              Actualizar
+            </Button>
+          </div>
+        }
+      />
 
       {payload.setupRequired ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="rounded-lg border border-warning/20 bg-warning/10 p-4 text-sm text-warning">
           <p className="font-medium">Laboratorio pendiente de bootstrap</p>
           <p className="mt-1">
             Ejecuta <code>labs/labs_escrituras/sql/001_bootstrap_lab.sql</code> contra{' '}
@@ -460,7 +459,7 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
       ) : null}
 
       {!payload.setupRequired && payload.error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
           <p className="font-medium">No se pudo actualizar el laboratorio</p>
           <p className="mt-1">{payload.error}</p>
         </div>
@@ -469,38 +468,38 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm text-slate-600">Documentos</CardTitle>
-            <FileText className="size-5 text-slate-500" />
+            <CardTitle className="text-sm text-muted-foreground">Documentos</CardTitle>
+            <HugeiconsIcon icon={FileText} className="size-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">{totalDocuments}</div>
+            <div className="text-3xl font-semibold text-foreground">{totalDocuments}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm text-slate-600">Procesados</CardTitle>
-            <Database className="size-5 text-slate-500" />
+            <CardTitle className="text-sm text-muted-foreground">Procesados</CardTitle>
+            <HugeiconsIcon icon={Database} className="size-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">{processedCount}</div>
+            <div className="text-3xl font-semibold text-foreground">{processedCount}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm text-slate-600">Variables candidatas</CardTitle>
-            <FlaskConical className="size-5 text-slate-500" />
+            <CardTitle className="text-sm text-muted-foreground">Variables candidatas</CardTitle>
+            <HugeiconsIcon icon={FlaskConical} className="size-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">{payload.variables.length}</div>
+            <div className="text-3xl font-semibold text-foreground">{payload.variables.length}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm text-slate-600">Chunks vectorizados</CardTitle>
-            <Binary className="size-5 text-slate-500" />
+            <CardTitle className="text-sm text-muted-foreground">Chunks vectorizados</CardTitle>
+            <HugeiconsIcon icon={Binary} className="size-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-slate-900">
+            <div className="text-3xl font-semibold text-foreground">
               {payload.embeddingStats.embeddedChunks}/{payload.embeddingStats.totalChunks}
             </div>
           </CardContent>
@@ -514,7 +513,7 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
         <CardContent>
           <div className="grid gap-3 md:grid-cols-[220px_1fr_auto]">
             <select
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+              className="h-10 rounded-md border border-border bg-card px-3 text-sm"
               value={documentType}
               onChange={(event) => setDocumentType(event.target.value)}
             >
@@ -525,18 +524,18 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
               ))}
             </select>
             <input
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+              className="h-10 rounded-md border border-border bg-card px-3 py-2 text-sm"
               type="file"
               accept={LAB_ACCEPT_ATTRIBUTE}
               multiple
               onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
             />
             <Button onClick={handleUpload} disabled={isUploading || files.length === 0}>
-              <Upload className="size-4" />
+              <HugeiconsIcon icon={Upload} className="size-4" />
               {isUploading ? 'Subiendo' : files.length > 1 ? `Subir ${files.length}` : 'Subir'}
             </Button>
           </div>
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-muted-foreground">
             Los documentos reales quedan en storage local. No se versionan en Git junto con
             Markdown, embeddings ni exports.
           </p>
@@ -550,13 +549,13 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
           </CardHeader>
           <CardContent>
             {payload.documents.length === 0 ? (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 {isLoading ? 'Cargando documentos...' : 'Todavia no hay documentos cargados.'}
               </p>
             ) : (
               <div className="overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-left text-slate-500">
+                  <thead className="text-left text-muted-foreground">
                     <tr>
                       <th className="pb-3">Archivo</th>
                       <th className="pb-3">Tipo</th>
@@ -566,12 +565,12 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
                       <th className="pb-3">Tamano</th>
                     </tr>
                   </thead>
-                  <tbody className="text-slate-700">
+                  <tbody className="text-foreground">
                     {payload.documents.map((document) => (
-                      <tr key={document.id} className="border-t border-slate-100">
+                      <tr key={document.id} className="border-t border-border">
                         <td className="max-w-xs truncate py-3 font-medium">
                           {document.original_filename}
-                          <div className="font-mono text-xs text-slate-400">
+                          <div className="font-mono text-xs text-muted-foreground">
                             {document.sha256.slice(0, 12)}
                           </div>
                         </td>
@@ -604,15 +603,15 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
             {latestTemplate ? (
               <div className="space-y-3">
                 <div>
-                  <p className="font-medium text-slate-900">{latestTemplate.name}</p>
-                  <p className="text-xs text-slate-500">{latestTemplate.created_at}</p>
+                  <p className="font-medium text-foreground">{latestTemplate.name}</p>
+                  <p className="text-xs text-muted-foreground">{latestTemplate.created_at}</p>
                 </div>
-                <pre className="max-h-96 overflow-auto rounded-md bg-slate-950 p-3 text-xs text-slate-100">
+                <pre className="max-h-96 overflow-auto rounded-md bg-foreground p-3 text-xs text-background">
                   {latestTemplate.draft_markdown}
                 </pre>
               </div>
             ) : (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 Aun no hay template draft. Ejecuta el procesamiento/export del laboratorio cuando
                 existan chunks.
               </p>
@@ -628,23 +627,25 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
           </CardHeader>
           <CardContent>
             {payload.variables.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin variables candidatas todavia.</p>
+              <p className="text-sm text-muted-foreground">Sin variables candidatas todavia.</p>
             ) : (
               <div className="space-y-3">
                 {payload.variables.slice(0, 10).map((variable) => (
-                  <div key={variable.id} className="rounded-lg border border-slate-200 p-3">
+                  <div key={variable.id} className="rounded-lg border border-border p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-mono text-sm font-medium text-slate-900">
+                        <p className="font-mono text-sm font-medium text-foreground">
                           {variable.canonical_variable}
                         </p>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-muted-foreground">
                           {variable.proposed_value ?? 'sin valor'}
                         </p>
                       </div>
                       <Badge variant="outline">{variable.future_source}</Badge>
                     </div>
-                    <p className="mt-2 line-clamp-3 text-xs text-slate-500">{variable.evidence}</p>
+                    <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">
+                      {variable.evidence}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -658,21 +659,21 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
           </CardHeader>
           <CardContent>
             {payload.sourceMap.length === 0 ? (
-              <p className="text-sm text-slate-500">Sin source map generado todavia.</p>
+              <p className="text-sm text-muted-foreground">Sin source map generado todavia.</p>
             ) : (
               <div className="space-y-3">
                 {payload.sourceMap.slice(0, 12).map((entry) => (
-                  <div key={entry.id} className="rounded-lg border border-slate-200 p-3">
-                    <p className="font-mono text-sm font-medium text-slate-900">
+                  <div key={entry.id} className="rounded-lg border border-border p-3">
+                    <p className="font-mono text-sm font-medium text-foreground">
                       {entry.canonical_variable}
                     </p>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       {entry.future_source}
                       {entry.source_table
                         ? ` · ${entry.source_table}.${entry.source_field ?? '*'}`
                         : ''}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">{entry.rationale}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{entry.rationale}</p>
                   </div>
                 ))}
               </div>
@@ -680,7 +681,7 @@ export function EscriturasLabClient({ initialPayload }: { initialPayload: LabPay
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageShell>
   )
 }
 
@@ -717,24 +718,24 @@ function LabOperationDialog({
             <AlertDialogMedia
               className={
                 operation.status === 'success'
-                  ? 'bg-emerald-50 text-emerald-700'
+                  ? 'bg-success/10 text-success'
                   : operation.status === 'error'
-                    ? 'bg-red-50 text-red-700'
-                    : 'bg-sky-50 text-sky-700'
+                    ? 'bg-destructive/10 text-destructive'
+                    : 'bg-info/10 text-info'
               }
             >
               {operation.status === 'success' ? (
-                <CheckCircle2 />
+                <HugeiconsIcon icon={CheckCircle2} />
               ) : operation.status === 'error' ? (
-                <XCircle />
+                <HugeiconsIcon icon={XCircle} />
               ) : (
-                <LoaderCircle className="animate-spin" />
+                <Spinner />
               )}
             </AlertDialogMedia>
             <AlertDialogTitle>
               {operation.title}
               {progress ? (
-                <span className="ml-2 text-base font-normal text-slate-500">
+                <span className="ml-2 text-base font-normal text-muted-foreground">
                   {progress.percentage}%
                 </span>
               ) : null}
@@ -747,29 +748,29 @@ function LabOperationDialog({
               <div className="space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">{progress.label}</span>
-                    <span className="text-slate-500">Pendientes: {progress.pending}</span>
+                    <span className="font-medium text-foreground">{progress.label}</span>
+                    <span className="text-muted-foreground">Pendientes: {progress.pending}</span>
                   </div>
-                  <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-3 overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full bg-sky-600 transition-all duration-500"
+                      className="h-full rounded-full bg-info transition-all duration-500"
                       style={{ width: `${Math.max(progress.percentage, isRunning ? 4 : 0)}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <div className="rounded-lg border border-border bg-muted p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {operation.kind === 'process' ? 'Archivo actual' : 'Operacion actual'}
                   </p>
-                  <p className="mt-1 truncate text-sm font-medium text-slate-900">
+                  <p className="mt-1 truncate text-sm font-medium text-foreground">
                     {operation.kind === 'process'
                       ? (progress.currentItem ??
                         'Esperando que el procesador marque el documento...')
                       : progress.label}
                   </p>
                   {operation.lastPolledAt ? (
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Ultima actualizacion: {operation.lastPolledAt}
                     </p>
                   ) : null}
@@ -794,8 +795,8 @@ function LabOperationDialog({
             {isRunning ? (
               <div className="grid gap-2">
                 {steps.map((step) => (
-                  <div key={step} className="flex items-center gap-2 text-sm text-slate-600">
-                    <LoaderCircle className="size-3.5 animate-spin text-sky-600" />
+                  <div key={step} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Spinner className="size-3.5" />
                     {step}
                   </div>
                 ))}
@@ -803,39 +804,39 @@ function LabOperationDialog({
             ) : null}
 
             {!isRunning && summary.length > 0 ? (
-              <div className="grid gap-2 rounded-lg border border-slate-200 p-3">
+              <div className="grid gap-2 rounded-lg border border-border p-3">
                 {summary.map((item) => (
                   <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-slate-600">{item.label}</span>
-                    <span className="font-semibold text-slate-900">{item.value}</span>
+                    <span className="text-muted-foreground">{item.label}</span>
+                    <span className="font-semibold text-foreground">{item.value}</span>
                   </div>
                 ))}
               </div>
             ) : null}
 
             {operation.stderr ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-900">
-                  <AlertTriangle className="size-4" />
+              <div className="rounded-lg border border-warning/20 bg-warning/10 p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-warning">
+                  <HugeiconsIcon icon={AlertTriangle} className="size-4" />
                   Advertencias del proceso
                 </div>
-                <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-xs text-amber-900">
+                <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-xs text-warning">
                   {operation.stderr}
                 </pre>
               </div>
             ) : null}
 
             {operation.stdout ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="mb-2 text-sm font-medium text-slate-700">Salida del comando</p>
-                <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-xs text-slate-600">
+              <div className="rounded-lg border border-border bg-muted p-3">
+                <p className="mb-2 text-sm font-medium text-foreground">Salida del comando</p>
+                <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">
                   {operation.stdout}
                 </pre>
               </div>
             ) : null}
 
             {operation.error ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
                 {operation.error}
               </div>
             ) : null}
@@ -854,9 +855,9 @@ function LabOperationDialog({
 
 function MetricTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-slate-200 p-3">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-slate-900">{value}</p>
+    <div className="rounded-lg border border-border p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
     </div>
   )
 }

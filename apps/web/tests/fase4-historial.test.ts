@@ -12,6 +12,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { navItems } from '@/components/app-sidebar'
+import { ESCRITURA_TABS } from '@/components/documents/escritura-tabs'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lógica replicada de documents-history-table.tsx
@@ -407,73 +408,43 @@ describe('F-v2-4.13 — filterDocuments: combinación de filtros', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// F-v2-4.15 — navItems: grupo Documentos en el sidebar
+// F-v2-4.15 — Escrituras: tabs Mesa · Historial · Plantillas (SDD 015, ex-grupo Documentos)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('F-v2-4.15 — navItems: grupo Documentos', () => {
-  const docGroup = navItems.find((item) => item.title === 'Documentos')
-
-  it('existe el grupo "Documentos" en navItems', () => {
-    expect(docGroup).toBeDefined()
+describe('F-v2-4.15 — ESCRITURA_TABS: tabs de Escrituras', () => {
+  it('tiene los 3 tabs esperados en orden', () => {
+    expect(ESCRITURA_TABS.map((tab) => tab.title)).toEqual(['Mesa', 'Historial', 'Plantillas'])
   })
 
-  it('el grupo Documentos tiene subitems', () => {
-    expect(docGroup?.items).toBeDefined()
-    expect(docGroup?.items?.length).toBeGreaterThan(0)
+  it('tab Mesa apunta a /documentos', () => {
+    expect(ESCRITURA_TABS.find((t) => t.key === 'mesa')?.href).toBe('/documentos')
   })
 
-  it('tiene los subitems de Documentos aprobados para escrituras', () => {
-    expect(docGroup?.items).toHaveLength(3)
-    expect(docGroup?.items?.map((item) => item.title)).toEqual([
-      'Escrituras',
-      'Historial',
-      'Plantillas',
-    ])
+  it('tab Historial apunta a /documentos/historial', () => {
+    expect(ESCRITURA_TABS.find((t) => t.key === 'historial')?.href).toBe('/documentos/historial')
   })
 
-  it('subitem Escrituras existe con la URL correcta', () => {
-    const sub = docGroup?.items?.find((i) => i.title === 'Escrituras')
-    expect(sub).toBeDefined()
-    expect(sub?.url).toBe('/documentos')
-  })
-
-  it('subitem Plantillas existe con la URL correcta', () => {
-    const sub = docGroup?.items?.find((i) => i.title === 'Plantillas')
-    expect(sub).toBeDefined()
-    expect(sub?.url).toBe('/documentos/plantillas')
+  it('tab Plantillas apunta a /documentos/plantillas', () => {
+    expect(ESCRITURA_TABS.find((t) => t.key === 'plantillas')?.href).toBe('/documentos/plantillas')
   })
 
   it('no publica la ruta MVP de Bloques', () => {
-    const sub = docGroup?.items?.find((i) => i.title === 'Bloques')
+    const sub = ESCRITURA_TABS.find((t) => t.title === 'Bloques')
     expect(sub).toBeUndefined()
-  })
-
-  it('subitem Historial existe con la URL correcta', () => {
-    const sub = docGroup?.items?.find((i) => i.title === 'Historial')
-    expect(sub).toBeDefined()
-    expect(sub?.url).toBe('/documentos/historial')
-  })
-
-  it('el grupo Documentos no tiene URL propia (es colapsable)', () => {
-    expect(docGroup).not.toHaveProperty('url')
-  })
-
-  it('el grupo Documentos tiene un icono asignado', () => {
-    expect(docGroup?.icon).toBeDefined()
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// F-v2-4.15 — navItems: orden y estructura global del sidebar
+// F-v2-4.15 — navItems: estructura global del sidebar plano (SDD 015)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('F-v2-4.15 — navItems: estructura global del sidebar', () => {
-  it('contiene al menos 5 grupos/items de navegación', () => {
-    expect(navItems.length).toBeGreaterThanOrEqual(5)
+  it('es una lista plana de 6 items de navegación', () => {
+    expect(navItems).toHaveLength(6)
   })
 
-  it('Dashboard es el primer item', () => {
-    expect(navItems[0].title).toBe('Dashboard')
+  it('Panel es el primer item', () => {
+    expect(navItems[0].title).toBe('Panel')
   })
 
   it('Proyectos existe con URL /projects', () => {
@@ -482,28 +453,22 @@ describe('F-v2-4.15 — navItems: estructura global del sidebar', () => {
     expect((item as { url?: string })?.url).toBe('/projects')
   })
 
-  it('Agente existe y tiene subitems', () => {
+  it('Agente existe con URL /agente (Chat/Skills/Integraciones son tabs de la página)', () => {
     const item = navItems.find((i) => i.title === 'Agente')
     expect(item).toBeDefined()
-    expect(item?.items?.length).toBeGreaterThan(0)
+    expect((item as { url?: string })?.url).toBe('/agente')
   })
 
-  it('Documentos aparece después de Vendedores', () => {
+  it('Escrituras aparece antes de Vendedores', () => {
     const vendedoresIdx = navItems.findIndex((i) => i.title === 'Vendedores')
-    const documentosIdx = navItems.findIndex((i) => i.title === 'Documentos')
+    const escriturasIdx = navItems.findIndex((i) => i.title === 'Escrituras')
     expect(vendedoresIdx).toBeGreaterThanOrEqual(0)
-    expect(documentosIdx).toBeGreaterThan(vendedoresIdx)
+    expect(escriturasIdx).toBeLessThan(vendedoresIdx)
   })
 
-  it('todos los items tienen al menos title', () => {
+  it('todos los items tienen title y url', () => {
     navItems.forEach((item) => {
       expect(item.title).toBeTruthy()
-    })
-  })
-
-  it('todos los items hoja (sin subitems) tienen URL', () => {
-    const leafItems = navItems.filter((i) => !i.items || i.items.length === 0)
-    leafItems.forEach((item) => {
       expect((item as { url?: string }).url).toBeTruthy()
     })
   })
@@ -536,11 +501,10 @@ describe('F-v2-4.14 — /documentos accesos rápidos: rutas correctas', () => {
     })
   })
 
-  it('las hrefs coinciden con los subitems del sidebar', () => {
-    const docGroup = navItems.find((i) => i.title === 'Documentos')
-    const sidebarUrls = new Set(docGroup?.items?.map((i) => i.url))
+  it('las hrefs coinciden con los tabs de Escrituras', () => {
+    const tabUrls = new Set(ESCRITURA_TABS.map((t) => t.href))
     ACCESOS.forEach((a) => {
-      expect(sidebarUrls.has(a.href)).toBe(true)
+      expect(tabUrls.has(a.href)).toBe(true)
     })
   })
 

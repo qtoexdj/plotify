@@ -1,12 +1,25 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Inter } from 'next/font/google'
+import { Bricolage_Grotesque, Geist_Mono, Onest, Source_Serif_4 } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const onest = Onest({
+  variable: '--font-sans',
   subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+})
+
+const bricolageGrotesque = Bricolage_Grotesque({
+  variable: '--font-display',
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  display: 'swap',
+})
+
+const sourceSerif4 = Source_Serif_4({
+  variable: '--font-serif',
+  subsets: ['latin'],
+  display: 'swap',
 })
 
 const geistMono = Geist_Mono({
@@ -28,8 +41,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={inter.variable} suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="es" className={onest.variable} suppressHydrationWarning>
+      <body
+        className={`${bricolageGrotesque.variable} ${sourceSerif4.variable} ${geistMono.variable} antialiased`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

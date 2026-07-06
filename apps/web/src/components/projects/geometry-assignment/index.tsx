@@ -471,7 +471,7 @@ export function GeometryAssignmentPanel({
     return (
       <div className="flex items-center justify-center h-150 bg-muted/50 rounded-xl border border-border">
         <div className="flex flex-col items-center gap-3">
-          <Spinner className="w-8 h-8 text-primary" />
+          <Spinner className="w-8 h-8" />
           <div className="h-3 w-40 rounded bg-muted animate-pulse" />
         </div>
       </div>
@@ -516,19 +516,19 @@ export function GeometryAssignmentPanel({
                     key: 'lot' as const,
                     label: 'Lotes',
                     count: lotCount,
-                    active: 'bg-emerald-500 text-white',
+                    active: 'bg-success text-success-foreground',
                   },
                   {
                     key: 'road' as const,
                     label: 'Caminos',
                     count: roadCount,
-                    active: 'bg-amber-500 text-white',
+                    active: 'bg-warning text-warning-foreground',
                   },
                   {
                     key: 'common_area' as const,
                     label: 'Áreas',
                     count: commonAreaCount,
-                    active: 'bg-violet-500 text-white',
+                    active: 'bg-common-area text-common-area-foreground',
                   },
                 ] as const
               ).map((pill) => (
@@ -566,12 +566,12 @@ export function GeometryAssignmentPanel({
                 </div>
               )}
               {successMessage && (
-                <div className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400">
+                <div className="flex items-center gap-2 p-2 bg-success/10 border border-success/20 rounded-lg text-success text-sm">
                   <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4 shrink-0" />
                   <span className="flex-1">{successMessage}</span>
                   <button
                     onClick={() => setSuccessMessage(null)}
-                    className="hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded p-0.5"
+                    className="hover:bg-success/15 rounded p-0.5"
                   >
                     <HugeiconsIcon icon={Cancel01Icon} className="w-4 h-4" />
                   </button>
@@ -597,15 +597,15 @@ export function GeometryAssignmentPanel({
             <div className="absolute top-4 right-4 bg-card/90 backdrop-blur-sm rounded-lg shadow-sm border border-border p-2">
               <div className="flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" />
+                  <div className="w-3 h-3 rounded bg-success/40 border border-success" />
                   <span className="text-muted-foreground">Lotes</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-0.5 bg-amber-500" />
+                  <div className="w-3 h-0.5 bg-warning" />
                   <span className="text-muted-foreground">Caminos</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded bg-violet-200 border border-violet-400" />
+                  <div className="w-3 h-3 rounded bg-common-area/40 border border-common-area" />
                   <span className="text-muted-foreground">Áreas</span>
                 </div>
               </div>

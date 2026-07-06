@@ -41,21 +41,20 @@ describe('T009 - Documentos por proyecto', () => {
     const legalCenter = read('src/components/projects/detail/legal-control-center.tsx')
 
     expect(projectPage).toContain('useSearchParams')
-    expect(projectPage).toContain("requestedTab === 'legal'")
-    expect(projectPage).toContain("requestedTab === 'documents'")
+    expect(projectPage).toContain("'legal'")
+    expect(projectPage).toContain('validTabs.includes(requestedTab)')
+    expect(projectPage).toContain('?tab=${value}')
     expect(legalCenter).toContain('id="variables-legales"')
   })
 
-  it('ordena los subitems de Documentos como Escrituras, Historial y Plantillas', () => {
-    const sidebar = read('src/components/app-sidebar.tsx')
-    const documentos = sidebar.indexOf("title: 'Documentos'")
-    const escrituras = sidebar.indexOf("title: 'Escrituras'", documentos)
-    const historial = sidebar.indexOf("title: 'Historial'", documentos)
-    const plantillas = sidebar.indexOf("title: 'Plantillas'", documentos)
+  it('ordena los tabs de Escrituras como Mesa, Historial y Plantillas (SDD 015 — reemplaza el grupo Documentos del sidebar)', () => {
+    const tabs = read('src/components/documents/escritura-tabs.tsx')
+    const mesa = tabs.indexOf("title: 'Mesa'")
+    const historial = tabs.indexOf("title: 'Historial'")
+    const plantillas = tabs.indexOf("title: 'Plantillas'")
 
-    expect(documentos).toBeGreaterThanOrEqual(0)
-    expect(escrituras).toBeGreaterThan(documentos)
-    expect(historial).toBeGreaterThan(escrituras)
+    expect(mesa).toBeGreaterThanOrEqual(0)
+    expect(historial).toBeGreaterThan(mesa)
     expect(plantillas).toBeGreaterThan(historial)
   })
 })

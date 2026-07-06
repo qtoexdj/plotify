@@ -4,6 +4,12 @@ import { useEffect, useRef } from 'react'
 import { useMap } from '@/components/ui/map'
 import { useTheme } from 'next-themes'
 import { ESTADO_CONFIG } from '@/lib/models/lot.model'
+import {
+  INFRA_COLORS as INFRA_CONFIG,
+  MAP_SELECTION_COLOR,
+  MAP_LABEL_TEXT_COLOR,
+  MAP_LABEL_SELECTED_TEXT_COLOR,
+} from '@/lib/map/lot-colors'
 import type { ViewerFeatureCollection } from '@/types/viewer.types'
 import type MapLibreGL from 'maplibre-gl'
 
@@ -18,14 +24,6 @@ const LOT_LABELS_LAYER = 'lot-labels'
 const ROAD_LAYER = 'road-line'
 const COMMON_AREA_FILL_LAYER = 'common-area-fill'
 const COMMON_AREA_OUTLINE_LAYER = 'common-area-outline'
-const SERVITUDE_FILL_LAYER = 'servitude-fill'
-const SERVITUDE_OUTLINE_LAYER = 'servitude-outline'
-
-const INFRA_CONFIG = {
-  road: { stroke: '#f59e0b' },
-  common_area: { fill: '#a78bfa', stroke: '#7c3aed' },
-  servitude: { fill: '#f97316', stroke: '#c2410c' },
-} as const
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -36,27 +34,14 @@ const INFRA_CONFIG = {
  * colors and centroid coordinates for labels.
  */
 function enrichFeatureCollection(fc: ViewerFeatureCollection): GeoJSON.FeatureCollection {
-  const lotGeometryIdByLotId = new Map(
-    fc.features
-      .filter((feature) => feature.properties.geometry_type === 'lot' && feature.properties.lot_id)
-      .map((feature) => [feature.properties.lot_id as string, feature.properties.geometry_id])
-  )
-
   return {
     type: 'FeatureCollection',
     features: fc.features.map((f) => {
-      const { geometry_type, estado, lot_id, geometry_id } = f.properties
+      const { geometry_type, estado } = f.properties
       let fillColor: string
       let strokeColor: string
-      const interactiveGeometryId =
-        geometry_type === 'servitude' && lot_id
-          ? (lotGeometryIdByLotId.get(lot_id) ?? geometry_id)
-          : geometry_id
 
-      if (geometry_type === 'servitude') {
-        fillColor = INFRA_CONFIG.servitude.fill
-        strokeColor = INFRA_CONFIG.servitude.stroke
-      } else if (geometry_type === 'common_area') {
+      if (geometry_type === 'common_area') {
         fillColor = INFRA_CONFIG.common_area.fill
         strokeColor = INFRA_CONFIG.common_area.stroke
       } else if (geometry_type === 'lot') {
@@ -75,7 +60,6 @@ function enrichFeatureCollection(fc: ViewerFeatureCollection): GeoJSON.FeatureCo
         properties: {
           ...f.properties,
           _fill_color: fillColor,
-          _interactive_geometry_id: interactiveGeometryId,
           _stroke_color: strokeColor,
         },
       }
@@ -164,29 +148,6 @@ export function MapLotLayers({
       },
     })
 
-    // ─── Servitude Overlays ─────────────────────────────────────────────
-    map.addLayer({
-      id: SERVITUDE_FILL_LAYER,
-      type: 'fill',
-      source: SOURCE_ID,
-      filter: ['==', ['get', 'geometry_type'], 'servitude'],
-      paint: {
-        'fill-color': ['get', '_fill_color'],
-        'fill-opacity': 0.32,
-      },
-    })
-    map.addLayer({
-      id: SERVITUDE_OUTLINE_LAYER,
-      type: 'line',
-      source: SOURCE_ID,
-      filter: ['==', ['get', 'geometry_type'], 'servitude'],
-      paint: {
-        'line-color': ['get', '_stroke_color'],
-        'line-width': 1.75,
-        'line-opacity': 0.95,
-      },
-    })
-
     // ─── Lot Fill ───────────────────────────────────────────────────────
     map.addLayer({
       id: LOT_FILL_LAYER,
@@ -243,7 +204,7 @@ export function MapLotLayers({
         'text-ignore-placement': true,
       },
       paint: {
-        'text-color': isDark ? '#e5e7eb' : '#1f2937',
+        'text-color': isDark ? MAP_LABEL_TEXT_COLOR.dark : MAP_LABEL_TEXT_COLOR.light,
         'text-halo-color': isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)',
         'text-halo-width': 1.8,
       },
@@ -256,42 +217,11 @@ export function MapLotLayers({
   useEffect(() => {
     if (!map || !isLoaded || !layersAdded.current) return
 
-    const ownerGeometryIdByLotId = new Map(
-      featureCollection.features
-        .filter(
-          (feature) => feature.properties.geometry_type === 'lot' && feature.properties.lot_id
-        )
-        .map((feature) => [feature.properties.lot_id as string, feature.properties.geometry_id])
-    )
-
-    const resolveInteractiveGeometryId = (properties: Record<string, unknown> | undefined) => {
-      const geometryId = properties?.geometry_id
-      const geometryType = properties?.geometry_type
-      const lotId = properties?.lot_id
-
-      if (typeof geometryId !== 'string') {
-        return null
-      }
-
-      if (geometryType === 'servitude' && typeof lotId === 'string') {
-        return ownerGeometryIdByLotId.get(lotId) ?? geometryId
-      }
-
-      return geometryId
-    }
-
-    const interactiveLayers = [
-      LOT_FILL_LAYER,
-      ROAD_LAYER,
-      COMMON_AREA_FILL_LAYER,
-      SERVITUDE_FILL_LAYER,
-      SERVITUDE_OUTLINE_LAYER,
-    ]
+    const interactiveLayers = [LOT_FILL_LAYER, ROAD_LAYER, COMMON_AREA_FILL_LAYER]
 
     const handleMouseMove = (e: MapLibreGL.MapLayerMouseEvent) => {
       if (e.features && e.features.length > 0) {
-        const geoId = resolveInteractiveGeometryId(e.features[0].properties)
-        if (!geoId) return
+        const geoId = e.features[0].properties?.geometry_id as string
         onFeatureHover(geoId)
         map.getCanvas().style.cursor = 'pointer'
       }
@@ -304,8 +234,7 @@ export function MapLotLayers({
 
     const handleClick = (e: MapLibreGL.MapLayerMouseEvent) => {
       if (e.features && e.features.length > 0) {
-        const geoId = resolveInteractiveGeometryId(e.features[0].properties)
-        if (!geoId) return
+        const geoId = e.features[0].properties?.geometry_id as string
         const isMulti =
           e.originalEvent.shiftKey || e.originalEvent.ctrlKey || e.originalEvent.metaKey
         onFeatureClick(geoId, isMulti)
@@ -325,7 +254,7 @@ export function MapLotLayers({
         map.off('click', layer, handleClick)
       }
     }
-  }, [map, isLoaded, featureCollection, onFeatureClick, onFeatureHover])
+  }, [map, isLoaded, onFeatureClick, onFeatureHover])
 
   // ─── Selection & Hover visual states ──────────────────────────────────
   useEffect(() => {
@@ -363,7 +292,7 @@ export function MapLotLayers({
         ['get', 'geometry_id'],
         ['literal', selectedArr.length > 0 ? selectedArr : ['__none__']],
       ],
-      '#1d4ed8', // selected blue
+      MAP_SELECTION_COLOR,
       ['get', '_stroke_color'], // default
     ])
     map.setPaintProperty(LOT_OUTLINE_LAYER, 'line-width', [
@@ -393,8 +322,10 @@ export function MapLotLayers({
     }
 
     // --- Label bold for selected lots (F10 + F13) ---
-    const defaultLabelColor = isDark ? '#f3f4f6' : '#1f2937'
-    const selectedLabelColor = isDark ? '#93c5fd' : '#1e3a8a'
+    const defaultLabelColor = isDark ? MAP_LABEL_TEXT_COLOR.dark : MAP_LABEL_TEXT_COLOR.light
+    const selectedLabelColor = isDark
+      ? MAP_LABEL_SELECTED_TEXT_COLOR.dark
+      : MAP_LABEL_SELECTED_TEXT_COLOR.light
 
     if (hasSelection) {
       map.setLayoutProperty(LOT_LABELS_LAYER, 'text-size', [
@@ -431,8 +362,6 @@ export function MapLotLayers({
         const layers = [
           LOT_LABELS_LAYER,
           ROAD_LAYER,
-          SERVITUDE_OUTLINE_LAYER,
-          SERVITUDE_FILL_LAYER,
           LOT_OUTLINE_LAYER,
           LOT_FILL_LAYER,
           COMMON_AREA_OUTLINE_LAYER,

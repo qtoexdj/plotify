@@ -1,4 +1,3 @@
-import { PageHeader } from '@/components/dashboard/page-header'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { MesaEscritura } from '@/components/documents/mesa/mesa-escritura'
 
@@ -10,11 +9,7 @@ export default async function ProyectoMatrizPage({ params }: ProyectoMatrizPageP
   const { projectId } = await params
 
   return (
-    <PageShell>
-      <PageHeader
-        title="Mesa de escritura"
-        description="Matriz del proyecto con los datos revisados y los datos de venta pendientes."
-      />
+    <PageShell className="max-w-[1500px]">
       <MesaEscritura projectId={projectId} />
     </PageShell>
   )

@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { Bot, Send, CheckCircle2, ChevronDown, ChevronUp, Loader2, Unplug } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  BotIcon as Bot,
+  SentIcon as Send,
+  CheckmarkCircle02Icon as CheckCircle2,
+  ArrowDown01Icon as ChevronDown,
+  ArrowUp01Icon as ChevronUp,
+  Unlink01Icon as Unplug,
+} from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import {
   Card,
   CardContent,
@@ -131,14 +140,14 @@ export function TelegramLinkCard({
     <Card className="border-muted bg-muted/40 overflow-hidden relative">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Send className="h-5 w-5 text-[#2AABEE]" />
+          <HugeiconsIcon icon={Send} className="h-5 w-5 text-[#2AABEE]" />
           Notificaciones de Telegram
           {currentChatId && (
             <Badge
               variant="secondary"
-              className="ml-auto bg-green-500/10 text-green-600 hover:bg-green-500/20"
+              className="ml-auto bg-success/10 text-success hover:bg-success/20"
             >
-              <CheckCircle2 className="h-3 w-3 mr-1" />
+              <HugeiconsIcon icon={CheckCircle2} className="h-3 w-3 mr-1" />
               Vinculado
             </Badge>
           )}
@@ -159,9 +168,9 @@ export function TelegramLinkCard({
               className="bg-[#2AABEE] hover:bg-[#229ED9] text-white w-full sm:w-auto"
             >
               {isLoading && !showQR ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 h-4 w-4" />
               ) : (
-                <Bot className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={Bot} className="mr-2 h-4 w-4" />
               )}
               Vincular en Dispositivo Actual
             </Button>
@@ -173,11 +182,11 @@ export function TelegramLinkCard({
               className="w-full sm:w-auto"
             >
               {isLoading && showQR ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Spinner className="mr-2 h-4 w-4" />
               ) : showQR ? (
-                <ChevronUp className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={ChevronUp} className="mr-2 h-4 w-4" />
               ) : (
-                <ChevronDown className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={ChevronDown} className="mr-2 h-4 w-4" />
               )}
               {showQR ? 'Ocultar Código QR' : 'Mostrar Código QR'}
             </Button>
@@ -196,12 +205,12 @@ export function TelegramLinkCard({
                 />
               </div>
               <div className="space-y-1">
-                <h4 className="font-medium text-slate-900">Escanea desde tu móvil</h4>
-                <p className="text-sm text-slate-500 max-w-sm">
+                <h4 className="font-medium text-foreground">Escanea desde tu móvil</h4>
+                <p className="text-sm text-muted-foreground max-w-sm">
                   Abre la cámara de tu teléfono, escanea el código y presiona &quot;INICIAR&quot; en
                   Telegram.
                   <br />
-                  <span className="text-xs text-orange-500">
+                  <span className="text-xs text-warning">
                     Este código es válido por 15 minutos.
                   </span>
                 </p>
@@ -220,9 +229,9 @@ export function TelegramLinkCard({
             className="text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             {isUnlinking ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Spinner className="mr-2 h-4 w-4" />
             ) : (
-              <Unplug className="mr-2 h-4 w-4" />
+              <HugeiconsIcon icon={Unplug} className="mr-2 h-4 w-4" />
             )}
             Desvincular Cuenta
           </Button>

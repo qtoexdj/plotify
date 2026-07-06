@@ -6,7 +6,7 @@
  *   - getRoleBadgeVariant   (skills-grid.tsx)
  *   - getRoleLabel          (skills-grid.tsx)
  *   - getParameters         (skill-detail-modal.tsx)
- *   - navItems              (app-sidebar.tsx) — verifica que "Skills" está bajo "Agente"
+ *   - navItems              (app-sidebar.tsx) — verifica el sidebar plano de 6 ítems (SDD 015)
  *
  * Todos son tests de lógica pura: no requieren DOM ni React renderer.
  */
@@ -282,14 +282,13 @@ describe('getParameters', () => {
   })
 })
 
-// ─── navItems — Skills bajo Agente ────────────────────────────────────────────
+// ─── navItems — sidebar plano (SDD 015) ───────────────────────────────────────
 describe('navItems (app-sidebar)', () => {
   let navItems: Array<{
     title: string
     url?: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon?: any
-    items?: Array<{ title: string; url: string }>
   }>
 
   beforeAll(async () => {
@@ -297,28 +296,22 @@ describe('navItems (app-sidebar)', () => {
     navItems = mod.navItems
   })
 
-  it('existe un grupo "Agente" en navItems', () => {
+  it('es una lista plana de 6 ítems, sin sub-items anidados', () => {
+    expect(navItems).toHaveLength(6)
+    navItems.forEach((item) => {
+      expect(item).not.toHaveProperty('items')
+    })
+  })
+
+  it('existe un ítem "Agente" con url "/agente" (Skills/Integraciones ahora son tabs de la página)', () => {
     const agente = navItems.find((item) => item.title === 'Agente')
     expect(agente).toBeDefined()
+    expect(agente?.url).toBe('/agente')
   })
 
-  it('el grupo "Agente" tiene sub-items', () => {
-    const agente = navItems.find((item) => item.title === 'Agente')
-    expect(agente?.items).toBeDefined()
-    expect(agente!.items!.length).toBeGreaterThan(0)
-  })
-
-  it('el grupo "Agente" contiene el sub-item "Skills" con url "/agente/skills"', () => {
-    const agente = navItems.find((item) => item.title === 'Agente')
-    const skills = agente?.items?.find((sub) => sub.title === 'Skills')
-    expect(skills).toBeDefined()
-    expect(skills?.url).toBe('/agente/skills')
-  })
-
-  it('el grupo "Agente" también conserva "Chat" e "Integraciones"', () => {
-    const agente = navItems.find((item) => item.title === 'Agente')
-    const titles = agente?.items?.map((s) => s.title) ?? []
-    expect(titles).toContain('Chat')
-    expect(titles).toContain('Integraciones')
+  it('existe un ítem "Escrituras" con url "/documentos" (Historial/Plantillas ahora son tabs de la página)', () => {
+    const escrituras = navItems.find((item) => item.title === 'Escrituras')
+    expect(escrituras).toBeDefined()
+    expect(escrituras?.url).toBe('/documentos')
   })
 })

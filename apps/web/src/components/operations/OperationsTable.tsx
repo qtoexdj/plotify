@@ -23,7 +23,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { ESTADO_CONFIG } from '@/lib/models/lot.model'
+import { ESTADO_CONFIG, estadoToStatusVariant } from '@/lib/models/lot.model'
+import { StatusBadge } from '@/components/ui/status-badge'
 import type { OperationLot } from '@/lib/services/operations.service'
 import { LotInfoView } from '../projects/viewer/LotInfoView'
 import { LotEditForm } from '../projects/viewer/LotEditForm'
@@ -113,13 +114,7 @@ export function OperationsTable({ data }: OperationsTableProps) {
       cell: ({ row }) => {
         const estado = row.original.estado
         const config = ESTADO_CONFIG[estado]
-        return (
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-semibold ${config?.bgClass} ${config?.textClass}`}
-          >
-            {config?.label}
-          </span>
-        )
+        return <StatusBadge variant={estadoToStatusVariant(estado)}>{config?.label}</StatusBadge>
       },
     },
     {
@@ -164,12 +159,12 @@ export function OperationsTable({ data }: OperationsTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input
           placeholder="Filtrar por proyecto..."
           value={(table.getColumn('project_name')?.getFilterValue() as string) ?? ''}
           onChange={(event) => table.getColumn('project_name')?.setFilterValue(event.target.value)}
-          className="max-w-sm"
+          className="sm:max-w-sm"
         />
         <Input
           placeholder="Filtrar por cliente..."
@@ -177,17 +172,17 @@ export function OperationsTable({ data }: OperationsTableProps) {
           onChange={(event) =>
             table.getColumn('cliente_nombre')?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="sm:max-w-sm"
         />
       </div>
-      <div className="rounded-md border">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="whitespace-nowrap">
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -207,7 +202,7 @@ export function OperationsTable({ data }: OperationsTableProps) {
                   className="cursor-pointer hover:bg-muted/50"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="whitespace-nowrap">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -227,6 +222,7 @@ export function OperationsTable({ data }: OperationsTableProps) {
         <Button
           variant="outline"
           size="sm"
+          className="min-h-11"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
@@ -235,6 +231,7 @@ export function OperationsTable({ data }: OperationsTableProps) {
         <Button
           variant="outline"
           size="sm"
+          className="min-h-11"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >

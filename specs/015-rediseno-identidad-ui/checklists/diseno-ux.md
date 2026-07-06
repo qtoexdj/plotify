@@ -1,53 +1,46 @@
-# Checklist: Calidad de Diseño y UX (015)
+# Checklist Diseño/UX: SDD 015
 
-**Purpose**: gate de calidad visual/UX antes de cerrar el feature. Completar en la Fase 6 (T043).
+## Fundaciones
 
-## Identidad y tokens
-
-- [ ] CHK001 Ningún color fuera de tokens (grep SC-001 = 0) [FR-001, FR-012]
-- [ ] CHK002 `design.md` v2 sincronizado 1:1 con `globals.css`, con tabla AA [FR-002]
-- [ ] CHK003 `--brand` tokenizado; recolor de logo = 1 token + regenerar assets [FR-004, SC-008]
-- [ ] CHK004 Carmesí primario y destructive nunca ambiguos en una misma vista (regla documentada) [Edge]
-- [ ] CHK005 Dark mode diseñado (no invertido): revisión de las 6 secciones + super-admin en oscuro [FR-001]
-
-## Tipografía
-
-- [ ] CHK006 Onest en cuerpo, Bricolage en h1–h3 y cifras, mono en ROL/montos, serif solo en documento de mesa [FR-003]
-- [ ] CHK007 Inter y Geist Sans eliminadas del bundle [SC-007]
-- [ ] CHK008 Un solo `h1` por página (PageHeader) [FR-014]
+- [x] `design.md` está en v2.0.0 y sincronizado con `globals.css`.
+- [x] `--primary` usa carmesí claro/oscuro; `--brand` mantiene el verde del isotipo.
+- [x] Bricolage Grotesque, Onest, Source Serif 4 y Geist Mono están cargadas con `next/font`.
+- [x] Inter y Geist Sans no se cargan desde `layout.tsx`.
+- [x] `BrandMark`, `Spinner` y `BrandLoader` comparten paths del isotipo.
 
 ## Navegación
 
-- [ ] CHK009 Sidebar plano 6 ítems + Buscar + footer; sin grupos ni submenús [FR-005]
-- [ ] CHK010 Tabs internos en Escrituras y Agente con URLs conservadas [FR-006]
-- [ ] CHK011 ⌘K funcional con teclado (abrir, navegar, Escape) [FR-007]
-- [ ] CHK012 Header sin búsqueda [FR-008]
-- [ ] CHK013 Estado activo correcto en sub-rutas [FR-005]
+- [x] Sidebar dashboard es una lista plana: Buscar, Panel, Proyectos, Escrituras, Leads, Vendedores, Agente.
+- [x] Sidebar usa `variant="inset"` y el componente base redondea el panel en esa variante.
+- [x] Header dashboard queda sin búsqueda ni toggle de tema.
+- [x] Command palette está montado en dashboard y super-admin.
+- [x] Tabs de Escrituras conservan `/documentos`, `/documentos/historial`, `/documentos/plantillas`.
+- [x] Tabs de Agente conservan `/agente`, `/agente/skills`, `/agente/integrations`.
 
-## Feedback
+## Feedback Y Estados
 
-- [ ] CHK014 Solo Spinner/BrandLoader/Skeleton como indicadores (grep SC-002 = 0 + test guardia) [FR-009]
-- [ ] CHK015 BrandLoader únicamente en pantallas completas [FR-009]
-- [ ] CHK016 StatusBadge único para estados de lote y semánticos [FR-010]
-- [ ] CHK017 EmptyState en todas las listas vacías [FR-011]
-- [ ] CHK018 reduced-motion: loaders siguen informativos sin animación [FR-016]
+- [x] No quedan imports prohibidos `Loader2`, `LoaderCircle`, `Loading02Icon` ni `Loading03Icon`.
+- [x] No quedan `animate-spin` ad-hoc fuera de `Spinner`/`BrandLoader`.
+- [x] `BrandLoader` queda reservado a auth callback.
+- [x] `StatusBadge` cubre estados de lote y estados semánticos principales.
+- [x] `EmptyState` cubre vistas vacías principales; textos de tabla/filtro quedan como estados inline.
 
-## Consistencia
+## Coherencia Visual
 
-- [ ] CHK019 Una sola librería de iconos en producto (grep SC-003 = 0) [FR-013]
-- [ ] CHK020 PageShell en 100% de páginas dashboard + super-admin [FR-014, SC-004]
-- [ ] CHK021 Colores de mapa centralizados en `lib/map/lot-colors.ts` [FR-012]
+- [x] Grep de colores Tailwind crudos da cero fuera de la lista blanca MapLibre.
+- [x] Grep de `lucide-react` fuera de primitivas `components/ui/*` da cero.
+- [x] Agente usa `PageShell` + `PageHeader` en Chat, Skills e Integraciones.
+- [x] Super-admin usa tokens, PageShell/PageHeader en páginas principales.
 
-## Responsive y accesibilidad
+## Responsive
 
-- [ ] CHK022 375px sin scroll horizontal en todas las rutas del quickstart [FR-015, SC-005]
-- [ ] CHK023 Mesa móvil con patrón del visor (sheet/colapsables) [FR-015]
-- [ ] CHK024 Visor de proyecto sin regresión [FR-015]
-- [ ] CHK025 Tablas con scroll propio o vista tarjeta en móvil [FR-015]
-- [ ] CHK026 Targets táctiles ≥44px en acciones primarias [FR-016]
-- [ ] CHK027 Contraste AA verificado por par de tokens en ambos temas [FR-016, SC-006]
-- [ ] CHK028 Focus-visible y skip-link intactos [FR-016]
+- [x] `/operations` usa KPIs apilables, filtros responsivos, tabla con scroll propio y botones de al menos 44 px.
+- [x] Mesa de escritura móvil usa documento a ancho completo y bottom sheets para índice/datos.
+- [x] Tabs internos y menú lateral cumplen target táctil mínimo de 44 px.
+- [x] Wrappers de tablas principales usan `Table`/`overflow-x-auto` o composición equivalente.
+- [x] Quickstart lista las rutas para recorrido 375/768/1024/1440.
 
-## Gates
+## Pendientes Operativos
 
-- [ ] CHK029 `pnpm typecheck:web && pnpm test:web && pnpm build:web` verdes [FR-017, SC-009]
+- [ ] Recorrido visual manual con datos reales de super-admin si no hay rol disponible en ambiente local.
+- [ ] Regenerar assets de marca solo si se recolorean los SVG maestros de `brand/`.

@@ -22,10 +22,7 @@ interface BentoPanelProps {
 export function BentoPanel({ children, className }: BentoPanelProps) {
   return (
     <div
-      className={cn(
-        'rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden',
-        className
-      )}
+      className={cn('rounded-xl bg-card text-card-foreground shadow-sm overflow-hidden', className)}
     >
       {children}
     </div>

@@ -161,7 +161,7 @@ export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepP
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <HugeiconsIcon icon={ImageAdd01Icon} className="w-5 h-5 text-blue-600" />
+            <HugeiconsIcon icon={ImageAdd01Icon} className="w-5 h-5 text-info" />
             Imágenes del Proyecto (Máx 10)
           </CardTitle>
           <CardDescription>Sube fotos para mostrar el terreno y su entorno.</CardDescription>
@@ -171,7 +171,7 @@ export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepP
             {images.map((img, index) => (
               <div
                 key={index}
-                className="relative aspect-square rounded-lg overflow-hidden border bg-slate-100 group"
+                className="relative aspect-square rounded-lg overflow-hidden border bg-muted group"
               >
                 <img
                   src={img.preview}
@@ -187,9 +187,12 @@ export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepP
               </div>
             ))}
             {images.length < 10 && (
-              <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-50 transition-colors border-slate-200 dark:border-slate-800">
-                <HugeiconsIcon icon={ImageAdd01Icon} className="w-8 h-8 text-slate-400 mb-2" />
-                <span className="text-xs text-slate-500">Agregar foto</span>
+              <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted transition-colors border-border">
+                <HugeiconsIcon
+                  icon={ImageAdd01Icon}
+                  className="w-8 h-8 text-muted-foreground/60 mb-2"
+                />
+                <span className="text-xs text-muted-foreground">Agregar foto</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -206,7 +209,7 @@ export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepP
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-blue-600" />
+            <HugeiconsIcon icon={FileAttachmentIcon} className="w-5 h-5 text-info" />
             Documentos Legales (PDF)
           </CardTitle>
           <CardDescription>Sube los documentos disponibles. No son obligatorios.</CardDescription>
@@ -240,7 +243,7 @@ export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepP
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-red-500"
+                      className="text-destructive"
                       onClick={() => {
                         const newDocs = { ...docs }
                         delete newDocs[type.id]

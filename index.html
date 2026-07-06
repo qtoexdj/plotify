@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Plotify - Direcciones Visuales</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, Arial, sans-serif;
+        background: #ececec;
+      }
+      header {
+        padding: 24px;
+        text-align: center;
+        background: white;
+        position: sticky;
+        top: 0;
+        border-bottom: 1px solid #ddd;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
+        gap: 28px;
+        padding: 28px;
+      }
+      .card {
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        background: white;
+      }
+      .title {
+        padding: 16px 20px;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .mode {
+        padding: 10px 16px;
+        font-weight: 600;
+      }
+      .mock {
+        height: 270px;
+        padding: 18px;
+        display: flex;
+      }
+      .sidebar {
+        width: 95px;
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .content {
+        flex: 1;
+        margin-left: 14px;
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .top {
+        height: 34px;
+        border-radius: 8px;
+        margin-bottom: 18px;
+      }
+      .kpi {
+        display: flex;
+        gap: 10px;
+      }
+      .box {
+        flex: 1;
+        height: 70px;
+        border-radius: 10px;
+      }
+      .table div {
+        height: 18px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Plotify · Comparación Visual</h1>
+      <p>Cada dirección incluye versión Light y Dark.</p>
+    </header>
+    <div class="grid">
+      <div class="card">
+        <div class="title">A — Miel y grafito</div>
+        <div class="mode">Light</div>
+        <div class="mock" style="background: #f4f1ea; color: #3b3328">
+          <div class="sidebar" style="background: #50463c">
+            <div
+              style="
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #d2b36b;
+                margin-bottom: 18px;
+              "
+            ></div>
+            <div style="height: 10px; background: #e8dfcf; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #e8dfcf; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #e8dfcf; margin: 8px 0; border-radius: 4px"></div>
+          </div>
+          <div class="content" style="background: #fffaf3">
+            <div class="top" style="background: #e8dfcf"></div>
+            <div class="kpi">
+              <div class="box" style="background: #e8dfcf"></div>
+              <div class="box" style="background: #e8dfcf"></div>
+              <div class="box" style="background: #d2b36b; opacity: 0.85"></div>
+            </div>
+            <div class="table">
+              <div style="background: #e8dfcf; width: 95%"></div>
+              <div style="background: #e8dfcf; width: 88%"></div>
+              <div style="background: #e8dfcf; width: 92%"></div>
+              <div style="background: #d2b36b; width: 40%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mode">Dark</div>
+        <div class="mock" style="background: #1d1a17; color: #efe6d8">
+          <div class="sidebar" style="background: #2d2822">
+            <div
+              style="
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #c8a35a;
+                margin-bottom: 18px;
+              "
+            ></div>
+            <div style="height: 10px; background: #3a332d; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #3a332d; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #3a332d; margin: 8px 0; border-radius: 4px"></div>
+          </div>
+          <div class="content" style="background: #2a241e">
+            <div class="top" style="background: #3a332d"></div>
+            <div class="kpi">
+              <div class="box" style="background: #3a332d"></div>
+              <div class="box" style="background: #3a332d"></div>
+              <div class="box" style="background: #c8a35a; opacity: 0.85"></div>
+            </div>
+            <div class="table">
+              <div style="background: #3a332d; width: 95%"></div>
+              <div style="background: #3a332d; width: 88%"></div>
+              <div style="background: #3a332d; width: 92%"></div>
+              <div style="background: #c8a35a; width: 40%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">B — Vino y crema</div>
+        <div class="mode">Light</div>
+        <div class="mock" style="background: #f6f0ec; color: #4b1f2b">
+          <div class="sidebar" style="background: #6b2338">
+            <div
+              style="
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #9a4d62;
+                margin-bottom: 18px;
+              "
+            ></div>
+            <div style="height: 10px; background: #ead9d5; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #ead9d5; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #ead9d5; margin: 8px 0; border-radius: 4px"></div>
+          </div>
+          <div class="content" style="background: #fff">
+            <div class="top" style="background: #ead9d5"></div>
+            <div class="kpi">
+              <div class="box" style="background: #ead9d5"></div>
+              <div class="box" style="background: #ead9d5"></div>
+              <div class="box" style="background: #9a4d62; opacity: 0.85"></div>
+            </div>
+            <div class="table">
+              <div style="background: #ead9d5; width: 95%"></div>
+              <div style="background: #ead9d5; width: 88%"></div>
+              <div style="background: #ead9d5; width: 92%"></div>
+              <div style="background: #9a4d62; width: 40%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mode">Dark</div>
+        <div class="mock" style="background: #1c1316; color: #f5e8eb">
+          <div class="sidebar" style="background: #4d1f2d">
+            <div
+              style="
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #a65a71;
+                margin-bottom: 18px;
+              "
+            ></div>
+            <div style="height: 10px; background: #35262a; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #35262a; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #35262a; margin: 8px 0; border-radius: 4px"></div>
+          </div>
+          <div class="content" style="background: #2a1c20">
+            <div class="top" style="background: #35262a"></div>
+            <div class="kpi">
+              <div class="box" style="background: #35262a"></div>
+              <div class="box" style="background: #35262a"></div>
+              <div class="box" style="background: #a65a71; opacity: 0.85"></div>
+            </div>
+            <div class="table">
+              <div style="background: #35262a; width: 95%"></div>
+              <div style="background: #35262a; width: 88%"></div>
+              <div style="background: #35262a; width: 92%"></div>
+              <div style="background: #a65a71; width: 40%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">C — Tinta nítida</div>
+        <div class="mode">Light</div>
+        <div class="mock" style="background: #fff; color: #111">
+          <div class="sidebar" style="background: #111">
+            <div
+              style="
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #b11226;
+                margin-bottom: 18px;
+              "
+            ></div>
+            <div style="height: 10px; background: #e5e5e5; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #e5e5e5; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #e5e5e5; margin: 8px 0; border-radius: 4px"></div>
+          </div>
+          <div class="content" style="background: #fafafa">
+            <div class="top" style="background: #e5e5e5"></div>
+            <div class="kpi">
+              <div class="box" style="background: #e5e5e5"></div>
+              <div class="box" style="background: #e5e5e5"></div>
+              <div class="box" style="background: #b11226; opacity: 0.85"></div>
+            </div>
+            <div class="table">
+              <div style="background: #e5e5e5; width: 95%"></div>
+              <div style="background: #e5e5e5; width: 88%"></div>
+              <div style="background: #e5e5e5; width: 92%"></div>
+              <div style="background: #b11226; width: 40%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mode">Dark</div>
+        <div class="mock" style="background: #0d0d0d; color: #f4f4f4">
+          <div class="sidebar" style="background: #1a1a1a">
+            <div
+              style="
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #d62839;
+                margin-bottom: 18px;
+              "
+            ></div>
+            <div style="height: 10px; background: #2d2d2d; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #2d2d2d; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #2d2d2d; margin: 8px 0; border-radius: 4px"></div>
+          </div>
+          <div class="content" style="background: #161616">
+            <div class="top" style="background: #2d2d2d"></div>
+            <div class="kpi">
+              <div class="box" style="background: #2d2d2d"></div>
+              <div class="box" style="background: #2d2d2d"></div>
+              <div class="box" style="background: #d62839; opacity: 0.85"></div>
+            </div>
+            <div class="table">
+              <div style="background: #2d2d2d; width: 95%"></div>
+              <div style="background: #2d2d2d; width: 88%"></div>
+              <div style="background: #2d2d2d; width: 92%"></div>
+              <div style="background: #d62839; width: 40%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="title">D — Bruma y coral</div>
+        <div class="mode">Light</div>
+        <div class="mock" style="background: #eef2f6; color: #304050">
+          <div class="sidebar" style="background: #8da2b8">
+            <div
+              style="
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #e98a83;
+                margin-bottom: 18px;
+              "
+            ></div>
+            <div style="height: 10px; background: #d8e1ea; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #d8e1ea; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #d8e1ea; margin: 8px 0; border-radius: 4px"></div>
+          </div>
+          <div class="content" style="background: #fff">
+            <div class="top" style="background: #d8e1ea"></div>
+            <div class="kpi">
+              <div class="box" style="background: #d8e1ea"></div>
+              <div class="box" style="background: #d8e1ea"></div>
+              <div class="box" style="background: #e98a83; opacity: 0.85"></div>
+            </div>
+            <div class="table">
+              <div style="background: #d8e1ea; width: 95%"></div>
+              <div style="background: #d8e1ea; width: 88%"></div>
+              <div style="background: #d8e1ea; width: 92%"></div>
+              <div style="background: #e98a83; width: 40%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mode">Dark</div>
+        <div class="mock" style="background: #1a222b; color: #e7eef4">
+          <div class="sidebar" style="background: #2a3947">
+            <div
+              style="
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: #f18d84;
+                margin-bottom: 18px;
+              "
+            ></div>
+            <div style="height: 10px; background: #32414d; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #32414d; margin: 8px 0; border-radius: 4px"></div>
+            <div style="height: 10px; background: #32414d; margin: 8px 0; border-radius: 4px"></div>
+          </div>
+          <div class="content" style="background: #24303b">
+            <div class="top" style="background: #32414d"></div>
+            <div class="kpi">
+              <div class="box" style="background: #32414d"></div>
+              <div class="box" style="background: #32414d"></div>
+              <div class="box" style="background: #f18d84; opacity: 0.85"></div>
+            </div>
+            <div class="table">
+              <div style="background: #32414d; width: 95%"></div>
+              <div style="background: #32414d; width: 88%"></div>
+              <div style="background: #32414d; width: 92%"></div>
+              <div style="background: #f18d84; width: 40%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,6 +1,11 @@
 'use client'
 
-import { ListFilter, Lock, X } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  FilterIcon as ListFilter,
+  LockIcon as Lock,
+  Cancel01Icon as X,
+} from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import type { MoldeProgress } from '@/lib/legal/variable-matrix-model'
 
@@ -48,9 +53,9 @@ export function MoldeProgressHeader({
               onClick={() => onPendingFocusChange(!pendingFocus)}
             >
               {pendingFocus ? (
-                <X className="size-4" aria-hidden />
+                <HugeiconsIcon icon={X} className="size-4" aria-hidden />
               ) : (
-                <ListFilter className="size-4" aria-hidden />
+                <HugeiconsIcon icon={ListFilter} className="size-4" aria-hidden />
               )}
               {pendingFocus ? 'Ver todas' : `Ver ${progress.porRevisar} pendientes`}
             </Button>
@@ -62,21 +67,20 @@ export function MoldeProgressHeader({
             disabled={!progress.moldeAprobable || approving}
             onClick={onApproveMolde}
           >
-            {progress.moldeAprobable ? null : <Lock className="size-4" aria-hidden />}
+            {progress.moldeAprobable ? null : (
+              <HugeiconsIcon icon={Lock} className="size-4" aria-hidden />
+            )}
             Aprobar molde
           </Button>
         </div>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
-        <div
-          className="h-2 rounded-full bg-emerald-500 transition-all"
-          style={{ width: `${pct}%` }}
-        />
+        <div className="h-2 rounded-full bg-success transition-all" style={{ width: `${pct}%` }} />
       </div>
       <p className="text-sm text-muted-foreground" data-testid="molde-progress-summary">
         <span className="font-medium text-foreground">{progress.listas}</span> de {progress.total}{' '}
         listas ·{' '}
-        <span className={hasPending ? 'font-medium text-amber-600' : 'text-foreground'}>
+        <span className={hasPending ? 'font-medium text-warning' : 'text-foreground'}>
           {progress.porRevisar} por revisar
         </span>{' '}
         · los huecos de venta no cuentan

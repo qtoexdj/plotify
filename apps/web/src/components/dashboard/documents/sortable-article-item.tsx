@@ -2,7 +2,12 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Pencil, X } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  DragDropVerticalIcon as GripVertical,
+  PencilEdit02Icon as Pencil,
+  Cancel01Icon as X,
+} from '@hugeicons/core-free-icons'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
@@ -43,10 +48,7 @@ interface SortableArticleItemProps {
 function ConditionBadge({ item }: { item: ArticleItem }) {
   if (item.condition_field) {
     return (
-      <Badge
-        variant="secondary"
-        className="text-xs shrink-0 bg-blue-100 text-blue-800 border-blue-200"
-      >
+      <Badge variant="secondary" className="text-xs shrink-0 bg-info/15 text-info border-info/30">
         Condicional
       </Badge>
     )
@@ -55,7 +57,7 @@ function ConditionBadge({ item }: { item: ArticleItem }) {
     return (
       <Badge
         variant="outline"
-        className="text-xs shrink-0 bg-yellow-50 text-yellow-800 border-yellow-300"
+        className="text-xs shrink-0 bg-warning/10 text-warning border-warning/30"
       >
         Opcional
       </Badge>
@@ -63,7 +65,7 @@ function ConditionBadge({ item }: { item: ArticleItem }) {
   }
   return (
     <Badge
-      className="text-xs shrink-0 bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-100"
+      className="text-xs shrink-0 bg-muted text-muted-foreground border-border hover:bg-muted"
       variant="outline"
     >
       Fijo
@@ -105,7 +107,7 @@ export function SortableArticleItem({
           className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0 touch-none"
           aria-label="Arrastrar para reordenar"
         >
-          <GripVertical className="h-4 w-4" />
+          <HugeiconsIcon icon={GripVertical} className="h-4 w-4" />
         </button>
 
         {/* Posición */}
@@ -127,7 +129,7 @@ export function SortableArticleItem({
           onClick={() => onEdit(item.block_id)}
           aria-label="Editar contenido del bloque"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <HugeiconsIcon icon={Pencil} className="h-3.5 w-3.5" />
         </Button>
         <Button
           variant="ghost"
@@ -136,7 +138,7 @@ export function SortableArticleItem({
           onClick={() => onRemove(item.id)}
           aria-label="Quitar de la secuencia"
         >
-          <X className="h-3.5 w-3.5" />
+          <HugeiconsIcon icon={X} className="h-3.5 w-3.5" />
         </Button>
       </div>
 

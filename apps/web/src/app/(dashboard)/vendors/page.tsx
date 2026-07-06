@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
 import { getActiveWorkspace } from '@/lib/services/workspace.service'
 import { getOrganizationMembers } from '@/lib/services/vendors.service'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -33,14 +33,11 @@ export default async function VendorsPage() {
   if (!workspace) {
     return (
       <PageShell>
-        <Card>
-          <CardHeader>
-            <CardTitle>No hay Workspace activo</CardTitle>
-            <CardDescription>
-              Debes pertenecer a una organización para ver los vendedores.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <EmptyState
+          icon={UserStar01Icon}
+          title="No hay Workspace activo"
+          description="Debes pertenecer a una organización para ver los vendedores."
+        />
       </PageShell>
     )
   }
@@ -68,7 +65,7 @@ export default async function VendorsPage() {
       ) : (
         <BentoGrid>
           <BentoPanel className="xl:col-span-12">
-            <div className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-sidebar-border px-6 py-4 space-y-1.5">
+            <div className="bg-muted/50 border-b border-sidebar-border px-6 py-4 space-y-1.5">
               <h3 className="font-semibold text-lg leading-none tracking-tight">
                 Equipo de Trabajo
               </h3>
@@ -96,7 +93,7 @@ export default async function VendorsPage() {
                         <TableCell>
                           <Avatar>
                             <AvatarImage src={member.avatar_url || undefined} />
-                            <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">
+                            <AvatarFallback className="bg-muted text-muted-foreground font-medium">
                               {member.first_name?.[0] || member.username?.[0] || 'U'}
                             </AvatarFallback>
                           </Avatar>
@@ -108,19 +105,15 @@ export default async function VendorsPage() {
                             (member.username || 'Usuario sin nombre')}
                         </TableCell>
                         <TableCell>
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {member.username}
-                          </span>
+                          <span className="text-muted-foreground">{member.username}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {member.phone || '---'}
-                          </span>
+                          <span className="text-muted-foreground">{member.phone || '---'}</span>
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={member.role === 'admin' ? 'default' : 'secondary'}
-                            className={member.role === 'admin' ? 'bg-blue-600' : ''}
+                            className={member.role === 'admin' ? 'bg-primary' : ''}
                           >
                             {member.role === 'admin' ? 'Administrador' : 'Vendedor'}
                           </Badge>
@@ -158,7 +151,7 @@ export default async function VendorsPage() {
                     <div className="flex items-center gap-3">
                       <Avatar className="w-11 h-11 shrink-0 border border-sidebar-border shadow-sm">
                         <AvatarImage src={member.avatar_url || undefined} />
-                        <AvatarFallback className="bg-blue-100 text-blue-700 font-bold text-sm">
+                        <AvatarFallback className="bg-muted text-muted-foreground font-bold text-sm">
                           {member.first_name?.[0] || member.username?.[0] || 'U'}
                         </AvatarFallback>
                       </Avatar>
@@ -174,7 +167,7 @@ export default async function VendorsPage() {
                           variant={member.role === 'admin' ? 'default' : 'secondary'}
                           className={
                             member.role === 'admin'
-                              ? 'bg-blue-600 font-bold text-[10px]'
+                              ? 'bg-primary font-bold text-[10px]'
                               : 'font-bold text-[10px]'
                           }
                         >

@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation'
 import { getSkillsForOrg } from '@/lib/services/agent-skills.service'
 import { CustomSkillEditor } from '@/components/dashboard/skills/custom-skill-editor'
 import { SkillsGrid } from '@/components/dashboard/skills/skills-grid'
+import { AgenteTabs } from '@/components/agente/agente-tabs'
+import { PageHeader } from '@/components/dashboard/page-header'
+import { PageShell } from '@/components/dashboard/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,18 +41,14 @@ export default async function SkillsPage() {
     }))
 
   return (
-    <main
-      className="p-6 md:p-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700"
-      data-testid="agent-skills-page"
-    >
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Skills del Agente</h1>
-        <p className="text-muted-foreground mt-1">
-          Habilita o deshabilita las herramientas que tu agente de IA puede utilizar
-        </p>
-      </div>
+    <PageShell id="agent-skills-page">
+      <PageHeader
+        title="Skills del Agente"
+        description="Habilita o deshabilita las herramientas que tu agente de IA puede utilizar."
+      />
+      <AgenteTabs active="skills" />
       <CustomSkillEditor organizationId={organizationId} availableTools={availableTools} />
       <SkillsGrid skills={skills} organizationId={organizationId} />
-    </main>
+    </PageShell>
   )
 }

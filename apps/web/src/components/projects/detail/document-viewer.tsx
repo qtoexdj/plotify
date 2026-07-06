@@ -22,7 +22,7 @@ export function DocumentViewer({ url, title }: DocumentViewerProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="hidden sm:flex">
+        <Button variant="outline" size="sm" className="min-h-11">
           <HugeiconsIcon icon={ViewIcon} className="w-4 h-4 mr-2" />
           Ver
         </Button>
@@ -31,7 +31,7 @@ export function DocumentViewer({ url, title }: DocumentViewerProps) {
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 w-full bg-slate-100/50 dark:bg-slate-900/50">
+        <div className="flex-1 w-full bg-muted/50">
           <iframe src={`${url}#view=FitH`} className="w-full h-full border-0 block" title={title} />
         </div>
       </DialogContent>

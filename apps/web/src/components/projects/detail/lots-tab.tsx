@@ -13,10 +13,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { LotStatusBadge } from '@/components/projects/LotStatusBadge'
 import { SkeletonTable } from '@/components/dashboard/skeleton-card'
+import { EmptyState } from '@/components/dashboard/empty-state'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -323,7 +323,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
               <div className="max-h-[70vh] overflow-y-auto pr-2">
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-900">Lote</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Lote</h3>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Lote</Label>
@@ -386,7 +386,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                   </div>
 
                   <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-900">Cliente</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Cliente</h3>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Nombre completo</Label>
@@ -448,12 +448,17 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                 </div>
               </div>
               <AlertDialogFooter>
-                {createLotError ? <p className="text-sm text-red-600">{createLotError}</p> : null}
+                {createLotError ? (
+                  <p className="text-sm text-destructive">{createLotError}</p>
+                ) : null}
                 <div className="flex gap-2">
-                  <AlertDialogCancel disabled={isCreatingLot}>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel className="min-h-11" disabled={isCreatingLot}>
+                    Cancelar
+                  </AlertDialogCancel>
                   <Button
                     onClick={handleCreateLotRecord}
                     disabled={isCreatingLot || !createLotForm.lot_id}
+                    className="min-h-11"
                   >
                     {isCreatingLot ? (
                       <>
@@ -476,104 +481,177 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
             <SkeletonTable />
           </div>
         ) : error ? (
-          <div className="text-center py-12 text-gray-600">
+          <div className="text-center py-12 text-muted-foreground">
             <p className="mb-4">{error}</p>
             <Button variant="outline" onClick={onRefresh}>
               Reintentar
             </Button>
           </div>
         ) : lots.length === 0 ? (
-          <div className="text-center py-12 text-gray-600">
-            <HugeiconsIcon icon={File02Icon} className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p>No hay lotes registrados</p>
-          </div>
+          <EmptyState
+            icon={File02Icon}
+            title="No hay lotes registrados"
+            description="Sube la geometría del proyecto para comenzar a gestionar sus lotes."
+          />
         ) : (
-          <ScrollArea className="h-115 w-full rounded-md border">
-            <div className="min-w-550">
-              <Table>
-                <TableCaption>Listado de lotes con ficha completa</TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Lote</TableHead>
-                    <TableHead>Estado lote</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>RUN</TableHead>
-                    <TableHead>Dirección</TableHead>
-                    <TableHead>Estado civil</TableHead>
-                    <TableHead>Ocupación</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Abono</TableHead>
-                    <TableHead>Saldo</TableHead>
-                    <TableHead>Detalle deuda</TableHead>
-                    <TableHead>Estado firma</TableHead>
-                    <TableHead>Fecha firma</TableHead>
-                    <TableHead>Lugar firma</TableHead>
-                    <TableHead>Notaría</TableHead>
-                    <TableHead>CBR</TableHead>
-                    <TableHead>Abogado</TableHead>
-                    <TableHead>CBR estado</TableHead>
-                    <TableHead>CBR petitorio</TableHead>
-                    <TableHead>CBR salida</TableHead>
-                    <TableHead>CBR reparo</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                    <TableHead>Correo</TableHead>
-                    <TableHead>Comisión</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lots.map((lot) => {
-                    const record = lot.lot_records
-                    return (
-                      <TableRow key={lot.id}>
-                        <TableCell className="font-medium">{lot.numero_lote}</TableCell>
-                        <TableCell>
-                          <LotStatusBadge status={lot.estado || 'disponible'} />
-                        </TableCell>
-                        <TableCell className="min-w-55">{record?.cliente_nombre || '—'}</TableCell>
-                        <TableCell>{record?.cliente_run || '—'}</TableCell>
-                        <TableCell className="min-w-50">
-                          {record?.cliente_direccion || '—'}
-                        </TableCell>
-                        <TableCell>{record?.cliente_estado_civil || '—'}</TableCell>
-                        <TableCell>{record?.cliente_ocupacion || '—'}</TableCell>
-                        <TableCell>{formatCurrency(record?.valor)}</TableCell>
-                        <TableCell>{formatCurrency(record?.abono)}</TableCell>
-                        <TableCell>{formatCurrency(record?.saldo)}</TableCell>
-                        <TableCell className="min-w-65 whitespace-normal text-sm text-gray-600">
-                          {record?.detalle_deuda || '—'}
-                        </TableCell>
-                        <TableCell>{record?.firma_estado || '—'}</TableCell>
-                        <TableCell>{record?.firma_fecha || '—'}</TableCell>
-                        <TableCell>{record?.firma_lugar || '—'}</TableCell>
-                        <TableCell>{formatCurrency(record?.gasto_notaria)}</TableCell>
-                        <TableCell>{formatCurrency(record?.gasto_cbr)}</TableCell>
-                        <TableCell>{formatCurrency(record?.gasto_abogado)}</TableCell>
-                        <TableCell>{record?.cbr_estado || '—'}</TableCell>
-                        <TableCell>{record?.cbr_numero_petitorio || '—'}</TableCell>
-                        <TableCell>{record?.cbr_fecha_salida_estimada || '—'}</TableCell>
-                        <TableCell className="min-w-50 whitespace-normal text-sm text-gray-600">
-                          {record?.cbr_reparo || '—'}
-                        </TableCell>
-                        <TableCell>{record?.cliente_telefono || '—'}</TableCell>
-                        <TableCell>{record?.cliente_email || '—'}</TableCell>
-                        <TableCell>{formatCurrency(record?.comision_monto)}</TableCell>
-                        <TableCell className="text-xs text-gray-500">
-                          {lot.vendedor_id || '—'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="outline" size="sm" onClick={() => openLotEditor(lot)}>
-                            Editar
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+          <>
+            <div className="space-y-3 md:hidden" aria-label="Listado resumido de lotes">
+              {lots.map((lot) => {
+                const record = lot.lot_records
+                const hasClient = Boolean(record?.cliente_nombre)
+                return (
+                  <div key={lot.id} className="rounded-2xl border bg-card p-4 shadow-xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium uppercase text-muted-foreground">Lote</p>
+                        <p className="font-display text-2xl font-semibold text-foreground">
+                          {lot.numero_lote}
+                        </p>
+                      </div>
+                      <LotStatusBadge status={lot.estado || 'disponible'} />
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-xl bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">Cliente</p>
+                        <p className="mt-1 truncate font-medium text-foreground">
+                          {record?.cliente_nombre || 'Sin cliente'}
+                        </p>
+                        {record?.cliente_run ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {record.cliente_run}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="rounded-xl bg-muted/40 p-3">
+                        {hasClient ? (
+                          <>
+                            <p className="text-xs text-muted-foreground">Saldo</p>
+                            <p className="mt-1 font-medium text-foreground">
+                              {formatCurrency(record?.saldo)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Firma: {record?.firma_estado || 'pendiente'}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-muted-foreground">Venta</p>
+                            <p className="mt-1 font-medium text-foreground">Sin iniciar</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <p className="min-w-0 truncate text-xs text-muted-foreground">
+                        {hasClient
+                          ? record?.cliente_email || record?.cliente_telefono || 'Ficha iniciada'
+                          : 'Disponible, sin ficha'}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-11 px-4"
+                        onClick={() => openLotEditor(lot)}
+                      >
+                        Editar
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </ScrollArea>
+
+            <div className="hidden h-115 w-full overflow-auto rounded-md border md:block">
+              <div className="min-w-550">
+                <Table>
+                  <TableCaption>Listado de lotes con ficha completa</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Lote</TableHead>
+                      <TableHead>Estado lote</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>RUN</TableHead>
+                      <TableHead>Dirección</TableHead>
+                      <TableHead>Estado civil</TableHead>
+                      <TableHead>Ocupación</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Abono</TableHead>
+                      <TableHead>Saldo</TableHead>
+                      <TableHead>Detalle deuda</TableHead>
+                      <TableHead>Estado firma</TableHead>
+                      <TableHead>Fecha firma</TableHead>
+                      <TableHead>Lugar firma</TableHead>
+                      <TableHead>Notaría</TableHead>
+                      <TableHead>CBR</TableHead>
+                      <TableHead>Abogado</TableHead>
+                      <TableHead>CBR estado</TableHead>
+                      <TableHead>CBR petitorio</TableHead>
+                      <TableHead>CBR salida</TableHead>
+                      <TableHead>CBR reparo</TableHead>
+                      <TableHead>Teléfono</TableHead>
+                      <TableHead>Correo</TableHead>
+                      <TableHead>Comisión</TableHead>
+                      <TableHead>Vendedor</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lots.map((lot) => {
+                      const record = lot.lot_records
+                      return (
+                        <TableRow key={lot.id}>
+                          <TableCell className="font-medium">{lot.numero_lote}</TableCell>
+                          <TableCell>
+                            <LotStatusBadge status={lot.estado || 'disponible'} />
+                          </TableCell>
+                          <TableCell className="min-w-55">
+                            {record?.cliente_nombre || '—'}
+                          </TableCell>
+                          <TableCell>{record?.cliente_run || '—'}</TableCell>
+                          <TableCell className="min-w-50">
+                            {record?.cliente_direccion || '—'}
+                          </TableCell>
+                          <TableCell>{record?.cliente_estado_civil || '—'}</TableCell>
+                          <TableCell>{record?.cliente_ocupacion || '—'}</TableCell>
+                          <TableCell>{formatCurrency(record?.valor)}</TableCell>
+                          <TableCell>{formatCurrency(record?.abono)}</TableCell>
+                          <TableCell>{formatCurrency(record?.saldo)}</TableCell>
+                          <TableCell className="min-w-65 whitespace-normal text-sm text-muted-foreground">
+                            {record?.detalle_deuda || '—'}
+                          </TableCell>
+                          <TableCell>{record?.firma_estado || '—'}</TableCell>
+                          <TableCell>{record?.firma_fecha || '—'}</TableCell>
+                          <TableCell>{record?.firma_lugar || '—'}</TableCell>
+                          <TableCell>{formatCurrency(record?.gasto_notaria)}</TableCell>
+                          <TableCell>{formatCurrency(record?.gasto_cbr)}</TableCell>
+                          <TableCell>{formatCurrency(record?.gasto_abogado)}</TableCell>
+                          <TableCell>{record?.cbr_estado || '—'}</TableCell>
+                          <TableCell>{record?.cbr_numero_petitorio || '—'}</TableCell>
+                          <TableCell>{record?.cbr_fecha_salida_estimada || '—'}</TableCell>
+                          <TableCell className="min-w-50 whitespace-normal text-sm text-muted-foreground">
+                            {record?.cbr_reparo || '—'}
+                          </TableCell>
+                          <TableCell>{record?.cliente_telefono || '—'}</TableCell>
+                          <TableCell>{record?.cliente_email || '—'}</TableCell>
+                          <TableCell>{formatCurrency(record?.comision_monto)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {lot.vendedor_id || '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={() => openLotEditor(lot)}>
+                              Editar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </>
         )}
 
         <Sheet open={isEditorOpen} onOpenChange={(open) => (!open ? closeLotEditor() : null)}>
@@ -586,7 +664,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
             </SheetHeader>
             <div className="flex-1 overflow-y-auto px-6 pb-6 pt-2 space-y-6">
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">Datos del lote</h3>
+                <h3 className="text-sm font-semibold text-foreground">Datos del lote</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Número de lote</Label>
@@ -630,7 +708,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">Cliente</h3>
+                <h3 className="text-sm font-semibold text-foreground">Cliente</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Nombre completo</Label>
@@ -685,7 +763,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">Precios</h3>
+                <h3 className="text-sm font-semibold text-foreground">Precios</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Valor</Label>
@@ -717,13 +795,18 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
                     pero la estructura está lista para recibirlos todos */}
             </div>
             <SheetFooter>
-              {saveLotError ? <p className="text-sm text-red-600">{saveLotError}</p> : null}
-              {saveLotSuccess ? <p className="text-sm text-green-600">Cambios guardados</p> : null}
+              {saveLotError ? <p className="text-sm text-destructive">{saveLotError}</p> : null}
+              {saveLotSuccess ? <p className="text-sm text-success">Cambios guardados</p> : null}
               <div className="flex gap-2">
-                <Button variant="outline" onClick={closeLotEditor} disabled={isSavingLot}>
+                <Button
+                  variant="outline"
+                  onClick={closeLotEditor}
+                  disabled={isSavingLot}
+                  className="min-h-11"
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleSaveLot} disabled={isSavingLot}>
+                <Button onClick={handleSaveLot} disabled={isSavingLot} className="min-h-11">
                   {isSavingLot ? (
                     <>
                       <Spinner className="w-4 h-4 mr-2" />

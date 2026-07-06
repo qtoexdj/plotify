@@ -18,7 +18,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Eye, EyeOff, GripVertical, LockKeyhole } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  ViewIcon as Eye,
+  ViewOffIcon as EyeOff,
+  DragDropVerticalIcon as GripVertical,
+  LockKeyIcon as LockKeyhole,
+} from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
@@ -142,8 +148,8 @@ function FilaIndice({
       style={style}
       data-testid={`mesa-indice-${clause.clause_key}`}
       className={cn(
-        'grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-stretch rounded-md border border-transparent text-sm transition-colors hover:bg-muted',
-        summary.porRevisar > 0 && 'border-amber-300 bg-amber-50/80 dark:bg-amber-950/20',
+        'grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-stretch rounded-md border border-transparent text-sm transition-colors hover:bg-muted',
+        summary.porRevisar > 0 && 'border-warning/40 bg-warning/10',
         clause.disabled && 'opacity-60',
         isDragging && 'z-10 border-border opacity-70 shadow-sm'
       )}
@@ -155,13 +161,20 @@ function FilaIndice({
         size="icon-sm"
         disabled={arrastreDeshabilitado}
         aria-label={clause.fixed_position ? MESA_TEXT.posicionFija : MESA_TEXT.reordenarClausula}
-        className="h-full rounded-md text-muted-foreground"
+        className="h-full min-h-11 w-11 rounded-md text-muted-foreground"
         {...attributes}
         {...listeners}
       >
-        {clause.fixed_position ? <LockKeyhole /> : <GripVertical />}
+        {clause.fixed_position ? (
+          <HugeiconsIcon icon={LockKeyhole} />
+        ) : (
+          <HugeiconsIcon icon={GripVertical} />
+        )}
       </Button>
-      <a href={`#clausula-${clause.clause_key}`} className="min-w-0 px-2 py-1.5">
+      <a
+        href={`#clausula-${clause.clause_key}`}
+        className="flex min-h-11 min-w-0 flex-col justify-center px-2 py-1.5"
+      >
         <span
           className={cn(
             'block truncate font-medium',
@@ -177,9 +190,7 @@ function FilaIndice({
           ) : omitida ? (
             MESA_TEXT.noAplicaCorto
           ) : summary.porRevisar > 0 ? (
-            <span className="font-medium text-amber-700 dark:text-amber-200">
-              {textoResumenClausula(summary)}
-            </span>
+            <span className="font-medium text-warning">{textoResumenClausula(summary)}</span>
           ) : (
             textoResumenClausula(summary)
           )}
@@ -192,10 +203,10 @@ function FilaIndice({
         disabled={toggleDeshabilitado}
         aria-label={clause.disabled ? MESA_TEXT.reactivarClausula : MESA_TEXT.desactivarClausula}
         title={clause.disabled ? MESA_TEXT.reactivarClausula : MESA_TEXT.desactivarClausula}
-        className="h-full rounded-md text-muted-foreground"
+        className="h-full min-h-11 w-11 rounded-md text-muted-foreground"
         onClick={() => onToggleDisabled?.(clause.clause_key)}
       >
-        {clause.disabled ? <EyeOff /> : <Eye />}
+        {clause.disabled ? <HugeiconsIcon icon={EyeOff} /> : <HugeiconsIcon icon={Eye} />}
       </Button>
     </div>
   )
@@ -248,12 +259,12 @@ export function MesaIndice({
     <nav
       data-testid="mesa-indice"
       aria-label={MESA_TEXT.indiceTitle}
-      className="rounded-lg border border-border bg-card text-card-foreground"
+      className="rounded-xl bg-transparent text-card-foreground"
     >
-      <h3 className="border-b border-border px-4 py-3 text-sm font-semibold">
+      <h3 className="px-2 pb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {MESA_TEXT.indiceTitle}
       </h3>
-      <div className="max-h-[70vh] overflow-auto p-2">
+      <div className="max-h-[70vh] overflow-auto">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={clausulasVisibles.map((clause) => clause.clause_key)}

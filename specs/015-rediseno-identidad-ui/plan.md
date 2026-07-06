@@ -30,7 +30,7 @@ La entrega es incremental por user story: US1 (tokens+fuentes+marca) y US2 (nave
 
 - No cambiar URLs ni estructura de rutas (tabs = links a rutas existentes).
 - No tocar el motor de variables/escrituras ni servicios; solo presentación.
-- El color de marca debe quedar en un único token (`--brand`) — el usuario recoloreará `brand/*.svg` después.
+- El color de marca debe quedar en un único token (`--brand`), aunque su valor vigente se mantiene verde `#16A34A` (decisión 2026-07-03: el logo no migra a carmesí; ambos colores coexisten sin mezclarse).
 - Colores literales solo en el módulo de constantes de MapLibre (lista blanca).
 - El visor de proyecto (`geometry-viewer`) es patrón de referencia: prohibido regresionar su UX.
 - `design.md` conserva su protocolo de frontmatter YAML de tokens (estilo design-tokens) y se mantiene 1:1 con `globals.css`.
@@ -111,6 +111,20 @@ Módulo por módulo (proyectos → documentos/mesa → dashboard/operations → 
 ### Fase 5 — Responsive y QA de producción (US5)
 
 `/operations` reconstruida; mesa móvil con patrón del visor (Sheet/colapsables); wrappers de tablas; recorrido 375/768/1024/1440 de todas las rutas; regresión del visor; checklist final + gates. **Gate**: SC-005/006/009 en verde.
+
+## Protocolo de edición por página (obligatorio)
+
+Regla acordada con el usuario (2026-07-02). Antes de editar **cada página** (en cualquier fase que la toque):
+
+1. **Anunciar**: el agente informa qué página viene a continuación (ruta + qué tareas la tocan).
+2. **Preguntar** (AskUserQuestion o equivalente): _"¿Mantenemos la UX y cambiamos solo la UI, o cambiamos también la UX?"_
+   - **Solo UI** → se aplica exclusivamente la piel (tokens, fuentes, superficies, StatusBadge, Spinner, PageShell) sin mover estructura, flujos ni posiciones de acciones. Sin wireframes.
+   - **Cambiar UX** → el agente genera 2–3 wireframes de opciones ANTES de codear; el usuario elige (o mezcla) y recién ahí se implementa.
+3. **Excepciones pre-aprobadas** (no requieren pregunta, ya decididas en spec): sidebar plano, header sin búsqueda + ⌘K, tabs de Escrituras/Agente, reconstrucción de `/operations`, mesa móvil con bottom sheet. Para estas, los wireframes de la conversación de diseño son el contrato; aun así `/operations` y la mesa móvil se presentan con wireframes de detalle antes de codear por ser reestructuraciones grandes.
+4. **Móvil**: la pregunta del paso 2 cubre también la versión móvil. Si la adaptación es **mecánica** (grids que apilan, tablas con scroll propio, paddings responsivos) se hace directo, sin preguntar. Si la página necesita una **UX móvil diseñada** (reorganizar interacción: sheets, paneles colapsables, toolbars táctiles — nivel visor de proyecto), el agente lo anuncia y presenta wireframes móviles antes de codear. Candidatas ya identificadas: mesa de escritura (T037), operations (T036), geometry-assignment, paneles de verificación de lotes.
+5. **Prohibido**: cambiar UX de una página sin pasar por el paso 2, aunque parezca "mejora obvia".
+
+El visor de proyecto queda fuera de todo cambio de UX (regresión prohibida, T041).
 
 ## Verification Commands
 

@@ -44,20 +44,17 @@ const STATUS_CONFIG: Record<
   draft: {
     label: 'Borrador',
     variant: 'outline',
-    className:
-      'border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:bg-amber-500/20',
+    className: 'border-warning/30 text-warning bg-warning/10',
   },
   verified_exact: {
     label: 'Verificado (Coincide)',
     variant: 'default',
-    className:
-      'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-700',
+    className: 'bg-success/15 text-success border-success/30',
   },
   verified_override: {
     label: 'Verificado (Override)',
     variant: 'default',
-    className:
-      'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-700',
+    className: 'bg-info/15 text-info border-info/30',
   },
 }
 
@@ -713,11 +710,11 @@ export function LotVerificationPanel({
       <CardContent className="space-y-4">
         {/* Readiness State Alerts */}
         {!readiness.isReady ? (
-          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-800 dark:text-amber-400 space-y-1">
+          <div className="rounded-lg bg-warning/10 border border-warning/20 p-3 text-xs text-warning space-y-1">
             <div className="font-semibold flex items-center gap-1.5">
               <HugeiconsIcon
                 icon={InformationSquareIcon}
-                className="w-4 h-4 text-amber-500 shrink-0"
+                className="w-4 h-4 text-warning shrink-0"
               />
               Lote pendiente de verificación y deslindes
             </div>
@@ -728,9 +725,9 @@ export function LotVerificationPanel({
             </ul>
           </div>
         ) : (
-          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs text-emerald-800 dark:text-emerald-400 space-y-1">
+          <div className="rounded-lg bg-success/10 border border-success/20 p-3 text-xs text-success space-y-1">
             <div className="font-semibold flex items-center gap-1.5">
-              <HugeiconsIcon icon={Shield02Icon} className="w-4 h-4 text-emerald-500 shrink-0" />
+              <HugeiconsIcon icon={Shield02Icon} className="w-4 h-4 text-success shrink-0" />
               Lote completamente verificado y apto para documentos
             </div>
           </div>
@@ -949,7 +946,7 @@ export function LotVerificationPanel({
                   key={index}
                   className={`group rounded-lg border p-2.5 transition-colors ${
                     isRoad
-                      ? 'bg-amber-50/50 border-amber-200/50 dark:bg-amber-500/10 dark:border-amber-500/20'
+                      ? 'bg-warning/10 border-warning/20'
                       : 'border-border/50 hover:border-border hover:bg-muted/30'
                   }`}
                 >
@@ -963,7 +960,7 @@ export function LotVerificationPanel({
                         placeholder="Ej: Norte"
                         className={`h-7 px-1.5 text-xs font-semibold uppercase tracking-wide bg-transparent transition-colors ${
                           isRoad
-                            ? 'border-amber-300 focus-visible:ring-amber-500 dark:border-amber-600'
+                            ? 'border-warning/50 focus-visible:ring-warning'
                             : 'border-transparent hover:border-border focus-visible:ring-primary'
                         }`}
                         title="Editar orientación"
@@ -974,7 +971,7 @@ export function LotVerificationPanel({
                             <TooltipTrigger asChild>
                               <HugeiconsIcon
                                 icon={InformationSquareIcon}
-                                className="w-3.5 h-3.5 text-amber-500 shrink-0 cursor-help"
+                                className="w-3.5 h-3.5 text-warning shrink-0 cursor-help"
                               />
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-[10px] max-w-50">
@@ -988,7 +985,7 @@ export function LotVerificationPanel({
 
                     {/* Distancia con sufijo "m" */}
                     <InputGroup
-                      className={`w-24 shrink-0 h-7 ${isRoad ? 'border-amber-300 dark:border-amber-600' : ''}`}
+                      className={`w-24 shrink-0 h-7 ${isRoad ? 'border-warning/50' : ''}`}
                     >
                       <InputGroupInput
                         type="number"
@@ -1010,7 +1007,7 @@ export function LotVerificationPanel({
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveBoundary(index)}
-                      className="h-7 w-7 shrink-0 text-muted-foreground/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-7 w-7 shrink-0 text-muted-foreground/40 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <HugeiconsIcon icon={Cancel01Icon} className="w-3.5 h-3.5" />
                     </Button>
@@ -1023,9 +1020,7 @@ export function LotVerificationPanel({
                       onChange={(e) => handleBoundaryFieldChange(index, 'colinda', e.target.value)}
                       placeholder="Colinda con: Ej. Lote 15 y Camino"
                       className={`h-7 text-[11px] ${
-                        isRoad
-                          ? 'border-amber-300 focus-visible:ring-amber-500 dark:border-amber-600 shadow-[0_0_0_1px_rgba(251,191,36,0.2)]'
-                          : ''
+                        isRoad ? 'border-warning/50 focus-visible:ring-warning' : ''
                       }`}
                     />
                   </div>
@@ -1053,7 +1048,7 @@ export function LotVerificationPanel({
                 id="accept-deslinde"
                 checked={deslindeAceptado}
                 onChange={(e) => setDeslindeAceptado(e.target.checked)}
-                className="h-4 w-4 rounded border-border text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                className="h-4 w-4 rounded border-border text-success focus:ring-success cursor-pointer"
               />
               <label
                 htmlFor="accept-deslinde"
@@ -1075,7 +1070,7 @@ export function LotVerificationPanel({
             size="sm"
             onClick={handleSave}
             disabled={isSaving || isPending}
-            className="flex-1 text-xs"
+            className="min-h-11 flex-1 text-xs"
             title="Guarda el progreso sin marcar el lote como verificado"
           >
             {isSaving ? (
@@ -1094,7 +1089,7 @@ export function LotVerificationPanel({
                     size="sm"
                     onClick={handleVerify}
                     disabled={!canVerify || isSaving || isPending}
-                    className="w-full text-xs bg-emerald-600 hover:bg-emerald-700"
+                    className="min-h-11 w-full text-xs bg-success text-success-foreground hover:bg-success/90"
                   >
                     {isSaving ? (
                       <Spinner className="w-3.5 h-3.5 mr-2" />
@@ -1110,7 +1105,7 @@ export function LotVerificationPanel({
                   <div className="flex gap-1.5 items-start">
                     <HugeiconsIcon
                       icon={RulerIcon}
-                      className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5"
+                      className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5"
                     />
                     <span>Completa superficie y los 4 deslindes para verificar.</span>
                   </div>
@@ -1135,10 +1130,10 @@ function DiffBadge({ diff }: { diff: number | null }) {
   const sign = diff > 0 ? '+' : ''
   const color =
     absDiff < 0.5
-      ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/20'
+      ? 'text-success bg-success/10'
       : absDiff < 2
-        ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/20'
-        : 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-500/20'
+        ? 'text-warning bg-warning/10'
+        : 'text-destructive bg-destructive/10'
 
   return (
     <span

@@ -29,8 +29,8 @@ export default async function ProfileSettingsPage() {
           title="Perfil de Usuario"
           description="Gestiona tu información personal y datos de contacto."
         />
-        <div className="rounded-xl bg-amber-500/10 p-4 border border-amber-500/20 mt-6">
-          <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+        <div className="rounded-xl bg-warning/10 p-4 border border-warning/20 mt-6">
+          <p className="text-sm text-warning font-medium">
             No se encontró el perfil para tu cuenta. Por favor, contacta a soporte.
           </p>
         </div>

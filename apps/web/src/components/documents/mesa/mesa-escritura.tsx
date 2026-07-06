@@ -1,7 +1,15 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { Cancel01Icon, ListViewIcon, Task01Icon } from '@hugeicons/core-free-icons'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useIsMobile } from '@/hooks/use-mobile'
 import {
   getMatrizCase,
   getMatrizProject,
@@ -56,6 +64,21 @@ export function resumenDeMesa(matriz: MatrizView) {
   }
 }
 
+function useIsCompactMesa() {
+  const [isCompact, setIsCompact] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1279px)')
+    const onChange = () => setIsCompact(mql.matches)
+    mql.addEventListener('change', onChange)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsCompact(mql.matches)
+    return () => mql.removeEventListener('change', onChange)
+  }, [])
+
+  return isCompact
+}
+
 /**
  * Mensaje humano de guardado: el conflicto de versión (otra persona guardó
  * primero) se comunica con el texto del diccionario, jamás con el código.
@@ -101,6 +124,10 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
   const [clausulaActiva, setClausulaActiva] = useState<string | null>(null)
   const [borradores, setBorradores] = useState<Record<string, MatrizClauseOverride>>({})
   const [soloPendientes, setSoloPendientes] = useState(false)
+  const isMobile = useIsMobile()
+  const isCompact = useIsCompactMesa()
+  const [indiceSheetOpen, setIndiceSheetOpen] = useState(false)
+  const [datosSheetOpen, setDatosSheetOpen] = useState(false)
 
   useEffect(() => {
     if (initialData || missingSource) return
@@ -225,36 +252,187 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
     )
   }
 
-  return (
-    <div data-testid="mesa-escritura" className="space-y-4">
-      <MesaEncabezado
-        matriz={matriz}
-        puedeGuardar={resumen.puedeEditar}
-        guardando={guardando}
-        onGuardar={handleGuardar}
-        soloPendientes={soloPendientes}
-        onSoloPendientesChange={setSoloPendientes}
-      />
+  const indiceContent = (
+    <MesaIndice
+      clausulas={ordenadas}
+      resolucion={matriz.resolution}
+      scope={matriz.scope}
+      soloPendientes={soloPendientes}
+      puedeReordenar={resumen.puedeEditar}
+      onReordenar={handleReordenar}
+      onToggleDisabled={handleToggleDisabled}
+    />
+  )
 
-      {aviso ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {aviso}
-        </div>
+  const datosContent = (
+    <div className="space-y-4">
+      <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
+        <WorkflowAcciones matriz={matriz} onWorkflowUpdate={handleWorkflowUpdate} />
+      </section>
+
+      {matriz.approval_blockers.length > 0 ? (
+        <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
+          <h3 className="mb-3 text-sm font-semibold">{MESA_TEXT.pendientesTitle}</h3>
+          {matriz.scope === 'project' ? (
+            <PreparacionMatriz
+              projectId={matriz.project_id}
+              blockers={matriz.approval_blockers}
+              onResolved={recargarMatriz}
+            />
+          ) : (
+            <PendientesList blockers={matriz.approval_blockers} compact />
+          )}
+        </section>
       ) : null}
+      <PanelDatos
+        resolucion={matriz.resolution}
+        projectId={matriz.project_id}
+        scope={matriz.scope}
+        soloPendientes={soloPendientes}
+      />
+    </div>
+  )
 
-      <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_320px]">
-        <MesaIndice
-          clausulas={ordenadas}
-          resolucion={matriz.resolution}
-          scope={matriz.scope}
-          soloPendientes={soloPendientes}
-          puedeReordenar={resumen.puedeEditar}
-          onReordenar={handleReordenar}
-          onToggleDisabled={handleToggleDisabled}
-        />
+  const encabezado = (
+    <MesaEncabezado
+      matriz={matriz}
+      puedeGuardar={resumen.puedeEditar}
+      guardando={guardando}
+      onGuardar={handleGuardar}
+      soloPendientes={soloPendientes}
+      onSoloPendientesChange={setSoloPendientes}
+    />
+  )
+
+  const avisoBanner = aviso ? (
+    <div
+      role="alert"
+      className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+    >
+      {aviso}
+    </div>
+  ) : null
+
+  const pendientesCount = matriz.resolution.missing_count
+
+  const supportSheets = (
+    <>
+      <Sheet open={indiceSheetOpen} onOpenChange={setIndiceSheetOpen}>
+        <SheetContent
+          side="bottom"
+          className="flex h-[82dvh] flex-col overflow-hidden rounded-t-2xl p-0"
+          onClickCapture={(event) => {
+            if ((event.target as HTMLElement).closest('a[href^="#clausula-"]')) {
+              setIndiceSheetOpen(false)
+            }
+          }}
+        >
+          <SheetHeader className="border-b border-border px-4 py-3 text-left">
+            <SheetTitle>{MESA_TEXT.indiceTitle}</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="p-4">{indiceContent}</div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={datosSheetOpen} onOpenChange={setDatosSheetOpen}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="flex h-[82dvh] flex-col overflow-hidden rounded-t-2xl p-0"
+        >
+          <SheetHeader className="border-b border-border px-4 py-3 pr-14 text-left">
+            <SheetTitle>Datos y acciones</SheetTitle>
+            <SheetClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-3 top-2 min-h-11"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} aria-hidden />
+                Cerrar
+              </Button>
+            </SheetClose>
+          </SheetHeader>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="p-4">{datosContent}</div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+    </>
+  )
+
+  const compactActions =
+    typeof document !== 'undefined'
+      ? createPortal(
+          <div className="fixed inset-x-0 bottom-0 z-50 flex gap-2 border-t border-border bg-card/95 py-3 pl-20 pr-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:p-3 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] xl:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 flex-1"
+              onClick={() => setIndiceSheetOpen(true)}
+            >
+              <HugeiconsIcon icon={ListViewIcon} />
+              {MESA_TEXT.indiceTitle}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 flex-1"
+              onClick={() => setDatosSheetOpen(true)}
+            >
+              <HugeiconsIcon icon={Task01Icon} />
+              Datos y acciones
+              {pendientesCount > 0 ? (
+                <Badge variant="outline" className="border-warning/30 bg-warning/10 text-warning">
+                  {pendientesCount}
+                </Badge>
+              ) : null}
+            </Button>
+          </div>,
+          document.body
+        )
+      : null
+
+  if (isCompact || isMobile) {
+    return (
+      <>
+        <div
+          data-testid="mesa-escritura"
+          className="space-y-4 rounded-2xl bg-background/70 p-4 pb-28 shadow-sm ring-1 ring-border/40 sm:p-5"
+        >
+          {encabezado}
+          {avisoBanner}
+
+          <MesaDocumento
+            matriz={matriz}
+            puedeEditar={resumen.puedeEditar}
+            clausulaActiva={clausulaActiva}
+            clausulasConCambios={Object.keys(borradores)}
+            insertables={data.insertable_variables ?? []}
+            onActivarClausula={setClausulaActiva}
+            onCambioClausula={handleCambioClausula}
+            onCerrarEditor={() => setClausulaActiva(null)}
+          />
+        </div>
+        {compactActions}
+        {supportSheets}
+      </>
+    )
+  }
+
+  return (
+    <div
+      data-testid="mesa-escritura"
+      className="space-y-4 rounded-2xl bg-background/70 p-4 shadow-sm ring-1 ring-border/40 sm:p-5"
+    >
+      {encabezado}
+      {avisoBanner}
+
+      <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_300px]">
+        <aside className="sticky top-24 self-start">{indiceContent}</aside>
 
         <MesaDocumento
           matriz={matriz}
@@ -267,31 +445,8 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
           onCerrarEditor={() => setClausulaActiva(null)}
         />
 
-        <aside className="space-y-4">
-          <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
-            <WorkflowAcciones matriz={matriz} onWorkflowUpdate={handleWorkflowUpdate} />
-          </section>
-
-          {matriz.approval_blockers.length > 0 ? (
-            <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
-              <h3 className="mb-3 text-sm font-semibold">{MESA_TEXT.pendientesTitle}</h3>
-              {matriz.scope === 'project' ? (
-                <PreparacionMatriz
-                  projectId={matriz.project_id}
-                  blockers={matriz.approval_blockers}
-                  onResolved={recargarMatriz}
-                />
-              ) : (
-                <PendientesList blockers={matriz.approval_blockers} compact />
-              )}
-            </section>
-          ) : null}
-          <PanelDatos
-            resolucion={matriz.resolution}
-            projectId={matriz.project_id}
-            scope={matriz.scope}
-            soloPendientes={soloPendientes}
-          />
+        <aside className="sticky top-24 max-h-[calc(100dvh-7rem)] space-y-4 overflow-auto pr-1">
+          {datosContent}
         </aside>
       </div>
     </div>

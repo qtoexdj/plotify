@@ -11,14 +11,13 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-import { Badge } from '@/components/ui/badge'
-import { ESTADO_CONFIG, getEstadoBadgeClasses } from '@/lib/models/lot.model'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { ESTADO_CONFIG, estadoToStatusVariant } from '@/lib/models/lot.model'
 import { StageStepper } from '../StageStepper'
 import type { ProcessStage } from '@/types/database.types'
 import { updateLotStage } from '@/actions/lot-process.action'
 import { toast } from 'sonner'
 import type { LotDetails } from '@/types/viewer.types'
-import { cn } from '@/lib/utils'
 
 import { useRouter } from 'next/navigation'
 
@@ -125,16 +124,10 @@ export function LotInfoView({
         </p>
 
         <div className="mt-3 flex justify-center">
-          <Badge
-            variant="outline"
-            className={cn(
-              'capitalize font-medium border shadow-xs',
-              getEstadoBadgeClasses(lotDetails.estado)
-            )}
-          >
+          <StatusBadge variant={estadoToStatusVariant(lotDetails.estado)}>
             {ESTADO_CONFIG[lotDetails.estado as keyof typeof ESTADO_CONFIG]?.label ||
               lotDetails.estado}
-          </Badge>
+          </StatusBadge>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -86,14 +86,11 @@ export default async function ClientsPage() {
   if (!workspace) {
     return (
       <PageShell>
-        <Card>
-          <CardHeader>
-            <CardTitle>No hay Workspace activo</CardTitle>
-            <CardDescription>
-              Debes pertenecer a una organización para ver los leads.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <EmptyState
+          icon={UserGroupIcon}
+          title="No hay Workspace activo"
+          description="Debes pertenecer a una organización para ver los leads."
+        />
       </PageShell>
     )
   }

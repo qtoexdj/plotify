@@ -53,10 +53,10 @@ export function AssignmentHoverCard({ featureId, featureCollection }: Assignment
 
   const typeColor =
     geometryType === 'lot'
-      ? 'bg-emerald-100 text-emerald-700'
+      ? 'bg-success/15 text-success'
       : geometryType === 'road'
-        ? 'bg-amber-100 text-amber-700'
-        : 'bg-violet-100 text-violet-700'
+        ? 'bg-warning/15 text-warning'
+        : 'bg-common-area/15 text-common-area'
 
   return (
     <div

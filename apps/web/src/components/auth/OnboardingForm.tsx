@@ -107,7 +107,7 @@ export function OnboardingForm() {
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded p-3">
+            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded p-3">
               {error}
             </div>
           )}

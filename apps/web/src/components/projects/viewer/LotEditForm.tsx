@@ -8,7 +8,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 import type { GeoJSONGeometry } from '@/types/database.types'
-import { cn } from '@/lib/utils'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,9 +21,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/ui/status-badge'
 
-import { ESTADO_CONFIG, type EstadoLote, getEstadoBadgeClasses } from '@/lib/models/lot.model'
+import { ESTADO_CONFIG, type EstadoLote, estadoToStatusVariant } from '@/lib/models/lot.model'
 import type { LotDetails } from '@/types/viewer.types'
 
 const lotFormSchema = z.object({
@@ -101,20 +100,14 @@ export function LotEditForm({ lotDetails, onSave, onCancel }: LotEditFormProps) 
           />
         </div>
         {errors.numero_lote && (
-          <p className="text-[10px] text-red-500 mt-1">{errors.numero_lote.message}</p>
+          <p className="text-[10px] text-destructive mt-1">{errors.numero_lote.message}</p>
         )}
 
         {/* Visual Context: State Badge Preview */}
         <div className="mt-2 flex justify-center opacity-90">
-          <Badge
-            variant="outline"
-            className={cn(
-              'capitalize font-medium border text-[10px] transition-colors duration-300',
-              getEstadoBadgeClasses(currentEstado)
-            )}
-          >
+          <StatusBadge variant={estadoToStatusVariant(currentEstado)} className="text-[10px]">
             {ESTADO_CONFIG[currentEstado as keyof typeof ESTADO_CONFIG]?.label || currentEstado}
-          </Badge>
+          </StatusBadge>
         </div>
       </div>
 
@@ -143,7 +136,9 @@ export function LotEditForm({ lotDetails, onSave, onCancel }: LotEditFormProps) 
                 {...register('precio', { valueAsNumber: true })}
                 className="h-9"
               />
-              {errors.precio && <p className="text-[10px] text-red-500">{errors.precio.message}</p>}
+              {errors.precio && (
+                <p className="text-[10px] text-destructive">{errors.precio.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -157,7 +152,7 @@ export function LotEditForm({ lotDetails, onSave, onCancel }: LotEditFormProps) 
                 placeholder="Ej: 500000"
               />
               {errors.valor_reserva && (
-                <p className="text-[10px] text-red-500">{errors.valor_reserva.message}</p>
+                <p className="text-[10px] text-destructive">{errors.valor_reserva.message}</p>
               )}
             </div>
           </div>
@@ -175,7 +170,7 @@ export function LotEditForm({ lotDetails, onSave, onCancel }: LotEditFormProps) 
 
           {/* Action Footer */}
           <div className="flex gap-2 pt-2 border-t mt-2">
-            <Button type="submit" disabled={isSaving} className="flex-1 h-9" size="sm">
+            <Button type="submit" disabled={isSaving} className="min-h-11 flex-1" size="sm">
               {isSaving ? (
                 <Spinner className="w-4 h-4 mr-2" />
               ) : (
@@ -188,7 +183,7 @@ export function LotEditForm({ lotDetails, onSave, onCancel }: LotEditFormProps) 
               variant="destructive"
               size="icon"
               onClick={onCancel}
-              className="h-9 w-9 shadow-none"
+              className="size-11 shadow-none"
               disabled={isSaving}
               title="Cancelar Edición"
             >

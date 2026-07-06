@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -14,22 +13,33 @@ import { ProjectCard } from '@/components/projects/ProjectCard'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { PageHeader } from '@/components/dashboard/page-header'
 import { BentoGrid } from '@/components/dashboard/bento-grid'
+import { StatusBadge } from '@/components/ui/status-badge'
+
+const projectStatusConfig: Record<
+  string,
+  { label: string; variant: 'success' | 'info' | 'neutral' }
+> = {
+  operational: { label: 'Operacional', variant: 'success' },
+  validated: { label: 'Validado', variant: 'info' },
+  imported: { label: 'Importado', variant: 'info' },
+  draft: { label: 'Borrador', variant: 'neutral' },
+  activo: { label: 'Activo', variant: 'success' },
+  inactivo: { label: 'Inactivo', variant: 'neutral' },
+}
 
 export default function ProjectsPage() {
-  const router = useRouter()
   const [projects, setProjects] = useState<ProjectWithMetrics[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
 
-  const supabase = createClient()
-
-  const getFullUrl = (path: string | null | undefined) => {
+  const getFullUrl = useCallback((path: string | null | undefined) => {
     if (!path || path === '[]') return ''
+    const supabase = createClient()
     const cleanPath = path.replace(/^project-files\//, '')
     const { data } = supabase.storage.from('project-files').getPublicUrl(cleanPath)
     return data.publicUrl
-  }
+  }, [])
 
   const loadProjects = useCallback(async () => {
     try {
@@ -55,10 +65,7 @@ export default function ProjectsPage() {
   const handleDelete = async (projectId: string) => {
     setDeletingId(projectId)
     try {
-      const response = await fetch(`/api/projects/${projectId}`, {
-        method: 'DELETE',
-      })
-
+      const response = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
       if (response.ok) {
         setProjects((prev) => prev.filter((p) => p.id !== projectId))
       }
@@ -70,6 +77,15 @@ export default function ProjectsPage() {
   }
 
   const isAdmin = userRole === 'admin'
+  const totals = projects.reduce(
+    (acc, project) => ({
+      lots: acc.lots + project.total_lotes,
+      available: acc.available + project.lotes_libres,
+      reserved: acc.reserved + project.lotes_reservados,
+      sold: acc.sold + project.lotes_vendidos,
+    }),
+    { lots: 0, available: 0, reserved: 0, sold: 0 }
+  )
 
   if (isLoading) {
     return (
@@ -100,16 +116,16 @@ export default function ProjectsPage() {
     <PageShell>
       <PageHeader
         title="Proyectos"
-        description="Gestiona tus proyectos de loteos"
+        description="Administra tus loteos, disponibilidad y avance comercial."
         action={
-          isAdmin && (
-            <Link href="/onboarding/new">
-              <Button size="lg">
-                <HugeiconsIcon icon={PlusSignIcon} className="w-5 h-5 mr-2" />
+          isAdmin ? (
+            <Button asChild size="lg" className="min-h-11 px-5 font-semibold">
+              <Link href="/onboarding/new">
+                <HugeiconsIcon icon={PlusSignIcon} />
                 Nuevo Proyecto
-              </Button>
-            </Link>
-          )
+              </Link>
+            </Button>
+          ) : null
         }
       />
 
@@ -122,20 +138,61 @@ export default function ProjectsPage() {
           actionHref="/onboarding/new"
         />
       ) : (
-        <BentoGrid>
-          {projects.map((project) => (
-            <div key={project.id} className="md:col-span-6 xl:col-span-4">
-              <ProjectCard
-                project={project}
-                isAdmin={isAdmin}
-                deletingId={deletingId}
-                onDelete={handleDelete}
-                onClick={() => router.push(`/projects/${project.id}`)}
-                getFullUrl={getFullUrl}
-                layout="grid"
-              />
+        <section className="rounded-2xl bg-background/70 p-4 shadow-sm ring-1 ring-border/40 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>Portafolio</span>
+            <StatusBadge variant="available">{totals.available} disponibles</StatusBadge>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl bg-card px-5 py-4 shadow-xs">
+              <p className="text-sm text-muted-foreground">Lotes totales</p>
+              <p className="mt-1 font-display text-3xl font-semibold text-foreground">
+                {totals.lots}
+              </p>
+              <p className="text-sm font-medium text-muted-foreground">
+                {projects.length} proyectos activos
+              </p>
             </div>
-          ))}
+            <div className="rounded-2xl bg-card px-5 py-4 shadow-xs">
+              <p className="text-sm text-muted-foreground">Reservados</p>
+              <p className="mt-1 font-display text-3xl font-semibold text-foreground">
+                {totals.reserved}
+              </p>
+              <p className="text-sm font-medium text-warning">por gestionar</p>
+            </div>
+            <div className="rounded-2xl bg-primary px-5 py-4 text-primary-foreground shadow-xs">
+              <p className="text-sm text-primary-foreground/80">Vendidos</p>
+              <p className="mt-1 font-display text-3xl font-semibold">{totals.sold}</p>
+              <p className="text-sm font-medium text-primary-foreground/85">cierres registrados</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {projects.length > 0 && (
+        <BentoGrid>
+          {projects.map((project) => {
+            const status = projectStatusConfig[project.estado ?? 'draft'] ?? {
+              label: project.estado,
+              variant: 'neutral' as const,
+            }
+            return (
+              <div key={project.id} className="md:col-span-6 xl:col-span-4">
+                <ProjectCard
+                  project={project}
+                  isAdmin={isAdmin}
+                  deletingId={deletingId}
+                  onDelete={handleDelete}
+                  projectHref={`/projects/${project.id}`}
+                  getFullUrl={getFullUrl}
+                  statusLabel={status.label}
+                  statusVariant={status.variant}
+                  layout="grid"
+                />
+              </div>
+            )
+          })}
         </BentoGrid>
       )}
     </PageShell>

@@ -50,19 +50,19 @@ export default async function DashboardPage() {
 
       <BentoGrid>
         {member?.role === 'admin' && (
-          <div className="xl:col-span-12">
+          <div className="md:col-span-12">
             <PendingApprovalsPanel organizationId={member.organization_id} />
           </div>
         )}
 
         {member?.role === 'vendor' && (
-          <div className="xl:col-span-12">
+          <div className="md:col-span-12">
             <VendorRequestsPanel userId={userId} organizationId={member.organization_id} />
           </div>
         )}
 
         {hasNoCommercialHistory ? (
-          <div className="xl:col-span-12 space-y-4">
+          <div className="md:col-span-12 space-y-4">
             <h2 className="text-xl font-semibold tracking-tight text-foreground">Primeros Pasos</h2>
             <OnboardingChecklist
               hasProjects={kpis.totalProjects > 0}
@@ -72,12 +72,12 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <>
-            <div className="xl:col-span-12 space-y-4">
+            <div className="md:col-span-12 space-y-4">
               <h2 className="text-xl font-semibold tracking-tight">Resumen Global</h2>
               <DashboardKPIs kpis={kpis} />
             </div>
 
-            <div className="xl:col-span-12 space-y-4">
+            <div className="md:col-span-12 space-y-4">
               <h2 className="text-xl font-semibold tracking-tight">Equipo de Ventas</h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <VendorsList vendors={vendors} />

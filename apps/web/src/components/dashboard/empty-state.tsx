@@ -24,15 +24,17 @@ export function EmptyState({
   action,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center text-center p-8 border border-border bg-background rounded-2xl shadow-sm max-w-xl mx-auto py-14 space-y-5 animate-fade-in-up">
+    <div className="flex flex-col items-center justify-center text-center p-8 bg-card rounded-2xl shadow-sm max-w-xl mx-auto py-14 space-y-5 animate-fade-in-up">
       {/* Icon Area decorated with subtle soft background */}
-      <div className="p-4.5 rounded-full bg-accent/5 text-accent border border-accent/15 flex items-center justify-center shadow-inner">
+      <div className="p-4.5 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-inner">
         <HugeiconsIcon icon={Icon} className="w-12 h-12 stroke-[1.2]" />
       </div>
 
       {/* Texts area */}
       <div className="space-y-2">
-        <h3 className="text-xl font-bold tracking-tight text-foreground">{title}</h3>
+        <h3 className="font-display text-xl font-semibold tracking-tight text-foreground">
+          {title}
+        </h3>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">{description}</p>
       </div>
 

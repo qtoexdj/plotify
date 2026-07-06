@@ -19,9 +19,9 @@ export const DATO_CHIP_TESTID = {
 } as const satisfies Record<TokenResolutionStatus, string>
 
 const CLASES_CHIP = {
-  resolved: 'bg-emerald-50 text-emerald-900 ring-emerald-300 hover:bg-emerald-100',
-  blocked: 'bg-sky-50 text-sky-900 ring-sky-300 hover:bg-sky-100',
-  missing: 'bg-amber-50 text-amber-900 ring-amber-300 hover:bg-amber-100',
+  resolved: 'bg-success/10 text-success ring-success/30 hover:bg-success/15',
+  blocked: 'bg-info/10 text-info ring-info/30 hover:bg-info/15',
+  missing: 'bg-warning/10 text-warning ring-warning/30 hover:bg-warning/15',
 } as const satisfies Record<TokenResolutionStatus, string>
 
 /**
@@ -49,7 +49,7 @@ export function DatoChip({ label, estado, valor, className, ...props }: DatoChip
       type="button"
       data-testid={DATO_CHIP_TESTID[estado]}
       className={cn(
-        'cursor-pointer rounded px-1 py-0.5 font-sans text-[0.85em] ring-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current',
+        'inline-flex min-h-11 cursor-pointer items-center rounded px-1.5 py-0.5 font-sans text-[0.85em] leading-tight ring-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current xl:min-h-0 xl:px-1',
         CLASES_CHIP[estado],
         className
       )}

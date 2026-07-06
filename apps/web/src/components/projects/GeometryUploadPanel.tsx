@@ -114,7 +114,7 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <HugeiconsIcon icon={Location01Icon} className="w-5 h-5 text-blue-600" />
+          <HugeiconsIcon icon={Location01Icon} className="w-5 h-5 text-info" />
           <CardTitle>Subir Geometría (CAD/GIS)</CardTitle>
         </div>
         <CardDescription>
@@ -136,11 +136,11 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
         </div>
 
         {selectedFile && (
-          <div className="flex flex-col gap-3 p-3 bg-slate-50 rounded border border-slate-200">
+          <div className="flex flex-col gap-3 p-3 bg-muted rounded border border-border">
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 text-slate-600" />
+              <HugeiconsIcon icon={FileUploadIcon} className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-medium">{selectedFile.name}</span>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted-foreground">
                 ({(selectedFile.size / 1024).toFixed(2)} KB)
               </span>
             </div>
@@ -166,7 +166,7 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
         </Button>
 
         {status === 'success' && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded text-green-700">
+          <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/20 rounded text-success">
             <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4" />
             <span className="text-sm font-medium">
               Archivo parseado correctamente. {featuresCount} geometrías detectadas.
@@ -175,7 +175,7 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
         )}
 
         {status === 'error' && errorMessage && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded text-red-700">
+          <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded text-destructive">
             <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4" />
             <span className="text-sm">{errorMessage}</span>
           </div>

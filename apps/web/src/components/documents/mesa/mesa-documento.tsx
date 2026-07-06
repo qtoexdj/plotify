@@ -1,7 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { LockKeyhole, PencilLine } from 'lucide-react'
+import { HugeiconsIcon } from '@hugeicons/react'
+import {
+  LockKeyIcon as LockKeyhole,
+  PencilEdit02Icon as PencilLine,
+} from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -418,19 +422,17 @@ function BloqueTituloAprobado({ bloque }: { bloque: BloqueTitulo }) {
     <div
       tabIndex={0}
       data-testid="bloque-titulo"
-      className="my-4 rounded-r-md border-l-4 border-purple-300 bg-purple-50/60 py-3 pl-4 pr-3 focus-visible:outline-2 focus-visible:outline-purple-400"
+      className="my-4 rounded-r-md border-l-4 border-info/40 bg-info/10 py-3 pl-4 pr-3 focus-visible:outline-2 focus-visible:outline-info"
     >
-      <p className="flex items-center gap-1.5 font-sans text-xs font-medium text-purple-900">
-        <LockKeyhole aria-hidden className="size-3.5 shrink-0" />
+      <p className="flex items-center gap-1.5 font-sans text-xs font-medium text-info">
+        <HugeiconsIcon icon={LockKeyhole} aria-hidden className="size-3.5 shrink-0" />
         {MESA_TEXT.bloqueTitulo}
         {bloque.label ? <span className="font-normal">· {bloque.label}</span> : null}
       </p>
       {bloque.texto ? (
-        <p className="mt-2 text-justify">{bloque.texto}</p>
+        <p className="mt-2 text-left md:text-justify">{bloque.texto}</p>
       ) : (
-        <p className="mt-2 font-sans text-sm text-purple-900/80">
-          {MESA_TEXT.bloqueTituloPendiente}
-        </p>
+        <p className="mt-2 font-sans text-sm text-info/80">{MESA_TEXT.bloqueTituloPendiente}</p>
       )}
       <p className="mt-2 font-sans text-xs text-muted-foreground">{MESA_TEXT.bloqueTituloAyuda}</p>
     </div>
@@ -484,9 +486,9 @@ export function MesaDocumento({
   return (
     <section
       data-testid="mesa-documento"
-      className="rounded-lg border border-border bg-card text-card-foreground"
+      className="overflow-hidden rounded-2xl bg-card text-card-foreground shadow-xs"
     >
-      <div className="flex items-center justify-end gap-2 border-b border-border px-4 py-2.5">
+      <div className="flex items-center justify-end gap-2 px-4 py-2.5">
         <Switch
           id="mostrar-estructura"
           checked={vista === 'estructura'}
@@ -497,7 +499,7 @@ export function MesaDocumento({
         </Label>
       </div>
 
-      <article className="mx-auto max-w-3xl px-6 py-10 font-serif text-[15px] leading-8 sm:px-10">
+      <article className="mx-auto min-h-[220px] max-w-3xl px-5 py-10 font-serif text-[16px] leading-8 sm:px-10">
         <h2 className="text-center text-base font-bold uppercase tracking-wide">
           {matriz.template.name}
         </h2>
@@ -539,9 +541,7 @@ export function MesaDocumento({
                     </h3>
                     <span className="flex shrink-0 items-center gap-2 font-sans">
                       {conCambios.has(clause.clause_key) ? (
-                        <span className="text-xs text-amber-700">
-                          {MESA_TEXT.cambiosSinGuardar}
-                        </span>
+                        <span className="text-xs text-warning">{MESA_TEXT.cambiosSinGuardar}</span>
                       ) : null}
                       {puedeActivar ? (
                         <Button
@@ -551,7 +551,7 @@ export function MesaDocumento({
                           onClick={activar}
                           className="text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
                         >
-                          <PencilLine />
+                          <HugeiconsIcon icon={PencilLine} />
                           {MESA_TEXT.editarClausula}
                         </Button>
                       ) : null}
@@ -570,7 +570,10 @@ export function MesaDocumento({
                           bloque={bloque}
                         />
                       ) : (
-                        <p key={`${clause.clause_key}-${index}`} className="mt-3 text-justify">
+                        <p
+                          key={`${clause.clause_key}-${index}`}
+                          className="mt-3 text-left md:text-justify"
+                        >
                           {bloque.segmentos.map((segmento, posicion) =>
                             segmento.kind === 'texto' ? (
                               <span key={posicion}>{segmento.texto}</span>

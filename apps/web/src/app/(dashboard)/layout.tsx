@@ -7,7 +7,10 @@ import { getActiveWorkspace } from '@/lib/services/workspace.service'
 import { createClient } from '@/lib/supabase/server'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { HeaderTitle } from '@/components/dashboard/header-title'
+import { HeaderBreadcrumb } from '@/components/dashboard/header-breadcrumb'
+import { BreadcrumbProvider } from '@/components/dashboard/breadcrumb-context'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { CommandPaletteProvider } from '@/components/command-palette'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isSuperAdmin } = await getUserWithSuperAdmin()
@@ -59,52 +62,65 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <SidebarProvider>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg z-50 font-medium shadow-lg"
-      >
-        Saltar al contenido principal
-      </a>
-      <AppSidebar
-        user={{
-          name: fullName,
-          email,
-          avatar: avatarUrl,
-        }}
-        workspace={workspace}
-        leadCount={leadCount}
-      />
-      <SidebarInset>
-        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b border-border/40 bg-background/70 backdrop-blur-md transition-all duration-300">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <HeaderTitle
-              workspaceName={workspace?.organization?.name ?? 'Plotify'}
-              userRole={userRole}
-            />
-          </div>
-          <div className="ml-auto px-4 flex items-center gap-3">
-            {organizationId && (
-              <NotificationBell
-                userId={user.id}
-                organizationId={organizationId}
-                userRole={userRole}
-              />
-            )}
-            <Avatar className="h-8 w-8 rounded-lg border border-border shadow-xs shrink-0">
-              <AvatarImage src={avatarUrl} alt={fullName} />
-              <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold text-xs">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        </header>
-        <main id="main-content" tabIndex={-1} className="flex-1 overflow-auto outline-none">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    <BreadcrumbProvider>
+      <SidebarProvider>
+        <CommandPaletteProvider>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg z-50 font-medium shadow-lg"
+          >
+            Saltar al contenido principal
+          </a>
+          <AppSidebar
+            user={{
+              name: fullName,
+              email,
+              avatar: avatarUrl,
+            }}
+            workspaceName={workspace?.organization?.name ?? 'Plotify'}
+            leadCount={leadCount}
+          />
+          <SidebarInset>
+            <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 bg-transparent transition-all duration-300">
+              <div className="flex items-center gap-2 px-4 md:hidden">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4 bg-border" />
+                <HeaderTitle
+                  workspaceName={workspace?.organization?.name ?? 'Plotify'}
+                  userRole={userRole}
+                />
+              </div>
+              <div className="hidden items-center gap-2 px-4 md:flex">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4 bg-border" />
+                <HeaderBreadcrumb />
+              </div>
+              <div className="ml-auto px-4 flex items-center gap-3">
+                {organizationId && (
+                  <NotificationBell
+                    userId={user.id}
+                    organizationId={organizationId}
+                    userRole={userRole}
+                  />
+                )}
+                <Avatar className="h-8 w-8 rounded-lg shadow-xs shrink-0">
+                  <AvatarImage src={avatarUrl} alt={fullName} />
+                  <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold text-xs">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            </header>
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className="min-w-0 flex-1 overflow-auto outline-none"
+            >
+              {children}
+            </main>
+          </SidebarInset>
+        </CommandPaletteProvider>
+      </SidebarProvider>
+    </BreadcrumbProvider>
   )
 }

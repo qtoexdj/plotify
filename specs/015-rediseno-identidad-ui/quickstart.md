@@ -1,58 +1,78 @@
-# Quickstart: Verificación del Rediseño (015)
+# Quickstart: SDD 015 Rediseño Identidad UI
 
-## 1. Verificación de identidad (Fase 1 / US1)
+## Alcance Verificado
 
-```bash
-pnpm dev:web
-```
+Este quickstart cierra la verificación funcional del rediseño "Tinta nítida":
 
-1. Abrir `http://localhost:3000/dashboard` en tema claro y oscuro (toggle o preferencia de sistema).
-2. DevTools → computed font de `body` = Onest; de un `h1`/cifra KPI = Bricolage Grotesque.
-3. Network → no se descargan Inter ni Geist Sans; Bricolage/Onest/Source Serif 4 con `font-display: swap`.
-4. `getComputedStyle(document.documentElement).getPropertyValue('--primary')` = carmesí (claro) y su par al activar `.dark`.
-5. Mesa de escritura (`/documentos/matriz/...` con el caso demo sembrado): el documento se ve en Source Serif 4.
+- Tokens, fuentes y marca en `globals.css`, `layout.tsx`, `design.md` y `brand/colors.md`.
+- Sidebar oscuro flotante, header limpio y command palette en dashboard y super-admin.
+- Tabs internos de Escrituras y Agente.
+- Spinner/BrandLoader/StatusBadge/EmptyState/guard tests.
+- Barrido de colores crudos y `lucide-react`.
+- Responsive base de `/operations` y mesa de escritura móvil con bottom sheets.
 
-## 2. Verificación de navegación (Fase 3 / US2)
-
-- Sidebar: 6 ítems planos + Buscar + Configuración/usuario abajo; panel flotante oscuro en AMBOS temas.
-- ⌘K (y Ctrl+K) abre el palette desde cualquier página; Escape cierra; navegar a Proyectos/Settings/un proyecto.
-- `/documentos/historial` muestra tabs con "Historial" activo y "Escrituras" activo en sidebar.
-- Móvil (DevTools 375px): sidebar como drawer; misma estructura.
-- Header: sin input de búsqueda.
-
-## 3. Recorrido responsive completo (Fase 6 / US5)
-
-Rutas a verificar en 375 / 768 / 1024 / 1440 px, ambos temas, sin scroll horizontal:
-
-```text
-/dashboard          /projects            /projects/[id] (visor: regresión prohibida)
-/documentos         /documentos/historial /documentos/plantillas
-/documentos/matriz/proyecto/[id]         /operations
-/clients            /vendors             /agente
-/agente/skills      /agente/integrations /settings/profile
-/settings/workspace /onboarding/new      /auth/login
-/super-admin (+ organizations, users, audit-logs, prompt-ops, labs)
-```
-
-Chequeo por ruta: `document.scrollingElement.scrollWidth <= window.innerWidth`.
-
-## 4. Gates y greps
+## Comandos
 
 ```bash
-pnpm typecheck:web && pnpm test:web && pnpm build:web
-
-# colores crudos (esperado: 0 fuera de lib/map/lot-colors.ts)
-grep -rEn '(bg|text|border|ring|from|to|via)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+' apps/web/src --include='*.tsx' | grep -v 'lib/map/lot-colors'
-
-# loaders prohibidos (esperado: 0)
-grep -rEn 'Loader2|LoaderCircle|Loading0[23]Icon' apps/web/src --include='*.tsx'
-
-# lucide fuera de primitivas (esperado: 0)
-grep -rln "from 'lucide-react'" apps/web/src --include='*.tsx' | grep -v 'components/ui/'
+pnpm typecheck:web
+pnpm test:web
+pnpm build:web
 ```
 
-## 5. Recolor de marca (cuando el usuario lo haga)
+Greps de cierre:
 
-1. Editar los SVG maestros en `brand/` (verde → carmesí) y `brand/colors.md`.
-2. `cd apps/api && ./.venv/bin/python ../../brand/scripts/generate_assets.py`
-3. En la web solo cambia el token `--brand` en `globals.css`. Nada más.
+```bash
+rg -n "Loader2|LoaderCircle|Loading0[23]Icon" apps/web/src --glob '*.tsx'
+rg -n "from ['\"]lucide-react['\"]" apps/web/src --glob '*.tsx'
+rg -n "(bg|text|border|ring|from|to|via)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+" apps/web/src --glob '*.tsx'
+```
+
+Los tres greps deben devolver cero resultados, excepto colores literales centralizados en `apps/web/src/lib/map/lot-colors.ts`.
+
+## Rutas De Recorrido
+
+Recorrer en claro y oscuro, con anchos 375, 768, 1024 y 1440 px:
+
+- `/dashboard`
+- `/projects`
+- `/projects/[projectId]`
+- `/documentos`
+- `/documentos/historial`
+- `/documentos/plantillas`
+- `/documentos/matriz/[caseId]`
+- `/documentos/matriz/proyecto/[projectId]`
+- `/clients`
+- `/vendors`
+- `/operations`
+- `/agente`
+- `/agente/skills`
+- `/agente/integrations`
+- `/settings/profile`
+- `/settings/workspace`
+- `/ayuda/vendedor`
+- `/onboarding/new`
+- `/super-admin`
+- `/super-admin/audit-logs`
+- `/super-admin/organizations`
+- `/super-admin/projects`
+- `/super-admin/prompt-ops`
+- `/super-admin/prompt-ops/[promptId]`
+- `/super-admin/users`
+- `/super-admin/labs/escrituras`
+
+## Criterios Manuales
+
+- `document.documentElement.scrollWidth <= window.innerWidth` en 375 px para cada ruta renderizable.
+- Sidebar desktop se ve como panel oscuro flotante redondeado; sidebar móvil abre como drawer.
+- `Cmd/Ctrl+K` abre el command palette en dashboard y super-admin.
+- Header dashboard no contiene input de búsqueda ni toggle de tema.
+- Tabs de Escrituras y Agente conservan URLs actuales y tienen target táctil de al menos 44 px.
+- Mesa de escritura móvil muestra documento a ancho completo y mueve índice/datos a bottom sheets.
+- Visor de proyecto conserva selección de lote, panel lateral desktop, bottom sheet móvil, toolbar y export.
+- No hay fondos claros pegados ni texto ilegible en dark mode.
+
+## Resultado Actual
+
+- Gates técnicos: pasan (`typecheck:web`, `test:web`, `build:web`).
+- Greps SC-001/SC-002/SC-003: cero resultados en código de producto.
+- Assets de marca: no se regeneraron porque el usuario no recoloreó los SVG maestros; el flujo queda documentado en `brand/colors.md`.
