@@ -1916,6 +1916,48 @@ async def submit_matriz(
     return await _workflow_response(client, updated, case_row)
 
 
+async def _recompute_pending_cases_after_matriz_approval(
+    *, client: Any, organization_id: str, project_id: str
+) -> None:
+    """FR-005: al aprobar el molde, re-evalúa los casos `variables_pending`
+    del proyecto para que hereden los gates recién aprobados sin esperar a
+    que alguien abra la mesa manualmente. Best-effort por caso: una falla en
+    uno no bloquea la aprobación de la matriz ni el recompute del resto."""
+    from services.escritura_readiness import create_escritura_case_snapshot
+
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_cases")
+            .select("id, lot_id")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("case_status", "variables_pending")
+            .execute()
+        )
+    )
+    for case in _rows(getattr(result, "data", None)):
+        lot_id = case.get("lot_id")
+        if not lot_id:
+            continue
+        try:
+            await create_escritura_case_snapshot(
+                organization_id=organization_id,
+                project_id=project_id,
+                lot_id=str(lot_id),
+                stage_operational=True,
+                supabase=client,
+            )
+        except Exception as exc:
+            logger.error(
+                "matriz_approval_recompute_case_failed",
+                organization_id=organization_id,
+                project_id=project_id,
+                lot_id=str(lot_id),
+                escritura_case_id=case.get("id"),
+                error=str(exc),
+            )
+
+
 @router.post(
     "/escritura-matrices/{matriz_id}/approve",
     response_model=MatrizCaseResponse,
@@ -1989,6 +2031,14 @@ async def approve_matriz(
         decision_type="matriz_approved",
         decision_status="approved",
         decided_by=str(request.approved_by),
+    )
+    approved_project_id = (
+        str(case_row["project_id"]) if case_row else str(matrix_row["project_id"])
+    )
+    await _recompute_pending_cases_after_matriz_approval(
+        client=client,
+        organization_id=str(organization_id),
+        project_id=approved_project_id,
     )
     return await _workflow_response(client, updated, case_row)
 

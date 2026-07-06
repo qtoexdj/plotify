@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from api.deps import verify_internal_secret
 from api.v1.endpoints import escritura_matrices, escritura_templates
+from services import escritura_readiness
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "matriz"
 
@@ -879,6 +880,64 @@ class TestMatrizReviewWorkflow:
         assert approved_audit["decision_type"] == "matriz_approved"
         assert approved_audit["decision_status"] == "approved"
         assert approved_audit["escritura_case_id"] is None
+
+    def test_project_matriz_approval_recomputes_variables_pending_cases(
+        self, monkeypatch
+    ):
+        """FR-005: aprobar el molde re-evalua los casos variables_pending del
+        proyecto, para que hereden los gates recien aprobados sin esperar a
+        que alguien abra la mesa manualmente."""
+        store = FakeStore()
+        template = _seed_template(store)
+        _seed_project(store)
+        project_snapshot = _project_snapshot_fixture()
+        matrix = _seed_project_matrix(
+            store,
+            template=template,
+            variable_snapshot=project_snapshot,
+            status="legal_review_pending",
+        )
+        matrix["submitted_by"] = "00000000-0000-4000-8000-000000000020"
+        _patch_project_snapshot(monkeypatch, variable_snapshot=project_snapshot)
+
+        pending_case = _seed_case(store)
+        pending_case["case_status"] = "variables_pending"
+        pending_case["lot_id"] = LOT_ID
+
+        ready_case_id = str(uuid.uuid4())
+        ready_lot_id = str(uuid.uuid4())
+        store.tables["escritura_cases"].append(
+            {
+                **pending_case,
+                "id": ready_case_id,
+                "lot_id": ready_lot_id,
+                "case_status": "ready_for_minuta",
+            }
+        )
+
+        recompute_calls: list[dict[str, Any]] = []
+
+        async def fake_snapshot(**kwargs):
+            recompute_calls.append(kwargs)
+            return {}
+
+        monkeypatch.setattr(
+            escritura_readiness, "create_escritura_case_snapshot", fake_snapshot
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/approve",
+            params={"organization_id": ORG_ID},
+            json={"approved_by": "00000000-0000-4000-8000-000000000021"},
+        )
+
+        assert response.status_code == 200
+        assert len(recompute_calls) == 1
+        call = recompute_calls[0]
+        assert call["organization_id"] == ORG_ID
+        assert call["project_id"] == PROJECT_ID
+        assert call["lot_id"] == LOT_ID
+        assert call["stage_operational"] is True
 
     def test_project_matriz_approval_blocks_project_pending_variable(
         self, monkeypatch

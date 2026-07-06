@@ -74,7 +74,7 @@
 
 ### Recompute de gates
 
-- [ ] **T013** [US1] Al aprobar la matriz del proyecto (`approve_matriz`, `apps/api/api/v1/endpoints/escritura_matrices.py:1923`), encolar/ejecutar recompute de `create_escritura_case_snapshot(stage_operational=True)` para todos los `escritura_cases` `variables_pending` del proyecto (FR-005). Verify: `pnpm test:api`
+- [x] **T013** [US1] Al aprobar la matriz del proyecto (`approve_matriz`, `apps/api/api/v1/endpoints/escritura_matrices.py:1923`), encolar/ejecutar recompute de `create_escritura_case_snapshot(stage_operational=True)` para todos los `escritura_cases` `variables_pending` del proyecto (FR-005). Verify: `pnpm test:api`
 
 - [ ] **T014** [US1] Cablear el botón "Verificar" de la mesa (`apps/web/src/components/documents/mesa/mesa-encabezado.tsx:164`) al re-stage del caso `POST /escritura-matrices/case/{caseId}/stage-operational` (endpoint existente `escritura_matrices.py:2222`) + refrescar (FR-006). Verify: `pnpm --filter web lint && pnpm build:web`
 
