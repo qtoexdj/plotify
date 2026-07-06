@@ -1091,8 +1091,15 @@ async def create_escritura_case_snapshot(
         # from operational rows before snapshotting, so the party/price/
         # geometry gates see them. A bridge failure must not block the case:
         # the affected keys simply stay missing and the gates surface them.
-        from services.escritura_operational_bridge import stage_operational_variables
+        from services.escritura_operational_bridge import (
+            LOT_GEOMETRY_VARIABLE_KEYS,
+            LOT_RECORD_VARIABLE_KEYS,
+            stage_operational_variables,
+        )
 
+        expected_bridge_variable_count = len(LOT_RECORD_VARIABLE_KEYS) + len(
+            LOT_GEOMETRY_VARIABLE_KEYS
+        )
         try:
             await stage_operational_variables(
                 organization_id=organization_id,
@@ -1100,13 +1107,21 @@ async def create_escritura_case_snapshot(
                 lot_id=lot_id,
                 supabase=supabase,
             )
-        except Exception as exc:  # pragma: no cover - defensive logging path
-            logger.warning(
+        except Exception as exc:
+            # FR-002: a failed staging call always populates 0 of the
+            # variables the bridge should have produced for this lot; log at
+            # error (not warning) so a config bug (e.g. a maybe_single()
+            # None crash) surfaces instead of silently leaving the case
+            # "waiting for data" forever. Best-effort is preserved: the case
+            # is still created/updated below with whatever gates are missing.
+            logger.error(
                 "operational_bridge_staging_failed",
                 organization_id=organization_id,
                 project_id=project_id,
                 lot_id=lot_id,
                 error=str(exc),
+                populated_count=0,
+                expected_count=expected_bridge_variable_count,
             )
 
     readiness = await get_escritura_readiness(

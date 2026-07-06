@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -211,6 +211,75 @@ class TestCaseCreationInvokesBridge:
             supabase=FakeClient(),
         )
         assert call_order == ["bridge", "readiness"]
+
+    @pytest.mark.asyncio
+    async def test_bridge_exception_logs_error_with_populated_and_expected_counts(
+        self, monkeypatch
+    ):
+        """FR-002: si el puente revienta, el caso se sigue creando (best-effort,
+        el flujo no cambia) pero se loguea a nivel error (no warning) con 0
+        variables pobladas de N esperadas, para que un bug de configuracion
+        (p. ej. el crash de maybe_single() -> None) no quede escondido como
+        un simple warning."""
+
+        async def failing_stage(**_kwargs):
+            raise RuntimeError("boom")
+
+        async def fake_readiness(**_kwargs):
+            return escritura_readiness.EscrituraReadiness(
+                organization_id=ORG_ID,
+                project_id=PROJECT_ID,
+                lot_id=LOT_ID,
+                readiness_status="pending",
+                gates=(),
+            )
+
+        monkeypatch.setattr(bridge, "stage_operational_variables", failing_stage)
+        monkeypatch.setattr(
+            escritura_readiness, "get_escritura_readiness", fake_readiness
+        )
+        fake_logger = MagicMock()
+        monkeypatch.setattr(escritura_readiness, "logger", fake_logger)
+
+        class FakeCaseTable:
+            def select(self, *_a):
+                return self
+
+            def eq(self, *_a):
+                return self
+
+            def neq(self, *_a):
+                return self
+
+            def maybe_single(self):
+                return self
+
+            def insert(self, payload):
+                self._payload = payload
+                return self
+
+            def execute(self):
+                payload = getattr(self, "_payload", None)
+                return SimpleNamespace(data=[payload] if payload else None)
+
+        class FakeClient:
+            def table(self, name):
+                assert name == "escritura_cases"
+                return FakeCaseTable()
+
+        result = await escritura_readiness.create_escritura_case_snapshot(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            lot_id=LOT_ID,
+            supabase=FakeClient(),
+        )
+
+        assert result
+        fake_logger.error.assert_called_once()
+        _, error_kwargs = fake_logger.error.call_args
+        assert error_kwargs["populated_count"] == 0
+        assert error_kwargs["expected_count"] > 0
+        fake_logger.warning.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_stage_operational_flag_false_skips_bridge(self, monkeypatch):
