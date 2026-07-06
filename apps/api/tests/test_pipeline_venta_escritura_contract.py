@@ -3,9 +3,16 @@
 T007: el payload de venta con cliente_nacionalidad/cliente_region/
 cliente_comuna llega íntegro a approval_requests.payload (Pydantic no
 descarta los campos nuevos).
+
+T012: tras la aprobación (lot_records con los 3 campos, simulando el RPC
+approve_sale/approve_reservation ya corrido — T002), correr
+stage_operational_variables produce una fila comprador.nacionalidad con
+valor en variable_resolutions.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 def _build_approvals_app():
@@ -126,3 +133,144 @@ async def test_request_sale_payload_keeps_comprador_fields():
     assert payload["cliente_comuna"] == "Teno"
     assert payload["notaria"] == "Notaría de Teno"
     assert payload["fecha_firma"] == "2026-07-15"
+
+
+# ─── T012: aprobar venta -> lot_records -> stage -> variable_resolutions ─────
+
+ORG_ID = "00000000-0000-4000-8000-000000000001"
+PROJECT_ID = "00000000-0000-4000-8000-000000000002"
+LOT_ID = "00000000-0000-4000-8000-000000000003"
+
+# Simula lot_records tras approve_sale (T002): los 3 campos nuevos ya
+# persistidos, como si el RPC hubiese corrido.
+APPROVED_LOT_RECORD = {
+    "id": "00000000-0000-4000-8000-000000000005",
+    "lot_id": LOT_ID,
+    "cliente_nombre": "Cliente Demo",
+    "cliente_run": "12.345.678-9",
+    "cliente_direccion": "Calle Falsa 123",
+    "cliente_estado_civil": "soltero",
+    "cliente_ocupacion": "ingeniero",
+    "cliente_nacionalidad": "chilena",
+    "valor": 12_000_000,
+    "abono": None,
+    "saldo": None,
+    "firma_lugar": "Notaría de Teno",
+    "firma_fecha": "2026-07-15",
+}
+
+APPROVED_LOT = {
+    "id": LOT_ID,
+    "project_id": PROJECT_ID,
+    "numero_lote": "3",
+    "estado": "vendido",
+    "m2": 5000,
+    "area_official_m2": 5000,
+    "superficie_neta_m2": 4800,
+    "boundaries_official": [],
+    "servidumbre_m2": None,
+    "servidumbre_ancho_m": None,
+}
+
+
+class _FakeTable:
+    def __init__(self, supabase, name):
+        self.supabase = supabase
+        self.name = name
+        self.operation = "select"
+        self.payload = None
+
+    def select(self, *_a):
+        self.operation = "select"
+        return self
+
+    def insert(self, payload):
+        self.operation = "insert"
+        self.payload = payload
+        return self
+
+    def update(self, payload):
+        self.operation = "update"
+        self.payload = payload
+        return self
+
+    def eq(self, *_a):
+        return self
+
+    def neq(self, *_a):
+        return self
+
+    def is_(self, *_a):
+        return self
+
+    def in_(self, *_a):
+        return self
+
+    def order(self, *_a, **_k):
+        return self
+
+    def limit(self, *_a):
+        return self
+
+    def maybe_single(self):
+        return self
+
+    def execute(self):
+        return self.supabase.execute(self)
+
+
+class _FakeSupabase:
+    """Fake mínimo para stage_operational_variables: lots/lot_records/
+    organization_payment_info/variable_resolutions."""
+
+    def __init__(self):
+        self.inserted: list[dict] = []
+
+    def table(self, name):
+        return _FakeTable(self, name)
+
+    def execute(self, table: _FakeTable):
+        if table.name == "lots":
+            return MagicMock(data=APPROVED_LOT)
+        if table.name == "lot_records":
+            return MagicMock(data=[APPROVED_LOT_RECORD])
+        if table.name == "organization_payment_info":
+            # 0 filas: real supabase-py devuelve None, no un objeto con
+            # .data = None (FR-001/T006).
+            return None
+        if table.name == "variable_resolutions":
+            if table.operation == "select":
+                return MagicMock(data=[])
+            if table.operation == "update":
+                return MagicMock(data=[])
+            if table.operation == "insert":
+                self.inserted.extend(table.payload)
+                return MagicMock(
+                    data=[
+                        {**row, "id": f"var-{index}"}
+                        for index, row in enumerate(table.payload)
+                    ]
+                )
+        raise AssertionError(f"unexpected table {table.name}")
+
+
+@pytest.mark.asyncio
+async def test_approved_sale_stages_comprador_nacionalidad_variable():
+    from services.escritura_operational_bridge import stage_operational_variables
+
+    supabase = _FakeSupabase()
+
+    with patch(
+        "asyncio.to_thread",
+        new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+    ):
+        outcome = await stage_operational_variables(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            lot_id=LOT_ID,
+            supabase=supabase,
+        )
+
+    assert "comprador.nacionalidad" in outcome.proposed
+    staged = {row["variable_key"]: row for row in supabase.inserted}
+    assert staged["comprador.nacionalidad"]["value_text"] == "chilena"

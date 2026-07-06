@@ -70,7 +70,7 @@
 
 - [x] **T011** [US1] Cambiar el `except Exception` silencioso de `create_escritura_case_snapshot` (`apps/api/services/escritura_readiness.py:1096`) para contar variables pobladas y loguear a nivel `error` cuando pobló 0 debiendo poblar N (FR-002). No cambiar el flujo (sigue best-effort). Verify: `pnpm test:api`
 
-- [ ] **T012** [US1] Test de contrato: aprobar una venta (mock del RPC o contra Supabase real de test) → `lot_records` con los 3 campos → correr `stage_operational_variables` → fila `comprador.nacionalidad` con valor en `variable_resolutions`. Añadir a `apps/api/tests/test_pipeline_venta_escritura_contract.py`. Verify: `pnpm test:api`
+- [x] **T012** [US1] Test de contrato: aprobar una venta (mock del RPC o contra Supabase real de test) → `lot_records` con los 3 campos → correr `stage_operational_variables` → fila `comprador.nacionalidad` con valor en `variable_resolutions`. Añadir a `apps/api/tests/test_pipeline_venta_escritura_contract.py`. Verify: `pnpm test:api`
 
 ### Recompute de gates
 
