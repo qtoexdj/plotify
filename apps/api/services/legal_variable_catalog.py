@@ -159,8 +159,10 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "comprador.domicilio",
         "comprador.estado_civil",
         "comprador.profesion_giro",
-        # SDD 008 (research D11): hecho juridico independiente; no existe en
-        # lot_records, entra manual via CCL. Nunca se infiere del nombre.
+        # SDD 016 (FR-004): puebla lot_records.cliente_nacionalidad via el
+        # puente operacional (sale_gap), igual que el resto del grupo. Antes
+        # (SDD 008 D11) entraba manual via CCL; el formulario de venta ahora
+        # lo captura, asi que nunca hace falta autoria manual.
         "comprador.nacionalidad",
     ),
     "personeria": (

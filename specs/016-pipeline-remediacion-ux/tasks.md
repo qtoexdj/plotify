@@ -66,7 +66,7 @@
 
 ### Puente y datos del comprador
 
-- [ ] **T010** [US1] Mapear `comprador.nacionalidad` desde `lot_records.cliente_nacionalidad` en `map_lot_record_variables` (`apps/api/services/escritura_operational_bridge.py:240`, lista `variables`). Decidir región/comuna (concatenar a `comprador.domicilio` o metadato — ver contracts/payloads-comprador.md). Verify: `pnpm test:api`
+- [x] **T010** [US1] Mapear `comprador.nacionalidad` desde `lot_records.cliente_nacionalidad` en `map_lot_record_variables` (`apps/api/services/escritura_operational_bridge.py:240`, lista `variables`). Decidir región/comuna (concatenar a `comprador.domicilio` o metadato — ver contracts/payloads-comprador.md). Verify: `pnpm test:api`
 
 - [ ] **T011** [US1] Cambiar el `except Exception` silencioso de `create_escritura_case_snapshot` (`apps/api/services/escritura_readiness.py:1096`) para contar variables pobladas y loguear a nivel `error` cuando pobló 0 debiendo poblar N (FR-002). No cambiar el flujo (sigue best-effort). Verify: `pnpm test:api`
 

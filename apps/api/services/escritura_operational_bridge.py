@@ -38,6 +38,7 @@ LOT_RECORD_VARIABLE_KEYS = (
     "comprador.domicilio",
     "comprador.estado_civil",
     "comprador.profesion_giro",
+    "comprador.nacionalidad",
     "transaccion.precio_numeros",
     "transaccion.moneda",
     "transaccion.forma_pago",
@@ -189,6 +190,7 @@ def _lot_record_hash_fields(record: dict[str, Any]) -> dict[str, Any]:
         "cliente_direccion": record.get("cliente_direccion"),
         "cliente_estado_civil": record.get("cliente_estado_civil"),
         "cliente_ocupacion": record.get("cliente_ocupacion"),
+        "cliente_nacionalidad": record.get("cliente_nacionalidad"),
         "valor": record.get("valor"),
         "abono": record.get("abono"),
         "saldo": record.get("saldo"),
@@ -245,6 +247,7 @@ def map_lot_record_variables(
         system_var("comprador.domicilio", _clean(record.get("cliente_direccion"))),
         system_var("comprador.estado_civil", _clean(record.get("cliente_estado_civil"))),
         system_var("comprador.profesion_giro", _clean(record.get("cliente_ocupacion"))),
+        system_var("comprador.nacionalidad", _clean(record.get("cliente_nacionalidad"))),
     ]
 
     valor = record.get("valor")

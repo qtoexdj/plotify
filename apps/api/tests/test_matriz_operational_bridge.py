@@ -62,12 +62,17 @@ class TestLotRecordMapping:
             by_key["comprador.profesion_giro"].value_text
             == record["cliente_ocupacion"]
         )
+        assert (
+            by_key["comprador.nacionalidad"].value_text
+            == record["cliente_nacionalidad"]
+        )
         for key in (
             "comprador.nombre",
             "comprador.rut",
             "comprador.domicilio",
             "comprador.estado_civil",
             "comprador.profesion_giro",
+            "comprador.nacionalidad",
         ):
             assert by_key[key].source_type == "system"
             assert by_key[key].source == "lot_records"
