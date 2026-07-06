@@ -1,3 +1,5 @@
+'use client'
+
 import {
   DashboardCircleIcon,
   Folder02Icon,
@@ -40,18 +42,21 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     email: string
     avatar?: string
   }
-  workspace?: { organization?: { name?: string | null; is_personal?: boolean | null } } | null
+  workspaceName?: string
   leadCount?: number
 }
 
-export function AppSidebar({ user, workspace, leadCount = 0, ...props }: AppSidebarProps) {
+export function AppSidebar({
+  user,
+  workspaceName = 'Plotify',
+  leadCount = 0,
+  ...props
+}: AppSidebarProps) {
   const sidebarUser = {
     name: user?.name ?? 'Usuario',
     email: user?.email ?? '',
     avatar: user?.avatar ?? '',
   }
-
-  const workspaceName = workspace?.organization?.name ?? 'Plotify'
 
   return (
     <Sidebar collapsible="icon" variant="inset" {...props}>

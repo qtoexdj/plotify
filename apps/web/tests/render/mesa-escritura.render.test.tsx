@@ -8,7 +8,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 
 import { MesaEscritura } from '@/components/documents/mesa/mesa-escritura'
+import { PanelDatos } from '@/components/documents/mesa/panel-datos'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
+import type { TokenResolution } from '@/lib/documents/matriz-types'
 import { caseResponse, clausula, matrizWith, GATE_BLOCKER, DATO_BLOCKER } from './fixtures'
 
 afterEach(cleanup)
@@ -64,5 +66,34 @@ describe('MesaIndice: interruptor de activar/desactivar cláusula', () => {
       MESA_TEXT.desactivarClausula
     ) as HTMLButtonElement
     expect(boton.disabled).toBe(true)
+  })
+})
+
+describe('PanelDatos', () => {
+  it('permite contraer y expandir los grupos de datos', () => {
+    const token: TokenResolution = {
+      variableKey: 'comprador.nombre',
+      label: 'Nombre comprador',
+      status: 'missing',
+      value_text: null,
+      state: null,
+      source_type: null,
+      producer: 'sale_gap',
+      evidence_refs: [],
+    }
+
+    render(
+      <PanelDatos
+        resolucion={{ tokens: [token], blocks: [], missing_count: 1 }}
+        projectId="p1"
+        scope="project"
+      />
+    )
+
+    const group = screen.getByTestId('panel-datos-grupo-venta')
+    expect(group.getAttribute('data-state')).toBe('open')
+    fireEvent.click(screen.getByRole('button', { name: 'Contraer Se completa en la venta' }))
+    expect(group.getAttribute('data-state')).toBe('closed')
+    expect(screen.getByRole('button', { name: 'Expandir Se completa en la venta' })).toBeTruthy()
   })
 })

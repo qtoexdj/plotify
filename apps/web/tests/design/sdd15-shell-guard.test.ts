@@ -45,16 +45,17 @@ describe('SDD 015 shell and responsive guardrails', () => {
 
   it('keeps project detail aligned to the operational viewer summary', () => {
     const projectPage = readSrc('app/(dashboard)/projects/[projectId]/page.tsx')
+    const overviewTab = readSrc('components/projects/detail/overview-tab.tsx')
 
     expect(projectPage).toContain('PageShell')
     expect(projectPage).toContain('PageHeader')
-    expect(projectPage).toContain('ProjectSummaryPanel')
-    expect(projectPage).toContain('Nueva venta')
+    expect(projectPage).toContain('OverviewTab')
+    expect(projectPage).toContain('Ir al visor')
     expect(projectPage).toContain('handleStartSale')
     expect(projectPage).toContain('scrollIntoView')
-    expect(projectPage).toContain('Ventas registradas')
-    expect(projectPage).toContain('Reservados')
-    expect(projectPage).toContain('En mesa')
+    expect(projectPage).toContain('Administrar proyecto')
+    expect(overviewTab).toContain('Ventas registradas')
+    expect(overviewTab).toContain('Reservados')
   })
 
   it('keeps internal tabs at the 44px touch-target minimum', () => {

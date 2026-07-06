@@ -17,7 +17,6 @@ import { EmptyState } from '@/components/dashboard/empty-state'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -495,92 +494,164 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
             description="Sube la geometría del proyecto para comenzar a gestionar sus lotes."
           />
         ) : (
-          <ScrollArea className="h-115 w-full rounded-md border">
-            <div className="min-w-550">
-              <Table>
-                <TableCaption>Listado de lotes con ficha completa</TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Lote</TableHead>
-                    <TableHead>Estado lote</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>RUN</TableHead>
-                    <TableHead>Dirección</TableHead>
-                    <TableHead>Estado civil</TableHead>
-                    <TableHead>Ocupación</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Abono</TableHead>
-                    <TableHead>Saldo</TableHead>
-                    <TableHead>Detalle deuda</TableHead>
-                    <TableHead>Estado firma</TableHead>
-                    <TableHead>Fecha firma</TableHead>
-                    <TableHead>Lugar firma</TableHead>
-                    <TableHead>Notaría</TableHead>
-                    <TableHead>CBR</TableHead>
-                    <TableHead>Abogado</TableHead>
-                    <TableHead>CBR estado</TableHead>
-                    <TableHead>CBR petitorio</TableHead>
-                    <TableHead>CBR salida</TableHead>
-                    <TableHead>CBR reparo</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                    <TableHead>Correo</TableHead>
-                    <TableHead>Comisión</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lots.map((lot) => {
-                    const record = lot.lot_records
-                    return (
-                      <TableRow key={lot.id}>
-                        <TableCell className="font-medium">{lot.numero_lote}</TableCell>
-                        <TableCell>
-                          <LotStatusBadge status={lot.estado || 'disponible'} />
-                        </TableCell>
-                        <TableCell className="min-w-55">{record?.cliente_nombre || '—'}</TableCell>
-                        <TableCell>{record?.cliente_run || '—'}</TableCell>
-                        <TableCell className="min-w-50">
-                          {record?.cliente_direccion || '—'}
-                        </TableCell>
-                        <TableCell>{record?.cliente_estado_civil || '—'}</TableCell>
-                        <TableCell>{record?.cliente_ocupacion || '—'}</TableCell>
-                        <TableCell>{formatCurrency(record?.valor)}</TableCell>
-                        <TableCell>{formatCurrency(record?.abono)}</TableCell>
-                        <TableCell>{formatCurrency(record?.saldo)}</TableCell>
-                        <TableCell className="min-w-65 whitespace-normal text-sm text-muted-foreground">
-                          {record?.detalle_deuda || '—'}
-                        </TableCell>
-                        <TableCell>{record?.firma_estado || '—'}</TableCell>
-                        <TableCell>{record?.firma_fecha || '—'}</TableCell>
-                        <TableCell>{record?.firma_lugar || '—'}</TableCell>
-                        <TableCell>{formatCurrency(record?.gasto_notaria)}</TableCell>
-                        <TableCell>{formatCurrency(record?.gasto_cbr)}</TableCell>
-                        <TableCell>{formatCurrency(record?.gasto_abogado)}</TableCell>
-                        <TableCell>{record?.cbr_estado || '—'}</TableCell>
-                        <TableCell>{record?.cbr_numero_petitorio || '—'}</TableCell>
-                        <TableCell>{record?.cbr_fecha_salida_estimada || '—'}</TableCell>
-                        <TableCell className="min-w-50 whitespace-normal text-sm text-muted-foreground">
-                          {record?.cbr_reparo || '—'}
-                        </TableCell>
-                        <TableCell>{record?.cliente_telefono || '—'}</TableCell>
-                        <TableCell>{record?.cliente_email || '—'}</TableCell>
-                        <TableCell>{formatCurrency(record?.comision_monto)}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {lot.vendedor_id || '—'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="outline" size="sm" onClick={() => openLotEditor(lot)}>
-                            Editar
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+          <>
+            <div className="space-y-3 md:hidden" aria-label="Listado resumido de lotes">
+              {lots.map((lot) => {
+                const record = lot.lot_records
+                const hasClient = Boolean(record?.cliente_nombre)
+                return (
+                  <div key={lot.id} className="rounded-2xl border bg-card p-4 shadow-xs">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium uppercase text-muted-foreground">Lote</p>
+                        <p className="font-display text-2xl font-semibold text-foreground">
+                          {lot.numero_lote}
+                        </p>
+                      </div>
+                      <LotStatusBadge status={lot.estado || 'disponible'} />
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-xl bg-muted/40 p-3">
+                        <p className="text-xs text-muted-foreground">Cliente</p>
+                        <p className="mt-1 truncate font-medium text-foreground">
+                          {record?.cliente_nombre || 'Sin cliente'}
+                        </p>
+                        {record?.cliente_run ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {record.cliente_run}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="rounded-xl bg-muted/40 p-3">
+                        {hasClient ? (
+                          <>
+                            <p className="text-xs text-muted-foreground">Saldo</p>
+                            <p className="mt-1 font-medium text-foreground">
+                              {formatCurrency(record?.saldo)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Firma: {record?.firma_estado || 'pendiente'}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-muted-foreground">Venta</p>
+                            <p className="mt-1 font-medium text-foreground">Sin iniciar</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <p className="min-w-0 truncate text-xs text-muted-foreground">
+                        {hasClient
+                          ? record?.cliente_email || record?.cliente_telefono || 'Ficha iniciada'
+                          : 'Disponible, sin ficha'}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-11 px-4"
+                        onClick={() => openLotEditor(lot)}
+                      >
+                        Editar
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </ScrollArea>
+
+            <div className="hidden h-115 w-full overflow-auto rounded-md border md:block">
+              <div className="min-w-550">
+                <Table>
+                  <TableCaption>Listado de lotes con ficha completa</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Lote</TableHead>
+                      <TableHead>Estado lote</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>RUN</TableHead>
+                      <TableHead>Dirección</TableHead>
+                      <TableHead>Estado civil</TableHead>
+                      <TableHead>Ocupación</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Abono</TableHead>
+                      <TableHead>Saldo</TableHead>
+                      <TableHead>Detalle deuda</TableHead>
+                      <TableHead>Estado firma</TableHead>
+                      <TableHead>Fecha firma</TableHead>
+                      <TableHead>Lugar firma</TableHead>
+                      <TableHead>Notaría</TableHead>
+                      <TableHead>CBR</TableHead>
+                      <TableHead>Abogado</TableHead>
+                      <TableHead>CBR estado</TableHead>
+                      <TableHead>CBR petitorio</TableHead>
+                      <TableHead>CBR salida</TableHead>
+                      <TableHead>CBR reparo</TableHead>
+                      <TableHead>Teléfono</TableHead>
+                      <TableHead>Correo</TableHead>
+                      <TableHead>Comisión</TableHead>
+                      <TableHead>Vendedor</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lots.map((lot) => {
+                      const record = lot.lot_records
+                      return (
+                        <TableRow key={lot.id}>
+                          <TableCell className="font-medium">{lot.numero_lote}</TableCell>
+                          <TableCell>
+                            <LotStatusBadge status={lot.estado || 'disponible'} />
+                          </TableCell>
+                          <TableCell className="min-w-55">
+                            {record?.cliente_nombre || '—'}
+                          </TableCell>
+                          <TableCell>{record?.cliente_run || '—'}</TableCell>
+                          <TableCell className="min-w-50">
+                            {record?.cliente_direccion || '—'}
+                          </TableCell>
+                          <TableCell>{record?.cliente_estado_civil || '—'}</TableCell>
+                          <TableCell>{record?.cliente_ocupacion || '—'}</TableCell>
+                          <TableCell>{formatCurrency(record?.valor)}</TableCell>
+                          <TableCell>{formatCurrency(record?.abono)}</TableCell>
+                          <TableCell>{formatCurrency(record?.saldo)}</TableCell>
+                          <TableCell className="min-w-65 whitespace-normal text-sm text-muted-foreground">
+                            {record?.detalle_deuda || '—'}
+                          </TableCell>
+                          <TableCell>{record?.firma_estado || '—'}</TableCell>
+                          <TableCell>{record?.firma_fecha || '—'}</TableCell>
+                          <TableCell>{record?.firma_lugar || '—'}</TableCell>
+                          <TableCell>{formatCurrency(record?.gasto_notaria)}</TableCell>
+                          <TableCell>{formatCurrency(record?.gasto_cbr)}</TableCell>
+                          <TableCell>{formatCurrency(record?.gasto_abogado)}</TableCell>
+                          <TableCell>{record?.cbr_estado || '—'}</TableCell>
+                          <TableCell>{record?.cbr_numero_petitorio || '—'}</TableCell>
+                          <TableCell>{record?.cbr_fecha_salida_estimada || '—'}</TableCell>
+                          <TableCell className="min-w-50 whitespace-normal text-sm text-muted-foreground">
+                            {record?.cbr_reparo || '—'}
+                          </TableCell>
+                          <TableCell>{record?.cliente_telefono || '—'}</TableCell>
+                          <TableCell>{record?.cliente_email || '—'}</TableCell>
+                          <TableCell>{formatCurrency(record?.comision_monto)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {lot.vendedor_id || '—'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={() => openLotEditor(lot)}>
+                              Editar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </>
         )}
 
         <Sheet open={isEditorOpen} onOpenChange={(open) => (!open ? closeLotEditor() : null)}>

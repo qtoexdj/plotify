@@ -4,10 +4,12 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { PlusSignIcon, Folder02Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import { PlusSignIcon, Folder02Icon } from '@hugeicons/core-free-icons'
 import type { ProjectWithMetrics } from '@/types/database.types'
+import { createClient } from '@/lib/supabase/client'
 import { SkeletonCard } from '@/components/dashboard/skeleton-card'
 import { EmptyState } from '@/components/dashboard/empty-state'
+import { ProjectCard } from '@/components/projects/ProjectCard'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { PageHeader } from '@/components/dashboard/page-header'
 import { BentoGrid } from '@/components/dashboard/bento-grid'
@@ -15,7 +17,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 
 const projectStatusConfig: Record<
   string,
-  { label: string; variant: 'success' | 'info' | 'warning' | 'neutral' }
+  { label: string; variant: 'success' | 'info' | 'neutral' }
 > = {
   operational: { label: 'Operacional', variant: 'success' },
   validated: { label: 'Validado', variant: 'info' },
@@ -28,7 +30,16 @@ const projectStatusConfig: Record<
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectWithMetrics[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
+
+  const getFullUrl = useCallback((path: string | null | undefined) => {
+    if (!path || path === '[]') return ''
+    const supabase = createClient()
+    const cleanPath = path.replace(/^project-files\//, '')
+    const { data } = supabase.storage.from('project-files').getPublicUrl(cleanPath)
+    return data.publicUrl
+  }, [])
 
   const loadProjects = useCallback(async () => {
     try {
@@ -50,6 +61,20 @@ export default function ProjectsPage() {
 
     return () => window.clearTimeout(timeoutId)
   }, [loadProjects])
+
+  const handleDelete = async (projectId: string) => {
+    setDeletingId(projectId)
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
+      if (response.ok) {
+        setProjects((prev) => prev.filter((p) => p.id !== projectId))
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error)
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const isAdmin = userRole === 'admin'
   const totals = projects.reduce(
@@ -142,73 +167,33 @@ export default function ProjectsPage() {
               <p className="text-sm font-medium text-primary-foreground/85">cierres registrados</p>
             </div>
           </div>
-
-          <div className="mt-4 overflow-hidden rounded-2xl bg-card shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead className="text-muted-foreground">
-                  <tr className="[&_th]:px-5 [&_th]:py-3 [&_th]:font-medium">
-                    <th>Proyecto</th>
-                    <th>Ubicación</th>
-                    <th>Total</th>
-                    <th>Disponibles</th>
-                    <th>Reservas</th>
-                    <th>Estado</th>
-                    <th className="text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {projects.map((project) => (
-                    <tr
-                      key={project.id}
-                      className="transition-colors hover:bg-muted/50 [&_td]:px-5 [&_td]:py-4"
-                    >
-                      <td>
-                        <Link
-                          href={`/projects/${project.id}`}
-                          className="font-semibold text-foreground underline-offset-4 hover:underline"
-                        >
-                          {project.name}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
-                          {project.descripcion || 'Sin descripción registrada'}
-                        </p>
-                      </td>
-                      <td className="text-muted-foreground">
-                        {[project.region, project.comuna].filter(Boolean).join(' / ') || '—'}
-                      </td>
-                      <td className="font-display text-lg font-semibold text-foreground">
-                        {project.total_lotes}
-                      </td>
-                      <td>
-                        <StatusBadge variant="available">{project.lotes_libres}</StatusBadge>
-                      </td>
-                      <td>
-                        <StatusBadge variant="reserved">{project.lotes_reservados}</StatusBadge>
-                      </td>
-                      <td>
-                        {(() => {
-                          const status =
-                            projectStatusConfig[project.estado ?? 'draft'] ??
-                            projectStatusConfig.draft
-                          return <StatusBadge variant={status.variant}>{status.label}</StatusBadge>
-                        })()}
-                      </td>
-                      <td className="text-right">
-                        <Button asChild variant="outline" size="sm" className="min-h-11">
-                          <Link href={`/projects/${project.id}`}>
-                            Abrir
-                            <HugeiconsIcon icon={ArrowRight01Icon} />
-                          </Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </section>
+      )}
+
+      {projects.length > 0 && (
+        <BentoGrid>
+          {projects.map((project) => {
+            const status = projectStatusConfig[project.estado ?? 'draft'] ?? {
+              label: project.estado,
+              variant: 'neutral' as const,
+            }
+            return (
+              <div key={project.id} className="md:col-span-6 xl:col-span-4">
+                <ProjectCard
+                  project={project}
+                  isAdmin={isAdmin}
+                  deletingId={deletingId}
+                  onDelete={handleDelete}
+                  projectHref={`/projects/${project.id}`}
+                  getFullUrl={getFullUrl}
+                  statusLabel={status.label}
+                  statusVariant={status.variant}
+                  layout="grid"
+                />
+              </div>
+            )
+          })}
+        </BentoGrid>
       )}
     </PageShell>
   )

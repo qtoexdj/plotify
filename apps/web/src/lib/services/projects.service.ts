@@ -15,6 +15,67 @@ type OrganizationMembership = {
   role: 'admin' | 'user'
 }
 
+/**
+ * Los vendedores de un proyecto pueden venir de dos fuentes: asignados directamente
+ * al proyecto (tabla vendor_projects, vía "Asignar Vendedor") o inferidos desde el
+ * vendedor_id de sus lotes. Hay que unir ambas o un proyecto sin lotes vendidos/reservados
+ * aparenta no tener vendedores aunque sí los tenga asignados.
+ */
+async function resolveProjectVendedores(
+  supabase: SupabaseClient,
+  projectId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lots: any[] | null
+): Promise<{ id: string; nombre: string; avatar_url: string | null }[]> {
+  const uniqueVendorsMap = new Map<string, { id: string; nombre: string; user_id: string | null }>()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lots?.forEach((lot: any) => {
+    if (lot.vendors && lot.vendors.id && lot.vendors.nombre) {
+      uniqueVendorsMap.set(lot.vendors.id, {
+        id: lot.vendors.id,
+        nombre: lot.vendors.nombre,
+        user_id: lot.vendors.user_id ?? null,
+      })
+    }
+  })
+
+  const { data: projectVendors } = await supabase
+    .from('vendor_projects')
+    .select('vendor:vendor_id (id, nombre, user_id)')
+    .eq('project_id', projectId)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  projectVendors?.forEach((row: any) => {
+    if (row.vendor && row.vendor.id && row.vendor.nombre) {
+      uniqueVendorsMap.set(row.vendor.id, {
+        id: row.vendor.id,
+        nombre: row.vendor.nombre,
+        user_id: row.vendor.user_id ?? null,
+      })
+    }
+  })
+
+  const vendors = Array.from(uniqueVendorsMap.values())
+  const userIds = vendors.map((v) => v.user_id).filter((id): id is string => Boolean(id))
+
+  const avatarByUserId = new Map<string, string | null>()
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, avatar_url')
+      .in('id', userIds)
+
+    profiles?.forEach((profile) => avatarByUserId.set(profile.id, profile.avatar_url))
+  }
+
+  return vendors.map(({ id, nombre, user_id }) => ({
+    id,
+    nombre,
+    avatar_url: (user_id && avatarByUserId.get(user_id)) ?? null,
+  }))
+}
+
 export const PROJECT_LEGAL_DOCUMENT_FIELDS = {
   doc_dominio_vigente: 'dominio_vigente',
   doc_hipoteca_gravamen: 'hipoteca_gravamen',
@@ -156,7 +217,7 @@ export async function getProjectsWithMetrics(
     projects.map(async (project) => {
       const { data: lots, error: lotsError } = await supabase
         .from('lots')
-        .select('estado, vendedor_id, vendors(id, nombre)')
+        .select('estado, vendedor_id, vendors(id, nombre, user_id)')
         .eq('project_id', project.id)
 
       if (lotsError) {
@@ -174,14 +235,7 @@ export async function getProjectsWithMetrics(
       const lotes_reservados = lots?.filter((l) => l.estado === 'reservado').length || 0
       const lotes_vendidos = lots?.filter((l) => l.estado === 'vendido').length || 0
 
-      const uniqueVendorsMap = new Map<string, { id: string; nombre: string }>()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      lots?.forEach((lot: any) => {
-        if (lot.vendors && lot.vendors.id && lot.vendors.nombre) {
-          uniqueVendorsMap.set(lot.vendors.id, { id: lot.vendors.id, nombre: lot.vendors.nombre })
-        }
-      })
-      const vendedores = Array.from(uniqueVendorsMap.values())
+      const vendedores = await resolveProjectVendedores(supabase, project.id, lots)
 
       return {
         ...project,
@@ -219,7 +273,7 @@ export async function getProjectById(
 
   const { data: lots, error: lotsError } = await supabase
     .from('lots')
-    .select('estado, vendedor_id, vendors(id, nombre)')
+    .select('estado, vendedor_id, vendors(id, nombre, user_id)')
     .eq('project_id', project.id)
 
   if (lotsError) {
@@ -237,14 +291,7 @@ export async function getProjectById(
   const lotes_reservados = lots?.filter((l) => l.estado === 'reservado').length || 0
   const lotes_vendidos = lots?.filter((l) => l.estado === 'vendido').length || 0
 
-  const uniqueVendorsMap = new Map<string, { id: string; nombre: string }>()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lots?.forEach((lot: any) => {
-    if (lot.vendors && lot.vendors.id && lot.vendors.nombre) {
-      uniqueVendorsMap.set(lot.vendors.id, { id: lot.vendors.id, nombre: lot.vendors.nombre })
-    }
-  })
-  const vendedores = Array.from(uniqueVendorsMap.values())
+  const vendedores = await resolveProjectVendedores(supabase, project.id, lots)
 
   return {
     ...project,

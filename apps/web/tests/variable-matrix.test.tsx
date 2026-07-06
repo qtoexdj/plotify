@@ -144,6 +144,25 @@ describe('ProducerGroup', () => {
     ])[0]
   }
 
+  function authoredSection() {
+    return groupByProducer([
+      mk({
+        variable_key: 'mandato.rectificacion_nombre',
+        variable_group: 'mandato',
+        producer: 'authored',
+        state: 'approved',
+        value_text: 'Juan Prueba apellido listo',
+      }),
+      mk({
+        variable_key: 'mandato.rectificacion_rut',
+        variable_group: 'mandato',
+        producer: 'authored',
+        state: 'approved',
+        value_text: '17.270.807-2',
+      }),
+    ])[0]
+  }
+
   it('renderiza la seccion con su conteo, valores y la entrada SII colapsada', () => {
     render(
       <ProducerGroup
@@ -153,6 +172,7 @@ describe('ProducerGroup', () => {
         bulkSaving={false}
         onSelect={() => {}}
         onApprove={() => {}}
+        onEdit={() => {}}
         onBulkApprove={() => {}}
         onOpenSiiDetail={() => {}}
       />
@@ -173,6 +193,7 @@ describe('ProducerGroup', () => {
         bulkSaving={false}
         onSelect={() => {}}
         onApprove={() => {}}
+        onEdit={() => {}}
         onBulkApprove={() => {}}
         onOpenSiiDetail={() => {}}
       />
@@ -192,6 +213,7 @@ describe('ProducerGroup', () => {
         bulkSaving={false}
         onSelect={() => {}}
         onApprove={() => {}}
+        onEdit={() => {}}
         onBulkApprove={() => {}}
         onOpenSiiDetail={() => {}}
       />
@@ -203,6 +225,51 @@ describe('ProducerGroup', () => {
     expect(screen.getByText('Curicó')).toBeTruthy()
   })
 
+  it('rotula y contrae la seccion de rectificacion redactada', () => {
+    render(
+      <ProducerGroup
+        section={authoredSection()}
+        selectedId={null}
+        savingId={null}
+        bulkSaving={false}
+        onSelect={() => {}}
+        onApprove={() => {}}
+        onEdit={() => {}}
+        onBulkApprove={() => {}}
+        onOpenSiiDetail={() => {}}
+      />
+    )
+
+    expect(screen.getByText('Rectificación')).toBeTruthy()
+    expect(screen.getByText('nombre y RUT para el mandato')).toBeTruthy()
+    expect(screen.queryByText('Autoría')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Contraer Rectificación' }))
+    expect(screen.queryByText('Juan Prueba apellido listo')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Expandir Rectificación' }))
+    expect(screen.getByText('Juan Prueba apellido listo')).toBeTruthy()
+  })
+
+  it('muestra nombres legibles y permite editar variables manuales', () => {
+    const onEdit = vi.fn()
+    render(
+      <ProducerGroup
+        section={manualSection()}
+        selectedId={null}
+        savingId={null}
+        bulkSaving={false}
+        onSelect={() => {}}
+        onApprove={() => {}}
+        onEdit={onEdit}
+        onBulkApprove={() => {}}
+        onOpenSiiDetail={() => {}}
+      />
+    )
+
+    expect(screen.getByText('Oficina sectorial SAG')).toBeTruthy()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Editar' })[0])
+    expect(onEdit).toHaveBeenCalledTimes(1)
+  })
+
   it('marca visualmente la seccion y filas que siguen por aprobar', () => {
     render(
       <ProducerGroup
@@ -212,6 +279,7 @@ describe('ProducerGroup', () => {
         bulkSaving={false}
         onSelect={() => {}}
         onApprove={() => {}}
+        onEdit={() => {}}
         onBulkApprove={() => {}}
         onOpenSiiDetail={() => {}}
       />
@@ -238,6 +306,7 @@ describe('ProducerGroup', () => {
         bulkSaving={false}
         onSelect={() => {}}
         onApprove={onApprove}
+        onEdit={() => {}}
         onBulkApprove={() => {}}
         onOpenSiiDetail={() => {}}
       />
@@ -258,6 +327,7 @@ describe('ProducerGroup', () => {
         bulkSaving={false}
         onSelect={() => {}}
         onApprove={() => {}}
+        onEdit={() => {}}
         onBulkApprove={onBulkApprove}
         onOpenSiiDetail={() => {}}
       />
@@ -276,6 +346,7 @@ describe('ProducerGroup', () => {
         bulkSaving={false}
         onSelect={() => {}}
         onApprove={() => {}}
+        onEdit={() => {}}
         onBulkApprove={() => {}}
         onOpenSiiDetail={onOpenSiiDetail}
       />

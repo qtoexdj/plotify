@@ -2,7 +2,10 @@ import type { Lot, LotRecord, EstadoLote } from '@/types/database.types'
 
 export type { Lot, LotRecord, EstadoLote }
 
-export type LotWithRecord = Lot & { lot_records: LotRecord | null }
+export type LotWithRecord = Lot & {
+  lot_records: LotRecord | null
+  vendors?: { id: string; nombre: string } | null
+}
 
 export interface LotRecordForm {
   numero_lote: string

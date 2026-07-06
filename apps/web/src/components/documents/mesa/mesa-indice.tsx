@@ -148,7 +148,7 @@ function FilaIndice({
       style={style}
       data-testid={`mesa-indice-${clause.clause_key}`}
       className={cn(
-        'grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-stretch rounded-md border border-transparent text-sm transition-colors hover:bg-muted',
+        'grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-stretch rounded-md border border-transparent text-sm transition-colors hover:bg-muted',
         summary.porRevisar > 0 && 'border-warning/40 bg-warning/10',
         clause.disabled && 'opacity-60',
         isDragging && 'z-10 border-border opacity-70 shadow-sm'
@@ -161,7 +161,7 @@ function FilaIndice({
         size="icon-sm"
         disabled={arrastreDeshabilitado}
         aria-label={clause.fixed_position ? MESA_TEXT.posicionFija : MESA_TEXT.reordenarClausula}
-        className="h-full rounded-md text-muted-foreground"
+        className="h-full min-h-11 w-11 rounded-md text-muted-foreground"
         {...attributes}
         {...listeners}
       >
@@ -171,7 +171,10 @@ function FilaIndice({
           <HugeiconsIcon icon={GripVertical} />
         )}
       </Button>
-      <a href={`#clausula-${clause.clause_key}`} className="min-w-0 px-2 py-1.5">
+      <a
+        href={`#clausula-${clause.clause_key}`}
+        className="flex min-h-11 min-w-0 flex-col justify-center px-2 py-1.5"
+      >
         <span
           className={cn(
             'block truncate font-medium',
@@ -200,7 +203,7 @@ function FilaIndice({
         disabled={toggleDeshabilitado}
         aria-label={clause.disabled ? MESA_TEXT.reactivarClausula : MESA_TEXT.desactivarClausula}
         title={clause.disabled ? MESA_TEXT.reactivarClausula : MESA_TEXT.desactivarClausula}
-        className="h-full rounded-md text-muted-foreground"
+        className="h-full min-h-11 w-11 rounded-md text-muted-foreground"
         onClick={() => onToggleDisabled?.(clause.clause_key)}
       >
         {clause.disabled ? <HugeiconsIcon icon={EyeOff} /> : <HugeiconsIcon icon={Eye} />}

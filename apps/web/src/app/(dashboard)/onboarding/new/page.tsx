@@ -172,15 +172,22 @@ export default function OnboardingWizardPage() {
   }
 
   return (
-    <div className={currentStep === 3 ? 'px-4 py-6' : 'max-w-5xl mx-auto space-y-6 p-6'}>
-      <div className="flex items-center justify-between">
+    <div
+      className={
+        currentStep === 3 ? 'px-4 py-6' : 'max-w-5xl mx-auto space-y-6 p-4 pb-28 sm:p-6 sm:pb-6'
+      }
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Nuevo proyecto</h1>
           <p className="text-muted-foreground">
             Completa el onboarding en pasos antes de ir al proyecto.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="w-fit rounded-full border border-primary bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary lg:hidden">
+          Paso {currentStep} de {steps.length}: {steps[currentStep - 1]?.label}
+        </div>
+        <div className="hidden gap-2 lg:flex">
           {steps.map((step) => {
             const isActive = currentStep === step.id
             const isDone = currentStep > step.id
@@ -189,7 +196,7 @@ export default function OnboardingWizardPage() {
                 key={step.id}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${
                   isActive
-                    ? 'border-info bg-info/10 text-info'
+                    ? 'border-primary bg-primary/10 text-primary'
                     : isDone
                       ? 'border-success bg-success/10 text-success'
                       : 'border-border bg-card text-muted-foreground'
@@ -248,14 +255,16 @@ export default function OnboardingWizardPage() {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <div className="flex flex-col gap-4 p-4 mt-2 border border-border rounded-lg bg-muted/50">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div className="space-y-0.5">
-                        <Label>Formato de nombre para lotes</Label>
+                        <Label htmlFor="usar_prefijo_lotes">Formato de nombre para lotes</Label>
                         <p className="text-sm text-muted-foreground">
                           Personaliza cómo se llamarán tus lotes automáticamente.
                         </p>
                       </div>
                       <Switch
+                        id="usar_prefijo_lotes"
+                        aria-label="Usar prefijo personalizado para lotes"
                         checked={usarPrefijo}
                         onCheckedChange={(checked) =>
                           register('usar_prefijo_lotes').onChange({
@@ -268,7 +277,7 @@ export default function OnboardingWizardPage() {
                     {usarPrefijo && (
                       <div className="space-y-2 pt-2 border-t border-border">
                         <Label htmlFor="prefijo_lotes">Prefijo personalizado</Label>
-                        <div className="flex gap-2 items-center">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                           <Input
                             id="prefijo_lotes"
                             {...register('prefijo_lotes')}
@@ -295,9 +304,9 @@ export default function OnboardingWizardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
                   {/* Precio Block */}
                   <div className="flex flex-col gap-4 p-4 border border-border rounded-lg bg-muted/50">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-0.5">
-                        <Label>Precio de Venta</Label>
+                        <Label htmlFor="precio_tipo">Precio de Venta</Label>
                         <p className="text-sm text-muted-foreground">
                           Establece el precio general de los lotes.
                         </p>
@@ -305,6 +314,8 @@ export default function OnboardingWizardPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">Variable</span>
                         <Switch
+                          id="precio_tipo"
+                          aria-label="Usar precio fijo para los lotes"
                           checked={precioTipo === 'fijo'}
                           onCheckedChange={(checked) =>
                             register('precio_tipo').onChange({
@@ -321,6 +332,7 @@ export default function OnboardingWizardPage() {
                         <Input
                           id="precio_valor"
                           type="number"
+                          inputMode="numeric"
                           min="0"
                           {...register('precio_valor', { valueAsNumber: true })}
                           placeholder="Ej: 50000000"
@@ -331,16 +343,18 @@ export default function OnboardingWizardPage() {
 
                   {/* Reserva Block */}
                   <div className="flex flex-col gap-4 p-4 border border-border rounded-lg bg-muted/50">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-0.5">
-                        <Label>Valor de Reserva</Label>
+                        <Label htmlFor="reserva_tipo">Valor de Reserva</Label>
                         <p className="text-sm text-muted-foreground">
-                          Monto a cobrar por resevar un lote.
+                          Monto a cobrar por reservar un lote.
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">Variable</span>
                         <Switch
+                          id="reserva_tipo"
+                          aria-label="Usar valor de reserva fijo"
                           checked={reservaTipo === 'fijo'}
                           onCheckedChange={(checked) =>
                             register('reserva_tipo').onChange({
@@ -360,6 +374,7 @@ export default function OnboardingWizardPage() {
                         <Input
                           id="reserva_valor"
                           type="number"
+                          inputMode="numeric"
                           min="0"
                           {...register('reserva_valor', { valueAsNumber: true })}
                           placeholder="Ej: 500000"
@@ -387,7 +402,7 @@ export default function OnboardingWizardPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              <div className="fixed inset-x-4 bottom-4 z-40 flex flex-col gap-3 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur sm:static sm:flex-row sm:items-center sm:justify-between sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <HugeiconsIcon icon={Location01Icon} className="w-4 h-4" />
                   Total lotes: {totalLotes || 0}

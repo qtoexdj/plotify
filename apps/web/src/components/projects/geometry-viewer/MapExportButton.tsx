@@ -252,7 +252,7 @@ export function MapExportButton({
         <Button
           variant="secondary"
           size="icon"
-          className="absolute top-2 right-2 z-10 h-8 w-8 shadow-md bg-background/90 hover:bg-background border border-border"
+          className="absolute top-2 right-2 z-10 h-11 w-11 border border-border bg-background/90 shadow-md hover:bg-background dark:border-white/10 dark:bg-card/90 dark:hover:bg-muted/80"
           onClick={handleExport}
           disabled={isExporting}
           aria-label="Exportar plano como PDF"

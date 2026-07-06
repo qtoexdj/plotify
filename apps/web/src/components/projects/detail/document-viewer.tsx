@@ -22,7 +22,7 @@ export function DocumentViewer({ url, title }: DocumentViewerProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="hidden sm:flex">
+        <Button variant="outline" size="sm" className="min-h-11">
           <HugeiconsIcon icon={ViewIcon} className="w-4 h-4 mr-2" />
           Ver
         </Button>

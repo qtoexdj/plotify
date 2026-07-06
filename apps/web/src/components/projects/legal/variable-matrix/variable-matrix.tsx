@@ -268,6 +268,7 @@ export function VariableMatrix({
               bulkSaving={bulkSaving}
               onSelect={(entry) => setSelectedId(entry.id)}
               onApprove={approve}
+              onEdit={openEditor}
               onBulkApprove={bulkApprove}
               onOpenSiiDetail={() => setSiiDetailOpen(true)}
               forceOpen={effectivePendingFocus}

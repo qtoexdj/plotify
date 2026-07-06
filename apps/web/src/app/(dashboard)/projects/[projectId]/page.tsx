@@ -2,7 +2,7 @@
 
 import { use, useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Delete02Icon, PlusSignIcon } from '@hugeicons/core-free-icons'
+import { ArrowRight01Icon, Delete02Icon, MoreHorizontalIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GeometryViewer } from '@/components/projects/geometry-viewer'
@@ -13,7 +13,6 @@ import { LegalTab } from '@/components/projects/detail/legal-tab'
 import { DocumentsTab } from '@/components/projects/detail/documents-tab'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/ui/status-badge'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { PageHeader } from '@/components/dashboard/page-header'
 import {
@@ -27,129 +26,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import type { ProjectWithMetrics } from '@/types/database.types'
 import type { LotWithRecord } from '@/components/projects/detail/types'
 import { createClient } from '@/lib/supabase/client'
+import { useSetBreadcrumbLabel } from '@/components/dashboard/breadcrumb-context'
+import { cn } from '@/lib/utils'
 
 interface ProjectDetailPageProps {
   params: Promise<{ projectId: string }>
 }
 
 const deletedProjects = new Set<string>()
-
-const lotStatusConfig = {
-  disponible: { label: 'Disponible', variant: 'available' },
-  reservado: { label: 'Reserva', variant: 'reserved' },
-  vendido: { label: 'Vendido', variant: 'sold' },
-} as const
-
-const projectStatusConfig: Record<
-  string,
-  { label: string; variant: 'success' | 'info' | 'warning' | 'neutral' }
-> = {
-  operational: { label: 'Operacional', variant: 'success' },
-  validated: { label: 'Validado', variant: 'info' },
-  imported: { label: 'Importado', variant: 'info' },
-  draft: { label: 'Borrador', variant: 'neutral' },
-  activo: { label: 'Activo', variant: 'success' },
-  inactivo: { label: 'Inactivo', variant: 'neutral' },
-}
-
-function ProjectSummaryPanel({
-  project,
-  lots,
-}: {
-  project: ProjectWithMetrics
-  lots: LotWithRecord[]
-}) {
-  const tableLots = lots
-    .filter((lot) => lot.estado !== 'disponible' || lot.lot_records?.cliente_nombre)
-    .slice(0, 5)
-  const enMesa = lots.filter((lot) => lot.verified_status === 'draft').length
-  const revenue = lots.reduce((sum, lot) => sum + (lot.lot_records?.valor ?? lot.precio ?? 0), 0)
-  const revenueUf = revenue > 0 ? Math.round(revenue / 39000) : 0
-  const status = projectStatusConfig[project.estado ?? 'draft'] ?? projectStatusConfig.draft
-
-  return (
-    <section className="rounded-2xl bg-background/70 p-3 shadow-sm ring-1 ring-border/40 sm:p-4">
-      <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_1fr_1fr]">
-        <div className="rounded-2xl bg-card px-4 py-3 shadow-xs">
-          <p className="text-sm text-muted-foreground">Estado del proyecto</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <StatusBadge variant={status.variant}>{status.label}</StatusBadge>
-            <StatusBadge variant="available">{project.lotes_libres} disponibles</StatusBadge>
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {project.region} / {project.comuna}
-          </p>
-        </div>
-        <div className="rounded-2xl bg-card px-4 py-3 shadow-xs">
-          <p className="text-sm text-muted-foreground">Ventas registradas</p>
-          <p className="mt-1 font-display text-2xl font-semibold text-foreground">
-            {revenueUf > 0
-              ? `UF ${revenueUf.toLocaleString('es-CL')}`
-              : `${project.lotes_vendidos}`}
-          </p>
-          <p className="text-sm font-medium text-success">
-            {revenueUf > 0 ? 'valor acumulado' : 'lotes vendidos'}
-          </p>
-        </div>
-        <div className="rounded-2xl bg-card px-4 py-3 shadow-xs">
-          <p className="text-sm text-muted-foreground">Reservados</p>
-          <p className="mt-1 font-display text-2xl font-semibold text-foreground">
-            {project.lotes_reservados}
-          </p>
-          <p className="text-sm font-medium text-warning">
-            {project.lotes_reservados === 1
-              ? '1 por revisar'
-              : `${project.lotes_reservados} por revisar`}
-          </p>
-        </div>
-        <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-xs">
-          <p className="text-sm text-primary-foreground/80">En mesa</p>
-          <p className="mt-1 font-display text-2xl font-semibold">{enMesa}</p>
-          <p className="text-sm font-medium text-primary-foreground/85">
-            {enMesa === 1 ? '1 bloqueada — revisar' : `${enMesa} bloqueadas — revisar`}
-          </p>
-        </div>
-      </div>
-
-      {tableLots.length > 0 ? (
-        <div className="mt-3 overflow-hidden rounded-2xl bg-card shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left text-sm">
-              <thead className="text-muted-foreground">
-                <tr className="[&_th]:px-5 [&_th]:py-3 [&_th]:font-medium">
-                  <th>Lote</th>
-                  <th>Comprador</th>
-                  <th>ROL</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {tableLots.map((lot) => {
-                  const status = lotStatusConfig[lot.estado] ?? lotStatusConfig.disponible
-                  return (
-                    <tr key={lot.id} className="[&_td]:px-5 [&_td]:py-3">
-                      <td className="font-medium text-foreground">{lot.numero_lote}</td>
-                      <td className="text-foreground">
-                        {lot.lot_records?.cliente_nombre ?? 'Sin comprador'}
-                      </td>
-                      <td className="font-mono text-muted-foreground">{lot.geometry_id ?? '—'}</td>
-                      <td>
-                        <StatusBadge variant={status.variant}>{status.label}</StatusBadge>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : null}
-    </section>
-  )
-}
 
 export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { projectId } = use(params)
@@ -161,8 +55,11 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const [project, setProject] = useState<ProjectWithMetrics | null>(null)
   const [lots, setLots] = useState<LotWithRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  useSetBreadcrumbLabel(project?.name)
   const [isDeleting, setIsDeleting] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [isRoleLoading, setIsRoleLoading] = useState(true)
 
   // Lots Fetching State
   const [isLotsLoading, setIsLotsLoading] = useState(true)
@@ -174,22 +71,33 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   // Check user role
   useEffect(() => {
     const checkRole = async () => {
-      if (!project?.organization_id) return
+      if (!project?.organization_id) {
+        setIsRoleLoading(false)
+        return
+      }
+
+      setIsRoleLoading(true)
 
       const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
 
-      if (user) {
-        const { data } = await supabase
-          .from('organization_members')
-          .select('role')
-          .eq('organization_id', project.organization_id)
-          .eq('user_id', user.id)
-          .maybeSingle()
+        if (user) {
+          const { data } = await supabase
+            .from('organization_members')
+            .select('role')
+            .eq('organization_id', project.organization_id)
+            .eq('user_id', user.id)
+            .maybeSingle()
 
-        setUserRole(data?.role || null)
+          setUserRole(data?.role || null)
+        } else {
+          setUserRole(null)
+        }
+      } finally {
+        setIsRoleLoading(false)
       }
     }
 
@@ -272,10 +180,17 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
   const requestedTab = searchParams.get('tab')
   const [selectedTab, setSelectedTab] = useState('overview')
+  const adminTabs = ['clients', 'legal']
   const validTabs = isAdmin
     ? ['overview', 'lots', 'viewer', 'documents', 'clients', 'legal']
     : ['overview', 'lots', 'viewer', 'documents']
-  const activeTab = requestedTab && validTabs.includes(requestedTab) ? requestedTab : selectedTab
+  const isRequestedAdminTab = requestedTab ? adminTabs.includes(requestedTab) : false
+  const canHoldRequestedAdminTab = isRoleLoading && isRequestedAdminTab
+  const activeTab =
+    requestedTab && (validTabs.includes(requestedTab) || canHoldRequestedAdminTab)
+      ? requestedTab
+      : selectedTab
+  const isViewerTab = activeTab === 'viewer'
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -336,28 +251,51 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   }
 
   return (
-    <PageShell className="py-4 sm:py-5">
+    <PageShell
+      className={cn('py-4 sm:py-5', isViewerTab && 'md:h-[calc(100svh-4.5rem)] md:overflow-hidden')}
+      contentClassName={cn(
+        isViewerTab && 'md:flex md:h-full md:min-h-0 md:flex-col md:gap-5 md:space-y-0'
+      )}
+    >
       <PageHeader
         title={project.name}
         description={`${project.region} / ${project.comuna}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button className="min-h-11 px-5 font-semibold" onClick={handleStartSale}>
-              <HugeiconsIcon icon={PlusSignIcon} />
-              Nueva venta
+              <HugeiconsIcon icon={ArrowRight01Icon} />
+              Ir al visor
             </Button>
             {isAdmin ? (
               <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    disabled={isDeleting}
-                    className="min-h-11 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <HugeiconsIcon icon={Delete02Icon} />
-                    <span className="hidden sm:inline">Eliminar</span>
-                  </Button>
-                </AlertDialogTrigger>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="min-h-11 min-w-11 px-3"
+                      aria-label="Administrar proyecto"
+                    >
+                      <HugeiconsIcon icon={MoreHorizontalIcon} />
+                      <span className="hidden sm:inline">Administrar</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem disabled className="text-muted-foreground">
+                      Acciones del proyecto
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem
+                        className="gap-2 text-destructive focus:text-destructive"
+                        disabled={isDeleting}
+                        onSelect={(event) => event.preventDefault()}
+                      >
+                        <HugeiconsIcon icon={Delete02Icon} className="h-4 w-4" />
+                        Eliminar proyecto
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>¿Eliminar proyecto?</AlertDialogTitle>
@@ -377,38 +315,46 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         }
       />
 
-      <ProjectSummaryPanel project={project} lots={lots} />
-
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 md:space-y-6">
-        <div className="flex overflow-x-auto px-1">
-          <TabsList className="h-auto flex-wrap gap-0.5">
-            <TabsTrigger value="overview" className="min-h-11 text-xs sm:text-sm">
-              Vista General
-            </TabsTrigger>
-            <TabsTrigger value="lots" className="min-h-11 text-xs sm:text-sm">
-              Lotes
-            </TabsTrigger>
-            <TabsTrigger value="viewer" className="min-h-11 text-xs sm:text-sm">
-              Visor
-            </TabsTrigger>
-            <TabsTrigger value="documents" className="min-h-11 text-xs sm:text-sm">
-              Documentos
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="clients" className="min-h-11 text-xs sm:text-sm">
-                Clientes
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className={cn(
+          'space-y-4 md:space-y-6',
+          isViewerTab && 'md:flex md:min-h-0 md:flex-1 md:flex-col md:gap-5 md:space-y-0'
+        )}
+      >
+        <div className="relative -mx-1 overflow-hidden px-1">
+          <div className="overflow-x-auto pb-1 pr-10">
+            <TabsList className="!h-11 shrink-0 gap-0.5">
+              <TabsTrigger value="overview" className="min-h-11 text-xs sm:text-sm">
+                Vista General
               </TabsTrigger>
-            )}
-            {isAdmin && (
-              <TabsTrigger value="legal" className="min-h-11 text-xs sm:text-sm">
-                Legal
+              <TabsTrigger value="lots" className="min-h-11 text-xs sm:text-sm">
+                Lotes
               </TabsTrigger>
-            )}
-          </TabsList>
+              <TabsTrigger value="viewer" className="min-h-11 text-xs sm:text-sm">
+                Visor
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="min-h-11 text-xs sm:text-sm">
+                Documentos
+              </TabsTrigger>
+              {(isAdmin || (isRoleLoading && isRequestedAdminTab)) && (
+                <TabsTrigger value="clients" className="min-h-11 text-xs sm:text-sm">
+                  Clientes
+                </TabsTrigger>
+              )}
+              {(isAdmin || (isRoleLoading && isRequestedAdminTab)) && (
+                <TabsTrigger value="legal" className="min-h-11 text-xs sm:text-sm">
+                  Legal
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent" />
         </div>
 
         <TabsContent value="overview">
-          <OverviewTab project={project} />
+          <OverviewTab project={project} lots={lots} />
         </TabsContent>
 
         <TabsContent value="lots">
@@ -422,8 +368,8 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           />
         </TabsContent>
 
-        <TabsContent value="viewer">
-          <div ref={viewerSectionRef}>
+        <TabsContent value="viewer" className={cn(isViewerTab && 'md:min-h-0 md:flex-1')}>
+          <div ref={viewerSectionRef} className={cn(isViewerTab && 'md:h-full md:min-h-0')}>
             {/* GeometryViewer ya maneja su propio estado interno, pero idealmente debería recibir datos
                  o tener un bus de eventos si quisieramos sincronizar selección */}
             <GeometryViewer projectId={projectId} projectName={project.name} isAdmin={isAdmin} />
@@ -434,15 +380,27 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           <DocumentsTab project={project} isAdmin={isAdmin} lots={lots} />
         </TabsContent>
 
-        {isAdmin && (
+        {(isAdmin || (isRoleLoading && activeTab === 'clients')) && (
           <TabsContent value="clients">
-            <ClientsTab lots={lots} />
+            {isAdmin ? (
+              <ClientsTab lots={lots} />
+            ) : (
+              <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
+                Cargando permisos del proyecto…
+              </div>
+            )}
           </TabsContent>
         )}
 
-        {isAdmin && (
+        {(isAdmin || (isRoleLoading && activeTab === 'legal')) && (
           <TabsContent value="legal">
-            <LegalTab lots={lots} projectId={projectId} project={project} />
+            {isAdmin ? (
+              <LegalTab lots={lots} projectId={projectId} project={project} />
+            ) : (
+              <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
+                Cargando centro legal y permisos del proyecto…
+              </div>
+            )}
           </TabsContent>
         )}
       </Tabs>

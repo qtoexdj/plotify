@@ -17,6 +17,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 import type { ViewerFeature } from '@/types/viewer.types'
 import type { EstadoLote } from '@/lib/models/lot.model'
@@ -44,6 +54,7 @@ export function BulkActionsPanel({
 
   const [targetState, setTargetState] = useState<EstadoLote | ''>('')
   const [targetPrice, setTargetPrice] = useState<string>('')
+  const [pendingAction, setPendingAction] = useState<'state' | 'price' | null>(null)
 
   // Computed Metrics
   const selectedFeatures = useMemo(() => {
@@ -57,6 +68,27 @@ export function BulkActionsPanel({
   const totalPrice = useMemo(() => {
     return selectedFeatures.reduce((acc, f) => acc + (f.properties?.precio || 0), 0)
   }, [selectedFeatures])
+
+  const parsedTargetPrice = useMemo(() => {
+    const price = parseInt(targetPrice)
+    return isNaN(price) || price < 0 ? null : price
+  }, [targetPrice])
+
+  const pendingActionTitle =
+    pendingAction === 'state' ? 'Confirmar cambio de estado' : 'Confirmar cambio de precio'
+
+  const pendingActionDescription =
+    pendingAction === 'state'
+      ? `Se cambiará el estado de ${selectedIds.length} lotes a "${targetState}".`
+      : `Se fijará el precio de ${selectedIds.length} lotes en ${
+          parsedTargetPrice === null
+            ? ''
+            : new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                maximumFractionDigits: 0,
+              }).format(parsedTargetPrice)
+        }.`
 
   // Handlers
   const handleStateUpdate = async () => {
@@ -75,12 +107,11 @@ export function BulkActionsPanel({
   }
 
   const handlePriceUpdate = async () => {
-    const price = parseInt(targetPrice)
-    if (isNaN(price) || price < 0) return
+    if (parsedTargetPrice === null) return
 
     setIsUpdatingPrice(true)
     try {
-      await onUpdatePrice(selectedIds, price)
+      await onUpdatePrice(selectedIds, parsedTargetPrice)
       toast.success(`Precio actualizado para ${selectedIds.length} lotes`)
       setTargetPrice('')
     } catch (error) {
@@ -89,6 +120,15 @@ export function BulkActionsPanel({
     } finally {
       setIsUpdatingPrice(false)
     }
+  }
+
+  const handleConfirmPendingAction = async () => {
+    if (pendingAction === 'state') {
+      await handleStateUpdate()
+    } else if (pendingAction === 'price') {
+      await handlePriceUpdate()
+    }
+    setPendingAction(null)
   }
 
   return (
@@ -108,8 +148,9 @@ export function BulkActionsPanel({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 -mr-2 -mt-2 text-muted-foreground hover:text-foreground"
+            className="h-11 w-11 -mr-3 -mt-3 text-muted-foreground hover:text-foreground"
             onClick={onClearSelection}
+            aria-label="Limpiar selección múltiple"
           >
             <HugeiconsIcon icon={Cancel01Icon} className="w-4 h-4" />
           </Button>
@@ -152,7 +193,7 @@ export function BulkActionsPanel({
           </CardHeader>
           <CardContent className="p-3 pt-2 flex gap-2">
             <Select value={targetState} onValueChange={(v) => setTargetState(v as EstadoLote)}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-11 text-xs" aria-label="Nuevo estado masivo">
                 <SelectValue placeholder="Nuevo estado..." />
               </SelectTrigger>
               <SelectContent>
@@ -162,9 +203,10 @@ export function BulkActionsPanel({
             </Select>
             <Button
               size="sm"
-              className="h-8 px-3"
+              className="h-11 px-4"
               disabled={!targetState || isUpdatingState}
-              onClick={handleStateUpdate}
+              onClick={() => setPendingAction('state')}
+              aria-label="Aplicar estado masivo"
             >
               {isUpdatingState ? <Spinner className="w-3 h-3" /> : 'Aplicar'}
             </Button>
@@ -186,15 +228,17 @@ export function BulkActionsPanel({
             <Input
               type="number"
               placeholder="Ej: 25000000"
-              className="h-8 text-xs"
+              className="h-11 text-xs"
               value={targetPrice}
               onChange={(e) => setTargetPrice(e.target.value)}
+              aria-label="Precio masivo"
             />
             <Button
               size="sm"
-              className="h-8 px-3"
-              disabled={!targetPrice || isUpdatingPrice}
-              onClick={handlePriceUpdate}
+              className="h-11 px-4"
+              disabled={parsedTargetPrice === null || isUpdatingPrice}
+              onClick={() => setPendingAction('price')}
+              aria-label="Aplicar precio masivo"
             >
               {isUpdatingPrice ? <Spinner className="w-3 h-3" /> : 'Aplicar'}
             </Button>
@@ -237,13 +281,11 @@ export function BulkActionsPanel({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-11 w-11 text-muted-foreground hover:text-destructive"
                     onClick={() => onRemoveFromSelection(f.properties.geometry_id)}
+                    aria-label={`Quitar lote ${f.properties?.numero_lote || f.properties.geometry_id} de la selección`}
                   >
-                    <HugeiconsIcon
-                      icon={Cancel01Icon}
-                      className="w-3 h-3 text-muted-foreground hover:text-destructive"
-                    />
+                    <HugeiconsIcon icon={Cancel01Icon} className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </div>
@@ -251,6 +293,32 @@ export function BulkActionsPanel({
           </div>
         </ScrollArea>
       </div>
+
+      <AlertDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => !open && setPendingAction(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pendingActionTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingActionDescription} Esta acción actualizará la información comercial de la
+              selección actual.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUpdatingState || isUpdatingPrice}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmPendingAction}
+              disabled={isUpdatingState || isUpdatingPrice}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

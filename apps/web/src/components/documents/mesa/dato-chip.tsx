@@ -49,7 +49,7 @@ export function DatoChip({ label, estado, valor, className, ...props }: DatoChip
       type="button"
       data-testid={DATO_CHIP_TESTID[estado]}
       className={cn(
-        'cursor-pointer rounded px-1 py-0.5 font-sans text-[0.85em] ring-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current',
+        'inline-flex min-h-11 cursor-pointer items-center rounded px-1.5 py-0.5 font-sans text-[0.85em] leading-tight ring-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current xl:min-h-0 xl:px-1',
         CLASES_CHIP[estado],
         className
       )}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { isPorRevisar, type MatrixEntry } from '@/lib/legal/variable-matrix-model'
 import type { VariableInventoryItem } from '@/lib/legal/variable-resolution-types'
+import { legalVariableDisplayLabel } from '@/lib/legal/variable-labels'
 
 /** Valor legible de una variable (texto, JSON serializado, o guion). */
 export function formatVariableValue(item: VariableInventoryItem): string {
@@ -21,7 +22,7 @@ function formatConfidence(confidence: number | null | undefined): string {
 
 function entryLabel(entry: MatrixEntry): string {
   if (entry.kind === 'collapsed') return 'Roles SII por lote'
-  return entry.item.label ?? entry.item.variable_key
+  return legalVariableDisplayLabel(entry.item)
 }
 
 function entryKeyText(entry: MatrixEntry): string {
@@ -45,6 +46,7 @@ interface VariableRowProps {
   saving: boolean
   onSelect: (entry: MatrixEntry) => void
   onApprove: (item: VariableInventoryItem) => void
+  onEdit?: (item: VariableInventoryItem) => void
   onOpenSiiDetail: () => void
 }
 
@@ -54,9 +56,12 @@ export function VariableRow({
   saving,
   onSelect,
   onApprove,
+  onEdit,
   onOpenSiiDetail,
 }: VariableRowProps) {
   const canApprove = entry.kind === 'single' && isPorRevisar(entry)
+  const canEdit =
+    entry.kind === 'single' && (entry.producer === 'manual' || entry.producer === 'authored')
   const pending = isPorRevisar(entry)
   const confidence = entry.kind === 'single' ? formatConfidence(entry.item.confidence) : ''
 
@@ -117,6 +122,21 @@ export function VariableRow({
             }}
           >
             Aprobar
+          </Button>
+        ) : null}
+        {canEdit && onEdit ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="min-h-10 w-full sm:w-auto"
+            disabled={saving}
+            onClick={(event) => {
+              event.stopPropagation()
+              if (entry.kind === 'single') onEdit(entry.item)
+            }}
+          >
+            Editar
           </Button>
         ) : entry.kind === 'collapsed' ? (
           <Button

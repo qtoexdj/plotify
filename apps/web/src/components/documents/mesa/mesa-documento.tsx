@@ -430,7 +430,7 @@ function BloqueTituloAprobado({ bloque }: { bloque: BloqueTitulo }) {
         {bloque.label ? <span className="font-normal">· {bloque.label}</span> : null}
       </p>
       {bloque.texto ? (
-        <p className="mt-2 text-justify">{bloque.texto}</p>
+        <p className="mt-2 text-left md:text-justify">{bloque.texto}</p>
       ) : (
         <p className="mt-2 font-sans text-sm text-info/80">{MESA_TEXT.bloqueTituloPendiente}</p>
       )}
@@ -499,7 +499,7 @@ export function MesaDocumento({
         </Label>
       </div>
 
-      <article className="mx-auto min-h-[220px] max-w-3xl px-6 py-10 font-serif text-[16px] leading-8 sm:px-10">
+      <article className="mx-auto min-h-[220px] max-w-3xl px-5 py-10 font-serif text-[16px] leading-8 sm:px-10">
         <h2 className="text-center text-base font-bold uppercase tracking-wide">
           {matriz.template.name}
         </h2>
@@ -570,7 +570,10 @@ export function MesaDocumento({
                           bloque={bloque}
                         />
                       ) : (
-                        <p key={`${clause.clause_key}-${index}`} className="mt-3 text-justify">
+                        <p
+                          key={`${clause.clause_key}-${index}`}
+                          className="mt-3 text-left md:text-justify"
+                        >
                           {bloque.segmentos.map((segmento, posicion) =>
                             segmento.kind === 'texto' ? (
                               <span key={posicion}>{segmento.texto}</span>

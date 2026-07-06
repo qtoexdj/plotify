@@ -1,7 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Lot, LotRecord } from '@/types/database.types'
 
-export type LotWithRecord = Lot & { lot_records: LotRecord | null }
+export type LotWithRecord = Lot & {
+  lot_records: LotRecord | null
+  vendors?: { id: string; nombre: string } | null
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeLotRecord(lot: any): LotWithRecord {
@@ -24,7 +27,10 @@ export async function getLotsWithRecords(
 ): Promise<LotWithRecord[]> {
   const supabase = supabaseClient || (await createClient())
 
-  let query = supabase.from('lots').select('*, lot_records (*)').eq('project_id', projectId)
+  let query = supabase
+    .from('lots')
+    .select('*, lot_records (*), vendors (id, nombre)')
+    .eq('project_id', projectId)
 
   if (filterVendorId) {
     query = query.eq('vendedor_id', filterVendorId)
