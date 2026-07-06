@@ -80,7 +80,7 @@
 
 ### Revisión jurídica (FR-007, FR-008)
 
-- [ ] **T015** [US1] Materializar `documento.abogado_redactor.*` como variables project-scoped antes de la revisión jurídica del caso. Implementar el mínimo backend necesario para upsert de `documento.abogado_redactor.nombre/rut/email` desde un default de organización o input explícito admin/abogado, con `state='approved'` o `resolved`, `source_type='legal_review'`/`manual`, auditoría en `legal_review_decisions`, y sin depender todavía de la pantalla completa de Configuración (T052). Verify: `pnpm test:api`
+- [x] **T015** [US1] Materializar `documento.abogado_redactor.*` como variables project-scoped antes de la revisión jurídica del caso. Implementar el mínimo backend necesario para upsert de `documento.abogado_redactor.nombre/rut/email` desde un default de organización o input explícito admin/abogado, con `state='approved'` o `resolved`, `source_type='legal_review'`/`manual`, auditoría en `legal_review_decisions`, y sin depender todavía de la pantalla completa de Configuración (T052). Verify: `pnpm test:api`
 
 - [ ] **T016** [US1] Endpoint `POST /escritura-matrices/case/{caseId}/legal-review` en `apps/api/api/v1/endpoints/escritura_matrices.py`: body `{decision, comentario?}`, valida `is_org_admin`, exige que `documento.abogado_redactor.nombre/rut` existan como variables project-scoped, escribe `revision_juridica.estado/aprobada_por/aprobada_at` (reusa `_insert_legal_review_decision`, `legal_variable_resolution.py:1788`), refresca snapshot. Contrato: [contracts/revision-juridica.md](./contracts/revision-juridica.md). Verify: `pnpm test:api`
 
