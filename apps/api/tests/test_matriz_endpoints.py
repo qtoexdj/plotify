@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -63,7 +64,7 @@ class FakeQuery:
         self.filters: list[tuple[str, object]] = []
         self.orderings: list[tuple[str, bool]] = []
         self.limit_count: int | None = None
-        self.single = False
+        self.is_single = False
 
     def select(self, *_args):
         return self
@@ -103,7 +104,11 @@ class FakeQuery:
         return self
 
     def maybe_single(self):
-        self.single = True
+        self.is_single = True
+        return self
+
+    def single(self):
+        self.is_single = True
         return self
 
     def _matches(self, row: dict[str, Any]) -> bool:
@@ -155,7 +160,7 @@ class FakeQuery:
                     updated.append(row)
             return SimpleNamespace(data=updated)
         rows = self._matched_rows()
-        if self.single:
+        if self.is_single:
             return SimpleNamespace(data=rows[0] if rows else None)
         return SimpleNamespace(data=rows)
 
@@ -1132,6 +1137,155 @@ class TestMatrizReviewWorkflow:
         assert generate.json()["detail"]["code"] == "snapshot_stale"
         assert save.status_code == 409
         assert save.json()["detail"]["code"] == "snapshot_stale"
+
+
+class TestLegalReviewEndpoint:
+    """T016 (FR-007/FR-008): POST /escritura-matrices/case/{caseId}/legal-review."""
+
+    ADMIN_ID = "00000000-0000-4000-8000-000000000021"
+
+    def _seed_scope(self, store: FakeStore, *, role: str = "admin") -> dict[str, Any]:
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        _seed_matrix(store, case_row=case_row, template=template, status="approved")
+        store.tables.setdefault("organization_members", []).append(
+            {"organization_id": ORG_ID, "user_id": self.ADMIN_ID, "role": role}
+        )
+        return case_row
+
+    def _post(self, store: FakeStore, monkeypatch, case_id: str, body: dict[str, Any]):
+        return _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/case/{case_id}/legal-review",
+            params={"organization_id": ORG_ID},
+            json=body,
+        )
+
+    def test_rejects_non_admin_role(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store, role="user")
+
+        response = self._post(
+            store, monkeypatch, case_row["id"], {"decision": "aprobada", "decided_by": self.ADMIN_ID}
+        )
+
+        assert response.status_code == 403
+
+    def test_approve_blocked_without_abogado_redactor_variables(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+        monkeypatch.setattr(
+            escritura_readiness, "create_escritura_case_snapshot", AsyncMock()
+        )
+
+        response = self._post(
+            store, monkeypatch, case_row["id"], {"decision": "aprobada", "decided_by": self.ADMIN_ID}
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "abogado_redactor_incompleto"
+        assert "documento.abogado_redactor.nombre" in detail["missing"]
+        assert "documento.abogado_redactor.rut" in detail["missing"]
+
+    def test_reject_requires_comentario(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+
+        response = self._post(
+            store, monkeypatch, case_row["id"], {"decision": "rechazada", "decided_by": self.ADMIN_ID}
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["code"] == "comentario_required"
+
+    def test_approve_writes_revision_juridica_variables_and_audits(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+        store.tables.setdefault("variable_resolutions", []).extend(
+            [
+                {
+                    "id": "var-abogado-nombre",
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "lot_id": None,
+                    "escritura_case_id": None,
+                    "variable_key": "documento.abogado_redactor.nombre",
+                    "value_text": "María José Contreras Silva",
+                    "state": "resolved",
+                },
+                {
+                    "id": "var-abogado-rut",
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "lot_id": None,
+                    "escritura_case_id": None,
+                    "variable_key": "documento.abogado_redactor.rut",
+                    "value_text": "15.234.567-8",
+                    "state": "resolved",
+                },
+            ]
+        )
+        snapshot_mock = AsyncMock()
+        monkeypatch.setattr(
+            escritura_readiness, "create_escritura_case_snapshot", snapshot_mock
+        )
+
+        response = self._post(
+            store, monkeypatch, case_row["id"], {"decision": "aprobada", "decided_by": self.ADMIN_ID}
+        )
+
+        assert response.status_code == 200
+        snapshot_mock.assert_awaited_once()
+
+        revision_rows = {
+            row["variable_key"]: row
+            for row in store.tables["variable_resolutions"]
+            if row["variable_key"].startswith("revision_juridica.")
+        }
+        assert revision_rows["revision_juridica.estado"]["value_text"] == "aprobada"
+        assert revision_rows["revision_juridica.estado"]["lot_id"] == LOT_ID
+        assert revision_rows["revision_juridica.estado"]["escritura_case_id"] is None
+        assert revision_rows["revision_juridica.aprobada_por"]["value_text"] == self.ADMIN_ID
+        assert "revision_juridica.aprobada_at" in revision_rows
+
+        decisions = store.tables["legal_review_decisions"]
+        assert decisions[-1]["decision_type"] == "approve_case"
+        assert decisions[-1]["decision_status"] == "approved"
+        assert decisions[-1]["escritura_case_id"] == case_row["id"]
+
+    def test_reject_writes_only_estado_variable(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+        snapshot_mock = AsyncMock()
+        monkeypatch.setattr(
+            escritura_readiness, "create_escritura_case_snapshot", snapshot_mock
+        )
+
+        response = self._post(
+            store,
+            monkeypatch,
+            case_row["id"],
+            {
+                "decision": "rechazada",
+                "decided_by": self.ADMIN_ID,
+                "comentario": "Falta corregir la cláusula de servidumbre.",
+            },
+        )
+
+        assert response.status_code == 200
+        revision_rows = [
+            row
+            for row in store.tables["variable_resolutions"]
+            if row["variable_key"].startswith("revision_juridica.")
+        ]
+        assert len(revision_rows) == 1
+        assert revision_rows[0]["variable_key"] == "revision_juridica.estado"
+        assert revision_rows[0]["value_text"] == "rechazada"
+
+        decisions = store.tables["legal_review_decisions"]
+        assert decisions[-1]["decision_type"] == "reject_case"
+        assert decisions[-1]["decision_status"] == "rejected"
+        assert decisions[-1]["reason"] == "Falta corregir la cláusula de servidumbre."
 
 
 class TestAlertClauseContract:

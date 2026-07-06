@@ -276,6 +276,17 @@ class MatrizRejectRequest(MatrizBaseModel):
     reason: str = Field(min_length=1, max_length=2000)
 
 
+# ─── Revisión jurídica del caso (SDD16, FR-007/FR-008) ───────────────────────
+
+LegalReviewDecision = Literal["aprobada", "rechazada"]
+
+
+class LegalReviewDecisionRequest(MatrizBaseModel):
+    decision: LegalReviewDecision
+    decided_by: UUID
+    comentario: str | None = Field(default=None, max_length=2000)
+
+
 # ─── Generaciones de minuta ──────────────────────────────────────────────────
 
 

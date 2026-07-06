@@ -25,6 +25,7 @@ from core.logger import get_logger
 from schemas.escritura_matrices import (
     EscrituraTraceResponse,
     GenerateMinutaRequest,
+    LegalReviewDecisionRequest,
     MatrizApproveRequest,
     MatrizCaseResponse,
     MatrizRejectRequest,
@@ -1762,6 +1763,249 @@ async def get_case_matriz(
     if matrix_row is None:
         matrix_row = await _lazy_create_matrix(client, case_row, org_id)
     return await _case_response(client, matrix_row, case_row)
+
+
+# ─── Revisión jurídica del caso (SDD16, FR-007/FR-008) ───────────────────────
+
+ABOGADO_REDACTOR_REQUIRED_KEYS = (
+    "documento.abogado_redactor.nombre",
+    "documento.abogado_redactor.rut",
+)
+
+
+def _has_review_value(row: dict[str, Any] | None) -> bool:
+    if not row:
+        return False
+    value_text = row.get("value_text")
+    return (isinstance(value_text, str) and bool(value_text.strip())) or row.get(
+        "value_json"
+    ) is not None
+
+
+async def _missing_abogado_redactor_keys(
+    client: Any, organization_id: str, project_id: str
+) -> list[str]:
+    """FR-007: el molde en un clic (T031) o la acción mínima de T015 deben
+    haber materializado estos datos como variables project-scoped antes de
+    aprobar la revisión jurídica del caso."""
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("variable_resolutions")
+            .select("variable_key, value_text, value_json")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .is_("lot_id", "null")
+            .in_("variable_key", list(ABOGADO_REDACTOR_REQUIRED_KEYS))
+            .neq("state", "superseded")
+            .execute()
+        )
+    )
+    rows_by_key = {row["variable_key"]: row for row in _rows(getattr(result, "data", None))}
+    return [
+        key for key in ABOGADO_REDACTOR_REQUIRED_KEYS if not _has_review_value(rows_by_key.get(key))
+    ]
+
+
+async def _upsert_lot_variable(
+    client: Any,
+    *,
+    organization_id: str,
+    project_id: str,
+    lot_id: str,
+    variable_key: str,
+    value_text: str,
+    reviewed_by: str,
+    reviewed_at: str,
+) -> dict[str, Any]:
+    """Fija revision_juridica.* scope lote (nunca proyecto, a diferencia de
+    documento.abogado_redactor.*): es una decisión por caso, no un dato de
+    organización. Sin propuesta previa que aprobar -> state='resolved'."""
+    existing_result = await asyncio.to_thread(
+        lambda: (
+            client.table("variable_resolutions")
+            .select("id")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("lot_id", lot_id)
+            .is_("escritura_case_id", "null")
+            .eq("variable_key", variable_key)
+            .neq("state", "superseded")
+            .limit(1)
+            .execute()
+        )
+    )
+    existing = _first_row(getattr(existing_result, "data", None))
+    if existing:
+        update_result = await asyncio.to_thread(
+            lambda: (
+                client.table("variable_resolutions")
+                .update(
+                    {
+                        "value_text": value_text,
+                        "state": "resolved",
+                        "reviewed_by": reviewed_by,
+                        "reviewed_at": reviewed_at,
+                    }
+                )
+                .eq("id", existing["id"])
+                .execute()
+            )
+        )
+        return _first_row(getattr(update_result, "data", None)) or existing
+
+    insert_payload = {
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "lot_id": lot_id,
+        "escritura_case_id": None,
+        "variable_key": variable_key,
+        "variable_group": "revision_juridica",
+        "value_text": value_text,
+        "state": "resolved",
+        "source_type": "legal_review",
+        "reviewed_by": reviewed_by,
+        "reviewed_at": reviewed_at,
+        "approval_required": False,
+    }
+    insert_result = await asyncio.to_thread(
+        lambda: client.table("variable_resolutions").insert(insert_payload).execute()
+    )
+    inserted = _first_row(getattr(insert_result, "data", None))
+    if not inserted:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo guardar la revisión jurídica.",
+        )
+    return inserted
+
+
+@router.post(
+    "/escritura-matrices/case/{escritura_case_id}/legal-review",
+    response_model=MatrizCaseResponse,
+)
+async def submit_legal_review(
+    escritura_case_id: UUID,
+    request: LegalReviewDecisionRequest,
+    organization_id: UUID = Query(...),
+) -> MatrizCaseResponse:
+    """FR-007/FR-008: acción explícita del admin/abogado sobre el caso.
+    Aprobada exige que documento.abogado_redactor.nombre/rut ya existan
+    project-scoped (T015); escribe revision_juridica.* scope lote y audita
+    en legal_review_decisions. Rechazada exige comentario y no avanza el caso.
+    """
+    from api.deps import require_admin_role
+    from api.v1.endpoints.legal_variables import (
+        ensure_legal_documents_feature_enabled,
+    )
+    from core.database import get_supabase_client
+    from services.escritura_readiness import create_escritura_case_snapshot
+
+    client = get_supabase_client()
+    org_id = str(organization_id)
+    decided_by = str(request.decided_by)
+    await require_admin_role(decided_by, org_id, supabase=client)
+
+    case_row = await _fetch_case(client, str(escritura_case_id), org_id)
+    project_id = str(case_row["project_id"])
+    lot_id = str(case_row["lot_id"])
+    ensure_legal_documents_feature_enabled(
+        organization_id=org_id, project_id=project_id
+    )
+
+    comentario = (request.comentario or "").strip()
+    if request.decision == "rechazada" and not comentario:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "comentario_required",
+                "message": "Indica un comentario para rechazar la revisión jurídica.",
+            },
+        )
+
+    if request.decision == "aprobada":
+        missing = await _missing_abogado_redactor_keys(client, org_id, project_id)
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "abogado_redactor_incompleto",
+                    "message": "Completa los datos del abogado redactor antes de aprobar la revisión jurídica.",
+                    "missing": missing,
+                },
+            )
+
+    now = _utc_now_iso()
+    estado = "aprobada" if request.decision == "aprobada" else "rechazada"
+    estado_row = await _upsert_lot_variable(
+        client,
+        organization_id=org_id,
+        project_id=project_id,
+        lot_id=lot_id,
+        variable_key="revision_juridica.estado",
+        value_text=estado,
+        reviewed_by=decided_by,
+        reviewed_at=now,
+    )
+    if request.decision == "aprobada":
+        await _upsert_lot_variable(
+            client,
+            organization_id=org_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            variable_key="revision_juridica.aprobada_por",
+            value_text=decided_by,
+            reviewed_by=decided_by,
+            reviewed_at=now,
+        )
+        await _upsert_lot_variable(
+            client,
+            organization_id=org_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            variable_key="revision_juridica.aprobada_at",
+            value_text=now,
+            reviewed_by=decided_by,
+            reviewed_at=now,
+        )
+
+    await asyncio.to_thread(
+        lambda: (
+            client.table("legal_review_decisions")
+            .insert(
+                {
+                    "organization_id": org_id,
+                    "project_id": project_id,
+                    "lot_id": lot_id,
+                    "escritura_case_id": str(escritura_case_id),
+                    "variable_resolution_id": estado_row.get("id"),
+                    "decision_type": "approve_case"
+                    if request.decision == "aprobada"
+                    else "reject_case",
+                    "decision_status": "approved"
+                    if request.decision == "aprobada"
+                    else "rejected",
+                    "reason": comentario or None,
+                    "decided_by": decided_by,
+                    "decided_at": now,
+                }
+            )
+            .execute()
+        )
+    )
+
+    await create_escritura_case_snapshot(
+        organization_id=org_id,
+        project_id=project_id,
+        lot_id=lot_id,
+        stage_operational=False,
+        supabase=client,
+    )
+
+    refreshed_case = await _fetch_case(client, str(escritura_case_id), org_id)
+    matrix_row = await _fetch_active_matrix(client, str(escritura_case_id), org_id, project_id)
+    if matrix_row is None:
+        matrix_row = await _lazy_create_matrix(client, refreshed_case, org_id)
+    return await _case_response(client, matrix_row, refreshed_case)
 
 
 @router.put(
