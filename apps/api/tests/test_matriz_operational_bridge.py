@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -323,6 +324,71 @@ class FakeSupabase:
                     ]
                 )
         raise AssertionError(f"unexpected table {table.name}")
+
+
+# ─── T006: tolerancia a maybe_single() -> None (0 filas, sin AttributeError) ──
+
+
+class _RealisticMaybeSingleTable:
+    """A diferencia de FakeTable/FakeSupabase (arriba), reproduce el
+    comportamiento real de supabase-py: maybe_single().execute() devuelve
+    None (no un objeto con .data = None) cuando hay 0 filas."""
+
+    def __init__(self, data: Any) -> None:
+        self._data = data
+        self._maybe_single = False
+
+    def select(self, *args):
+        return self
+
+    def eq(self, *args):
+        return self
+
+    def order(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args):
+        return self
+
+    def maybe_single(self):
+        self._maybe_single = True
+        return self
+
+    def execute(self):
+        if self._maybe_single and self._data is None:
+            return None
+        return SimpleNamespace(data=self._data)
+
+
+class _RealisticFakeClient:
+    def __init__(self, tables: dict[str, Any]) -> None:
+        self._tables = tables
+
+    def table(self, name: str) -> _RealisticMaybeSingleTable:
+        return _RealisticMaybeSingleTable(self._tables[name])
+
+
+class TestFetchOperationalRowsToleratesMissingPaymentInfo:
+    @pytest.mark.asyncio
+    async def test_fetch_tolerates_missing_organization_payment_info(self):
+        client = _RealisticFakeClient(
+            {
+                "lots": {"id": LOT_ID},
+                "lot_records": [{"id": "rec-1"}],
+                "organization_payment_info": None,
+            }
+        )
+
+        lot, record, payment_info = await bridge._fetch_operational_rows(
+            client=client,
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            lot_id=LOT_ID,
+        )
+
+        assert lot == {"id": LOT_ID}
+        assert record == {"id": "rec-1"}
+        assert payment_info is None
 
 
 def _active_row(key: str, state: str, row_hash: str | None) -> dict:

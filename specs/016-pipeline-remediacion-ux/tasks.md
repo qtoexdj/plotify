@@ -47,7 +47,7 @@
 
 - [x] **T005** Regenerar contrato tras T004: `pnpm contracts:generate` (actualiza `packages/contracts/openapi/plotify-chat.v1.json` + `apps/web/src/lib/services/plotify-chat.generated.ts`). Verify: `pnpm typecheck:web`
 
-- [ ] **T006** Crear el helper defensivo `_safe_data(result)` y aplicarlo en `apps/api/services/escritura_operational_bridge.py`: `_fetch_operational_rows` (`:572-576`, los 3 `.data`) y `_assert_lot_scope` (`:532`). Definición en research R1. Verify: `pnpm test:api`
+- [x] **T006** Crear el helper defensivo `_safe_data(result)` y aplicarlo en `apps/api/services/escritura_operational_bridge.py`: `_fetch_operational_rows` (`:572-576`, los 3 `.data`) y `_assert_lot_scope` (`:532`). Definición en research R1. Verify: `pnpm test:api`
   - Test nuevo: llamar `_fetch_operational_rows` para una org SIN fila en `organization_payment_info` → no lanza `AttributeError`, `payment_info` = None.
 
 - [ ] **T007** [P] Crear test de contrato base del camino venta→escritura en `apps/api/tests/test_pipeline_venta_escritura_contract.py`: enviar payload de venta con los 3 campos nuevos → verificar que llegan a `approval_requests.payload` (no se descartan por Pydantic). Verify: `pnpm test:api`

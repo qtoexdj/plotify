@@ -526,6 +526,12 @@ def _first_row(data: Any) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _safe_data(result: Any) -> Any:
+    """supabase-py's maybe_single().execute() returns None (not a result
+    object with .data = None) on 0 rows; guard against AttributeError."""
+    return getattr(result, "data", None) if result is not None else None
+
+
 async def _assert_lot_scope(
     *, client: Any, organization_id: str, project_id: str, lot_id: str
 ) -> None:
@@ -540,7 +546,7 @@ async def _assert_lot_scope(
             .execute()
         )
     )
-    if not result.data:
+    if not _safe_data(result):
         raise OperationalBridgeScopeError(
             "lot_id does not belong to the requested organization/project."
         )
@@ -581,9 +587,9 @@ async def _fetch_operational_rows(
         ),
     )
     return (
-        _first_row(lot_result.data),
-        _first_row(record_result.data),
-        _first_row(payment_result.data),
+        _first_row(_safe_data(lot_result)),
+        _first_row(_safe_data(record_result)),
+        _first_row(_safe_data(payment_result)),
     )
 
 
