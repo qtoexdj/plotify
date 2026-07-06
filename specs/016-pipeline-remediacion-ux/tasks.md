@@ -50,7 +50,7 @@
 - [x] **T006** Crear el helper defensivo `_safe_data(result)` y aplicarlo en `apps/api/services/escritura_operational_bridge.py`: `_fetch_operational_rows` (`:572-576`, los 3 `.data`) y `_assert_lot_scope` (`:532`). Definición en research R1. Verify: `pnpm test:api`
   - Test nuevo: llamar `_fetch_operational_rows` para una org SIN fila en `organization_payment_info` → no lanza `AttributeError`, `payment_info` = None.
 
-- [ ] **T007** [P] Crear test de contrato base del camino venta→escritura en `apps/api/tests/test_pipeline_venta_escritura_contract.py`: enviar payload de venta con los 3 campos nuevos → verificar que llegan a `approval_requests.payload` (no se descartan por Pydantic). Verify: `pnpm test:api`
+- [x] **T007** [P] Crear test de contrato base del camino venta→escritura en `apps/api/tests/test_pipeline_venta_escritura_contract.py`: enviar payload de venta con los 3 campos nuevos → verificar que llegan a `approval_requests.payload` (no se descartan por Pydantic). Verify: `pnpm test:api`
 
 - [ ] **T008** Auditar todos los usos de `maybe_single().execute()` en `apps/api`: clasificar cada llamada como "fila obligatoria" o "fila opcional"; donde 0 filas sea válido, aplicar el helper defensivo (`_safe_data`/equivalente local ya existente) para evitar `AttributeError` por resultado `None`; añadir al menos un test de regresión fuera del puente operacional para un caso opcional. Verify: `pnpm test:api`
 
