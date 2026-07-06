@@ -43,9 +43,9 @@
 
 **⚠️ CRITICAL**: ninguna user story puede empezar hasta completar esta fase.
 
-- [ ] **T004** Agregar `cliente_nacionalidad`/`cliente_region`/`cliente_comuna` como `Optional[str] = None` a `SalePayload` (`apps/api/schemas/approval.py:33`) y `ReservationPayload` (`:6`). Contrato: [contracts/payloads-comprador.md](./contracts/payloads-comprador.md). Verify: `pnpm test:api`
+- [x] **T004** Agregar `cliente_nacionalidad`/`cliente_region`/`cliente_comuna` como `Optional[str] = None` a `SalePayload` (`apps/api/schemas/approval.py:33`) y `ReservationPayload` (`:6`). Contrato: [contracts/payloads-comprador.md](./contracts/payloads-comprador.md). Verify: `pnpm test:api`
 
-- [ ] **T005** Regenerar contrato tras T004: `pnpm contracts:generate` (actualiza `packages/contracts/openapi/plotify-chat.v1.json` + `apps/web/src/lib/services/plotify-chat.generated.ts`). Verify: `pnpm typecheck:web`
+- [x] **T005** Regenerar contrato tras T004: `pnpm contracts:generate` (actualiza `packages/contracts/openapi/plotify-chat.v1.json` + `apps/web/src/lib/services/plotify-chat.generated.ts`). Verify: `pnpm typecheck:web`
 
 - [ ] **T006** Crear el helper defensivo `_safe_data(result)` y aplicarlo en `apps/api/services/escritura_operational_bridge.py`: `_fetch_operational_rows` (`:572-576`, los 3 `.data`) y `_assert_lot_scope` (`:532`). Definición en research R1. Verify: `pnpm test:api`
   - Test nuevo: llamar `_fetch_operational_rows` para una org SIN fila en `organization_payment_info` → no lanza `AttributeError`, `payment_info` = None.
