@@ -9,6 +9,7 @@ import type {
   MatrizSubmitRequest,
   MinutaGeneration,
   MinutaGenerationListResponse,
+  StageOperationalResult,
   TemplateCreateRequest,
   TemplateListResponse,
 } from './matriz-types'
@@ -150,6 +151,13 @@ export async function generateMinuta(
 export async function listMinutaGenerations(caseId: string): Promise<MinutaGenerationListResponse> {
   return requestJson<MinutaGenerationListResponse>(
     `/api/escritura-matrices/case/${encodeURIComponent(caseId)}/generations`
+  )
+}
+
+export async function stageOperationalVariables(caseId: string): Promise<StageOperationalResult> {
+  return requestJson<StageOperationalResult>(
+    `/api/escritura-matrices/case/${encodeURIComponent(caseId)}/stage-operational`,
+    { method: 'POST' }
   )
 }
 

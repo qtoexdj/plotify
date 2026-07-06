@@ -158,6 +158,7 @@ export const MESA_TEXT = {
   sinPendientes: 'No hay pendientes. La escritura está lista para revisión.',
   abrirMesa: 'Abrir mesa de escritura',
   noSePudoCargar: 'No se pudo cargar la escritura. Recarga para intentarlo de nuevo.',
+  noSePudoVerificar: 'No se pudo verificar el caso. Intenta de nuevo.',
   esperandoVentas: 'Esperando ventas',
 } as const
 

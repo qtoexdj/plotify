@@ -14,6 +14,7 @@ import {
   getMatrizCase,
   getMatrizProject,
   saveMatriz,
+  stageOperationalVariables,
   MatrizClientError,
 } from '@/lib/documents/matriz-client'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
@@ -121,6 +122,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
   const [error, setError] = useState<string | null>(missingSource ? MESA_TEXT.noSePudoCargar : null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [verificando, setVerificando] = useState(false)
   const [clausulaActiva, setClausulaActiva] = useState<string | null>(null)
   const [borradores, setBorradores] = useState<Record<string, MatrizClauseOverride>>({})
   const [soloPendientes, setSoloPendientes] = useState(false)
@@ -207,6 +209,24 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
     setBorradores({})
     setClausulaActiva(null)
     setAviso(null)
+  }
+
+  async function handleVerificar() {
+    const escrituraCaseId = matriz?.escritura_case_id
+    if (!escrituraCaseId) {
+      window.location.reload()
+      return
+    }
+    setVerificando(true)
+    setAviso(null)
+    try {
+      await stageOperationalVariables(escrituraCaseId)
+      await recargarMatriz()
+    } catch {
+      setAviso(MESA_TEXT.noSePudoVerificar)
+    } finally {
+      setVerificando(false)
+    }
   }
 
   async function recargarMatriz() {
@@ -299,6 +319,8 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
       puedeGuardar={resumen.puedeEditar}
       guardando={guardando}
       onGuardar={handleGuardar}
+      onVerificar={handleVerificar}
+      verificando={verificando}
       soloPendientes={soloPendientes}
       onSoloPendientesChange={setSoloPendientes}
     />
