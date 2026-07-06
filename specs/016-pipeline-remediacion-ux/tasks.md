@@ -84,7 +84,7 @@
 
 - [x] **T016** [US1] Endpoint `POST /escritura-matrices/case/{caseId}/legal-review` en `apps/api/api/v1/endpoints/escritura_matrices.py`: body `{decision, comentario?}`, valida `is_org_admin`, exige que `documento.abogado_redactor.nombre/rut` existan como variables project-scoped, escribe `revision_juridica.estado/aprobada_por/aprobada_at` (reusa `_insert_legal_review_decision`, `legal_variable_resolution.py:1788`), refresca snapshot. Contrato: [contracts/revision-juridica.md](./contracts/revision-juridica.md). Verify: `pnpm test:api`
 
-- [ ] **T017** [US1] Ruta proxy web `apps/web/src/app/api/escritura-matrices/case/[caseId]/legal-review/route.ts` (inyecta `reviewed_by`, valida rol). Verify: `pnpm typecheck:web`
+- [x] **T017** [US1] Ruta proxy web `apps/web/src/app/api/escritura-matrices/case/[caseId]/legal-review/route.ts` (inyecta `reviewed_by`, valida rol). Verify: `pnpm typecheck:web`
 
 - [ ] **T018** [US1] UI en la mesa: paso visible "Esperando revisión jurídica" + botón "Aprobar revisión jurídica" (admin/abogado) + acción "Rechazar" con comentario. Si falta `documento.abogado_redactor.nombre/rut`, mostrar un formulario mínimo inline o enlace/acción a completar el dato antes de aprobar. Archivos: `apps/web/src/components/documents/mesa/workflow-acciones.tsx` / `panel-datos.tsx`. Verify: `pnpm --filter web lint && pnpm build:web`
 

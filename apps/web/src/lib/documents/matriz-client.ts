@@ -2,6 +2,7 @@ import type {
   ClauseUpsertRequest,
   EscrituraTemplateDetail,
   GenerateMinutaRequest,
+  LegalReviewDecisionRequest,
   MatrizApproveRequest,
   MatrizCaseResponse,
   MatrizRejectRequest,
@@ -158,6 +159,16 @@ export async function stageOperationalVariables(caseId: string): Promise<StageOp
   return requestJson<StageOperationalResult>(
     `/api/escritura-matrices/case/${encodeURIComponent(caseId)}/stage-operational`,
     { method: 'POST' }
+  )
+}
+
+export async function submitLegalReview(
+  caseId: string,
+  payload: LegalReviewDecisionRequest
+): Promise<MatrizCaseResponse> {
+  return requestJson<MatrizCaseResponse>(
+    `/api/escritura-matrices/case/${encodeURIComponent(caseId)}/legal-review`,
+    { method: 'POST', body: payload }
   )
 }
 

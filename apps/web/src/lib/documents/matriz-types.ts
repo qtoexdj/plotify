@@ -365,6 +365,13 @@ export interface GenerateMinutaRequest {
   warning_acknowledged: boolean
 }
 
+// ─── Revisión jurídica del caso (SDD16, FR-007/FR-008) ───────────────────────
+
+export interface LegalReviewDecisionRequest {
+  decision: 'aprobada' | 'rechazada'
+  comentario?: string
+}
+
 // ─── Puente operacional (US6) ────────────────────────────────────────────────
 
 export interface StageOperationalResult {
