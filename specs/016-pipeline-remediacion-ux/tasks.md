@@ -29,7 +29,7 @@
 
 ## Phase 1: Setup (infraestructura compartida)
 
-- [ ] **T001** Actualizar punteros SDD activos a 016: `.specify/feature.json` (`feature_directory` → `specs/016-pipeline-remediacion-ux`) y, si aplica, el puntero de feature activo en `AGENTS.md`. Verify: `pnpm format:check`
+- [x] **T001** Actualizar punteros SDD activos a 016: `.specify/feature.json` (`feature_directory` → `specs/016-pipeline-remediacion-ux`) y, si aplica, el puntero de feature activo en `AGENTS.md`. Verify: `pnpm format:check`
 
 - [ ] **T002** Crear la migración aditiva `packages/database/supabase/migrations/20260706000100_pipeline_remediacion.sql` con SOLO la parte segura primero (data-model §1 y §3): columnas `cliente_nacionalidad`/`cliente_region`/`cliente_comuna` en `lot_records` + reescritura de RPC `approve_sale`/`approve_reservation` copiando esos campos con `COALESCE` (patrón de `20260701000100`). Para la firma, NO crear columnas `notaria`/`fecha_firma`: persistir `payload.notaria` en `lot_records.firma_lugar` y `payload.fecha_firma` en `lot_records.firma_fecha`, que son las columnas canónicas existentes para "dónde/cuándo podría firmar". NO incluir aún los REVOKE ni el bucket privado (van tras HG-2, T060). Verify: `pnpm verify:migrations`
   - **Antes de escribir**: `select column_name from information_schema.columns where table_schema='public' and table_name='lot_records';` para no duplicar columnas.
