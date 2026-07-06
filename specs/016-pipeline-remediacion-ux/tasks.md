@@ -86,7 +86,7 @@
 
 - [x] **T017** [US1] Ruta proxy web `apps/web/src/app/api/escritura-matrices/case/[caseId]/legal-review/route.ts` (inyecta `reviewed_by`, valida rol). Verify: `pnpm typecheck:web`
 
-- [ ] **T018** [US1] UI en la mesa: paso visible "Esperando revisión jurídica" + botón "Aprobar revisión jurídica" (admin/abogado) + acción "Rechazar" con comentario. Si falta `documento.abogado_redactor.nombre/rut`, mostrar un formulario mínimo inline o enlace/acción a completar el dato antes de aprobar. Archivos: `apps/web/src/components/documents/mesa/workflow-acciones.tsx` / `panel-datos.tsx`. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T018** [US1] UI en la mesa: paso visible "Esperando revisión jurídica" + botón "Aprobar revisión jurídica" (admin/abogado) + acción "Rechazar" con comentario. Si falta `documento.abogado_redactor.nombre/rut`, mostrar un formulario mínimo inline o enlace/acción a completar el dato antes de aprobar. Archivos: `apps/web/src/components/documents/mesa/workflow-acciones.tsx` / `panel-datos.tsx`. Verify: `pnpm --filter web lint && pnpm build:web`
 
 ### Entrega al admin (FR-009, FR-010)
 
