@@ -19,9 +19,24 @@ Cada decisión resuelve una ambigüedad del plan de auditoría. Formato: **Decis
 
 ---
 
+## R1b · Dónde persistir notaría y fecha tentativa de firma (FR-003, FR-004)
+
+**Decisión**: Mantener `notaria` y `fecha_firma` como nombres del payload de reserva/venta porque expresan lo que el vendedor captura ("dónde/cuándo podría firmar el cliente"), pero persistirlos en las columnas existentes de `lot_records`: `notaria` → `firma_lugar` y `fecha_firma` → `firma_fecha`. No crear columnas `notaria`/`fecha_firma`.
+
+**Rationale**: `lot_records` ya tiene `firma_lugar`/`firma_fecha` y la migración `20260701000100_sale_approval_full_buyer_data.sql` ya usa ese mapeo para `payload.notaria`/`payload.fecha_firma`. Crear columnas nuevas duplicaría la misma semántica y obligaría a elegir entre dos fuentes de verdad al renderizar.
+
+**Alternativas rechazadas**:
+
+- _Crear columnas `notaria` y `fecha_firma`_: rechazado por redundancia con `firma_lugar`/`firma_fecha`.
+- _Renombrar los campos del payload_: rechazado, el formulario habla naturalmente de notaría y fecha de firma; cambiar el contrato externo no agrega valor.
+
+**Evidencia**: `lot_records` define `firma_lugar`/`firma_fecha` en la baseline; `20260701000100_sale_approval_full_buyer_data.sql` inserta `v_payload->>'notaria'` en `firma_lugar` y `(v_payload->>'fecha_firma')::date` en `firma_fecha`.
+
+---
+
 ## R2 · Dónde viven "abogado redactor" y "mandatario" (FR-007, FR-022)
 
-**Decisión**: Datos de **organización**, no de venta. Se cargan en una pantalla de Configuración ("Datos de la organización para escrituras") y se materializan como variables de proyecto con default de organización (reusando el mecanismo de autoría/default ya existente en el catálogo). El `abogado_redactor.*` se puebla al aprobar el molde; `revision_juridica.*` se escribe con la acción explícita del abogado por caso.
+**Decisión**: Datos de **organización**, no de venta. Se cargan en una pantalla de Configuración ("Datos de la organización para escrituras") y se materializan como variables de proyecto con default de organización (reusando el mecanismo de autoría/default ya existente en el catálogo). Para que US1 sea demostrable sin esperar toda la configuración de US4, el backend debe ofrecer un camino mínimo para materializar `documento.abogado_redactor.nombre/rut/email` como variables project-scoped antes de aprobar la revisión jurídica del caso. El `abogado_redactor.*` se puede poblar al aprobar el molde o mediante esa acción mínima; `revision_juridica.*` se escribe con la acción explícita del abogado por caso.
 
 **Rationale**: El plan (P1.5, P2.4) y la clasificación canónica de variables ya definen `mandato.*`/`documento.*` como "autoría con default de organización". Pedir el abogado por venta sería fricción repetida.
 
@@ -30,7 +45,7 @@ Cada decisión resuelve una ambigüedad del plan de auditoría. Formato: **Decis
 - _Pedir abogado por caso_: rechazado, es el mismo dato en toda la org.
 - _Hardcodear el mandatario_: rechazado, varía por organización.
 
-**Evidencia**: gate `legal_review_ready` exige `documento.abogado_redactor.nombre/rut` + `revision_juridica.estado` en `apps/api/services/legal_variable_catalog.py:721`. Hoy nada escribe `revision_juridica.*`; el diálogo manual solo lista 4 claves SAG (`apps/web/src/components/projects/legal/variable-matrix/manual-input-dialog.tsx:29`).
+**Evidencia**: gate `legal_review_ready` exige `documento.abogado_redactor.nombre/rut` + `revision_juridica.estado` en `apps/api/services/legal_variable_catalog.py:721`. Hoy nada escribe `revision_juridica.*`; el diálogo manual solo lista 4 claves SAG (`apps/web/src/components/projects/legal/variable-matrix/manual-input-dialog.tsx:29`). Además, `documento.*` se clasifica hoy como `signing`, por lo que `abogado_redactor.*` no recibe default automático de `AUTHORED_VARIABLE_DEFAULTS`; SDD16 debe materializarlo explícitamente como dato estable de organización/proyecto.
 
 ---
 

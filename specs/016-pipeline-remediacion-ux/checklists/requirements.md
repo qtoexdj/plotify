@@ -42,5 +42,5 @@
 - [ ] **HG-2**: aprobar migración de seguridad + limpieza de datos de prueba.
 - [ ] **HG-3**: sesión de usabilidad con usuario nuevo.
 - [ ] Rama base: 016 desde `main` o tras mergear 015 (R12).
-- [ ] `notaria`/`fecha_firma` en `lot_records`: columnas nuevas o reuso de `firma_lugar`/`firma_fecha` (data-model §1).
+- [x] `notaria`/`fecha_firma` en `lot_records`: reusar `firma_lugar`/`firma_fecha`; no crear columnas redundantes (data-model §1).
 - [ ] Estado masivo de lotes: eliminar la UI muerta (default) o agregar `estado` al schema con guard (R9).

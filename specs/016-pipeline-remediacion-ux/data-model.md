@@ -19,15 +19,9 @@ ALTER TABLE public.lot_records
 ```
 
 - Nullable, sin default. Se pueblan vía RPC de aprobación (§3).
-- `notaria` y `fecha_firma` NO son columnas de `lot_records` hoy; se decide en la tarea si se agregan aquí o se mapean como variables. El plan pide "copiar `notaria`/`fecha_firma` del payload a `lot_records`" → agregar también:
+- `notaria` y `fecha_firma` ya existen en los payloads de reserva/venta y representan "dónde/cuándo podría firmar el cliente". NO crear columnas nuevas para esos nombres: `lot_records` ya tiene `firma_lugar` y `firma_fecha`, que son las columnas canónicas para esa semántica. El RPC debe mapear `payload.notaria` → `firma_lugar` y `payload.fecha_firma` → `firma_fecha`.
 
-```sql
-ALTER TABLE public.lot_records
-  ADD COLUMN IF NOT EXISTS notaria    text,
-  ADD COLUMN IF NOT EXISTS fecha_firma date;
-```
-
-**Verificar antes de escribir**: `select column_name from information_schema.columns where table_schema='public' and table_name='lot_records';` — no duplicar columnas existentes (`cliente_direccion`, `cliente_estado_civil`, `cliente_ocupacion`, `cliente_telefono`, `cliente_email`, `firma_estado`, `firma_fecha`, `firma_lugar` ya existen; `firma_fecha` podría reusarse en vez de `fecha_firma` — decidir en la tarea, preferir reusar si la semántica coincide).
+**Verificar antes de escribir**: `select column_name from information_schema.columns where table_schema='public' and table_name='lot_records';` — no duplicar columnas existentes (`cliente_direccion`, `cliente_estado_civil`, `cliente_ocupacion`, `cliente_telefono`, `cliente_email`, `firma_estado`, `firma_fecha`, `firma_lugar` ya existen).
 
 ---
 
@@ -50,11 +44,11 @@ Cualquier otra transición se rechaza. La implementación por defecto (R9) es se
 ## §3 · RPC `approve_sale` / `approve_reservation` — copiar campos nuevos (FR-004)
 
 Reescribir ambas funciones (patrón de la migración `20260701000100_sale_approval_full_buyer_data.sql`) para incluir en el `INSERT ... ON CONFLICT (lot_id) DO UPDATE` los campos:
-`cliente_nacionalidad`, `cliente_region`, `cliente_comuna`, `notaria` (o `firma_lugar` si aplica), `fecha_firma` (o `firma_fecha`).
+`cliente_nacionalidad`, `cliente_region`, `cliente_comuna`, `firma_lugar`, `firma_fecha`.
 
 ```sql
 -- dentro del INSERT INTO public.lot_records (...):
-cliente_nacionalidad, cliente_region, cliente_comuna, notaria, fecha_firma
+cliente_nacionalidad, cliente_region, cliente_comuna, firma_lugar, firma_fecha
 -- VALUES:
 v_payload->>'cliente_nacionalidad', v_payload->>'cliente_region',
 v_payload->>'cliente_comuna', v_payload->>'notaria',

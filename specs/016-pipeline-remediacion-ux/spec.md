@@ -171,8 +171,8 @@ Eliminar código muerto, duplicación y datos de prueba inconsistentes que ensuc
 
 - **FR-001**: El puente operacional MUST tolerar resultados PostgREST `None` (0 filas) sin lanzar excepción; los datos bancarios de la organización son opcionales.
 - **FR-002**: El sistema MUST loguear a nivel `error` (no `warning`) cuando el puente puebla 0 variables donde debía poblar N, y contar las variables efectivamente pobladas.
-- **FR-003**: Los payloads de reserva y venta MUST aceptar y persistir `cliente_nacionalidad`, `cliente_region`, `cliente_comuna`, `notaria` y `fecha_firma`.
-- **FR-004**: El RPC de aprobación MUST copiar esos campos a `lot_records`; el puente MUST mapear `comprador.nacionalidad` desde `lot_records`.
+- **FR-003**: Los payloads de reserva y venta MUST aceptar y persistir `cliente_nacionalidad`, `cliente_region`, `cliente_comuna`, `notaria` y `fecha_firma`; `notaria`/`fecha_firma` representan dónde y cuándo podría firmar el cliente.
+- **FR-004**: El RPC de aprobación MUST copiar esos campos a `lot_records`; para firma MUST mapear `notaria` → `firma_lugar` y `fecha_firma` → `firma_fecha` sin crear columnas redundantes; el puente MUST mapear `comprador.nacionalidad` desde `lot_records`.
 - **FR-005**: Al aprobar la matriz del proyecto, el sistema MUST re-evaluar (recompute) los casos `variables_pending` de ese proyecto.
 - **FR-006**: El botón "Verificar" de la mesa MUST llamar al re-stage del caso y refrescar los gates.
 - **FR-007**: El sistema MUST exponer una acción "Aprobar revisión jurídica" (solo admin/abogado) que escriba `revision_juridica.estado='aprobada'` + `aprobada_por` + `aprobada_at`, auditada, con contraparte de rechazo+comentario.
@@ -220,7 +220,7 @@ Eliminar código muerto, duplicación y datos de prueba inconsistentes que ensuc
 
 ### Key Entities _(include if feature involves data)_
 
-- **lot_records** (existente, se extiende): registro comercial/legal de la venta de un lote. Nuevas columnas: `cliente_nacionalidad`, `cliente_region`, `cliente_comuna` (y persistir `notaria`/`fecha_firma` ya existentes en payload).
+- **lot_records** (existente, se extiende): registro comercial/legal de la venta de un lote. Nuevas columnas: `cliente_nacionalidad`, `cliente_region`, `cliente_comuna`. Los datos de firma del payload se guardan en columnas existentes: `notaria` → `firma_lugar`, `fecha_firma` → `firma_fecha`.
 - **variable_resolutions** (existente): resoluciones de variables por proyecto/lote. Se añade la escritura de `revision_juridica.*` scope lote.
 - **escritura_cases** (existente): caso de escritura de una venta. `readiness_gates` deja de contar los heredados del molde como pendientes del caso.
 - **escritura_deliveries** (existente): entregas auditadas. Se resuelve destinatario = admin (+vendedor opcional); nunca `sent` sin recipient.

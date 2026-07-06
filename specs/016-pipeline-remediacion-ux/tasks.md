@@ -31,7 +31,7 @@
 
 - [ ] **T001** Actualizar punteros SDD activos a 016: `.specify/feature.json` (`feature_directory` → `specs/016-pipeline-remediacion-ux`) y, si aplica, el puntero de feature activo en `AGENTS.md`. Verify: `pnpm format:check`
 
-- [ ] **T002** Crear la migración aditiva `packages/database/supabase/migrations/20260706000100_pipeline_remediacion.sql` con SOLO la parte segura primero (data-model §1 y §3): columnas `cliente_nacionalidad`/`cliente_region`/`cliente_comuna` en `lot_records` (y decidir `notaria`/`fecha_firma` vs reuso de `firma_lugar`/`firma_fecha` — ver data-model §1) + reescritura de RPC `approve_sale`/`approve_reservation` copiando esos campos con `COALESCE` (patrón de `20260701000100`). NO incluir aún los REVOKE ni el bucket privado (van tras HG-2, T060). Verify: `pnpm verify:migrations`
+- [ ] **T002** Crear la migración aditiva `packages/database/supabase/migrations/20260706000100_pipeline_remediacion.sql` con SOLO la parte segura primero (data-model §1 y §3): columnas `cliente_nacionalidad`/`cliente_region`/`cliente_comuna` en `lot_records` + reescritura de RPC `approve_sale`/`approve_reservation` copiando esos campos con `COALESCE` (patrón de `20260701000100`). Para la firma, NO crear columnas `notaria`/`fecha_firma`: persistir `payload.notaria` en `lot_records.firma_lugar` y `payload.fecha_firma` en `lot_records.firma_fecha`, que son las columnas canónicas existentes para "dónde/cuándo podría firmar". NO incluir aún los REVOKE ni el bucket privado (van tras HG-2, T060). Verify: `pnpm verify:migrations`
   - **Antes de escribir**: `select column_name from information_schema.columns where table_schema='public' and table_name='lot_records';` para no duplicar columnas.
   - **Aplicación**: el usuario aplica con `cd packages/database && supabase db push` (el agente no puede). Tras aplicar: regenerar `packages/database/types/database.generated.ts`.
 
@@ -51,6 +51,8 @@
   - Test nuevo: llamar `_fetch_operational_rows` para una org SIN fila en `organization_payment_info` → no lanza `AttributeError`, `payment_info` = None.
 
 - [ ] **T007** [P] Crear test de contrato base del camino venta→escritura en `apps/api/tests/test_pipeline_venta_escritura_contract.py`: enviar payload de venta con los 3 campos nuevos → verificar que llegan a `approval_requests.payload` (no se descartan por Pydantic). Verify: `pnpm test:api`
+
+- [ ] **T008** Auditar todos los usos de `maybe_single().execute()` en `apps/api`: clasificar cada llamada como "fila obligatoria" o "fila opcional"; donde 0 filas sea válido, aplicar el helper defensivo (`_safe_data`/equivalente local ya existente) para evitar `AttributeError` por resultado `None`; añadir al menos un test de regresión fuera del puente operacional para un caso opcional. Verify: `pnpm test:api`
 
 **Checkpoint**: contratos regenerados, puente ya no revienta con org sin datos bancarios.
 
@@ -78,13 +80,13 @@
 
 ### Revisión jurídica (FR-007, FR-008)
 
-- [ ] **T015** [US1] Endpoint `POST /escritura-matrices/case/{caseId}/legal-review` en `apps/api/api/v1/endpoints/escritura_matrices.py`: body `{decision, comentario?}`, valida `is_org_admin`, escribe `revision_juridica.estado/aprobada_por/aprobada_at` (reusa `_insert_legal_review_decision`, `legal_variable_resolution.py:1788`), refresca snapshot. Contrato: [contracts/revision-juridica.md](./contracts/revision-juridica.md). Verify: `pnpm test:api`
+- [ ] **T015** [US1] Materializar `documento.abogado_redactor.*` como variables project-scoped antes de la revisión jurídica del caso. Implementar el mínimo backend necesario para upsert de `documento.abogado_redactor.nombre/rut/email` desde un default de organización o input explícito admin/abogado, con `state='approved'` o `resolved`, `source_type='legal_review'`/`manual`, auditoría en `legal_review_decisions`, y sin depender todavía de la pantalla completa de Configuración (T052). Verify: `pnpm test:api`
 
-- [ ] **T016** [US1] Ruta proxy web `apps/web/src/app/api/escritura-matrices/case/[caseId]/legal-review/route.ts` (inyecta `reviewed_by`, valida rol). Verify: `pnpm typecheck:web`
+- [ ] **T016** [US1] Endpoint `POST /escritura-matrices/case/{caseId}/legal-review` en `apps/api/api/v1/endpoints/escritura_matrices.py`: body `{decision, comentario?}`, valida `is_org_admin`, exige que `documento.abogado_redactor.nombre/rut` existan como variables project-scoped, escribe `revision_juridica.estado/aprobada_por/aprobada_at` (reusa `_insert_legal_review_decision`, `legal_variable_resolution.py:1788`), refresca snapshot. Contrato: [contracts/revision-juridica.md](./contracts/revision-juridica.md). Verify: `pnpm test:api`
 
-- [ ] **T017** [US1] UI en la mesa: paso visible "Esperando revisión jurídica" + botón "Aprobar revisión jurídica" (admin/abogado) + acción "Rechazar" con comentario. Archivos: `apps/web/src/components/documents/mesa/workflow-acciones.tsx` / `panel-datos.tsx`. Verify: `pnpm --filter web lint && pnpm build:web`
+- [ ] **T017** [US1] Ruta proxy web `apps/web/src/app/api/escritura-matrices/case/[caseId]/legal-review/route.ts` (inyecta `reviewed_by`, valida rol). Verify: `pnpm typecheck:web`
 
-- [ ] **T018** [US1] Materializar `documento.abogado_redactor.*` como default de organización (prerequisito del gate). Mínimo: permitir ingresarlo (reusa `PUT legal-variables/by-key` o el default del catálogo). Verify: `pnpm test:api`
+- [ ] **T018** [US1] UI en la mesa: paso visible "Esperando revisión jurídica" + botón "Aprobar revisión jurídica" (admin/abogado) + acción "Rechazar" con comentario. Si falta `documento.abogado_redactor.nombre/rut`, mostrar un formulario mínimo inline o enlace/acción a completar el dato antes de aprobar. Archivos: `apps/web/src/components/documents/mesa/workflow-acciones.tsx` / `panel-datos.tsx`. Verify: `pnpm --filter web lint && pnpm build:web`
 
 ### Entrega al admin (FR-009, FR-010)
 
@@ -217,7 +219,7 @@
 ## Dependencias entre fases
 
 - **Setup (T001-T003)** → antes de todo.
-- **Foundational (T004-T007)** → bloquea todas las US.
+- **Foundational (T004-T008)** → bloquea todas las US.
 - **US1 (T010-T021)** → MVP; T013/T014 dependen de T006. T012 depende de T002+T004+T010.
 - **US2 (T030-T034)** → independiente de US1 salvo T033 (gates) que se apoya en el snapshot de US1.
 - **US3 (T040-T045)** → T042 (prefill) depende de T002 (columnas) para región/comuna completas.

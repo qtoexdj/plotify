@@ -16,12 +16,12 @@ Formulario en Configuración que lee/escribe `organization_payment_info` (schema
 | Mandatario por defecto                | default de org (variable `mandato.*`)                    | comparecencia del mandatario |
 | Abogado redactor (nombre, RUT, email) | default de org (variable `documento.abogado_redactor.*`) | gate `legal_review_ready`    |
 
-**Importante**: estos datos son **opcionales para el pipeline** (el puente completa sin ellos, FR-001). La pantalla evita que el usuario tenga que tocar SQL, pero su ausencia no rompe nada.
+**Importante**: los datos bancarios son opcionales para el puente operacional (FR-001). El abogado redactor no bloquea que la venta pueble variables, pero sí es requerido para que `legal_review_ready` pase a ready; US1 provee un camino mínimo para completarlo y US4 lo convierte en configuración reusable.
 
 ## Endpoints
 
 - `GET/PUT /api/v1/organizations/{org}/escritura-config` (o rutas proxy web equivalentes) — inferir `org` del JWT (Principio V), no confiar en el frontend.
-- El abogado redactor y el mandatario se materializan como variables de proyecto con default de org (reusar `PUT legal-variables/by-key` o el mecanismo de default del catálogo).
+- El abogado redactor y el mandatario se materializan como variables de proyecto con default de org (reusar el upsert mínimo de US1, `PUT legal-variables/by-key` o el mecanismo de default del catálogo).
 
 ## Pantalla "Conectar Telegram" (FR-023)
 

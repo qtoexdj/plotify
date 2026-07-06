@@ -12,7 +12,7 @@ cliente_region: Optional[str] = None
 cliente_comuna: Optional[str] = None
 ```
 
-`ReservationPayload` ya tiene `notaria`/`fecha_firma`; `SalePayload` también. No cambian.
+`ReservationPayload` ya tiene `notaria`/`fecha_firma`; `SalePayload` también. No cambian. Esos campos son metadata de firma: `notaria` indica dónde podría firmar el cliente y `fecha_firma` cuándo podría hacerlo.
 
 **Tras el cambio**: `pnpm contracts:generate` (regenera `packages/contracts/openapi/plotify-chat.v1.json` y `apps/web/src/lib/services/plotify-chat.generated.ts`). El frontend consume el tipo generado (Principio IV), no el mirror.
 
@@ -50,12 +50,12 @@ cliente_comuna: Optional[str] = None
 
 ## Efecto aguas abajo
 
-- RPC copia los campos a `lot_records` (data-model §3).
+- RPC copia los campos a `lot_records` (data-model §3): `cliente_*` a sus columnas nuevas/existentes; `notaria` a `firma_lugar`; `fecha_firma` a `firma_fecha`.
 - Puente mapea `comprador.nacionalidad` desde `lot_records.cliente_nacionalidad` (`escritura_operational_bridge.py:240`, función `map_lot_record_variables`).
 - Decisión de la tarea: región/comuna se concatenan a `comprador.domicilio` para el render o quedan como metadatos (no son token de escritura hoy).
 
 ## Test de contrato (obligatorio, cubre el gap del FakeStore)
 
 - Enviar el payload con los 3 campos → verificar que llegan a `approval_requests.payload` (no se descartan).
-- Aprobar → verificar que `lot_records` tiene los 3 valores.
+- Aprobar → verificar que `lot_records` tiene los 3 valores nuevos y que `notaria`/`fecha_firma` quedaron persistidos en `firma_lugar`/`firma_fecha`.
 - Correr el puente → verificar fila `comprador.nacionalidad` en `variable_resolutions` con valor.
