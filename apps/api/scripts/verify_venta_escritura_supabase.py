@@ -65,6 +65,12 @@ def _first_row(data: Any) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _safe_data(result: Any) -> Any:
+    """maybe_single().execute() devuelve None (no un objeto con .data = None)
+    cuando hay 0 filas; sin este guard, result.data revienta con AttributeError."""
+    return getattr(result, "data", None) if result is not None else None
+
+
 def _fixture_uuid(*parts: str) -> str:
     return str(uuid5(NAMESPACE_URL, "plotify:sdd011:" + ":".join(parts)))
 
@@ -116,7 +122,7 @@ async def _upsert_lot_record(client: Any, payload: dict[str, Any]) -> dict[str, 
     existing_result = await _execute(
         client.table("lot_records").select("id").eq("lot_id", lot_id).maybe_single()
     )
-    existing = _first_row(existing_result.data)
+    existing = _first_row(_safe_data(existing_result))
     if existing:
         update_payload = {key: value for key, value in payload.items() if key != "id"}
         result = await _execute(
@@ -504,7 +510,7 @@ async def _verify_sale_hook(
         .eq("organization_id", organization_id)
         .maybe_single()
     )
-    case_row = _first_row(case_result.data)
+    case_row = _first_row(_safe_data(case_result))
     snapshot = case_row.get("variable_snapshot") if case_row else {}
     missing_snapshot_keys = [
         key for key in sale_keys if not isinstance(snapshot, dict) or key not in snapshot

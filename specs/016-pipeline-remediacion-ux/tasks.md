@@ -52,7 +52,7 @@
 
 - [x] **T007** [P] Crear test de contrato base del camino venta→escritura en `apps/api/tests/test_pipeline_venta_escritura_contract.py`: enviar payload de venta con los 3 campos nuevos → verificar que llegan a `approval_requests.payload` (no se descartan por Pydantic). Verify: `pnpm test:api`
 
-- [ ] **T008** Auditar todos los usos de `maybe_single().execute()` en `apps/api`: clasificar cada llamada como "fila obligatoria" o "fila opcional"; donde 0 filas sea válido, aplicar el helper defensivo (`_safe_data`/equivalente local ya existente) para evitar `AttributeError` por resultado `None`; añadir al menos un test de regresión fuera del puente operacional para un caso opcional. Verify: `pnpm test:api`
+- [x] **T008** Auditar todos los usos de `maybe_single().execute()` en `apps/api`: clasificar cada llamada como "fila obligatoria" o "fila opcional"; donde 0 filas sea válido, aplicar el helper defensivo (`_safe_data`/equivalente local ya existente) para evitar `AttributeError` por resultado `None`; añadir al menos un test de regresión fuera del puente operacional para un caso opcional. Verify: `pnpm test:api`
 
 **Checkpoint**: contratos regenerados, puente ya no revienta con org sin datos bancarios.
 

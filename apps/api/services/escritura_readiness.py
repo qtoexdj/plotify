@@ -114,6 +114,13 @@ def _first_row(data: Any) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _safe_data(result: Any) -> Any:
+    """maybe_single().execute() devuelve None (no un objeto con .data = None)
+    cuando hay 0 filas; sin este guard, result.data revienta con AttributeError
+    en vez de dejar propagar el error de dominio esperado."""
+    return getattr(result, "data", None) if result is not None else None
+
+
 async def _assert_lot_scope(
     *,
     client: Any,
@@ -132,7 +139,7 @@ async def _assert_lot_scope(
             .execute()
         )
     )
-    if not result.data:
+    if not _safe_data(result):
         raise EscrituraReadinessScopeError(
             "lot_id does not belong to the requested organization/project."
         )
@@ -813,7 +820,7 @@ async def fetch_readiness_inputs(
             title_analysis = {"status": "llm_disabled"}
 
     variables = variables_result.data if isinstance(variables_result.data, list) else []
-    lot_legal_data = _first_row(lot_legal_result.data)
+    lot_legal_data = _first_row(_safe_data(lot_legal_result))
     if lot_legal_data:
         lot_legal_data = dict(lot_legal_data)
         lot_legal_data["_active_sii_certificate_ids"] = active_sii_certificate_ids

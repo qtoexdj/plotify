@@ -380,7 +380,7 @@ async def renew_delivery_link(
             .execute()
         )
     )
-    row = result.data if isinstance(result.data, dict) else None
+    row = result.data if result is not None and isinstance(result.data, dict) else None
     if not row:
         return None
     new_expires = (_now() + timedelta(days=LINK_TTL_DAYS)).isoformat()

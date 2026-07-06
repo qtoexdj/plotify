@@ -58,6 +58,12 @@ def _first_row(data: Any) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _safe_data(result: Any) -> Any:
+    """maybe_single().execute() devuelve None (no un objeto con .data = None)
+    cuando hay 0 filas; sin este guard, result.data revienta con AttributeError."""
+    return getattr(result, "data", None) if result is not None else None
+
+
 def _rows(data: Any) -> list[dict[str, Any]]:
     return data if isinstance(data, list) else []
 
@@ -75,7 +81,7 @@ async def _fetch_template(
             .execute()
         )
     )
-    row = _first_row(result.data)
+    row = _first_row(_safe_data(result))
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -363,7 +369,7 @@ async def upsert_escritura_template_clause(
             .execute()
         )
     )
-    existing = _first_row(existing_result.data)
+    existing = _first_row(_safe_data(existing_result))
     if existing:
         await asyncio.to_thread(
             lambda: (
