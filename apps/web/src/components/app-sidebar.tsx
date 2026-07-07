@@ -44,12 +44,14 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   }
   workspaceName?: string
   leadCount?: number
+  userRole?: 'admin' | 'vendor'
 }
 
 export function AppSidebar({
   user,
   workspaceName = 'Plotify',
   leadCount = 0,
+  userRole = 'vendor',
   ...props
 }: AppSidebarProps) {
   const sidebarUser = {
@@ -57,6 +59,16 @@ export function AppSidebar({
     email: user?.email ?? '',
     avatar: user?.avatar ?? '',
   }
+
+  const filteredNavItems = navItems.filter((item) => {
+    // Si el usuario es vendor (no-admin), ocultamos "Escrituras" y "Vendedores"
+    if (userRole !== 'admin') {
+      if (item.url === '/documentos' || item.url === '/vendors') {
+        return false
+      }
+    }
+    return true
+  })
 
   return (
     <Sidebar collapsible="icon" variant="inset" {...props}>
@@ -84,7 +96,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain
-          items={navItems.map((item) => {
+          items={filteredNavItems.map((item) => {
             if (item.title === 'Leads') {
               return { ...item, icon: undefined, hugeIcon: item.icon, badge: leadCount }
             }

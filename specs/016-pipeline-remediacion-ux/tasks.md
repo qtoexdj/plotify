@@ -156,7 +156,7 @@
 
 - [x] **T053** [US4] Pantalla "Conectar Telegram" en Configuración (deep link al bot + vinculación de `profiles.telegram_chat_id`; para admin, registrar bot de org si falta). Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T054** [US4] Scoping del sidebar por rol (`apps/web/src/components/app-sidebar.tsx:31`, `navItems`): ocultar Mesa/Plantillas/Vendedores al rol `user` + guard server-side en las rutas. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T054** [US4] Scoping del sidebar por rol (`apps/web/src/components/app-sidebar.tsx:31`, `navItems`): ocultar Mesa/Plantillas/Vendedores al rol `user` + guard server-side en las rutas. Verify: `pnpm --filter web lint && pnpm build:web`
 
 - [ ] **T055** [US4] Aviso pre-venta de lote no verificado en el panel del lote (`LotInfoView.tsx`): "Este lote aún no tiene cabida/deslindes verificados; la escritura quedará en espera" (FR-025). Verify: `pnpm --filter web lint && pnpm build:web`
 

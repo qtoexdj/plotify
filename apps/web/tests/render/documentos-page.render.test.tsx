@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 /**
- * SDD 011 T022 — render de Documentos por proyecto: monta la página real con
- * proyectos mockeados y valida los accesos humanos a matriz y variables.
+ * SDD 011 T022 — render de Documentos por proyecto: monta el componente
+ * cliente real con proyectos mockeados y valida los accesos humanos.
+ *
+ * Nota (T056): DocumentosPage fue convertida a RSC. La lógica de cliente
+ * vive en DocumentosClient; este test renderiza el componente cliente directamente.
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 
-import DocumentosPage from '@/app/(dashboard)/documentos/page'
+import { DocumentosClient } from '@/app/(dashboard)/documentos/documentos-client'
 import type { ProjectWithMetrics } from '@/types/database.types'
 
 function project(overrides: Partial<ProjectWithMetrics> = {}): ProjectWithMetrics {
@@ -55,7 +58,7 @@ describe('DocumentosPage (render)', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    render(<DocumentosPage />)
+    render(<DocumentosClient />)
 
     expect(screen.getByText('Cargando proyectos...')).toBeTruthy()
 
@@ -91,7 +94,7 @@ describe('DocumentosPage (render)', () => {
       )
     )
 
-    render(<DocumentosPage />)
+    render(<DocumentosClient />)
 
     await waitFor(() => {
       expect(screen.getByText('No hay proyectos')).toBeTruthy()
