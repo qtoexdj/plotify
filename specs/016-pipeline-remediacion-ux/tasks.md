@@ -184,11 +184,11 @@
 
 ## Phase 8: User Story 6 — Seguridad (gate de piloto) — requiere HG-2
 
-- [ ] **T060** [US6] Ampliar la migración (o una nueva `20260706000200_seguridad.sql`) con los `REVOKE EXECUTE` de `get_decrypted_bot_token`/`decrypt_credential`/`get_mcp_credentials` a `anon`/`authenticated` (data-model §4). **Verificar firmas exactas** antes. Verify: `pnpm verify:migrations` (aplicar solo tras **HG-2**)
+- [x] **T060** [US6] Ampliar la migración (o una nueva `20260706000200_seguridad.sql`) con los `REVOKE EXECUTE` de `get_decrypted_bot_token`/`decrypt_credential`/`get_mcp_credentials` a `anon`/`authenticated` (data-model §4). **Verificar firmas exactas** antes. Verify: `pnpm verify:migrations` (aplicar solo tras **HG-2**)
 
-- [ ] **T061** [US6] Pasar `project-files` a privado (`UPDATE storage.buckets SET public=false`) y migrar todo acceso a URLs firmadas en backend/web (data-model §5). Verificar que ver/descargar documentos legales sigue funcionando (US6-AS3). Verify: `pnpm build:web` + prueba manual de descarga (aplicar tras **HG-2**)
+- [x] **T061** [US6] Pasar `project-files` a privado (`UPDATE storage.buckets SET public=false`) y migrar todo acceso a URLs firmadas en backend/web (data-model §5). Verificar que ver/descargar documentos legales sigue funcionando (US6-AS3). Verify: `pnpm build:web` + prueba manual de descarga (aplicar tras **HG-2**)
 
-- [ ] **T062** [P] [US6] Higiene menor (P3.3, opcional): habilitar RLS en `checkpoint_*`/`dead_letter_queue`, fijar `search_path` en las 3 funciones. Verify: `pnpm verify:migrations`
+- [x] **T062** [P] [US6] Higiene menor (P3.3, opcional): habilitar RLS en `checkpoint_*`/`dead_letter_queue`, fijar `search_path` en las 3 funciones. Verify: `pnpm verify:migrations`
 
 **Checkpoint US6**: SC-007. **HG-2 obligatorio antes de aplicar T060/T061.**
 

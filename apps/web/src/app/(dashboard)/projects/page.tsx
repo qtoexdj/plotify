@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { PlusSignIcon, Folder02Icon } from '@hugeicons/core-free-icons'
 import type { ProjectWithMetrics } from '@/types/database.types'
-import { createClient } from '@/lib/supabase/client'
 import { SkeletonCard } from '@/components/dashboard/skeleton-card'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { ProjectCard } from '@/components/projects/ProjectCard'
@@ -35,10 +34,8 @@ export default function ProjectsPage() {
 
   const getFullUrl = useCallback((path: string | null | undefined) => {
     if (!path || path === '[]') return ''
-    const supabase = createClient()
     const cleanPath = path.replace(/^project-files\//, '')
-    const { data } = supabase.storage.from('project-files').getPublicUrl(cleanPath)
-    return data.publicUrl
+    return `/api/files/project-files/${cleanPath}`
   }, [])
 
   const loadProjects = useCallback(async () => {

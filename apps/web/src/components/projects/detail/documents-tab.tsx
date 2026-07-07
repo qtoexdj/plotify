@@ -162,10 +162,8 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
 
   const getFullUrl = (path: string | null | undefined) => {
     if (!path || path === '[]') return ''
-    // Limpiamos el path por si ya trae el nombre del bucket (pasa a veces en subidas directas)
     const cleanPath = path.replace(/^project-files\//, '')
-    const { data } = supabase.storage.from('project-files').getPublicUrl(cleanPath)
-    return data.publicUrl
+    return `/api/files/project-files/${cleanPath}`
   }
 
   const handleShare = async (url: string, title: string) => {
