@@ -134,7 +134,7 @@
 
 - [x] **T043** [US3] Aprobación delta (FR-017): cuando `sale_mode='reserved'` y RUT coincide con la reserva, la notificación al admin muestra el delta (valor final) en vez del formulario completo. Auto-aprobación queda **OFF por default** (HG-1). Archivos: notificación de aprobación + `apps/api/api/v1/endpoints/approvals.py:249`. Verify: `pnpm test:api`
 
-- [ ] **T044** [US3] Máquina de estados de `lots.estado` server-side (data-model §2, research R9): validar transiciones en la capa de servicio de reserva/venta/liberación. Verify: `pnpm test:api`
+- [x] **T044** [US3] Máquina de estados de `lots.estado` server-side (data-model §2, research R9): validar transiciones en la capa de servicio de reserva/venta/liberación. Verify: `pnpm test:api`
 
 - [ ] **T045** [US3] Bulk-update de lotes: `handleBulkUpdate` (`apps/web/src/components/projects/geometry-viewer/index.tsx:317`) valida `response.ok` y muestra error. **Default (research R9): eliminar la UI de estado masivo** del `BulkActionsPanel` (acción muerta); si el usuario la quiere, agregar `estado` (enum) a `lotUpdateSchema` con guard. Verify: `pnpm --filter web lint && pnpm build:web`
 

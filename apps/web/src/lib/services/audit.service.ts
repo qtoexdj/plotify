@@ -8,6 +8,7 @@ export const AUDIT_EVENT_LABELS: Record<string, string> = {
   'sale.requested': 'Venta Solicitada',
   'sale.approved': 'Venta Aprobada',
   'sale.rejected': 'Venta Rechazada',
+  'sale.released': 'Venta Liberada',
   'document.generated': 'Documento Generado',
   'document.regenerated': 'Documento Regenerado',
   'document.sent': 'Documento Enviado',
@@ -32,6 +33,7 @@ export type AuditAction =
   | 'sale.requested'
   | 'sale.approved'
   | 'sale.rejected'
+  | 'sale.released'
   | 'document.generated'
   | 'document.regenerated'
   | 'document.sent'
