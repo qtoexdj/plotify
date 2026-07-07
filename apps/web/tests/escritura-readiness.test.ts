@@ -107,7 +107,7 @@ describe('T052 - Escritura readiness frontend contract', () => {
   it('keeps readiness panel and generation entry points wired to block unsafe generation', () => {
     const panelSource = readSource('../src/components/projects/legal/escritura-readiness-panel.tsx')
     const documentsTabSource = readSource('../src/components/projects/detail/documents-tab.tsx')
-    const wizardSource = readSource('../src/components/dashboard/documents/generation-wizard.tsx')
+    // Nota (T070): generation-wizard.tsx fue eliminado como código muerto.
 
     expect(panelSource).toContain('LEGAL_REVIEW_WARNING')
     expect(panelSource).toContain('warningAcknowledged')
@@ -117,9 +117,6 @@ describe('T052 - Escritura readiness frontend contract', () => {
     expect(panelSource).toContain('Crear expediente de escritura')
     expect(documentsTabSource).toContain('EscrituraReadinessPanel')
     expect(documentsTabSource).toContain("estado === 'vendido'")
-    expect(wizardSource).toContain('escrituraCaseReady')
-    expect(wizardSource).toContain('Crea un snapshot de escritura listo')
-    expect(wizardSource).toContain("documentType === 'escritura' && !escrituraCaseReady")
   })
 })
 

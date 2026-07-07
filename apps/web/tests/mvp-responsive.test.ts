@@ -5,7 +5,6 @@ import path from 'path'
 // ─── Import Actual Web Components to Ensure Compilation & Integration ───────
 import { LotReservationForm } from '@/components/projects/LotReservationForm'
 import { PendingApprovalsPanel } from '@/components/dashboard/approvals/pending-approvals-panel'
-import { GenerationWizard } from '@/components/dashboard/documents/generation-wizard'
 
 /**
  * NOTA DE CALIDAD (QA):
@@ -15,6 +14,8 @@ import { GenerationWizard } from '@/components/dashboard/documents/generation-wi
  *
  * Estas aserciones estructurales de clases responsivas y scroll se complementan con un protocolo
  * formal de QA visual y funcional manual detallado en walkthrough.md y quickstart.md.
+ *
+ * NOTA (T070): GenerationWizard fue eliminado como código muerto. Su describe T084 fue removido.
  */
 
 describe('T082 - Responsive Reservation Form Layout Verification', () => {
@@ -37,10 +38,7 @@ describe('T082 - Responsive Reservation Form Layout Verification', () => {
   })
 
   it('guarantees the responsive grid layout in the shared form sections (T041 decomposition)', () => {
-    const sectionsDir = path.resolve(
-      __dirname,
-      '../src/components/projects/lot-reservation-form'
-    )
+    const sectionsDir = path.resolve(__dirname, '../src/components/projects/lot-reservation-form')
     const sourceCode = fs
       .readdirSync(sectionsDir)
       .map((file) => fs.readFileSync(path.join(sectionsDir, file), 'utf8'))
@@ -74,37 +72,6 @@ describe('T083 - Responsive Admin Approval Layout Verification', () => {
 
     // Action buttons must stretch to fill the container equally on mobile (flex-1)
     expect(sourceCode).toMatch(/flex-1/)
-  })
-})
-
-describe('T084 - Responsive Document Generation Wizard Verification', () => {
-  it('verifies that GenerationWizard compiles, imports, and is exported as a functional component', () => {
-    expect(GenerationWizard).toBeTypeOf('function')
-  })
-
-  it('guarantees responsive grids, scrollareas, and column span scaling for mobile stacking in the source file', () => {
-    const filePath = path.resolve(
-      __dirname,
-      '../src/components/dashboard/documents/generation-wizard.tsx'
-    )
-    const sourceCode = fs.readFileSync(filePath, 'utf8')
-
-    // Step 1: Template selection grid must wrap from 1 column on mobile to 2 on tablet and 3 on desktop
-    expect(sourceCode).toMatch(/grid-cols-1/)
-    expect(sourceCode).toMatch(/md:grid-cols-2/)
-    expect(sourceCode).toMatch(/lg:grid-cols-3/)
-
-    // Step 2: Scroll area must exist to constrain height on mobile screen sizes
-    expect(sourceCode).toMatch(/h-\[60vh\]/)
-    expect(sourceCode).toMatch(/pr-4/)
-
-    // Step 2: Layout inputs grid must stack vertically on mobile (grid-cols-1) and double column on screens sm+
-    expect(sourceCode).toMatch(/grid-cols-1/)
-    expect(sourceCode).toMatch(/sm:grid-cols-2/)
-
-    // Step 2: Children inputs spanning two columns must stack on mobile and span 2 columns on sm+
-    expect(sourceCode).toMatch(/col-span-1/)
-    expect(sourceCode).toMatch(/sm:col-span-2/)
   })
 })
 

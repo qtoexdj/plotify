@@ -196,7 +196,7 @@
 
 ## Phase 9: User Story 7 — Salud de código + limpieza pre-piloto (Priority: P3)
 
-- [ ] **T070** [P] [US7] Borrar código muerto: `apps/web/src/components/dashboard/documents/generation-wizard.tsx` y `apps/web/src/actions/reserve-lot.action.ts` (0 refs verificado). Verify: `pnpm build:web && pnpm typecheck:web`
+- [x] **T070** [P] [US7] Borrar código muerto: `apps/web/src/components/dashboard/documents/generation-wizard.tsx` y `apps/web/src/actions/reserve-lot.action.ts` (0 refs verificado). Verify: `pnpm build:web && pnpm typecheck:web`
 
 - [ ] **T071** [US7] Extraer helper común `buildApprovalRequest(mode, ...)` de `requestReservationApproval`/`requestSaleApproval` (`apps/web/src/actions/request-approval.action.ts`, ~110 líneas duplicadas). Comportamiento idéntico. Verify: `pnpm --filter web test && pnpm build:web`
 
