@@ -128,7 +128,7 @@
 
 - [x] **T040** [US3] Separar schemas: `reservationSchema` (liviano) y `saleSchema` (estricto) en `apps/web/src/lib/validations/lot-reservation.schema.ts`. Contrato: research R7. Verify: `pnpm typecheck:web`
 
-- [ ] **T041** [US3] Descomponer `LotReservationForm.tsx` (478 líneas) en secciones compartidas (`ClienteIdentificacion`, `ClienteDomicilio`, `ClienteContacto`) + `FirmaYMonto` solo venta; reserva usa `reservationSchema`, venta `saleSchema`. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T041** [US3] Descomponer `LotReservationForm.tsx` (478 líneas) en secciones compartidas (`ClienteIdentificacion`, `ClienteDomicilio`, `ClienteContacto`) + `FirmaYMonto` solo venta; reserva usa `reservationSchema`, venta `saleSchema`. Verify: `pnpm --filter web lint && pnpm build:web`
 
 - [ ] **T042** [US3] Prefill al vender lote `reservado`: cargar `initialClientData` desde `lot_records` (fallback: última reserva aprobada) en `apps/web/src/components/projects/viewer/LotInfoView.tsx:262` (abre "Solicitar Venta"). Campos editables, aviso "Datos cargados desde la reserva", foco en primer vacío. Verify: `pnpm --filter web lint && pnpm build:web`
 

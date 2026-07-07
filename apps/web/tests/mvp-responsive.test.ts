@@ -30,15 +30,25 @@ describe('T082 - Responsive Reservation Form Layout Verification', () => {
     expect(sourceCode).toMatch(/max-h-\[80vh\]/)
     expect(sourceCode).toMatch(/overflow-y-auto/)
 
-    // Layout grid must transition from 1 column on mobile to 2 columns on desktop
-    // Buscamos grid-cols-1 y md:grid-cols-2 independientemente o en orden flexible
-    expect(sourceCode).toMatch(/grid-cols-1/)
-    expect(sourceCode).toMatch(/md:grid-cols-2/)
-
     // Submit and cancel buttons container must stack vertically on mobile and stretch full width, and transition to horizontal row on desktop
     expect(sourceCode).toMatch(/flex-col/)
     expect(sourceCode).toMatch(/sm:flex-row/)
     expect(sourceCode).toMatch(/w-full/)
+  })
+
+  it('guarantees the responsive grid layout in the shared form sections (T041 decomposition)', () => {
+    const sectionsDir = path.resolve(
+      __dirname,
+      '../src/components/projects/lot-reservation-form'
+    )
+    const sourceCode = fs
+      .readdirSync(sectionsDir)
+      .map((file) => fs.readFileSync(path.join(sectionsDir, file), 'utf8'))
+      .join('\n')
+
+    // Layout grid must transition from 1 column on mobile to 2 columns on desktop
+    expect(sourceCode).toMatch(/grid-cols-1/)
+    expect(sourceCode).toMatch(/md:grid-cols-2/)
   })
 })
 

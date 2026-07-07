@@ -126,7 +126,7 @@ export interface ApprovalRequestPayload {
   cliente_nombre: string
   cliente_run: string
   valor_reserva: number
-  notaria: string
+  notaria?: string
   fecha_firma?: string
   // Campos extra para popular lot_records al aprobar
   cliente_direccion?: string

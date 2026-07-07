@@ -3,7 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import {
   reservationFormSchema,
+  saleFormSchema,
   type ReservationFormInput,
+  type SaleFormInput,
 } from '@/lib/validations/approval-request.schema'
 import { createApprovalRequest } from '@/lib/services/approvals.service'
 import { checkVendorAssignment } from './vendor-actions.action'
@@ -141,13 +143,12 @@ export async function requestReservationApproval(
     return { success: false, error: 'Proyecto no encontrado' }
   }
 
-  // 5. Armar payload con todos los datos del cliente
+  // 5. Armar payload con todos los datos del cliente (reserva: compromiso
+  // comercial, sin notaría ni fecha de firma — FR-015)
   const payload: ApprovalRequestPayload = {
     cliente_nombre: validData.cliente_nombre,
     cliente_run: validData.cliente_run,
     valor_reserva: validData.valor_reserva,
-    notaria: validData.notaria,
-    fecha_firma: validData.fecha,
     cliente_direccion: validData.cliente_direccion,
     cliente_region: validData.cliente_region,
     cliente_comuna: validData.cliente_comuna,
@@ -208,12 +209,12 @@ export async function requestReservationApproval(
 export async function requestSaleApproval(
   projectId: string,
   lotId: string,
-  data: ReservationFormInput
+  data: SaleFormInput
 ): Promise<RequestApprovalResult> {
   const supabase = await createClient()
 
   // 1. Validar input
-  const validation = reservationFormSchema.safeParse(data)
+  const validation = saleFormSchema.safeParse(data)
   if (!validation.success) {
     return { success: false, error: validation.error.issues[0].message }
   }
