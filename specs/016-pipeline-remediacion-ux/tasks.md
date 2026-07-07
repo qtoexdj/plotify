@@ -208,7 +208,7 @@
 
 ## Phase 10: Polish y cierre
 
-- [ ] **T080** Actualizar `plotify_memori/` y memoria del proyecto con el estado final del pipeline (qué quedó resuelto). Verify: N/A
+- [x] **T080** Actualizar `plotify_memori/` y memoria del proyecto con el estado final del pipeline (qué quedó resuelto). Verify: N/A
 
 - [ ] **T081** Correr todos los gates: `pnpm test:api && pnpm --filter web test && pnpm typecheck:web && pnpm build:web && pnpm verify:migrations`. Verify: todos verdes.
 

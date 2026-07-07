@@ -79,6 +79,7 @@ Generación de documentos legales (escrituras, deslindes, servidumbres).
 - [[SDD 008 Creador de Matriz - Handoff]]
 - [[SDD 010 Mesa de Escritura - Handoff]]
 - [[SDD 011 Venta-Escritura - Handoff]]
+- [[SDD 016 Pipeline Remediacion UX - Handoff]]
 - [[Texto de Deslinde]]
 - [[Servidumbres Legal]]
 
@@ -140,6 +141,7 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[SDD 009 Titulo Dominio Vigente]]
 - [[SDD 010 Mesa de Escritura - Handoff]]
 - [[SDD 011 Venta-Escritura - Handoff]]
+- [[SDD 016 Pipeline Remediacion UX - Handoff]]
 
 ---
 
@@ -171,3 +173,4 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[Implementacion SDD 001 Fase 2 - Foundation MVP]] - Foundation de `001-stabilize-plotify-mvp` cerrada: migracion de templates/documentos, versionado, contratos OpenAPI, fixtures multi-tenant, tests MVP y quickstart de piloto 20 lotes.
 - [[SDD 010 Mesa de Escritura - Handoff]] - Mesa legal implementada tecnicamente: documento continuo, evidencia, edicion in-place, plantillas sin JSON y retiro de la capa vieja; queda pendiente el gate humano de usabilidad.
 - [[SDD 011 Venta-Escritura - Handoff]] - Venta validada crea borrador automatico desde matriz del proyecto aprobada y lo entrega al vendedor por Telegram/web; queda pendiente el gate humano T026.
+- [[SDD 016 Pipeline Remediacion UX - Handoff]] - Cierra el pipeline venta→escritura (puente defensivo, revision juridica, entrega admin+vendedor), agrega checklist de preparacion, configuracion de organizacion/Telegram, verificacion masiva de lotes y la migracion de seguridad de HG-2 (revoke + bucket privado + RLS); queda pendiente el gate humano T082/HG-3.
