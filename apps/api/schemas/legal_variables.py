@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, field_validator
 
 from services import legal_variable_catalog as catalog
 
@@ -165,7 +165,11 @@ class VariableResolutionResponse(LegalVariableResponseModel):
     variable_key: str
     variable_group: str
     value_text: str | None = None
-    value_json: dict[str, Any] | list[Any] | None = None
+    # dict/list cubre la mayoría de los casos (deslindes, boundaries_official),
+    # pero lote.superficie_m2/servidumbre.superficie_m2 llegan como float
+    # crudo desde el puente operacional — value_json es una columna JSONB
+    # genérica, no solo objetos/arrays. JsonValue acepta cualquier JSON válido.
+    value_json: JsonValue | None = None
     state: str
     source_type: str
     source_ref: dict[str, Any] = Field(default_factory=dict)
@@ -208,7 +212,11 @@ class VariableInventoryResponse(LegalVariableResponseModel):
 class VariableUpdateRequest(LegalVariableBaseModel):
     action: str
     value_text: str | None = None
-    value_json: dict[str, Any] | list[Any] | None = None
+    # dict/list cubre la mayoría de los casos (deslindes, boundaries_official),
+    # pero lote.superficie_m2/servidumbre.superficie_m2 llegan como float
+    # crudo desde el puente operacional — value_json es una columna JSONB
+    # genérica, no solo objetos/arrays. JsonValue acepta cualquier JSON válido.
+    value_json: JsonValue | None = None
     state: str | None = None
     correction_reason: str | None = None
     reviewed_by: str | None = None
@@ -244,7 +252,11 @@ class VariableUpsertRequest(LegalVariableBaseModel):
 
     variable_key: str
     value_text: str | None = None
-    value_json: dict[str, Any] | list[Any] | None = None
+    # dict/list cubre la mayoría de los casos (deslindes, boundaries_official),
+    # pero lote.superficie_m2/servidumbre.superficie_m2 llegan como float
+    # crudo desde el puente operacional — value_json es una columna JSONB
+    # genérica, no solo objetos/arrays. JsonValue acepta cualquier JSON válido.
+    value_json: JsonValue | None = None
     state: str = "resolved"
     correction_reason: str | None = None
     reviewed_by: str | None = None
