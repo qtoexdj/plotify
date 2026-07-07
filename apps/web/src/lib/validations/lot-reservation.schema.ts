@@ -23,29 +23,69 @@ export function formatRut(rut: string): string {
   return `${body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${dv}`
 }
 
-export const lotReservationSchema = z.object({
+const rutSchema = z
+  .string()
+  .min(8, 'RUT inválido')
+  .transform((val) => val.replace(/\./g, '').replace(/\s/g, ''))
+  .refine((val) => /^[0-9]+-[0-9kK]{1}$/.test(val), {
+    message: 'Formato inválido. Use 12345678-9',
+  })
+  .refine(validateRut, {
+    message: 'RUT inválido (dígito verificador incorrecto)',
+  })
+
+const optionalText = z.string().optional().or(z.literal(''))
+
+const clientIdentificationFields = {
   cliente_nombre: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
-  cliente_run: z
-    .string()
-    .min(8, 'RUT inválido')
-    .transform((val) => val.replace(/\./g, '').replace(/\s/g, '')) // Remove dots/spaces before validation
-    .refine((val) => /^[0-9]+-[0-9kK]{1}$/.test(val), {
-      message: 'Formato inválido. Use 12345678-9',
-    })
-    .refine(validateRut, {
-      message: 'RUT inválido (dígito verificador incorrecto)',
-    }),
+  cliente_run: rutSchema,
+}
+
+const clientContactFields = {
+  cliente_email: z.string().email('Email inválido'),
+  cliente_telefono: z.string().min(8, 'Teléfono inválido'),
+}
+
+const strictLegalFields = {
   cliente_direccion: z.string().min(5, 'La dirección es obligatoria'),
   cliente_region: z.string().min(1, 'La región es obligatoria'),
   cliente_comuna: z.string().min(1, 'La comuna es obligatoria'),
   cliente_estado_civil: z.string().min(1, 'El estado civil es obligatorio'),
   cliente_nacionalidad: z.string().min(1, 'La nacionalidad es obligatoria'),
   cliente_ocupacion: z.string().min(1, 'La ocupación es obligatoria'),
-  cliente_email: z.string().email('Email inválido'),
-  cliente_telefono: z.string().min(8, 'Teléfono inválido'),
-  fecha: z.string().min(1, 'La fecha es obligatoria'),
-  notaria: z.string().min(3, 'La notaría es obligatoria'),
+}
+
+const optionalLegalFields = {
+  cliente_direccion: optionalText,
+  cliente_region: optionalText,
+  cliente_comuna: optionalText,
+  cliente_estado_civil: optionalText,
+  cliente_nacionalidad: optionalText,
+  cliente_ocupacion: optionalText,
+}
+
+const valueField = {
   valor_reserva: z.coerce.number().min(0, 'El valor debe ser positivo'),
+}
+
+export const reservationSchema = z.object({
+  ...clientIdentificationFields,
+  ...clientContactFields,
+  ...optionalLegalFields,
+  ...valueField,
 })
 
+export const saleSchema = z.object({
+  ...clientIdentificationFields,
+  ...clientContactFields,
+  ...strictLegalFields,
+  fecha: z.string().min(1, 'La fecha es obligatoria'),
+  notaria: z.string().min(3, 'La notaría es obligatoria'),
+  ...valueField,
+})
+
+export const lotReservationSchema = saleSchema
+
+export type ReservationInput = z.infer<typeof reservationSchema>
+export type SaleInput = z.infer<typeof saleSchema>
 export type LotReservationInput = z.infer<typeof lotReservationSchema>

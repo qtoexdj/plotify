@@ -126,7 +126,7 @@
 
 **Independent Test**: quickstart US3.
 
-- [ ] **T040** [US3] Separar schemas: `reservationSchema` (liviano) y `saleSchema` (estricto) en `apps/web/src/lib/validations/lot-reservation.schema.ts`. Contrato: research R7. Verify: `pnpm typecheck:web`
+- [x] **T040** [US3] Separar schemas: `reservationSchema` (liviano) y `saleSchema` (estricto) en `apps/web/src/lib/validations/lot-reservation.schema.ts`. Contrato: research R7. Verify: `pnpm typecheck:web`
 
 - [ ] **T041** [US3] Descomponer `LotReservationForm.tsx` (478 líneas) en secciones compartidas (`ClienteIdentificacion`, `ClienteDomicilio`, `ClienteContacto`) + `FirmaYMonto` solo venta; reserva usa `reservationSchema`, venta `saleSchema`. Verify: `pnpm --filter web lint && pnpm build:web`
 
