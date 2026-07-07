@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { File02Icon, PencilEdit02Icon, RulerIcon, Settings02Icon } from '@hugeicons/core-free-icons'
+import {
+  AlertCircleIcon,
+  File02Icon,
+  PencilEdit02Icon,
+  RulerIcon,
+  Settings02Icon,
+} from '@hugeicons/core-free-icons'
 import { getBoundariesWithNeighbors, type BoundaryWithNeighbor } from '@/lib/geometry/utils'
 import { calculateLegalMetrics } from '@/lib/geometry/utm'
 import type { GeoJSONGeometry } from '@/types/database.types'
@@ -12,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 import { StatusBadge } from '@/components/ui/status-badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ESTADO_CONFIG, estadoToStatusVariant } from '@/lib/models/lot.model'
 import { StageStepper } from '../StageStepper'
 import type { ProcessStage } from '@/types/database.types'
@@ -44,7 +51,19 @@ export function LotInfoView({
   isAdmin = false,
 }: LotInfoViewProps) {
   const [activeTab, setActiveTab] = useState('general')
+  const [isLoadingLegal, setIsLoadingLegal] = useState(false)
   const router = useRouter()
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val)
+    if (val === 'legal') {
+      setIsLoadingLegal(true)
+      const timer = setTimeout(() => {
+        setIsLoadingLegal(false)
+      }, 400)
+      return () => clearTimeout(timer)
+    }
+  }
 
   // Calculate Boundaries WITH neighbors
   const boundariesWithNeighbors = useMemo<BoundaryWithNeighbor[]>(() => {
@@ -142,8 +161,21 @@ export function LotInfoView({
         Editar información
       </Button>
 
+      {/* Aviso de lote no verificado */}
+      {(!lotDetails.verified_status || lotDetails.verified_status === 'draft') && (
+        <div className="rounded-xl border border-warning/30 bg-warning/5 p-3.5 text-warning flex items-start gap-2.5 shadow-2xs">
+          <HugeiconsIcon icon={AlertCircleIcon} className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-xs font-semibold leading-none">Lote no verificado</p>
+            <p className="text-[10px] leading-relaxed opacity-90">
+              Este lote aún no tiene cabida/deslindes verificados; la escritura quedará en espera.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ═══ TABS ═══ */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="w-full h-auto p-1 bg-muted/50 rounded-lg">
           <TabsTrigger
             value="general"
@@ -314,24 +346,56 @@ export function LotInfoView({
         {/* ─── Tab: Legal (solo administradores) ─── */}
         {isAdmin && (
           <TabsContent value="legal" className="space-y-3 mt-3">
-            {/* Verification Legal Panel (first) */}
-            {geometry && (
-              <LotVerificationPanel
-                projectId={projectId}
-                lotDetails={lotDetails}
-                legalMetrics={legalMetrics}
-                calculatedBoundaries={boundariesWithNeighbors}
-                onLotUpdated={onLotUpdated}
-              />
-            )}
-
-            {/* Empty state for legal tab */}
-            {!geometry && (
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <HugeiconsIcon icon={RulerIcon} className="w-8 h-8 opacity-20 mb-2" />
-                <p className="text-sm">No hay datos legales disponibles</p>
-                <p className="text-xs opacity-60 mt-1">Asigna una geometría para ver métricas</p>
+            {isLoadingLegal ? (
+              <div className="space-y-4">
+                {/* Simulated Status header */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/3 bg-muted/70" />
+                  <Skeleton className="h-9 w-full bg-muted/70" />
+                </div>
+                {/* Simulated Metrics Card */}
+                <div className="rounded-xl border border-border/50 p-4 space-y-3">
+                  <Skeleton className="h-4 w-1/4 bg-muted/70" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Skeleton className="h-12 w-full bg-muted/70" />
+                    <Skeleton className="h-12 w-full bg-muted/70" />
+                  </div>
+                </div>
+                {/* Simulated Boundaries list */}
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/3 bg-muted/70" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full bg-muted/70" />
+                    <Skeleton className="h-10 w-full bg-muted/70" />
+                    <Skeleton className="h-10 w-full bg-muted/70" />
+                    <Skeleton className="h-10 w-full bg-muted/70" />
+                  </div>
+                </div>
               </div>
+            ) : (
+              <>
+                {/* Verification Legal Panel (first) */}
+                {geometry && (
+                  <LotVerificationPanel
+                    projectId={projectId}
+                    lotDetails={lotDetails}
+                    legalMetrics={legalMetrics}
+                    calculatedBoundaries={boundariesWithNeighbors}
+                    onLotUpdated={onLotUpdated}
+                  />
+                )}
+
+                {/* Empty state for legal tab */}
+                {!geometry && (
+                  <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                    <HugeiconsIcon icon={RulerIcon} className="w-8 h-8 opacity-20 mb-2" />
+                    <p className="text-sm">No hay datos legales disponibles</p>
+                    <p className="text-xs opacity-60 mt-1">
+                      Asigna una geometría para ver métricas
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
         )}

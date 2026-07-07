@@ -171,7 +171,8 @@ export const MESA_TEXT = {
   faltaDatosAbogadoDescripcion:
     'Antes de aprobar la revisión jurídica, completa el nombre y RUT del abogado redactor del proyecto.',
   completarDatosAbogado: 'Completar datos del abogado',
-  noSePudoActualizarRevisionJuridica: 'No se pudo actualizar la revisión jurídica. Intenta de nuevo.',
+  noSePudoActualizarRevisionJuridica:
+    'No se pudo actualizar la revisión jurídica. Intenta de nuevo.',
 } as const
 
 /**

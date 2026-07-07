@@ -158,9 +158,9 @@
 
 - [x] **T054** [US4] Scoping del sidebar por rol (`apps/web/src/components/app-sidebar.tsx:31`, `navItems`): ocultar Mesa/Plantillas/Vendedores al rol `user` + guard server-side en las rutas. Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T055** [US4] Aviso pre-venta de lote no verificado en el panel del lote (`LotInfoView.tsx`): "Este lote aún no tiene cabida/deslindes verificados; la escritura quedará en espera" (FR-025). Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T055** [US4] Aviso pre-venta de lote no verificado en el panel del lote (`LotInfoView.tsx`): "Este lote aún no tiene cabida/deslindes verificados; la escritura quedará en espera" (FR-025). Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T056** [P] [US4] Polish: skeleton en el tab Legal mientras carga; nombre real del actor en Historial de minutas (`profiles.first_name/last_name`). Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T056** [P] [US4] Polish: skeleton en el tab Legal mientras carga; nombre real del actor en Historial de minutas (`profiles.first_name/last_name`). Verify: `pnpm --filter web lint && pnpm build:web`
 
 **Checkpoint US4**: SC-005 (usuario nuevo autosuficiente).
 

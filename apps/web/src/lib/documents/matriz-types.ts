@@ -354,6 +354,7 @@ export interface MinutaGeneration {
   warning_acknowledged_by: string
   warning_acknowledged_at: string
   generated_by: string | null
+  generated_by_name?: string | null
   generated_at: string
   download_url: string | null
 }

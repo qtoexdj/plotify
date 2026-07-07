@@ -865,6 +865,7 @@ describe('historial de generaciones (T017, US4)', () => {
     warning_acknowledged_by: 'u1',
     warning_acknowledged_at: '2026-06-11T10:00:00Z',
     generated_by: 'u1',
+    generated_by_name: 'Usuario registrado',
     generated_at: '2026-06-11T10:01:00Z',
     download_url: '/download/minuta.docx',
   }
