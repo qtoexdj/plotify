@@ -106,15 +106,15 @@
 
 **Independent Test**: quickstart US2.
 
-- [ ] **T030** [US2] Pasar `onApproveMolde` a `MoldeProgressHeader` desde `VariableMatrix` (`apps/web/src/components/projects/legal/variable-matrix/variable-matrix.tsx:223`). Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T030** [US2] Pasar `onApproveMolde` a `MoldeProgressHeader` desde `VariableMatrix` (`apps/web/src/components/projects/legal/variable-matrix/variable-matrix.tsx:223`). Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T031** [US2] Implementar el flujo de 3 pasos de "Aprobar molde" (bulk-approve confidence≥0.9 con evidencia → submit → approve). Contrato: [contracts/aprobar-molde.md](./contracts/aprobar-molde.md). Diálogo de confirmación lista las variables. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T031** [US2] Implementar el flujo de 3 pasos de "Aprobar molde" (bulk-approve confidence≥0.9 con evidencia → submit → approve). Contrato: [contracts/aprobar-molde.md](./contracts/aprobar-molde.md). Diálogo de confirmación lista las variables. Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T032** [US2] Estado post-aprobación: header "Molde aprobado · esperando ventas" + botón deshabilitado; mensaje claro si faltan huecos. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T032** [US2] Estado post-aprobación: header "Molde aprobado · esperando ventas" + botón deshabilitado; mensaje claro si faltan huecos. Verify: `pnpm --filter web lint && pnpm build:web`
 
 - [x] **T033** [US2] Gates heredados (FR-014): al construir la vista del caso, marcar los gates de proyecto (title/sag/sii-matriz) como heredados y NO contarlos en pendientes del caso. Solo se muestran datos de venta + geometry + legal_review. Archivos: readiness/mesa. **No** relajar la evaluación interna. Verify: `pnpm test:api && pnpm build:web`
 
-- [ ] **T034** [US2] Test web: caso muestra ≤2 pendientes tras heredar gates; variable confidence 0.5 NO se auto-aprueba. Verify: `pnpm --filter web test`
+- [x] **T034** [US2] Test web: caso muestra ≤2 pendientes tras heredar gates; variable confidence 0.5 NO se auto-aprueba. Verify: `pnpm --filter web test`
 
 **Checkpoint US2**: SC-002 (≤2 pendientes) y SC-003 (menos acciones de config).
 

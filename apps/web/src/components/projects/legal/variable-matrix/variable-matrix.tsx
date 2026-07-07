@@ -4,7 +4,24 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { PlusSignIcon as Plus } from '@hugeicons/core-free-icons'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
+import {
+  approveMatriz,
+  bulkApproveProjectVariables,
+  getMatrizProject,
+  submitMatriz,
+} from '@/lib/documents/matriz-client'
+import type { MatrizStatus } from '@/lib/documents/matriz-types'
 import { LegalVariableEditor } from '@/components/projects/legal/legal-variable-editor'
 import {
   computeMoldeProgress,
@@ -23,6 +40,7 @@ import { ProducerGroup } from './producer-group'
 import { SaleGapPanel } from './sale-gap-panel'
 import { SiiLotDetail } from './sii-lot-detail'
 import { VariableInspector } from './variable-inspector'
+import { legalVariableDisplayLabel } from '@/lib/legal/variable-labels'
 
 /**
  * SDD 013 US1 — superficie unica de la matriz de variables agrupada por
@@ -36,11 +54,25 @@ export function flattenInventory(
   return Object.values(groups).flatMap((group) => group ?? [])
 }
 
+export function autoApproveMoldeCandidates(
+  items: VariableInventoryItem[]
+): VariableInventoryItem[] {
+  return items.filter(
+    (item) =>
+      item.state === 'proposed' &&
+      item.confidence !== null &&
+      item.confidence >= 0.9 &&
+      item.evidence.length > 0
+  )
+}
+
 interface VariableMatrixProps {
   projectId: string
   projectName?: string
   scope?: 'project' | 'lot'
   lotId?: string
+  onApproveMolde?: () => void
+  approvingMolde?: boolean
 }
 
 export function VariableMatrix({
@@ -48,6 +80,8 @@ export function VariableMatrix({
   projectName,
   scope = 'project',
   lotId,
+  onApproveMolde,
+  approvingMolde = false,
 }: VariableMatrixProps) {
   const [items, setItems] = useState<VariableInventoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -60,6 +94,10 @@ export function VariableMatrix({
   const [siiDetailOpen, setSiiDetailOpen] = useState(false)
   const [manualOpen, setManualOpen] = useState(false)
   const [pendingFocus, setPendingFocus] = useState(false)
+  const [moldeApprovalOpen, setMoldeApprovalOpen] = useState(false)
+  const [moldeApproving, setMoldeApproving] = useState(false)
+  const [moldeApprovalError, setMoldeApprovalError] = useState<string | null>(null)
+  const [moldeStatus, setMoldeStatus] = useState<MatrizStatus | null>(null)
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -77,6 +115,16 @@ export function VariableMatrix({
         if (!response.ok) throw new Error(payload.error || 'Error al cargar variables')
         if (signal?.aborted) return
         setItems(flattenInventory(payload.groups))
+        if (scope === 'project') {
+          try {
+            const matriz = await getMatrizProject(projectId)
+            if (!signal?.aborted) setMoldeStatus(matriz.matriz.status)
+          } catch {
+            if (!signal?.aborted) setMoldeStatus(null)
+          }
+        } else {
+          setMoldeStatus(null)
+        }
       } catch (err) {
         if ((err as { name?: string }).name === 'AbortError') return
         setError(err instanceof Error ? err.message : 'Error al cargar variables')
@@ -84,7 +132,7 @@ export function VariableMatrix({
         if (!signal?.aborted) setIsLoading(false)
       }
     },
-    [projectId, lotId]
+    [projectId, lotId, scope]
   )
 
   useEffect(() => {
@@ -97,6 +145,8 @@ export function VariableMatrix({
 
   const sections = useMemo(() => groupByProducer(items), [items])
   const progress = useMemo(() => computeMoldeProgress(items), [items])
+  const moldeCandidates = useMemo(() => autoApproveMoldeCandidates(items), [items])
+  const moldeApproved = scope === 'project' && moldeStatus === 'approved'
   const effectivePendingFocus = pendingFocus && progress.porRevisar > 0
   const pendingEntries = useMemo(
     () => sections.flatMap((section) => section.entries.filter(isPorRevisar)),
@@ -202,6 +252,34 @@ export function VariableMatrix({
     [projectId, load]
   )
 
+  const handleApproveMolde = useCallback(() => {
+    setMoldeApprovalError(null)
+    setMoldeApprovalOpen(true)
+  }, [])
+
+  const confirmApproveMolde = useCallback(async () => {
+    setMoldeApproving(true)
+    setMoldeApprovalError(null)
+    try {
+      const variableKeys = moldeCandidates.map((item) => item.variable_key)
+      if (variableKeys.length > 0) {
+        await bulkApproveProjectVariables(projectId, { variable_keys: variableKeys })
+      }
+      const matriz = await getMatrizProject(projectId)
+      const submitted = await submitMatriz(matriz.matriz.id)
+      const approved = await approveMatriz(submitted.matriz.id)
+      setMoldeStatus(approved.matriz.status)
+      toast.success('Molde aprobado')
+      setMoldeApprovalOpen(false)
+      onApproveMolde?.()
+      await load()
+    } catch (err) {
+      setMoldeApprovalError(err instanceof Error ? err.message : 'No se pudo aprobar el molde')
+    } finally {
+      setMoldeApproving(false)
+    }
+  }, [moldeCandidates, projectId, onApproveMolde, load])
+
   if (isLoading) {
     return (
       <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
@@ -226,7 +304,83 @@ export function VariableMatrix({
         scope={scope}
         pendingFocus={effectivePendingFocus}
         onPendingFocusChange={togglePendingFocus}
+        onApproveMolde={handleApproveMolde}
+        canApproveMolde={!moldeApproved && (progress.moldeAprobable || moldeCandidates.length > 0)}
+        approved={moldeApproved}
+        approving={approvingMolde || moldeApproving}
       />
+
+      <AlertDialog
+        open={moldeApprovalOpen}
+        onOpenChange={(open) => {
+          if (moldeApproving) return
+          setMoldeApprovalOpen(open)
+          if (!open) setMoldeApprovalError(null)
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-lg" data-testid="approve-molde-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Aprobar molde</AlertDialogTitle>
+            <AlertDialogDescription>
+              Al aprobar, se confirmarán las variables extraídas de alta confianza y la matriz del
+              proyecto pasará a aprobada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-sm font-medium text-foreground">
+                {moldeCandidates.length > 0
+                  ? `${moldeCandidates.length} variables extraídas se aprobarán automáticamente`
+                  : 'No hay variables de alta confianza para aprobar en bloque'}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Solo entran variables propuestas con confianza igual o superior a 0,9 y evidencia
+                documental.
+              </p>
+            </div>
+
+            {moldeCandidates.length > 0 ? (
+              <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                {moldeCandidates.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {legalVariableDisplayLabel(item)}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{item.variable_key}</p>
+                    </div>
+                    <span className="shrink-0 text-xs font-medium text-success">
+                      {Math.round((item.confidence ?? 0) * 100)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {moldeApprovalError ? (
+              <p className="text-sm font-medium text-destructive">{moldeApprovalError}</p>
+            ) : null}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={moldeApproving}>Cancelar</AlertDialogCancel>
+            <Button type="button" disabled={moldeApproving} onClick={confirmApproveMolde}>
+              {moldeApproving ? (
+                <>
+                  <Spinner className="size-4" />
+                  Aprobando
+                </>
+              ) : (
+                'Aprobar molde'
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {effectivePendingFocus ? (
         <div
