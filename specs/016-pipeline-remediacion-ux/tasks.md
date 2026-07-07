@@ -198,7 +198,7 @@
 
 - [x] **T070** [P] [US7] Borrar código muerto: `apps/web/src/components/dashboard/documents/generation-wizard.tsx` y `apps/web/src/actions/reserve-lot.action.ts` (0 refs verificado). Verify: `pnpm build:web && pnpm typecheck:web`
 
-- [ ] **T071** [US7] Extraer helper común `buildApprovalRequest(mode, ...)` de `requestReservationApproval`/`requestSaleApproval` (`apps/web/src/actions/request-approval.action.ts`, ~110 líneas duplicadas). Comportamiento idéntico. Verify: `pnpm --filter web test && pnpm build:web`
+- [x] **T071** [US7] Extraer helper común `buildApprovalRequest(mode, ...)` de `requestReservationApproval`/`requestSaleApproval` (`apps/web/src/actions/request-approval.action.ts`, ~110 líneas duplicadas). Comportamiento idéntico. Verify: `pnpm --filter web test && pnpm build:web`
 
 - [ ] **T072** [P] [US7] Limpiar `console.log` de `apps/web/src` (52 ocurrencias) y arreglar los 2 tests web frágiles de la rama 015 (raw-colors-guard en `documents-tab`, test que grepa `max-h-[80vh]`). Verify: `pnpm --filter web test`
 

@@ -16,16 +16,19 @@ export type RequestApprovalResult =
   | { success: true; approval_id: string; message: string }
   | { success: false; error: string }
 
-/**
- * Resuelve la información del vendedor a partir del usuario autenticado.
- * Busca el registro de vendor vinculado al user_id actual.
- */
-export async function resolveVendorFromUser(userId: string): Promise<{
+/** Información del vendedor resuelta desde la DB. */
+interface VendorInfo {
   vendor_id: string
   vendor_name: string
   vendor_phone: string
   organization_id: string
-} | null> {
+}
+
+/**
+ * Resuelve la información del vendedor a partir del usuario autenticado.
+ * Busca el registro de vendor vinculado al user_id actual.
+ */
+export async function resolveVendorFromUser(userId: string): Promise<VendorInfo | null> {
   const supabase = await createClient()
 
   const { data: vendor, error } = await supabase
@@ -47,34 +50,37 @@ export async function resolveVendorFromUser(userId: string): Promise<{
   }
 }
 
+/** Resultado interno de buildApprovalRequest, shared entre reservation y sale. */
+interface ApprovalContext {
+  check: Awaited<ReturnType<typeof checkVendorAssignment>> & { allowed: true }
+  vendorInfo: VendorInfo
+  organizationId: string
+}
+
 /**
- * Server Action invocada desde LotReservationForm cuando mode === 'reservation'.
- * Crea una solicitud de aprobación en lugar de reservar el lote directamente.
+ * Helper compartido: valida acceso del vendedor, resuelve su información
+ * (con fallback a lote→proyecto) y obtiene el organization_id del proyecto.
+ *
+ * Devuelve un error si alguna validación falla, o el contexto listo para
+ * crear la solicitud de aprobación.
  */
-export async function requestReservationApproval(
+async function buildApprovalRequest(
   projectId: string,
-  lotId: string,
-  data: ReservationFormInput
-): Promise<RequestApprovalResult> {
+  lotId: string
+): Promise<{ success: false; error: string } | { success: true; ctx: ApprovalContext }> {
   const supabase = await createClient()
 
-  // 1. Validar input
-  const validation = reservationFormSchema.safeParse(data)
-  if (!validation.success) {
-    return { success: false, error: validation.error.issues[0].message }
-  }
-  const validData = validation.data
-
-  // 2. Enforce vendor assignment before reservation access (T025)
+  // 1. Verificar que el vendedor tiene acceso al lote/proyecto
   const check = await checkVendorAssignment(projectId, lotId)
   if (!check.allowed) {
     return { success: false, error: check.error || 'Acceso denegado' }
   }
 
-  // 3. Resolver info del vendedor desde el usuario
+  // 2. Resolver info del vendedor desde el usuario autenticado
   let vendorInfo = await resolveVendorFromUser(check.userId!)
+
   if (!vendorInfo) {
-    // Si no tiene registro de vendedor (ej: es admin), primero buscamos si el lote ya tiene vendedor_id
+    // Fallback 1: vendedor asignado al lote
     const { data: lotData } = await supabase
       .from('lots')
       .select('vendedor_id')
@@ -101,7 +107,7 @@ export async function requestReservationApproval(
     }
 
     if (!vendorInfo) {
-      // Si no, buscamos el primer vendedor asignado al proyecto
+      // Fallback 2: primer vendedor asignado al proyecto
       const { data: vpData, error: vpErr } = await supabase
         .from('vendor_projects')
         .select('vendor_id, vendors(id, nombre, phone, organization_id)')
@@ -132,7 +138,7 @@ export async function requestReservationApproval(
     }
   }
 
-  // 4. Obtener organization_id del proyecto
+  // 3. Obtener organization_id del proyecto
   const { data: project, error: projectError } = await supabase
     .from('projects')
     .select('organization_id')
@@ -142,6 +148,37 @@ export async function requestReservationApproval(
   if (projectError || !project?.organization_id) {
     return { success: false, error: 'Proyecto no encontrado' }
   }
+
+  return {
+    success: true,
+    ctx: {
+      check: check as ApprovalContext['check'],
+      vendorInfo,
+      organizationId: project.organization_id,
+    },
+  }
+}
+
+/**
+ * Server Action invocada desde LotReservationForm cuando mode === 'reservation'.
+ * Crea una solicitud de aprobación en lugar de reservar el lote directamente.
+ */
+export async function requestReservationApproval(
+  projectId: string,
+  lotId: string,
+  data: ReservationFormInput
+): Promise<RequestApprovalResult> {
+  // 1. Validar input
+  const validation = reservationFormSchema.safeParse(data)
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+  const validData = validation.data
+
+  // 2–4. Resolver contexto compartido (vendedor + organización)
+  const built = await buildApprovalRequest(projectId, lotId)
+  if (!built.success) return built
+  const { check, vendorInfo, organizationId } = built.ctx
 
   // 5. Armar payload con todos los datos del cliente (reserva: compromiso
   // comercial, sin notaría ni fecha de firma — FR-015)
@@ -162,7 +199,7 @@ export async function requestReservationApproval(
   // 6. Crear solicitud de aprobación
   const result = await createApprovalRequest({
     lotId,
-    organizationId: project.organization_id,
+    organizationId,
     vendorId: vendorInfo.vendor_id,
     vendorName: vendorInfo.vendor_name,
     vendorPhone: vendorInfo.vendor_phone,
@@ -181,7 +218,7 @@ export async function requestReservationApproval(
       action: 'reservation.requested',
       entity: 'approval_requests',
       entity_id: result.approval_id,
-      organization_id: project.organization_id,
+      organization_id: organizationId,
       payload: {
         lot_id: lotId,
         project_id: projectId,
@@ -211,8 +248,6 @@ export async function requestSaleApproval(
   lotId: string,
   data: SaleFormInput
 ): Promise<RequestApprovalResult> {
-  const supabase = await createClient()
-
   // 1. Validar input
   const validation = saleFormSchema.safeParse(data)
   if (!validation.success) {
@@ -220,83 +255,10 @@ export async function requestSaleApproval(
   }
   const validData = validation.data
 
-  // 2. Enforce vendor assignment before sale access
-  const check = await checkVendorAssignment(projectId, lotId)
-  if (!check.allowed) {
-    return { success: false, error: check.error || 'Acceso denegado' }
-  }
-
-  // 3. Resolver info del vendedor desde el usuario
-  let vendorInfo = await resolveVendorFromUser(check.userId!)
-  if (!vendorInfo) {
-    // Si no tiene registro de vendedor (ej: es admin), primero buscamos si el lote ya tiene vendedor_id
-    const { data: lotData } = await supabase
-      .from('lots')
-      .select('vendedor_id')
-      .eq('id', lotId)
-      .single()
-
-    const lotVendorId = lotData?.vendedor_id
-
-    if (lotVendorId) {
-      const { data: vRecord } = await supabase
-        .from('vendors')
-        .select('id, nombre, phone, organization_id')
-        .eq('id', lotVendorId)
-        .maybeSingle()
-
-      if (vRecord) {
-        vendorInfo = {
-          vendor_id: vRecord.id,
-          vendor_name: vRecord.nombre,
-          vendor_phone: vRecord.phone || '',
-          organization_id: vRecord.organization_id || '',
-        }
-      }
-    }
-
-    if (!vendorInfo) {
-      // Si no, buscamos el primer vendedor asignado al proyecto
-      const { data: vpData, error: vpErr } = await supabase
-        .from('vendor_projects')
-        .select('vendor_id, vendors(id, nombre, phone, organization_id)')
-        .eq('project_id', projectId)
-        .limit(1)
-        .maybeSingle()
-
-      if (vpErr || !vpData || !vpData.vendors) {
-        return {
-          success: false,
-          error:
-            'No se encontró un vendedor asignado a este lote o proyecto para asociar la solicitud.',
-        }
-      }
-
-      const assignedVendor = vpData.vendors as unknown as {
-        id: string
-        nombre: string
-        phone: string | null
-        organization_id: string | null
-      }
-      vendorInfo = {
-        vendor_id: assignedVendor.id,
-        vendor_name: assignedVendor.nombre,
-        vendor_phone: assignedVendor.phone || '',
-        organization_id: assignedVendor.organization_id || '',
-      }
-    }
-  }
-
-  // 4. Obtener organization_id del proyecto
-  const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .select('organization_id')
-    .eq('id', projectId)
-    .single()
-
-  if (projectError || !project?.organization_id) {
-    return { success: false, error: 'Proyecto no encontrado' }
-  }
+  // 2–4. Resolver contexto compartido (vendedor + organización)
+  const built = await buildApprovalRequest(projectId, lotId)
+  if (!built.success) return built
+  const { check, vendorInfo, organizationId } = built.ctx
 
   const { createSaleApprovalRequest } = await import('@/lib/services/approvals.service')
 
@@ -320,7 +282,7 @@ export async function requestSaleApproval(
   // 6. Crear solicitud de aprobación de venta
   const result = await createSaleApprovalRequest({
     lotId,
-    organizationId: project.organization_id,
+    organizationId,
     vendorId: vendorInfo.vendor_id,
     vendorName: vendorInfo.vendor_name,
     vendorPhone: vendorInfo.vendor_phone,
@@ -339,7 +301,7 @@ export async function requestSaleApproval(
       action: 'sale.requested',
       entity: 'approval_requests',
       entity_id: result.approval_id,
-      organization_id: project.organization_id,
+      organization_id: organizationId,
       payload: {
         lot_id: lotId,
         project_id: projectId,
