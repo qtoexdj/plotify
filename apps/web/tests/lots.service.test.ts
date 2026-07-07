@@ -111,9 +111,9 @@ describe('lots.service', () => {
 
     createClientMock.mockResolvedValue({ from } as any)
 
-    await expect(
-      updateLotAndRecord('lot-1', { estado: 'reservado' } as any, null)
-    ).rejects.toThrow(LotEstadoTransitionError)
+    await expect(updateLotAndRecord('lot-1', { estado: 'reservado' } as any, null)).rejects.toThrow(
+      LotEstadoTransitionError
+    )
 
     expect(update).not.toHaveBeenCalled()
   })

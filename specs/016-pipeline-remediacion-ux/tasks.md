@@ -200,7 +200,7 @@
 
 - [x] **T071** [US7] Extraer helper común `buildApprovalRequest(mode, ...)` de `requestReservationApproval`/`requestSaleApproval` (`apps/web/src/actions/request-approval.action.ts`, ~110 líneas duplicadas). Comportamiento idéntico. Verify: `pnpm --filter web test && pnpm build:web`
 
-- [ ] **T072** [P] [US7] Limpiar `console.log` de `apps/web/src` (52 ocurrencias) y arreglar los 2 tests web frágiles de la rama 015 (raw-colors-guard en `documents-tab`, test que grepa `max-h-[80vh]`). Verify: `pnpm --filter web test`
+- [x] **T072** [P] [US7] Limpiar `console.log` de `apps/web/src` (52 ocurrencias) y arreglar los 2 tests web frágiles de la rama 015 (raw-colors-guard en `documents-tab`, test que grepa `max-h-[80vh]`). Verify: `pnpm --filter web test`
 
 - [ ] **T073** [US7] (con OK del usuario, HG-2) Limpiar datos de prueba de Teno: lotes 26/37 inconsistentes, venta de auditoría del lote 14, minuta demo del lote 1. Verify: consulta de estado consistente en DB.
 

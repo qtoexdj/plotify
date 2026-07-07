@@ -39,7 +39,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     )
 
     if (error || !data) {
-      return Response.json({ error: error || 'Error al registrar la revisión jurídica' }, { status })
+      return Response.json(
+        { error: error || 'Error al registrar la revisión jurídica' },
+        { status }
+      )
     }
     return Response.json(data)
   } catch (error) {

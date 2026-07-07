@@ -245,13 +245,8 @@ export function BulkActionsPanel({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdatingPrice}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmPendingAction}
-              disabled={isUpdatingPrice}
-            >
+            <AlertDialogCancel disabled={isUpdatingPrice}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPendingAction} disabled={isUpdatingPrice}>
               Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -173,7 +173,10 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
         onWorkflowUpdate(await approveMatriz(matriz.id))
       } else if (accion === 'rechazar') {
         onWorkflowUpdate(await rejectMatriz(matriz.id, { reason: razon.trim() }))
-      } else if (accion === 'aprobar_revision_juridica' || accion === 'rechazar_revision_juridica') {
+      } else if (
+        accion === 'aprobar_revision_juridica' ||
+        accion === 'rechazar_revision_juridica'
+      ) {
         onWorkflowUpdate(
           await submitLegalReview(escrituraCaseId as string, {
             decision: accion === 'aprobar_revision_juridica' ? 'aprobada' : 'rechazada',

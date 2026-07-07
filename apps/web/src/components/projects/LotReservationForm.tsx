@@ -21,10 +21,7 @@ import {
   type SaleInput,
 } from '@/lib/validations/lot-reservation.schema'
 import { requestReservationApproval, requestSaleApproval } from '@/actions/request-approval.action'
-import type {
-  ReservationFormInput,
-  SaleFormInput,
-} from '@/lib/validations/approval-request.schema'
+import type { ReservationFormInput, SaleFormInput } from '@/lib/validations/approval-request.schema'
 import { CHILE_REGIONS } from '@/lib/geo/chile-location'
 import type { LotClientPrefill } from '@/types/viewer.types'
 import { ClienteIdentificacion } from '@/components/projects/lot-reservation-form/cliente-identificacion'
@@ -116,11 +113,7 @@ export function LotReservationForm({
       }
 
       if (mode === 'direct_sale') {
-        const result = await requestSaleApproval(
-          projectId,
-          lotId,
-          submissionData as SaleFormInput
-        )
+        const result = await requestSaleApproval(projectId, lotId, submissionData as SaleFormInput)
         if (result.success) {
           toast.success('Solicitud de venta enviada', {
             description: `La solicitud de venta del lote ${lotNumber} fue enviada al administrador para aprobación.`,

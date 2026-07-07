@@ -77,10 +77,7 @@ interface ServitudeSegmentWidthRow {
 
 /** Maps calculated BoundaryWithNeighbor[] directly to editable OfficialBoundaries format 1:1 */
 function boundariesToOfficial(calculated: BoundaryWithNeighbor[]): OfficialBoundaries {
-  console.log(
-    '[DEBUG-PANEL] Mapeando calculatedBoundaries a Official:',
-    JSON.stringify(calculated, null, 2)
-  )
+
   // Mapeo 1:1 estricto con la arista nativa (sin agrupación ni sufijos)
   return calculated.map((seg) => {
     let colindaFinal = ''

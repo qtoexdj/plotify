@@ -102,9 +102,7 @@ export function ClienteDomicilio<T extends FieldValues>({
     <section className="space-y-3 rounded-xl border bg-muted/20 p-4">
       <div>
         <p className="text-sm font-semibold text-foreground">Domicilio</p>
-        <p className="text-xs text-muted-foreground">
-          Dirección civil y ubicación administrativa.
-        </p>
+        <p className="text-xs text-muted-foreground">Dirección civil y ubicación administrativa.</p>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
