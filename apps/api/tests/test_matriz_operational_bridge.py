@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 
 from services import escritura_operational_bridge as bridge
+from services import legal_variable_catalog as catalog
 from services.legal_title_words import (
     hectareas_to_words,
     metros_cuadrados_to_words,
@@ -159,6 +160,25 @@ class TestLotGeometryMapping:
         by_key = _by_key(mapping.variables)
         assert by_key["servidumbre.aplica"].value_json is False
         assert "servidumbre.superficie_m2" not in by_key
+
+
+class TestBridgeKeysRegisteredInCatalog:
+    """Guard de regresión: el bridge produjo servidumbre.ancho_label desde
+    siempre (ver test_servidumbre_width_label_maps_from_official_lot arriba)
+    pero esa clave nunca se registró en legal_variable_catalog. El mapeo
+    puro nunca lo detectó porque no pasa por la validación de
+    propose_variable/validate_proposal — solo se manifestaba como un 500
+    real al vender un lote con servidumbre de ancho variable. Este test
+    ejercita exactamente ese chequeo para las 3 tuplas del bridge."""
+
+    def test_every_bridge_variable_key_is_a_known_catalog_key(self):
+        all_bridge_keys = (
+            bridge.LOT_RECORD_VARIABLE_KEYS
+            + bridge.LOT_GEOMETRY_VARIABLE_KEYS
+            + bridge.DERIVED_VARIABLE_KEYS
+        )
+        unknown = [key for key in all_bridge_keys if not catalog.is_variable_key(key)]
+        assert unknown == []
 
 
 # ─── T014: derivadas en palabras (motor compartido) ──────────────────────────
