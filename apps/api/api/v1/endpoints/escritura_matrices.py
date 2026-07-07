@@ -2796,7 +2796,6 @@ async def bulk_verify_lots(
     
     # Tolerancia como fracción (ej: 0.5% -> 0.005)
     tol = request.tolerance_pct / 100.0
-    now = datetime.now(UTC).isoformat()
 
     # Colección de tareas asíncronas para actualización y auditoría
     update_tasks = []
@@ -2832,40 +2831,27 @@ async def bulk_verify_lots(
         if diff_area <= tol and diff_perim <= tol:
             # Dentro de tolerancia -> verified_exact
             verified_count += 1
-            
-            # Definir funciones locales de actualización y auditoría para ejecutar vía asyncio.to_thread
-            def update_and_audit(l_id=lot["id"], area_official=area_off, perim_official=perim_off, prev_status=lot["verified_status"]):
-                client.table("lots").update({
-                    "verified_status": "verified_exact",
-                    "verified_at": now,
-                    "verified_by": admin_id,
-                    "updated_at": now,
-                    "m2": area_official,
-                }).eq("id", l_id).execute()
-                
-                client.table("audit_logs").insert({
-                    "actor": admin_id,
-                    "action": "VERIFY",
-                    "entity": "lots",
-                    "entity_id": l_id,
-                    "payload": {
-                        "type": "lot_saved_and_verified",
-                        "verified_status": "verified_exact",
-                        "official": {
-                            "area_official_m2": area_official,
-                            "perimeter_official_m": perim_official,
-                            "boundaries_official": None,
-                        },
-                        "calculated_snapshot": {
-                            "area_m2": area_calc,
-                            "perimeter_m": perim_calc,
-                        },
-                        "prev_status": prev_status,
-                        "verified_at": now,
-                        "bulk": True
-                    }
-                }).execute()
-                
+
+            # Escritura vía RPC (no client.table("lots").update() directo):
+            # lots tiene el trigger trg_guard_legal_fields, que revierte en
+            # silencio verified_status/verified_at/verified_by/etc. a su
+            # valor anterior si auth.uid() no resuelve a un admin del
+            # proyecto. Con la service role key auth.uid() es NULL (no hay
+            # sesión de usuario), así que un UPDATE directo aquí nunca
+            # persiste aunque no lance error. El RPC re-verifica el rol
+            # admin server-side e impersona a admin_id solo para su propia
+            # transacción (ver 20260707020000_verify_lot_as_admin_rpc.sql).
+            def update_and_audit(l_id=lot["id"], calc_area=area_calc, calc_perim=perim_calc):
+                client.rpc(
+                    "verify_lot_as_admin",
+                    {
+                        "p_lot_id": l_id,
+                        "p_admin_id": admin_id,
+                        "p_area_calc_m2": calc_area,
+                        "p_perimeter_calc_m": calc_perim,
+                    },
+                ).execute()
+
             update_tasks.append(asyncio.to_thread(update_and_audit))
         else:
             # Fuera de tolerancia -> deviated

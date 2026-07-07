@@ -59,15 +59,29 @@ class MockQuery:
 
         return MockResponse([])
 
+class MockRpcCall:
+    def __init__(self, fn_name, params, store):
+        self.fn_name = fn_name
+        self.params = params
+        self.store = store
+
+    def execute(self):
+        self.store.rpc_calls.append((self.fn_name, self.params))
+        return MockResponse(None)
+
 class MockSupabaseStore:
     def __init__(self):
         self.lots_data = []
         self.geometries_data = []
         self.updates = []
         self.inserts = []
+        self.rpc_calls = []
 
     def table(self, table_name):
         return MockQuery(table_name, self)
+
+    def rpc(self, fn_name, params):
+        return MockRpcCall(fn_name, params, self)
 
 @pytest.fixture
 def test_store():
@@ -161,20 +175,20 @@ def test_bulk_verify_lots_success_and_tolerances(client, test_store):
     assert "22222222-2222-2222-2222-222222222222" in res_data["deviated"]
     assert "33333333-3333-3333-3333-333333333333" in res_data["skipped_no_geometry"]
 
-    # Validar que se guardó en Supabase la actualización del Lote 1 y la inserción del log de auditoría
-    assert len(test_store.updates) == 1
-    assert test_store.updates[0][0] == "lots"
-    assert test_store.updates[0][2]["verified_status"] == "verified_exact"
-    assert test_store.updates[0][2]["m2"] == 10074.715
+    # Validar que la verificación del Lote 1 se hizo vía el RPC
+    # verify_lot_as_admin (no client.table("lots").update() directo: ese
+    # UPDATE lo revierte en silencio trg_guard_legal_fields cuando lo llama
+    # la service role key sin sesión de usuario real, ver T057 fix).
+    assert len(test_store.rpc_calls) == 1
+    fn_name, params = test_store.rpc_calls[0]
+    assert fn_name == "verify_lot_as_admin"
+    assert params["p_lot_id"] == "11111111-1111-1111-1111-111111111111"
+    assert params["p_admin_id"] == ADMIN_ID
 
-    assert len(test_store.inserts) == 1
-    assert test_store.inserts[0][0] == "audit_logs"
-    assert test_store.inserts[0][1]["action"] == "VERIFY"
-    assert test_store.inserts[0][1]["payload"]["bulk"] is True
-
-    # Resetear updates e inserts
+    # Resetear updates/inserts/rpc_calls
     test_store.updates.clear()
     test_store.inserts.clear()
+    test_store.rpc_calls.clear()
 
     # 3. Ejecutar con tolerancia 6.0% (Lote 1 y Lote 2 verificados, Lote 3 sin geometría)
     response = client.post(
@@ -192,5 +206,8 @@ def test_bulk_verify_lots_success_and_tolerances(client, test_store):
     assert len(res_data["deviated"]) == 0
     assert "33333333-3333-3333-3333-333333333333" in res_data["skipped_no_geometry"]
     
-    assert len(test_store.updates) == 2
-    assert len(test_store.inserts) == 2
+    assert len(test_store.rpc_calls) == 2
+    assert {c[1]["p_lot_id"] for c in test_store.rpc_calls} == {
+        "11111111-1111-1111-1111-111111111111",
+        "22222222-2222-2222-2222-222222222222",
+    }
