@@ -359,7 +359,7 @@ export function DocumentsTab({ project: initialProject, isAdmin, lots = [] }: Do
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-slate-100/80 p-3 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.65)] dark:border-white/10 dark:bg-background/70 sm:p-4">
+    <section className="rounded-2xl border border-border/70 bg-muted/40 p-3 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.65)] dark:border-white/10 dark:bg-background/70 sm:p-4">
       <div className="flex flex-col gap-4">
         <div className="order-1 grid gap-3 sm:grid-cols-4">
           <div className="rounded-2xl bg-card px-4 py-3 shadow-sm ring-1 ring-border/50 dark:ring-white/10">

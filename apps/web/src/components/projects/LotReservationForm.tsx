@@ -178,7 +178,7 @@ export function LotReservationForm({
   }
 
   return (
-    <div className="flex max-h-[min(82vh,780px)] flex-col">
+    <div className="flex max-h-[80vh] flex-col">
       <div className="px-1 pb-4">
         <h3 className="text-lg font-medium">
           {mode === 'direct_sale' ? `Venta Lote ${lotNumber}` : `Reservar Lote ${lotNumber}`}
