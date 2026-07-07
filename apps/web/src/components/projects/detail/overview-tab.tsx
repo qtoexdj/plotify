@@ -172,6 +172,15 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
   const estadoProyectoReal = useMemo(() => {
     if (isProjectOperational) return 'operational'
 
+    // /api/projects/[id]/lots filtra por vendedor_id para roles no-admin, así
+    // que `lots` no representa el proyecto completo para ellos: con esa
+    // lista parcial (o vacía) no se puede inferir cuántos lotes están
+    // verificados. project.total_lotes sí es un conteo a nivel proyecto,
+    // no filtrado por vendedor, así que alcanza para distinguir "sin
+    // geometría" de "con geometría" (project.estado no sirve: es el mismo
+    // flag fijo que T051 reemplaza para el admin).
+    if (userRole !== 'admin') return project.total_lotes > 0 ? 'imported' : 'draft'
+
     const lotesTotal = lots.length
     if (lotesTotal === 0) return 'draft'
 
@@ -200,7 +209,7 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
     }
 
     return 'imported'
-  }, [isProjectOperational, lots, projectMatriz])
+  }, [isProjectOperational, lots, projectMatriz, userRole, project.total_lotes])
 
   const summaryStatus = projectStatusConfig[estadoProyectoReal] ?? projectStatusConfig.draft
 
