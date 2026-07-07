@@ -87,16 +87,19 @@ def test_bulk_verify_lots_success_and_tolerances(client, test_store):
     # 1. Configurar datos de prueba
     # Un lote exacto, un lote desviado por 5%, un lote sin geometría
     
-    # Geometría cuadrada de aprox 100m en Chile Central (Zona 19 Sur)
-    # Puntos en longitud/latitud
+    # Geometría cuadrada de aprox 100m en Chile Central (Zona 19 Sur).
+    # Puntos en [lon, lat, altitud] — igual que el GeoJSON real que produce
+    # la conversión de KML/KMZ (siempre trae un 3er componente de altitud,
+    # normalmente 0). Regression test: calculate_lot_legal_metrics NO debe
+    # asumir que cada punto tiene exactamente 2 componentes.
     square_geometry = {
         "type": "Polygon",
         "coordinates": [[
-            [-71.0, -33.0],
-            [-71.0, -33.0009],  # aprox 100 metros al sur
-            [-71.00108, -33.0009], # aprox 100 metros al oeste
-            [-71.00108, -33.0],
-            [-71.0, -33.0]
+            [-71.0, -33.0, 0],
+            [-71.0, -33.0009, 0],  # aprox 100 metros al sur
+            [-71.00108, -33.0009, 0], # aprox 100 metros al oeste
+            [-71.00108, -33.0, 0],
+            [-71.0, -33.0, 0]
         ]]
     }
 

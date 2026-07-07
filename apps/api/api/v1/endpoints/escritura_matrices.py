@@ -2759,7 +2759,8 @@ async def bulk_verify_lots(
         
         zone = get_utm_zone(cleaned[0][0])
         utm_points = []
-        for lon, lat in cleaned:
+        for point in cleaned:
+            lon, lat = point[0], point[1]
             x, y = latlon_to_utm(lat, lon, zone)
             utm_points.append((x, y))
             
