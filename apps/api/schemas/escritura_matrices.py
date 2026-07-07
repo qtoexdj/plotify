@@ -407,3 +407,14 @@ class EscrituraTraceResponse(MatrizResponseModel):
     escritura_case_id: UUID
     source_project_matriz_id: UUID | None = None
     events: list[EscrituraTraceEvent] = Field(default_factory=list)
+
+
+class BulkVerifyLotsRequest(MatrizBaseModel):
+    tolerance_pct: float = 0.5
+    admin_id: UUID
+
+
+class BulkVerifyLotsResponse(MatrizResponseModel):
+    verified: int
+    deviated: list[UUID] = Field(default_factory=list)
+    skipped_no_geometry: list[UUID] = Field(default_factory=list)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -41,6 +42,8 @@ export function GeometryViewer({
 }: GeometryViewerProps) {
   const isMobile = useIsMobile()
   const viewerRef = useRef<HTMLDivElement | null>(null)
+  const searchParams = useSearchParams()
+  const appliedLotIdParamRef = useRef<string | null>(null)
 
   // ─────────────────────────────────────────────────────────────────────────
   // State
@@ -90,6 +93,22 @@ export function GeometryViewer({
     }
     loadFeatures()
   }, [projectId, refreshKey])
+
+  // Auto-selecciona el lote apuntado por ?lotId= (ej: desde "verificar coincidencias"
+  // en la pestaña Lotes), una sola vez por valor de lotId para no pisar la
+  // selección manual del usuario en renders posteriores.
+  useEffect(() => {
+    const targetLotId = searchParams.get('lotId')
+    if (!targetLotId || !featureCollection) return
+    if (appliedLotIdParamRef.current === targetLotId) return
+
+    const feature = featureCollection.features.find((f) => f.properties.lot_id === targetLotId)
+    if (feature) {
+      const geometryId = feature.properties.geometry_id
+      window.queueMicrotask(() => setSelectedIds(new Set([geometryId])))
+    }
+    appliedLotIdParamRef.current = targetLotId
+  }, [searchParams, featureCollection])
 
   useEffect(() => {
     const supabase = createClient()
@@ -347,9 +366,7 @@ export function GeometryViewer({
     // respuesta y se avisa si algún lote no se pudo actualizar.
     const failed = responses.filter(({ response }) => !response.ok)
     if (failed.length > 0) {
-      throw new Error(
-        `No se pudo actualizar ${failed.length} de ${lotIdsToUpdate.length} lotes.`
-      )
+      throw new Error(`No se pudo actualizar ${failed.length} de ${lotIdsToUpdate.length} lotes.`)
     }
   }
 

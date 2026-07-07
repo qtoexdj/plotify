@@ -7,6 +7,10 @@ import { GeometryViewer } from '@/components/projects/geometry-viewer'
 import { BulkActionsPanel } from '@/components/projects/viewer/BulkActionsPanel'
 import type { ViewerFeature, ViewerFeatureCollection } from '@/types/viewer.types'
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 vi.mock('@hugeicons/react', () => ({
   HugeiconsIcon: ({ className }: { className?: string }) => (
     <span aria-hidden="true" className={className} />

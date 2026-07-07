@@ -23,6 +23,8 @@ from urllib.parse import quote
 from api.deps import verify_internal_secret
 from core.logger import get_logger
 from schemas.escritura_matrices import (
+    BulkVerifyLotsRequest,
+    BulkVerifyLotsResponse,
     EscrituraTraceResponse,
     GenerateMinutaRequest,
     LegalReviewDecisionRequest,
@@ -2647,3 +2649,234 @@ async def stage_operational_variables(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
         ) from exc
     return StageOperationalResult.model_validate(outcome.to_dict())
+
+
+@router.post(
+    "/projects/{project_id}/lots/bulk-verify",
+    response_model=BulkVerifyLotsResponse,
+)
+async def bulk_verify_lots(
+    project_id: UUID,
+    request: BulkVerifyLotsRequest,
+    organization_id: UUID = Query(...),
+) -> BulkVerifyLotsResponse:
+    """US5: Acción para verificar masivamente todos los lotes de un proyecto que se encuentren
+    dentro del porcentaje de tolerancia (tolerance_pct) comparando su cabida calculada vs oficial.
+    """
+    import math
+    from api.deps import require_admin_role
+    from core.database import get_supabase_client
+    from schemas.escritura_matrices import BulkVerifyLotsResponse
+
+    client = get_supabase_client()
+    org_id = str(organization_id)
+    admin_id = str(request.admin_id)
+    proj_id = str(project_id)
+    
+    # 1. Validar rol de administrador
+    await require_admin_role(admin_id, org_id, supabase=client)
+
+    # Helper UTM y Shoelace definidos localmente
+    def get_utm_zone(lon: float) -> int:
+        return math.floor((lon + 180) / 6) + 1
+
+    def latlon_to_utm(lat: float, lon: float, zone: int) -> tuple[float, float]:
+        a = 6378137.0
+        f = 1 / 298.257223563
+        b = a * (1 - f)
+        e2 = (a**2 - b**2) / a**2
+        ep2 = (a**2 - b**2) / b**2
+        k0 = 0.9996
+        lon_origin = (zone - 1) * 6 - 180 + 3
+        lat_rad = math.radians(lat)
+        lon_rad = math.radians(lon)
+        lon_origin_rad = math.radians(lon_origin)
+        N = a / math.sqrt(1 - e2 * math.sin(lat_rad)**2)
+        T = math.tan(lat_rad)**2
+        C = ep2 * math.cos(lat_rad)**2
+        A = (lon_rad - lon_origin_rad) * math.cos(lat_rad)
+        n = f / (2 - f)
+        alpha = (a + b) / 2.0 * (1 + (n**2)/4.0 + (n**4)/64.0)
+        beta = 3.0 * n / 2.0 - 27.0 * n**3 / 32.0
+        gamma = 21.0 * n**2 / 16.0 - 55.0 * n**4 / 32.0
+        delta = 151.0 * n**3 / 96.0
+        M = alpha * (lat_rad - beta * math.sin(2*lat_rad) + gamma * math.sin(4*lat_rad) - delta * math.sin(6*lat_rad))
+        x = k0 * N * (A + (1 - T + C) * A**3 / 6.0 + (5 - 18 * T + T**2 + 72 * C - 58 * ep2) * A**5 / 120.0) + 500000.0
+        y = k0 * (M + N * math.tan(lat_rad) * (A**2 / 2.0 + (5 - T + 9 * C + 4 * C**2) * A**4 / 24.0 + (61 - 58 * T + T**2 + 600 * C - 330 * ep2) * A**6 / 720.0))
+        y += 10000000.0
+        return x, y
+
+    def clean_coordinates(coords: list[list[float]]) -> list[list[float]]:
+        if len(coords) < 3:
+            return coords
+        cleaned = []
+        for c in coords:
+            if not cleaned or abs(c[0] - cleaned[-1][0]) > 1e-9 or abs(c[1] - cleaned[-1][1]) > 1e-9:
+                cleaned.append(c)
+        if len(cleaned) > 3:
+            if abs(cleaned[0][0] - cleaned[-1][0]) < 1e-9 and abs(cleaned[0][1] - cleaned[-1][1]) < 1e-9:
+                cleaned.pop()
+        return cleaned
+
+    def calculate_shoelace_area(points: list[tuple[float, float]]) -> float:
+        area = 0.0
+        n = len(points)
+        for i in range(n):
+            j = (i + 1) % n
+            area += points[i][0] * points[j][1]
+            area -= points[j][0] * points[i][1]
+        return abs(area) / 2.0
+
+    def calculate_planar_perimeter(points: list[tuple[float, float]]) -> float:
+        perim = 0.0
+        n = len(points)
+        for i in range(n):
+            j = (i + 1) % n
+            dx = points[j][0] - points[i][0]
+            dy = points[j][1] - points[i][1]
+            perim += math.sqrt(dx * dx + dy * dy)
+        return perim
+
+    def calculate_lot_legal_metrics(geometry: dict) -> dict | None:
+        geom_type = geometry.get("type")
+        coords = geometry.get("coordinates", [])
+        if geom_type == "Polygon":
+            coords_outer = coords[0]
+        elif geom_type == "MultiPolygon":
+            coords_outer = coords[0][0]
+        elif geom_type == "LineString":
+            coords_outer = coords
+        elif geom_type == "MultiLineString":
+            coords_outer = coords[0]
+        else:
+            return None
+        
+        if not coords_outer or len(coords_outer) < 3:
+            return None
+        cleaned = clean_coordinates(coords_outer)
+        if len(cleaned) < 3:
+            return None
+        
+        zone = get_utm_zone(cleaned[0][0])
+        utm_points = []
+        for lon, lat in cleaned:
+            x, y = latlon_to_utm(lat, lon, zone)
+            utm_points.append((x, y))
+            
+        area = calculate_shoelace_area(utm_points)
+        perimeter = calculate_planar_perimeter(utm_points)
+        return {
+            "area_legal_m2": area,
+            "perimeter_legal_m": perimeter,
+        }
+
+    # 2. Consultar lotes del proyecto
+    lots_res = await asyncio.to_thread(
+        lambda: client.table("lots")
+        .select("id, numero_lote, m2, area_official_m2, perimeter_official_m, verified_status, geometry_id")
+        .eq("project_id", proj_id)
+        .execute()
+    )
+    lots = lots_res.data or []
+
+    # 3. Consultar geometrías asignadas a lotes de este proyecto
+    geom_res = await asyncio.to_thread(
+        lambda: client.table("geometries")
+        .select("id, geometry")
+        .eq("project_id", proj_id)
+        .eq("geometry_type", "lot")
+        .execute()
+    )
+    geoms = {row["id"]: row["geometry"] for row in (geom_res.data or [])}
+
+    verified_count = 0
+    deviated: list[UUID] = []
+    skipped_no_geometry: list[UUID] = []
+    
+    # Tolerancia como fracción (ej: 0.5% -> 0.005)
+    tol = request.tolerance_pct / 100.0
+    now = datetime.now(UTC).isoformat()
+
+    # Colección de tareas asíncronas para actualización y auditoría
+    update_tasks = []
+
+    for lot in lots:
+        lot_id = UUID(lot["id"])
+        geom_id = lot["geometry_id"]
+        
+        if not geom_id or geom_id not in geoms:
+            skipped_no_geometry.append(lot_id)
+            continue
+            
+        geom = geoms[geom_id]
+        metrics = calculate_lot_legal_metrics(geom)
+        if not metrics:
+            skipped_no_geometry.append(lot_id)
+            continue
+            
+        area_calc = metrics["area_legal_m2"]
+        perim_calc = metrics["perimeter_legal_m"]
+        
+        area_off = lot["area_official_m2"]
+        perim_off = lot["perimeter_official_m"]
+        
+        # Si no tiene definidos los valores oficiales, se considera desviado o incompleto para auto-verificación
+        if area_off is None or perim_off is None:
+            deviated.append(lot_id)
+            continue
+            
+        diff_area = abs(area_off - area_calc) / area_calc
+        diff_perim = abs(perim_off - perim_calc) / perim_calc
+        
+        if diff_area <= tol and diff_perim <= tol:
+            # Dentro de tolerancia -> verified_exact
+            verified_count += 1
+            
+            # Definir funciones locales de actualización y auditoría para ejecutar vía asyncio.to_thread
+            def update_and_audit(l_id=lot["id"], area_official=area_off, perim_official=perim_off, prev_status=lot["verified_status"]):
+                client.table("lots").update({
+                    "verified_status": "verified_exact",
+                    "verified_at": now,
+                    "verified_by": admin_id,
+                    "updated_at": now,
+                    "m2": area_official,
+                }).eq("id", l_id).execute()
+                
+                client.table("audit_logs").insert({
+                    "actor": admin_id,
+                    "action": "VERIFY",
+                    "entity": "lots",
+                    "entity_id": l_id,
+                    "payload": {
+                        "type": "lot_saved_and_verified",
+                        "verified_status": "verified_exact",
+                        "official": {
+                            "area_official_m2": area_official,
+                            "perimeter_official_m": perim_official,
+                            "boundaries_official": None,
+                        },
+                        "calculated_snapshot": {
+                            "area_m2": area_calc,
+                            "perimeter_m": perim_calc,
+                        },
+                        "prev_status": prev_status,
+                        "verified_at": now,
+                        "bulk": True
+                    }
+                }).execute()
+                
+            update_tasks.append(asyncio.to_thread(update_and_audit))
+        else:
+            # Fuera de tolerancia -> deviated
+            deviated.append(lot_id)
+
+    # 4. Ejecutar todas las actualizaciones en lote de forma paralela
+    if update_tasks:
+        await asyncio.gather(*update_tasks)
+
+    return BulkVerifyLotsResponse(
+        verified=verified_count,
+        deviated=deviated,
+        skipped_no_geometry=skipped_no_geometry,
+    )
+

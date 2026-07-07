@@ -172,11 +172,11 @@
 
 **Independent Test**: quickstart US5.
 
-- [ ] **T057** [US5] Endpoint `POST /projects/{projectId}/lots/bulk-verify` (body `{tolerance_pct}`), auto-verifica dentro de tolerancia, audita, devuelve `{verified, deviated, skipped_no_geometry}`. Contrato: [contracts/verificacion-masiva-lotes.md](./contracts/verificacion-masiva-lotes.md). Reusa la lógica de `saveAndVerifyLot`. Verify: `pnpm test:api`
+- [x] **T057** [US5] Endpoint `POST /projects/{projectId}/lots/bulk-verify` (body `{tolerance_pct}`), auto-verifica dentro de tolerancia, audita, devuelve `{verified, deviated, skipped_no_geometry}`. Contrato: [contracts/verificacion-masiva-lotes.md](./contracts/verificacion-masiva-lotes.md). Reusa la lógica de `saveAndVerifyLot`. Verify: `pnpm test:api`
 
-- [ ] **T058** [US5] Ruta proxy web + botón "Verificar los lotes que coinciden con el plano" (tolerancia default 0,5%) en la pestaña Lotes / checklist, con resumen del resultado y enlace a revisión manual de los desviados. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T058** [US5] Ruta proxy web + botón "Verificar los lotes que coinciden con el plano" (tolerancia default 0,5%) en la pestaña Lotes / checklist, con resumen del resultado y enlace a revisión manual de los desviados. Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T059** [US5] Test: lotes diff 0,0% → verificados; diff 5% → deviated; sin geometría → skipped. Verify: `pnpm test:api`
+- [x] **T059** [US5] Test: lotes diff 0,0% → verificados; diff 5% → deviated; sin geometría → skipped. Verify: `pnpm test:api`
 
 **Checkpoint US5**: SC-006 (53 lotes en 1 acción).
 

@@ -26,6 +26,7 @@ export interface components {
       "description"?: string | null
       "fix_url"?: string | null
       "gate"?: string | null
+      "inherited"?: boolean
       "key"?: string | null
       "kind": "token_missing" | "readiness_gate" | "alert_clause_missing" | "snapshot_stale"
       "message"?: string | null
@@ -55,6 +56,15 @@ export interface components {
     "BotResponse": {
       "bot_username": string
       "is_active": boolean
+    }
+    "BulkVerifyLotsRequest": {
+      "admin_id": string
+      "tolerance_pct"?: number
+    }
+    "BulkVerifyLotsResponse": {
+      "deviated"?: Array<string>
+      "skipped_no_geometry"?: Array<string>
+      "verified": number
     }
     "ClauseUpsertRequest": {
       "alert_tipo"?: string | null
@@ -380,6 +390,11 @@ export interface components {
       "extraction_status": string
       "ingestion_job_id": string
       "legal_document_id": string
+    }
+    "LegalReviewDecisionRequest": {
+      "comentario"?: string | null
+      "decided_by": string
+      "decision": "aprobada" | "rechazada"
     }
     "LotLegalDataResponse": {
       "created_at"?: string | null
@@ -1143,6 +1158,12 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["MinutaGenerationListResponse"]
   }
+  "submit_legal_review_api_v1_escritura_matrices_case__escritura_case_id__legal_review_post": {
+    method: "POST"
+    path: "/api/v1/escritura-matrices/case/{escritura_case_id}/legal-review"
+    requestBody: components["schemas"]["LegalReviewDecisionRequest"]
+    response: components["schemas"]["MatrizCaseResponse"]
+  }
   "get_escritura_trace_api_v1_escritura_matrices_case__escritura_case_id__trace_get": {
     method: "GET"
     path: "/api/v1/escritura-matrices/case/{escritura_case_id}/trace"
@@ -1358,6 +1379,12 @@ export interface operations {
     path: "/api/v1/notifications/{notification_id}/read"
     requestBody: never
     response: components["schemas"]["MarkReadResponse"]
+  }
+  "bulk_verify_lots_api_v1_projects__project_id__lots_bulk_verify_post": {
+    method: "POST"
+    path: "/api/v1/projects/{project_id}/lots/bulk-verify"
+    requestBody: components["schemas"]["BulkVerifyLotsRequest"]
+    response: components["schemas"]["BulkVerifyLotsResponse"]
   }
   "list_prompts_api_v1_prompts__get": {
     method: "GET"
