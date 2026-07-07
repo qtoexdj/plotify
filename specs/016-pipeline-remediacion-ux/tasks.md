@@ -130,7 +130,7 @@
 
 - [x] **T041** [US3] Descomponer `LotReservationForm.tsx` (478 líneas) en secciones compartidas (`ClienteIdentificacion`, `ClienteDomicilio`, `ClienteContacto`) + `FirmaYMonto` solo venta; reserva usa `reservationSchema`, venta `saleSchema`. Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T042** [US3] Prefill al vender lote `reservado`: cargar `initialClientData` desde `lot_records` (fallback: última reserva aprobada) en `apps/web/src/components/projects/viewer/LotInfoView.tsx:262` (abre "Solicitar Venta"). Campos editables, aviso "Datos cargados desde la reserva", foco en primer vacío. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T042** [US3] Prefill al vender lote `reservado`: cargar `initialClientData` desde `lot_records` (fallback: última reserva aprobada) en `apps/web/src/components/projects/viewer/LotInfoView.tsx:262` (abre "Solicitar Venta"). Campos editables, aviso "Datos cargados desde la reserva", foco en primer vacío. Verify: `pnpm --filter web lint && pnpm build:web`
 
 - [ ] **T043** [US3] Aprobación delta (FR-017): cuando `sale_mode='reserved'` y RUT coincide con la reserva, la notificación al admin muestra el delta (valor final) en vez del formulario completo. Auto-aprobación queda **OFF por default** (HG-1). Archivos: notificación de aprobación + `apps/api/api/v1/endpoints/approvals.py:249`. Verify: `pnpm test:api`
 

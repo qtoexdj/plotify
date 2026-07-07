@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Spinner } from '@/components/ui/spinner'
@@ -26,6 +26,7 @@ import type {
   SaleFormInput,
 } from '@/lib/validations/approval-request.schema'
 import { CHILE_REGIONS } from '@/lib/geo/chile-location'
+import type { LotClientPrefill } from '@/types/viewer.types'
 import { ClienteIdentificacion } from '@/components/projects/lot-reservation-form/cliente-identificacion'
 import { ClienteDomicilio } from '@/components/projects/lot-reservation-form/cliente-domicilio'
 import { ClienteContacto } from '@/components/projects/lot-reservation-form/cliente-contacto'
@@ -41,7 +42,22 @@ interface LotReservationFormProps {
   onCancel: () => void
   mode?: 'reservation' | 'direct_sale'
   initialReservationValue?: number
+  /** T042 (FR-016): datos de la reserva aprobada para precargar la venta. */
+  initialClientData?: LotClientPrefill | null
 }
+
+const PREFILLABLE_FIELDS_IN_ORDER = [
+  'cliente_nombre',
+  'cliente_run',
+  'cliente_direccion',
+  'cliente_region',
+  'cliente_comuna',
+  'cliente_estado_civil',
+  'cliente_nacionalidad',
+  'cliente_ocupacion',
+  'cliente_email',
+  'cliente_telefono',
+] as const
 
 export function LotReservationForm({
   projectId,
@@ -51,28 +67,44 @@ export function LotReservationForm({
   onCancel,
   mode = 'reservation',
   initialReservationValue = 0,
+  initialClientData = null,
 }: LotReservationFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isDirectSale = mode === 'direct_sale'
+  const hasPrefill = isDirectSale && Boolean(initialClientData)
 
   const form = useForm<SaleInput>({
     resolver: zodResolver(isDirectSale ? saleSchema : reservationSchema) as never,
     defaultValues: {
-      cliente_nombre: '',
-      cliente_run: '',
-      cliente_direccion: '',
-      cliente_region: '',
-      cliente_comuna: '',
-      cliente_estado_civil: '',
-      cliente_nacionalidad: '',
-      cliente_ocupacion: '',
-      cliente_email: '',
-      cliente_telefono: '',
+      cliente_nombre: initialClientData?.cliente_nombre ?? '',
+      cliente_run: initialClientData?.cliente_run ?? '',
+      cliente_direccion: initialClientData?.cliente_direccion ?? '',
+      cliente_region: initialClientData?.cliente_region ?? '',
+      cliente_comuna: initialClientData?.cliente_comuna ?? '',
+      cliente_estado_civil: initialClientData?.cliente_estado_civil ?? '',
+      cliente_nacionalidad: initialClientData?.cliente_nacionalidad ?? '',
+      cliente_ocupacion: initialClientData?.cliente_ocupacion ?? '',
+      cliente_email: initialClientData?.cliente_email ?? '',
+      cliente_telefono: initialClientData?.cliente_telefono ?? '',
       fecha: new Date().toISOString().split('T')[0], // Today YYYY-MM-DD
       notaria: '',
       valor_reserva: initialReservationValue,
     },
   })
+
+  // T042: foco en el primer campo vacío tras precargar desde la reserva.
+  useEffect(() => {
+    if (!hasPrefill) return
+    const firstEmpty = PREFILLABLE_FIELDS_IN_ORDER.find(
+      (field) => !initialClientData?.[field]?.trim()
+    )
+    if (firstEmpty) {
+      form.setFocus(firstEmpty)
+    } else {
+      form.setFocus('fecha')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function onSubmit(data: ReservationInput | SaleInput) {
     setIsSubmitting(true)
@@ -132,6 +164,14 @@ export function LotReservationForm({
           Complete los datos del cliente para solicitar la{' '}
           {mode === 'direct_sale' ? 'venta' : 'reserva'}.
         </p>
+        {hasPrefill ? (
+          <p
+            role="status"
+            className="mt-2 rounded-md bg-info/10 px-3 py-2 text-xs font-medium text-info"
+          >
+            Datos cargados desde la reserva. Revísalos y completa lo que falte.
+          </p>
+        ) : null}
       </div>
 
       <Form {...form}>

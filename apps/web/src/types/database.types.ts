@@ -285,7 +285,10 @@ export interface LotRecord {
   cliente_run: string | null
   cliente_run_normalizado: string | null
   cliente_direccion: string | null
+  cliente_region: string | null
+  cliente_comuna: string | null
   cliente_estado_civil: string | null
+  cliente_nacionalidad: string | null
   cliente_ocupacion: string | null
   cliente_telefono: string | null
   cliente_email: string | null

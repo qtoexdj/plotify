@@ -94,6 +94,9 @@ export function ItemDetailPanel({
                 lotNumber={lotDetails.numero_lote}
                 mode={reservationMode} // 'reservation' | 'direct_sale'
                 initialReservationValue={lotDetails.valor_reserva || 0}
+                initialClientData={
+                  reservationMode === 'direct_sale' ? lotDetails.client_prefill : null
+                }
                 onSuccess={() => setReservationMode(null)} // Refresh will be handled by parent/realtime
                 onCancel={() => setReservationMode(null)}
               />

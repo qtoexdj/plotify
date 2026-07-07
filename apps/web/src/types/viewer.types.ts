@@ -8,7 +8,24 @@ import type {
   GeoJSONFeature,
   ServidumbreCalculationStatus,
   ServidumbreSource,
+  LotRecord,
 } from './database.types'
+
+/** T042 (FR-016): datos de la última reserva aprobada para precargar el
+ * formulario de venta. Solo los campos que el formulario edita. */
+export type LotClientPrefill = Pick<
+  LotRecord,
+  | 'cliente_nombre'
+  | 'cliente_run'
+  | 'cliente_direccion'
+  | 'cliente_region'
+  | 'cliente_comuna'
+  | 'cliente_estado_civil'
+  | 'cliente_nacionalidad'
+  | 'cliente_ocupacion'
+  | 'cliente_telefono'
+  | 'cliente_email'
+>
 
 export type ViewerGeometryType = GeometryType | 'servitude'
 
@@ -96,4 +113,8 @@ export interface LotDetails {
   verified_at: string | null
   verified_by: string | null
   etapa_proceso?: import('./database.types').ProcessStage | null
+  /** T042 (FR-016): datos de la reserva aprobada más reciente, para
+   * precargar el formulario de venta. Solo se resuelve cuando estado es
+   * "reservado" o "vendido". */
+  client_prefill?: LotClientPrefill | null
 }
