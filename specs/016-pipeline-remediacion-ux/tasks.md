@@ -210,7 +210,7 @@
 
 - [x] **T080** Actualizar `plotify_memori/` y memoria del proyecto con el estado final del pipeline (qué quedó resuelto). Verify: N/A
 
-- [ ] **T081** Correr todos los gates: `pnpm test:api && pnpm --filter web test && pnpm typecheck:web && pnpm build:web && pnpm verify:migrations`. Verify: todos verdes.
+- [x] **T081** Correr todos los gates: `pnpm test:api && pnpm --filter web test && pnpm typecheck:web && pnpm build:web && pnpm verify:migrations`. Verify: todos verdes.
 
 - [ ] **T082** **HG-3 (usuario)**: sesión de usabilidad con un usuario nuevo real que valide SC-003/SC-004/SC-005. Lo marca el usuario.
 
