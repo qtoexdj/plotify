@@ -327,19 +327,29 @@ export function GeometryViewer({
 
     if (lotIdsToUpdate.length === 0) return
 
-    await Promise.all(
-      lotIdsToUpdate.map((lotId) =>
-        fetch(`/api/onboarding/lot/${lotId}`, {
+    const responses = await Promise.all(
+      lotIdsToUpdate.map(async (lotId) => {
+        const response = await fetch(`/api/onboarding/lot/${lotId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         })
-      )
+        return { lotId, response }
+      })
     )
 
     const featuresRes = await fetch(`/api/viewer/${projectId}/feature-collection`)
     if (featuresRes.ok) {
       setFeatureCollection(await featuresRes.json())
+    }
+
+    // T045 (research R9): antes fallaba en silencio; ahora se valida cada
+    // respuesta y se avisa si algún lote no se pudo actualizar.
+    const failed = responses.filter(({ response }) => !response.ok)
+    if (failed.length > 0) {
+      throw new Error(
+        `No se pudo actualizar ${failed.length} de ${lotIdsToUpdate.length} lotes.`
+      )
     }
   }
 
@@ -420,9 +430,6 @@ export function GeometryViewer({
               newSet.delete(id)
               return newSet
             })
-          }}
-          onUpdateState={async (ids, newState) => {
-            await handleBulkUpdate(ids, { estado: newState })
           }}
           onUpdatePrice={async (ids, newPrice) => {
             await handleBulkUpdate(ids, { precio: newPrice })

@@ -136,7 +136,7 @@
 
 - [x] **T044** [US3] Máquina de estados de `lots.estado` server-side (data-model §2, research R9): validar transiciones en la capa de servicio de reserva/venta/liberación. Verify: `pnpm test:api`
 
-- [ ] **T045** [US3] Bulk-update de lotes: `handleBulkUpdate` (`apps/web/src/components/projects/geometry-viewer/index.tsx:317`) valida `response.ok` y muestra error. **Default (research R9): eliminar la UI de estado masivo** del `BulkActionsPanel` (acción muerta); si el usuario la quiere, agregar `estado` (enum) a `lotUpdateSchema` con guard. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T045** [US3] Bulk-update de lotes: `handleBulkUpdate` (`apps/web/src/components/projects/geometry-viewer/index.tsx:317`) valida `response.ok` y muestra error. **Default (research R9): eliminar la UI de estado masivo** del `BulkActionsPanel` (acción muerta); si el usuario la quiere, agregar `estado` (enum) a `lotUpdateSchema` con guard. Verify: `pnpm --filter web lint && pnpm build:web`
 
 **Checkpoint US3**: SC-004 (venta desde reserva en 2 actos).
 
