@@ -1396,6 +1396,44 @@ async def _resolve_case_vendor_user_id(
     return vendor_rows[0].get("user_id") if vendor_rows else None
 
 
+async def _resolve_org_admin_user_ids(client: Any, organization_id: str) -> list[str]:
+    """Admin user_ids de la organizacion que tienen Telegram vinculado."""
+    members_result = await asyncio.to_thread(
+        lambda: (
+            client.table("organization_members")
+            .select("user_id")
+            .eq("organization_id", organization_id)
+            .eq("role", "admin")
+            .execute()
+        )
+    )
+    member_rows = _rows(members_result.data)
+    admin_ids = [str(row["user_id"]) for row in member_rows if row.get("user_id")]
+    if not admin_ids:
+        return []
+
+    profiles_result = await asyncio.to_thread(
+        lambda: (
+            client.table("profiles")
+            .select("id, telegram_chat_id")
+            .in_("id", admin_ids)
+            .execute()
+        )
+    )
+    linked_profile_ids = {
+        str(row["id"])
+        for row in _rows(profiles_result.data)
+        if row.get("id") and row.get("telegram_chat_id")
+    }
+
+    seen: set[str] = set()
+    return [
+        user_id
+        for user_id in admin_ids
+        if user_id in linked_profile_ids and not (user_id in seen or seen.add(user_id))
+    ]
+
+
 async def _resolve_lot_label(client: Any, case_row: dict[str, Any]) -> str:
     lot_id = case_row.get("lot_id")
     if not lot_id:
@@ -1674,18 +1712,33 @@ async def _generate_minuta_row(
         content_hash=content_hash,
     )
 
-    # SDD 011 (US4): al aceptar/generar el borrador, entregarlo al vendedor
-    # asignado (Telegram best-effort + "mis documentos"). Best-effort: una falla
-    # de entrega NUNCA invalida la generación del DOCX ya persistida.
+    # SDD 016 (US1): al aceptar/generar el borrador, entregarlo a los admins
+    # con Telegram y al vendedor asignado. Best-effort: una falla de entrega
+    # NUNCA invalida la generación del DOCX ya persistida.
     try:
+        organization_id = str(case_row["organization_id"])
+        admin_user_ids = await _resolve_org_admin_user_ids(client, organization_id)
         vendor_user_id = await _resolve_case_vendor_user_id(client, case_row)
         lot_label = await _resolve_lot_label(client, case_row)
-        await deliver_draft(
-            supabase=client,
-            generation=inserted,
-            recipient_user_id=vendor_user_id,
-            lot_label=lot_label,
-        )
+        recipient_ids = [
+            user_id
+            for user_id in dict.fromkeys([*admin_user_ids, vendor_user_id])
+            if user_id is not None
+        ]
+        if not recipient_ids:
+            await deliver_draft(
+                supabase=client,
+                generation=inserted,
+                recipient_user_id=None,
+                lot_label=lot_label,
+            )
+        for recipient_user_id in recipient_ids:
+            await deliver_draft(
+                supabase=client,
+                generation=inserted,
+                recipient_user_id=recipient_user_id,
+                lot_label=lot_label,
+            )
     except Exception as exc:  # noqa: BLE001 - entrega best-effort, jamás bloquea
         logger.warning(
             "escritura_delivery_trigger_failed",

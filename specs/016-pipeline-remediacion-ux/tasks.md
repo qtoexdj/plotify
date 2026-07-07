@@ -90,11 +90,11 @@
 
 ### Entrega al admin (FR-009, FR-010)
 
-- [ ] **T019** [US1] Helper `_resolve_org_admin_user_ids(org)` en `apps/api/api/v1/endpoints/escritura_matrices.py` (admins con `telegram_chat_id`). Verify: `pnpm test:api`
+- [x] **T019** [US1] Helper `_resolve_org_admin_user_ids(org)` en `apps/api/api/v1/endpoints/escritura_matrices.py` (admins con `telegram_chat_id`). Verify: `pnpm test:api`
 
-- [ ] **T020** [US1] En el trigger de entrega (`_generate_minuta_row`/`deliver_draft`, `escritura_matrices.py:1680`): entregar a admin(s) siempre + vendedor si tiene Telegram; una fila por destinatario; nunca `sent` con `recipient_user_id` nulo (usar estado `unavailable`). Contrato: [contracts/entrega-telegram.md](./contracts/entrega-telegram.md). Verify: `pnpm test:api`
+- [x] **T020** [US1] En el trigger de entrega (`_generate_minuta_row`/`deliver_draft`, `escritura_matrices.py:1680`): entregar a admin(s) siempre + vendedor si tiene Telegram; una fila por destinatario; nunca `sent` con `recipient_user_id` nulo (usar estado `unavailable`). Contrato: [contracts/entrega-telegram.md](./contracts/entrega-telegram.md). Verify: `pnpm test:api`
 
-- [ ] **T021** [US1] Test: generar minuta con admin con `telegram_chat_id` → fila `sent` con recipient=admin; sin destinatario → `unavailable`, nunca `sent` nulo. Verify: `pnpm test:api`
+- [x] **T021** [US1] Test: generar minuta con admin con `telegram_chat_id` → fila `sent` con recipient=admin; sin destinatario → `unavailable`, nunca `sent` nulo. Verify: `pnpm test:api`
 
 **Checkpoint US1**: quickstart US1 pasa de punta a punta. **← MVP funcional.**
 

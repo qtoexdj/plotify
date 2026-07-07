@@ -1554,6 +1554,69 @@ class TestGenerateMinuta:
         assert inserted["resolution_manifest"]["missing_count"] == 0
         assert inserted["warning_acknowledged_by"] == "00000000-0000-4000-8000-000000000010"
 
+    def test_generate_delivers_to_linked_org_admin(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+        admin_id = "00000000-0000-4000-8000-000000000021"
+        store.tables["organization_members"] = [
+            {"organization_id": ORG_ID, "user_id": admin_id, "role": "admin"}
+        ]
+        store.tables["profiles"] = [{"id": admin_id, "telegram_chat_id": "777001"}]
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/generate",
+            params={"organization_id": ORG_ID},
+            json={
+                "warning_acknowledged": True,
+                "generated_by": "00000000-0000-4000-8000-000000000010",
+            },
+        )
+
+        assert response.status_code == 201
+        deliveries = store.tables["escritura_deliveries"]
+        assert {row["recipient_user_id"] for row in deliveries} == {admin_id}
+        assert {row["channel"] for row in deliveries} == {"web", "telegram"}
+        assert any(row["status"] == "sent" for row in deliveries)
+        assert not [
+            row
+            for row in deliveries
+            if row["recipient_user_id"] is None and row["status"] == "sent"
+        ]
+
+    def test_generate_without_resolvable_recipient_records_unavailable(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/generate",
+            params={"organization_id": ORG_ID},
+            json={
+                "warning_acknowledged": True,
+                "generated_by": "00000000-0000-4000-8000-000000000010",
+            },
+        )
+
+        assert response.status_code == 201
+        deliveries = store.tables["escritura_deliveries"]
+        assert len(deliveries) == 1
+        delivery = deliveries[0]
+        assert delivery["recipient_user_id"] is None
+        assert delivery["status"] == "unavailable"
+        assert delivery["sent_at"] is None
+        assert not [
+            row
+            for row in deliveries
+            if row["recipient_user_id"] is None and row["status"] == "sent"
+        ]
+
     def test_list_case_generations_returns_signed_urls(self, monkeypatch):
         store = FakeStore()
         _seed_case(store)
