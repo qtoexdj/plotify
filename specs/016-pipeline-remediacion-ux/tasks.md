@@ -112,7 +112,7 @@
 
 - [ ] **T032** [US2] Estado post-aprobación: header "Molde aprobado · esperando ventas" + botón deshabilitado; mensaje claro si faltan huecos. Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T033** [US2] Gates heredados (FR-014): al construir la vista del caso, marcar los gates de proyecto (title/sag/sii-matriz) como heredados y NO contarlos en pendientes del caso. Solo se muestran datos de venta + geometry + legal_review. Archivos: readiness/mesa. **No** relajar la evaluación interna. Verify: `pnpm test:api && pnpm build:web`
+- [x] **T033** [US2] Gates heredados (FR-014): al construir la vista del caso, marcar los gates de proyecto (title/sag/sii-matriz) como heredados y NO contarlos en pendientes del caso. Solo se muestran datos de venta + geometry + legal_review. Archivos: readiness/mesa. **No** relajar la evaluación interna. Verify: `pnpm test:api && pnpm build:web`
 
 - [ ] **T034** [US2] Test web: caso muestra ≤2 pendientes tras heredar gates; variable confidence 0.5 NO se auto-aprueba. Verify: `pnpm --filter web test`
 

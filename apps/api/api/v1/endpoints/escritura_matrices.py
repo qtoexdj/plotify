@@ -106,6 +106,9 @@ GENERATION_COLUMNS = (
 MINUTA_STORAGE_BUCKET = "documents"
 PROJECT_MATRIZ_GATE = "project_matriz_approved"
 PROJECT_MATRIZ_MISSING_CODE = "project_matriz_approval_missing"
+INHERITED_PROJECT_READINESS_GATES = frozenset(
+    {"title_verified", "sag_plano_verified", "sii_verified"}
+)
 
 # SDD 010 (research D6): catalogo humanizado para el picker "Insertar dato",
 # construido una vez desde la fuente unica (matriz_token_resolution).
@@ -525,6 +528,7 @@ def _approval_blockers(
     case_row: dict[str, Any],
     active_clauses: list[dict[str, Any]],
     snapshot_stale: bool,
+    inherited_gates: set[str] | frozenset[str] | None = None,
 ) -> list[dict[str, Any]]:
     project_id = str(case_row["project_id"])
     fix_url = f"/projects/{project_id}?tab=legal"
@@ -593,7 +597,11 @@ def _approval_blockers(
             )
         )
 
-    blockers.extend(_readiness_gate_blockers(case_row=case_row, fix_url=fix_url))
+    blockers.extend(
+        _readiness_gate_blockers(
+            case_row=case_row, fix_url=fix_url, inherited_gates=inherited_gates
+        )
+    )
     blockers.extend(
         _alert_clause_blockers(
             variable_snapshot=_as_dict(case_row.get("variable_snapshot")),
@@ -651,20 +659,25 @@ def _alert_clause_blockers(
 
 
 def _readiness_gate_blockers(
-    *, case_row: dict[str, Any], fix_url: str
+    *,
+    case_row: dict[str, Any],
+    fix_url: str,
+    inherited_gates: set[str] | frozenset[str] | None = None,
 ) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
+    inherited_gates = inherited_gates or frozenset()
     readiness_gates = _as_dict(case_row.get("readiness_gates"))
     for gate, payload in readiness_gates.items():
         if not isinstance(payload, dict) or payload.get("status") != "blocked":
             continue
+        gate_name = str(gate)
         causes = payload.get("blocking_variables") or []
         if not causes:
             causes = [None]
         for cause in causes:
             cause_text = str(cause) if cause is not None else None
             try:
-                copy = readiness_gate_microcopy(str(gate), cause_text)
+                copy = readiness_gate_microcopy(gate_name, cause_text)
             except KeyError:
                 # Gate fuera del catalogo (futuro): texto generico, nunca 500
                 # ni codigo crudo en pantalla.
@@ -680,9 +693,10 @@ def _readiness_gate_blockers(
                 _humanized(
                     {
                         "kind": "readiness_gate",
-                        "gate": str(gate),
+                        "gate": gate_name,
                         "cause": cause_text,
                         "fix_url": fix_url,
+                        "inherited": gate_name in inherited_gates,
                     },
                     copy,
                     fix_url,
@@ -790,6 +804,11 @@ async def _case_response(
                     case_row=case_row,
                     active_clauses=active_clauses,
                     snapshot_stale=snapshot_stale,
+                    inherited_gates=(
+                        INHERITED_PROJECT_READINESS_GATES
+                        if matrix_row.get("source_project_matriz_id")
+                        else None
+                    ),
                 ),
                 "dismissed_alerts": _dismissed_alerts(variable_snapshot),
             },

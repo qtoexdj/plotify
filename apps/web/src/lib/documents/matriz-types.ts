@@ -232,6 +232,7 @@ export type ApprovalBlocker = BlockerMicrocopyFields &
         cause: string | null
         fix_url: string
         message?: string | null
+        inherited?: boolean
       }
     | {
         kind: 'alert_clause_missing'

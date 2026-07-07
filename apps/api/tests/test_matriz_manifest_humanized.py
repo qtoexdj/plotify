@@ -187,6 +187,32 @@ def test_readiness_gate_blocker_translates_cause() -> None:
         _assert_human(text)
 
 
+def test_readiness_gate_blocker_can_be_marked_as_inherited_for_case_view() -> None:
+    snapshot = _snapshot()
+    gates = {
+        "title_verified": {
+            "status": "blocked",
+            "blocking_variables": ["titulo.clausula_primero_texto"],
+        },
+        "geometry_verified": {
+            "status": "blocked",
+            "blocking_variables": ["geometry_verified"],
+        },
+    }
+    blockers = _approval_blockers(
+        manifest={"tokens": [], "blocks": []},
+        case_row=_case_row(snapshot, gates),
+        active_clauses=[],
+        snapshot_stale=False,
+        inherited_gates=frozenset({"title_verified"}),
+    )
+
+    inherited = next(item for item in blockers if item["gate"] == "title_verified")
+    visible = next(item for item in blockers if item["gate"] == "geometry_verified")
+    assert inherited["inherited"] is True
+    assert visible["inherited"] is False
+
+
 def test_snapshot_stale_blocker_speaks_expediente() -> None:
     blockers = _approval_blockers(
         manifest={"tokens": [], "blocks": []},

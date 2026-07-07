@@ -12,9 +12,11 @@ import path from 'path'
 
 import {
   decideMesaVista,
+  isInheritedProjectGateBlocker,
   mensajeDeGuardado,
   overridesDeLaMatriz,
   resumenDeMesa,
+  visibleApprovalBlockers,
 } from '@/components/documents/mesa/mesa-escritura'
 import {
   bloquesDeClausula,
@@ -108,6 +110,25 @@ const GATE_BLOCKER: ApprovalBlocker = {
   action_href: '/projects/p1?tab=legal',
 }
 
+const INHERITED_PROJECT_GATE_BLOCKER: ApprovalBlocker = {
+  ...GATE_BLOCKER,
+  inherited: true,
+}
+
+const INHERITED_SAG_GATE_BLOCKER: ApprovalBlocker = {
+  ...GATE_BLOCKER,
+  gate: 'sag_plano_verified',
+  title: 'Verificación pendiente: SAG y plano',
+  inherited: true,
+}
+
+const INHERITED_SII_GATE_BLOCKER: ApprovalBlocker = {
+  ...GATE_BLOCKER,
+  gate: 'sii_verified',
+  title: 'Verificación pendiente: Roles SII',
+  inherited: true,
+}
+
 const DATO_BLOCKER: ApprovalBlocker = {
   kind: 'token_missing',
   key: 'comprador.estado_civil',
@@ -122,6 +143,36 @@ describe('decideMesaVista (research D7)', () => {
   it('verificaciones bloqueadas → preparación (jamás mesa parcial)', () => {
     expect(decideMesaVista(matrizWith([GATE_BLOCKER]))).toBe('preparacion')
     expect(decideMesaVista(matrizWith([DATO_BLOCKER, GATE_BLOCKER]))).toBe('preparacion')
+  })
+
+  it('ignora gates de proyecto heredados del molde aprobado en la vista del caso', () => {
+    const matriz = matrizWith([INHERITED_PROJECT_GATE_BLOCKER, DATO_BLOCKER])
+
+    expect(isInheritedProjectGateBlocker(INHERITED_PROJECT_GATE_BLOCKER)).toBe(true)
+    expect(visibleApprovalBlockers(matriz.approval_blockers)).toEqual([DATO_BLOCKER])
+    expect(decideMesaVista(matriz)).toBe('mesa')
+    expect(resumenDeMesa(matriz).pendientes).toBe(1)
+  })
+
+  it('deja ≤2 pendientes visibles cuando título, SAG y SII vienen heredados', () => {
+    const legalReviewBlocker: ApprovalBlocker = {
+      ...GATE_BLOCKER,
+      gate: 'legal_review_ready',
+      cause: 'documento.abogado_redactor.nombre',
+      title: 'Verificación pendiente: revisión legal',
+    }
+    const matriz = matrizWith([
+      INHERITED_PROJECT_GATE_BLOCKER,
+      INHERITED_SAG_GATE_BLOCKER,
+      INHERITED_SII_GATE_BLOCKER,
+      DATO_BLOCKER,
+      legalReviewBlocker,
+    ])
+
+    const visibles = visibleApprovalBlockers(matriz.approval_blockers)
+    expect(visibles).toEqual([DATO_BLOCKER, legalReviewBlocker])
+    expect(visibles).toHaveLength(2)
+    expect(resumenDeMesa(matriz).pendientes).toBeLessThanOrEqual(2)
   })
 
   it('solo datos faltantes (sin verificación bloqueada) → mesa', () => {

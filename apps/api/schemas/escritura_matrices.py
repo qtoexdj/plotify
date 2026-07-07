@@ -185,6 +185,10 @@ class ApprovalBlocker(MatrizResponseModel):
     description: str | None = None
     action_label: str | None = None
     action_href: str | None = None
+    # SDD 016 FR-014: en la vista del caso algunos gates de proyecto quedan
+    # heredados desde el molde aprobado. Siguen existiendo para auditoria, pero
+    # la UI no los cuenta como pendientes accionables del caso.
+    inherited: bool = False
 
 
 class DismissedAlert(MatrizResponseModel):

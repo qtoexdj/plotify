@@ -19,6 +19,7 @@ import {
 } from '@/lib/documents/matriz-client'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
 import type {
+  ApprovalBlocker,
   ClauseContentJson,
   MatrizCaseResponse,
   MatrizClauseOverride,
@@ -44,8 +45,16 @@ import { WorkflowAcciones } from './workflow-acciones'
 
 export type MesaVista = 'preparacion' | 'mesa'
 
+export function isInheritedProjectGateBlocker(blocker: ApprovalBlocker): boolean {
+  return blocker.kind === 'readiness_gate' && blocker.inherited === true
+}
+
+export function visibleApprovalBlockers(blockers: ApprovalBlocker[]): ApprovalBlocker[] {
+  return blockers.filter((blocker) => !isInheritedProjectGateBlocker(blocker))
+}
+
 export function decideMesaVista(matriz: MatrizView): MesaVista {
-  const verificacionesBloqueadas = matriz.approval_blockers.some(
+  const verificacionesBloqueadas = visibleApprovalBlockers(matriz.approval_blockers).some(
     (blocker) => blocker.kind === 'readiness_gate'
   )
   return verificacionesBloqueadas ? 'preparacion' : 'mesa'
@@ -59,7 +68,7 @@ export function resumenDeMesa(matriz: MatrizView) {
     totalClausulas: matriz.clauses.length,
     desactivadas,
     fijas,
-    pendientes: matriz.approval_blockers.length,
+    pendientes: visibleApprovalBlockers(matriz.approval_blockers).length,
     datosFaltantes: matriz.resolution.missing_count,
     puedeEditar: matriz.status !== 'approved' && !matriz.snapshot_stale,
   }
@@ -152,6 +161,10 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
 
   const matriz = data?.matriz ?? null
   const resumen = useMemo(() => (matriz ? resumenDeMesa(matriz) : null), [matriz])
+  const blockersVisibles = useMemo(
+    () => (matriz ? visibleApprovalBlockers(matriz.approval_blockers) : []),
+    [matriz]
+  )
   const ordenadas = useMemo(() => (matriz ? clausulasOrdenadas(matriz) : []), [matriz])
 
   function handleReordenar(reordenadas: MatrizClauseView[]) {
@@ -267,7 +280,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
   if (decideMesaVista(matriz) === 'preparacion') {
     return (
       <div data-testid="mesa-escritura">
-        <EstadoPreparacion matriz={matriz} blockers={matriz.approval_blockers} />
+        <EstadoPreparacion matriz={matriz} blockers={blockersVisibles} />
       </div>
     )
   }
@@ -290,17 +303,17 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
         <WorkflowAcciones matriz={matriz} onWorkflowUpdate={handleWorkflowUpdate} />
       </section>
 
-      {matriz.approval_blockers.length > 0 ? (
+      {blockersVisibles.length > 0 ? (
         <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
           <h3 className="mb-3 text-sm font-semibold">{MESA_TEXT.pendientesTitle}</h3>
           {matriz.scope === 'project' ? (
             <PreparacionMatriz
               projectId={matriz.project_id}
-              blockers={matriz.approval_blockers}
+              blockers={blockersVisibles}
               onResolved={recargarMatriz}
             />
           ) : (
-            <PendientesList blockers={matriz.approval_blockers} compact />
+            <PendientesList blockers={blockersVisibles} compact />
           )}
         </section>
       ) : null}
@@ -342,7 +355,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
       <Sheet open={indiceSheetOpen} onOpenChange={setIndiceSheetOpen}>
         <SheetContent
           side="bottom"
-          className="flex h-[82dvh] flex-col overflow-hidden rounded-t-2xl p-0"
+          className="flex h-[80dvh] flex-col overflow-hidden rounded-t-2xl p-0"
           onClickCapture={(event) => {
             if ((event.target as HTMLElement).closest('a[href^="#clausula-"]')) {
               setIndiceSheetOpen(false)
@@ -362,7 +375,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="flex h-[82dvh] flex-col overflow-hidden rounded-t-2xl p-0"
+          className="flex h-[80dvh] flex-col overflow-hidden rounded-t-2xl p-0"
         >
           <SheetHeader className="border-b border-border px-4 py-3 pr-14 text-left">
             <SheetTitle>Datos y acciones</SheetTitle>
