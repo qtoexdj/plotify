@@ -164,7 +164,45 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
   const visibleActivityLots = isTableExpanded ? tableLots : tableLots.slice(0, 2)
   const revenue = lots.reduce((sum, lot) => sum + (lot.lot_records?.valor ?? lot.precio ?? 0), 0)
   const revenueUf = revenue > 0 ? Math.round(revenue / (ufValue ?? 39000)) : 0
-  const summaryStatus = projectStatusConfig[project.estado ?? 'draft'] ?? projectStatusConfig.draft
+
+  const isOperational = project.estado === 'operational' || project.estado === 'activo'
+  const hasVentas = project.lotes_reservados > 0 || project.lotes_vendidos > 0
+  const isProjectOperational = isOperational || hasVentas
+
+  const estadoProyectoReal = useMemo(() => {
+    if (isProjectOperational) return 'operational'
+
+    const lotesTotal = lots.length
+    if (lotesTotal === 0) return 'draft'
+
+    const lotesVerificados = lots.filter(
+      (lot) => Boolean(lot.geometry_id) && lot.verified_status !== 'draft'
+    ).length
+    const lotesListo = lotesTotal > 0 && lotesVerificados === lotesTotal
+
+    const blockers = (projectMatriz?.approval_blockers ?? []).filter(
+      (blocker) => !(blocker.kind === 'readiness_gate' && blocker.inherited === true)
+    )
+    const tituloBlocker = blockers.find(
+      (blocker) => blocker.kind === 'readiness_gate' && blocker.gate === 'title_verified'
+    )
+    const tituloListo = Boolean(projectMatriz) && !tituloBlocker
+
+    const variableBlockers = blockers.filter(
+      (blocker) => !(blocker.kind === 'readiness_gate' && blocker.gate === 'title_verified')
+    )
+    const variablesListo = Boolean(projectMatriz) && variableBlockers.length === 0
+
+    const moldeListo = projectMatriz?.status === 'approved'
+
+    if (lotesListo && tituloListo && variablesListo && moldeListo) {
+      return 'validated'
+    }
+
+    return 'imported'
+  }, [isProjectOperational, lots, projectMatriz])
+
+  const summaryStatus = projectStatusConfig[estadoProyectoReal] ?? projectStatusConfig.draft
 
   useEffect(() => {
     if (!isLocationOpen) return
@@ -385,8 +423,6 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
     }
   }
 
-  const isOperational = project.estado === 'operational' || project.estado === 'activo'
-
   const checklistSteps = useMemo(() => {
     const blockers = (projectMatriz?.approval_blockers ?? []).filter(
       (blocker) => !(blocker.kind === 'readiness_gate' && blocker.inherited === true)
@@ -472,7 +508,11 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
             : lotesListo
               ? 'Todos los lotes están verificados.'
               : `${lotesVerificados} de ${lotesTotal} lotes verificados.`,
-        ctaLabel: lotesListo ? undefined : lotesTotal === 0 ? 'Importar geometría' : 'Verificar lotes',
+        ctaLabel: lotesListo
+          ? undefined
+          : lotesTotal === 0
+            ? 'Importar geometría'
+            : 'Verificar lotes',
         onClick: lotesListo
           ? undefined
           : () => onNavigateTab?.(lotesTotal === 0 ? 'viewer' : 'lots'),
@@ -481,16 +521,16 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
       {
         id: 'ventas',
         label: 'Ventas',
-        done: isOperational,
-        detail: isOperational
+        done: isProjectOperational,
+        detail: isProjectOperational
           ? 'Las ventas están habilitadas.'
           : 'Las ventas aún no están habilitadas para este proyecto.',
-        ctaLabel: isOperational ? undefined : 'Habilitar ventas',
-        onClick: isOperational ? undefined : handleMakeOperational,
+        ctaLabel: isProjectOperational ? undefined : 'Habilitar ventas',
+        onClick: isProjectOperational ? undefined : handleMakeOperational,
         href: undefined as string | undefined,
       },
     ]
-  }, [project, projectMatriz, lots, isOperational, onNavigateTab, handleMakeOperational])
+  }, [project, projectMatriz, lots, isProjectOperational, onNavigateTab, handleMakeOperational])
 
   const formattedClp = new Intl.NumberFormat('es-CL', {
     style: 'currency',
@@ -515,7 +555,7 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
 
   return (
     <div className="space-y-6">
-      {!isOperational && (
+      {!isProjectOperational && (
         <Card className="w-full gap-0 overflow-hidden border-primary/30 bg-primary/5 py-0">
           <CardContent className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="min-w-0 space-y-1">
@@ -524,18 +564,18 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
                   Estado de Preparación:
                 </span>
                 <Badge className="border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
-                  {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.label}
+                  {ESTADO_PROYECTO_CONFIG[estadoProyectoReal]?.label}
                 </Badge>
               </div>
               <h4 className="mt-1 text-sm font-semibold text-foreground">
                 Proyecto en Fase de Preparación
               </h4>
               <p className="max-w-4xl text-xs leading-relaxed text-muted-foreground">
-                {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.description}
+                {ESTADO_PROYECTO_CONFIG[estadoProyectoReal]?.description}
               </p>
             </div>
 
-            {isAdmin && (
+            {isAdmin && !hasVentas && (
               <Button
                 size="sm"
                 onClick={handleMakeOperational}
@@ -549,7 +589,7 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
         </Card>
       )}
 
-      {!isOperational && isAdmin && (
+      {!isProjectOperational && isAdmin && (
         <Card className="w-full shadow-xs">
           <CardHeader>
             <CardTitle>Checklist de preparación</CardTitle>
@@ -792,8 +832,8 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Estado</label>
                   <p className="text-lg mt-0.5">
-                    <Badge className={ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.className}>
-                      {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.label}
+                    <Badge className={ESTADO_PROYECTO_CONFIG[estadoProyectoReal]?.className}>
+                      {ESTADO_PROYECTO_CONFIG[estadoProyectoReal]?.label}
                     </Badge>
                   </p>
                 </div>

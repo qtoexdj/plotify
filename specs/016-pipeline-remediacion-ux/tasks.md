@@ -150,7 +150,7 @@
 
 - [x] **T050** [US4] Checklist del proyecto en la vista general (`apps/web/src/components/projects/detail/overview-tab.tsx`): pasos Documentos/Título/Variables/Molde/Lotes/Ventas con estado real + CTA (FR-020). Reusar `PreparacionMatriz` como base. Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T051** [US4] Derivar el estado de preparación del proyecto del estado real (geometría/matriz/ventas), no del flag fijo "Borrador" (FR-021). Quitar CTA "Habilitar Ventas" si ya hay ventas. Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T051** [US4] Derivar el estado de preparación del proyecto del estado real (geometría/matriz/ventas), no del flag fijo "Borrador" (FR-021). Quitar CTA "Habilitar Ventas" si ya hay ventas. Verify: `pnpm --filter web lint && pnpm build:web`
 
 - [ ] **T052** [US4] Pantalla "Datos de la organización para escrituras" en Configuración (razón social, RUT, banco/cuenta, mandatario, abogado redactor). Contrato: [contracts/organizacion-config.md](./contracts/organizacion-config.md). Verify: `pnpm --filter web lint && pnpm build:web`
 
