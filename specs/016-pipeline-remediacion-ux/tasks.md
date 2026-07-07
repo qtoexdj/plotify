@@ -152,9 +152,9 @@
 
 - [x] **T051** [US4] Derivar el estado de preparación del proyecto del estado real (geometría/matriz/ventas), no del flag fijo "Borrador" (FR-021). Quitar CTA "Habilitar Ventas" si ya hay ventas. Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T052** [US4] Pantalla "Datos de la organización para escrituras" en Configuración (razón social, RUT, banco/cuenta, mandatario, abogado redactor). Contrato: [contracts/organizacion-config.md](./contracts/organizacion-config.md). Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T052** [US4] Pantalla "Datos de la organización para escrituras" en Configuración (razón social, RUT, banco/cuenta, mandatario, abogado redactor). Contrato: [contracts/organizacion-config.md](./contracts/organizacion-config.md). Verify: `pnpm --filter web lint && pnpm build:web`
 
-- [ ] **T053** [US4] Pantalla "Conectar Telegram" en Configuración (deep link al bot + vinculación de `profiles.telegram_chat_id`; para admin, registrar bot de org si falta). Verify: `pnpm --filter web lint && pnpm build:web`
+- [x] **T053** [US4] Pantalla "Conectar Telegram" en Configuración (deep link al bot + vinculación de `profiles.telegram_chat_id`; para admin, registrar bot de org si falta). Verify: `pnpm --filter web lint && pnpm build:web`
 
 - [ ] **T054** [US4] Scoping del sidebar por rol (`apps/web/src/components/app-sidebar.tsx:31`, `navItems`): ocultar Mesa/Plantillas/Vendedores al rol `user` + guard server-side en las rutas. Verify: `pnpm --filter web lint && pnpm build:web`
 

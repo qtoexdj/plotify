@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getProfile } from './actions'
+import { getActiveWorkspace } from '@/lib/services/workspace.service'
 import { ProfileSettingsForm } from '@/components/dashboard/profile-settings-form'
+import { ProfileTelegramConnection } from '@/components/dashboard/profile-telegram-connection'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { PageHeader } from '@/components/dashboard/page-header'
 import { BentoGrid } from '@/components/dashboard/bento-grid'
@@ -38,6 +40,21 @@ export default async function ProfileSettingsPage() {
     )
   }
 
+  // Obtener el bot de Telegram de la organización activa para el deep link
+  const workspace = await getActiveWorkspace(user.id)
+  let botUsername: string | null = null
+  if (workspace) {
+    const { data: bot } = await supabase
+      .from('telegram_bots')
+      .select('bot_username')
+      .eq('organization_id', workspace.organization.id)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (bot) {
+      botUsername = bot.bot_username
+    }
+  }
+
   return (
     <PageShell>
       <PageHeader
@@ -46,8 +63,16 @@ export default async function ProfileSettingsPage() {
       />
 
       <BentoGrid className="mt-6">
-        <div className="md:col-span-12">
+        <div className="md:col-span-12 lg:col-span-8">
           <ProfileSettingsForm profile={profile} email={user.email || ''} />
+        </div>
+        <div className="md:col-span-12 lg:col-span-4">
+          <ProfileTelegramConnection
+            userId={user.id}
+            telegramChatId={profile.telegram_chat_id}
+            botUsername={botUsername}
+            organizationId={workspace?.organization.id ?? null}
+          />
         </div>
       </BentoGrid>
     </PageShell>
