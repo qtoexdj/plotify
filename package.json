@@ -17,7 +17,8 @@
     "format:check": "prettier --check .",
     "test:api": "cd apps/api && .venv/bin/python -m pytest -q",
     "contracts:generate": "cd apps/api && ./.venv/bin/python scripts/export_openapi_contract.py",
-    "verify:migrations": "pnpm --filter @plotify/database verify:migrations"
+    "verify:migrations": "pnpm --filter @plotify/database verify:migrations",
+    "update:webhook": "cd apps/api && ./.venv/bin/python scripts/dev-only/update_ngrok_webhook.py"
   },
   "devDependencies": {
     "prettier": "^3.8.3"

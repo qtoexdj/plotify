@@ -157,6 +157,12 @@
       "sourceType": "autoskills-registry",
       "computedHash": "551eb86a35cbf35747cc1a58059ed7e73aacdf03d2fd2e12f63208ea2c0a4ae9"
     },
+    "telegram-mini-app": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "github",
+      "skillPath": "cli-tool/components/skills/enterprise-communication/telegram-mini-app/SKILL.md",
+      "computedHash": "c13eae12baab9a67457572dc1e0217980eb11ff3b10db97daaaf140d3bd8b000"
+    },
     "test-driven-development": {
       "source": "addyosmani/agent-skills",
       "sourceType": "github",
