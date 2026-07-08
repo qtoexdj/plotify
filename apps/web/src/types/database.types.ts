@@ -126,7 +126,7 @@ export interface ApprovalRequestPayload {
   cliente_nombre: string
   cliente_run: string
   valor_reserva: number
-  notaria: string
+  notaria?: string
   fecha_firma?: string
   // Campos extra para popular lot_records al aprobar
   cliente_direccion?: string
@@ -285,7 +285,10 @@ export interface LotRecord {
   cliente_run: string | null
   cliente_run_normalizado: string | null
   cliente_direccion: string | null
+  cliente_region: string | null
+  cliente_comuna: string | null
   cliente_estado_civil: string | null
+  cliente_nacionalidad: string | null
   cliente_ocupacion: string | null
   cliente_telefono: string | null
   cliente_email: string | null

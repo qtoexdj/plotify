@@ -168,6 +168,11 @@
             ],
             "title": "Gate"
           },
+          "inherited": {
+            "default": false,
+            "title": "Inherited",
+            "type": "boolean"
+          },
           "key": {
             "anyOf": [
               {
@@ -355,6 +360,51 @@
         },
         "required": ["bot_username", "is_active"],
         "title": "BotResponse",
+        "type": "object"
+      },
+      "BulkVerifyLotsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "admin_id": {
+            "format": "uuid",
+            "title": "Admin Id",
+            "type": "string"
+          },
+          "tolerance_pct": {
+            "default": 0.5,
+            "title": "Tolerance Pct",
+            "type": "number"
+          }
+        },
+        "required": ["admin_id"],
+        "title": "BulkVerifyLotsRequest",
+        "type": "object"
+      },
+      "BulkVerifyLotsResponse": {
+        "properties": {
+          "deviated": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Deviated",
+            "type": "array"
+          },
+          "skipped_no_geometry": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Skipped No Geometry",
+            "type": "array"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "integer"
+          }
+        },
+        "required": ["verified"],
+        "title": "BulkVerifyLotsResponse",
         "type": "object"
       },
       "ClauseUpsertRequest": {
@@ -2380,6 +2430,36 @@
         "title": "LegalDocumentRetryResponse",
         "type": "object"
       },
+      "LegalReviewDecisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "comentario": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario"
+          },
+          "decided_by": {
+            "format": "uuid",
+            "title": "Decided By",
+            "type": "string"
+          },
+          "decision": {
+            "enum": ["aprobada", "rechazada"],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": ["decision", "decided_by"],
+        "title": "LegalReviewDecisionRequest",
+        "type": "object"
+      },
       "LotLegalDataResponse": {
         "properties": {
           "created_at": {
@@ -3856,6 +3936,17 @@
       "ReservationPayload": {
         "description": "Datos del cliente y la operación, almacenados como JSONB.",
         "properties": {
+          "cliente_comuna": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Comuna"
+          },
           "cliente_direccion": {
             "anyOf": [
               {
@@ -3889,6 +3980,17 @@
             ],
             "title": "Cliente Estado Civil"
           },
+          "cliente_nacionalidad": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Nacionalidad"
+          },
           "cliente_nombre": {
             "minLength": 2,
             "title": "Cliente Nombre",
@@ -3904,6 +4006,17 @@
               }
             ],
             "title": "Cliente Ocupacion"
+          },
+          "cliente_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Region"
           },
           "cliente_run": {
             "minLength": 7,
@@ -4222,6 +4335,17 @@
       "SalePayload": {
         "description": "Datos del cliente y la operación de venta, almacenados como JSONB.",
         "properties": {
+          "cliente_comuna": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Comuna"
+          },
           "cliente_direccion": {
             "anyOf": [
               {
@@ -4255,6 +4379,17 @@
             ],
             "title": "Cliente Estado Civil"
           },
+          "cliente_nacionalidad": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Nacionalidad"
+          },
           "cliente_nombre": {
             "minLength": 2,
             "title": "Cliente Nombre",
@@ -4270,6 +4405,17 @@
               }
             ],
             "title": "Cliente Ocupacion"
+          },
+          "cliente_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Region"
           },
           "cliente_run": {
             "minLength": 7,
@@ -7624,6 +7770,73 @@
         "tags": ["escritura-matrices"]
       }
     },
+    "/api/v1/escritura-matrices/case/{escritura_case_id}/legal-review": {
+      "post": {
+        "description": "FR-007/FR-008: acción explícita del admin/abogado sobre el caso.\nAprobada exige que documento.abogado_redactor.nombre/rut ya existan\nproject-scoped (T015); escribe revision_juridica.* scope lote y audita\nen legal_review_decisions. Rechazada exige comentario y no avanza el caso.",
+        "operationId": "submit_legal_review_api_v1_escritura_matrices_case__escritura_case_id__legal_review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escritura_case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escritura Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalReviewDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrizCaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Submit Legal Review",
+        "tags": ["escritura-matrices"]
+      }
+    },
     "/api/v1/escritura-matrices/case/{escritura_case_id}/trace": {
       "get": {
         "description": "Trazabilidad completa de la escritura (FR-012), consultable desde la\nmesa y el historial.",
@@ -9884,6 +10097,73 @@
         ],
         "summary": "Mark Notification Read",
         "tags": ["notifications"]
+      }
+    },
+    "/api/v1/projects/{project_id}/lots/bulk-verify": {
+      "post": {
+        "description": "US5: Acción para verificar masivamente todos los lotes de un proyecto que se encuentren\ndentro del porcentaje de tolerancia (tolerance_pct) comparando su cabida calculada vs oficial.",
+        "operationId": "bulk_verify_lots_api_v1_projects__project_id__lots_bulk_verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkVerifyLotsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkVerifyLotsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Bulk Verify Lots",
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/prompts/": {

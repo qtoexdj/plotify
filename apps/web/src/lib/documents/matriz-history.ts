@@ -121,6 +121,25 @@ export async function listOrganizationMinutaGenerations(
     }
   }
 
+  // Obtener los nombres reales de los perfiles que generaron las minutas
+  const generatedByIds = Array.from(
+    new Set(rows.map((row) => row.generated_by).filter((id): id is string => Boolean(id)))
+  )
+  let profilesById = new Map<string, { first_name: string | null; last_name: string | null }>()
+
+  if (generatedByIds.length > 0) {
+    const { data: profileRows, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name')
+      .in('id', generatedByIds)
+
+    if (profileError) {
+      console.error('Error fetching profiles for history:', profileError)
+    } else {
+      profilesById = new Map((profileRows ?? []).map((row) => [String(row.id), row]))
+    }
+  }
+
   return Promise.all(
     rows.map(async (row) => {
       const escrituraCase = casesById.get(row.escritura_case_id)
@@ -129,12 +148,19 @@ export async function listOrganizationMinutaGenerations(
       const { data: signed } = await supabase.storage
         .from('documents')
         .createSignedUrl(row.storage_path, 60 * 60 * 24 * 7)
+
+      const actorProfile = row.generated_by ? profilesById.get(row.generated_by) : null
+      const actorName = actorProfile
+        ? `${actorProfile.first_name ?? ''} ${actorProfile.last_name ?? ''}`.trim()
+        : null
+
       return {
         ...row,
         project_name: project?.name ?? 'Proyecto sin nombre',
         lot_id: escrituraCase?.lot_id ?? null,
         lot_label: lot?.numero_lote ? `Lote ${lot.numero_lote}` : null,
         download_url: signed?.signedUrl ?? null,
+        generated_by_name: actorName || null,
       }
     })
   )

@@ -55,3 +55,35 @@ export async function updateProfileAction(
     return { error: error instanceof Error ? error.message : 'Error al actualizar perfil' }
   }
 }
+
+export async function updateTelegramChatIdAction(userId: string, chatId: string | null) {
+  const supabase = await createClient()
+
+  // Validate caller identity
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || user.id !== userId) {
+    return { error: 'No autorizado para editar este perfil' }
+  }
+
+  try {
+    // Si chatId es string vacío, lo guardamos como null
+    const finalChatId = chatId && chatId.trim() !== '' ? chatId.trim() : null
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ telegram_chat_id: finalChatId })
+      .eq('id', userId)
+
+    if (error) throw error
+
+    revalidatePath('/settings/profile')
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating telegram chat id:', error)
+    return {
+      error: error instanceof Error ? error.message : 'Error al actualizar el Chat ID de Telegram',
+    }
+  }
+}

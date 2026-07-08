@@ -77,10 +77,7 @@ interface ServitudeSegmentWidthRow {
 
 /** Maps calculated BoundaryWithNeighbor[] directly to editable OfficialBoundaries format 1:1 */
 function boundariesToOfficial(calculated: BoundaryWithNeighbor[]): OfficialBoundaries {
-  console.log(
-    '[DEBUG-PANEL] Mapeando calculatedBoundaries a Official:',
-    JSON.stringify(calculated, null, 2)
-  )
+
   // Mapeo 1:1 estricto con la arista nativa (sin agrupación ni sufijos)
   return calculated.map((seg) => {
     let colindaFinal = ''
@@ -223,10 +220,18 @@ export function LotVerificationPanel({
           // Buscar match por label/dirección para obtener metadata fresca
           const match = calculatedOfficial.find((c) => c.label === b.label)
 
+          // es_servidumbre siempre se refresca desde el recálculo geométrico:
+          // los boundaries guardados antes de que existiera el flag (o antes
+          // de dibujar el camino) lo traen false/undefined para siempre, y
+          // ese flag alimenta "servidumbre de por medio" en los deslindes de
+          // la escritura. Solo se respeta un true guardado (marcado a mano).
+          const esServidumbre = b.es_servidumbre || match?.es_servidumbre || false
+
           if (b.colinda && b.colinda.trim() !== '') {
             // Si ya tiene colinda, solo inyectamos metadata si no existe
             return {
               ...b,
+              es_servidumbre: esServidumbre,
               neighbors_metadata: b.neighbors_metadata || match?.neighbors_metadata,
             }
           }
@@ -235,6 +240,7 @@ export function LotVerificationPanel({
             ? {
                 ...b,
                 colinda: match.colinda,
+                es_servidumbre: esServidumbre,
                 neighbors_metadata: match.neighbors_metadata,
               }
             : b

@@ -412,10 +412,13 @@ export async function getLotById(
   }
 
   let etapa_proceso = null
+  let client_prefill = null
   if (lot.estado === 'reservado' || lot.estado === 'vendido') {
     const { data: record } = await supabase
       .from('lot_records')
-      .select('etapa_proceso')
+      .select(
+        'etapa_proceso, cliente_nombre, cliente_run, cliente_direccion, cliente_region, cliente_comuna, cliente_estado_civil, cliente_nacionalidad, cliente_ocupacion, cliente_telefono, cliente_email'
+      )
       .eq('lot_id', lotId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -423,10 +426,11 @@ export async function getLotById(
 
     if (record) {
       etapa_proceso = record.etapa_proceso
+      client_prefill = record
     }
   }
 
-  return { ...lot, etapa_proceso } as LotDetails
+  return { ...lot, etapa_proceso, client_prefill } as LotDetails
 }
 
 export async function updateRoadSegmentWidthAndRecalculateServidumbres(

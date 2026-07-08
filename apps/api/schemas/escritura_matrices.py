@@ -185,6 +185,10 @@ class ApprovalBlocker(MatrizResponseModel):
     description: str | None = None
     action_label: str | None = None
     action_href: str | None = None
+    # SDD 016 FR-014: en la vista del caso algunos gates de proyecto quedan
+    # heredados desde el molde aprobado. Siguen existiendo para auditoria, pero
+    # la UI no los cuenta como pendientes accionables del caso.
+    inherited: bool = False
 
 
 class DismissedAlert(MatrizResponseModel):
@@ -274,6 +278,17 @@ class MatrizApproveRequest(MatrizBaseModel):
 class MatrizRejectRequest(MatrizBaseModel):
     rejected_by: UUID
     reason: str = Field(min_length=1, max_length=2000)
+
+
+# ─── Revisión jurídica del caso (SDD16, FR-007/FR-008) ───────────────────────
+
+LegalReviewDecision = Literal["aprobada", "rechazada"]
+
+
+class LegalReviewDecisionRequest(MatrizBaseModel):
+    decision: LegalReviewDecision
+    decided_by: UUID
+    comentario: str | None = Field(default=None, max_length=2000)
 
 
 # ─── Generaciones de minuta ──────────────────────────────────────────────────
@@ -392,3 +407,14 @@ class EscrituraTraceResponse(MatrizResponseModel):
     escritura_case_id: UUID
     source_project_matriz_id: UUID | None = None
     events: list[EscrituraTraceEvent] = Field(default_factory=list)
+
+
+class BulkVerifyLotsRequest(MatrizBaseModel):
+    tolerance_pct: float = 0.5
+    admin_id: UUID
+
+
+class BulkVerifyLotsResponse(MatrizResponseModel):
+    verified: int
+    deviated: list[UUID] = Field(default_factory=list)
+    skipped_no_geometry: list[UUID] = Field(default_factory=list)

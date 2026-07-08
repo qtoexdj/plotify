@@ -1,3 +1,5 @@
+import re
+
 from core.logger import get_logger
 from core.database import get_supabase_client
 from integrations.telegram_client import get_telegram_client_for_org
@@ -8,6 +10,36 @@ from services.escritura_notifications import (
 )
 
 logger = get_logger(__name__)
+
+
+def _normalize_run(value: str | None) -> str:
+    """Mismo criterio que la columna generada lot_records.cliente_run_normalizado
+    (regexp_replace(upper(run), '[^0-9K]', '', 'g')): solo dígitos y K."""
+    return re.sub(r"[^0-9K]", "", (value or "").upper())
+
+
+def _matching_reservation_client_name(
+    supabase, *, lot_id: str, payload_run: str | None
+) -> str | None:
+    """FR-017: si la venta viene de una reserva (sale_mode='reserved') y el
+    RUT coincide con el de esa reserva, devuelve el nombre del cliente ya
+    aprobado para armar el mensaje delta. None si no hay coincidencia."""
+    run_normalizado = _normalize_run(payload_run)
+    if not run_normalizado:
+        return None
+
+    record_res = (
+        supabase.table("lot_records")
+        .select("cliente_nombre, cliente_run_normalizado")
+        .eq("lot_id", lot_id)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    record_row = record_res.data[0] if record_res.data else None
+    if not record_row or record_row.get("cliente_run_normalizado") != run_normalizado:
+        return None
+    return record_row.get("cliente_nombre")
 
 
 async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
@@ -97,6 +129,7 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             return "NO_ADMIN_CONTACTS"
 
         request_type = request.get("request_type", "reservation")
+        sale_mode = request.get("sale_mode")
 
         # 4. Construir mensaje
         precio_total = lot_info.get("precio", 0)
@@ -106,7 +139,30 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             else "No definido"
         )
 
-        if request_type == "sale":
+        # FR-017: venta desde una reserva aprobada con el mismo RUT -> mensaje
+        # delta (solo lo que cambia), no el formulario completo de nuevo.
+        # HG-1: sigue exigiendo confirmar/rechazar explícito; no se auto-aprueba.
+        delta_client_name = None
+        if request_type == "sale" and sale_mode == "reserved":
+            delta_client_name = _matching_reservation_client_name(
+                supabase, lot_id=request["lot_id"], payload_run=payload.get("cliente_run")
+            )
+
+        if request_type == "sale" and delta_client_name:
+            valor_final_total = payload.get("valor_final", 0)
+            valor_final_str = (
+                f"${valor_final_total:,.0f}"
+                if valor_final_total
+                else "No definido"
+            )
+            message = (
+                f"📋 *Confirmación de venta*\n\n"
+                f"Ya aprobaste la reserva de *{delta_client_name}* "
+                f"para el *Lote {numero_lote}* — *Proyecto:* {project_name}.\n"
+                f"💵 *Valor final:* {valor_final_str}\n\n"
+                f"¿Confirmas esta venta?"
+            )
+        elif request_type == "sale":
             valor_final_total = payload.get("valor_final", 0)
             valor_final_str = (
                 f"${valor_final_total:,.0f}"

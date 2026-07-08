@@ -116,7 +116,7 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
                 .execute()
             )
         )
-        legal_data = legal_result.data or {}
+        legal_data = getattr(legal_result, "data", None) or {}
 
     lot_legal_result = await asyncio.to_thread(
         lambda: (
@@ -128,7 +128,7 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
             .execute()
         )
     )
-    lot_legal_data = lot_legal_result.data or {}
+    lot_legal_data = getattr(lot_legal_result, "data", None) or {}
 
     payment_result = await asyncio.to_thread(
         lambda: (
@@ -139,7 +139,7 @@ async def resolve_variables(lot_id: str, organization_id: str) -> dict:
             .execute()
         )
     )
-    payment_data = payment_result.data or {}
+    payment_data = getattr(payment_result, "data", None) or {}
     servidumbre_ancho_label = (lot.get("servidumbre_ancho_label") or "").strip()
     servidumbre_ancho_display = (
         servidumbre_ancho_label
@@ -543,8 +543,9 @@ async def get_project_active_template(
         )
     )
 
-    if active_result.data and active_result.data.get("template_id"):
-        return active_result.data["template_id"]
+    active_data = getattr(active_result, "data", None)
+    if active_data and active_data.get("template_id"):
+        return active_data["template_id"]
 
     # 3. Fallback: buscar el primer template de la organización y tipo de documento
     fallback_result = await asyncio.to_thread(

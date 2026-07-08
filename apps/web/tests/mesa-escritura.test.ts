@@ -12,9 +12,11 @@ import path from 'path'
 
 import {
   decideMesaVista,
+  isInheritedProjectGateBlocker,
   mensajeDeGuardado,
   overridesDeLaMatriz,
   resumenDeMesa,
+  visibleApprovalBlockers,
 } from '@/components/documents/mesa/mesa-escritura'
 import {
   bloquesDeClausula,
@@ -108,6 +110,25 @@ const GATE_BLOCKER: ApprovalBlocker = {
   action_href: '/projects/p1?tab=legal',
 }
 
+const INHERITED_PROJECT_GATE_BLOCKER: ApprovalBlocker = {
+  ...GATE_BLOCKER,
+  inherited: true,
+}
+
+const INHERITED_SAG_GATE_BLOCKER: ApprovalBlocker = {
+  ...GATE_BLOCKER,
+  gate: 'sag_plano_verified',
+  title: 'Verificación pendiente: SAG y plano',
+  inherited: true,
+}
+
+const INHERITED_SII_GATE_BLOCKER: ApprovalBlocker = {
+  ...GATE_BLOCKER,
+  gate: 'sii_verified',
+  title: 'Verificación pendiente: Roles SII',
+  inherited: true,
+}
+
 const DATO_BLOCKER: ApprovalBlocker = {
   kind: 'token_missing',
   key: 'comprador.estado_civil',
@@ -124,9 +145,64 @@ describe('decideMesaVista (research D7)', () => {
     expect(decideMesaVista(matrizWith([DATO_BLOCKER, GATE_BLOCKER]))).toBe('preparacion')
   })
 
+  it('ignora gates de proyecto heredados del molde aprobado en la vista del caso', () => {
+    const matriz = matrizWith([INHERITED_PROJECT_GATE_BLOCKER, DATO_BLOCKER])
+
+    expect(isInheritedProjectGateBlocker(INHERITED_PROJECT_GATE_BLOCKER)).toBe(true)
+    expect(visibleApprovalBlockers(matriz.approval_blockers)).toEqual([DATO_BLOCKER])
+    expect(decideMesaVista(matriz)).toBe('mesa')
+    expect(resumenDeMesa(matriz).pendientes).toBe(1)
+  })
+
+  it('deja ≤2 pendientes visibles cuando título, SAG y SII vienen heredados', () => {
+    const legalReviewBlocker: ApprovalBlocker = {
+      ...GATE_BLOCKER,
+      gate: 'legal_review_ready',
+      cause: 'documento.abogado_redactor.nombre',
+      title: 'Verificación pendiente: revisión legal',
+    }
+    const matriz = matrizWith([
+      INHERITED_PROJECT_GATE_BLOCKER,
+      INHERITED_SAG_GATE_BLOCKER,
+      INHERITED_SII_GATE_BLOCKER,
+      DATO_BLOCKER,
+      legalReviewBlocker,
+    ])
+
+    const visibles = visibleApprovalBlockers(matriz.approval_blockers)
+    expect(visibles).toEqual([DATO_BLOCKER, legalReviewBlocker])
+    expect(visibles).toHaveLength(2)
+    expect(resumenDeMesa(matriz).pendientes).toBeLessThanOrEqual(2)
+  })
+
   it('solo datos faltantes (sin verificación bloqueada) → mesa', () => {
     expect(decideMesaVista(matrizWith([DATO_BLOCKER]))).toBe('mesa')
     expect(decideMesaVista(matrizWith([]))).toBe('mesa')
+  })
+
+  it('legal_review_ready bloqueado SOLO por la acción de revisión (cause=revision_juridica.estado) → mesa, no deadlock', () => {
+    // T018: aprobar/rechazar la revisión jurídica ocurre DENTRO de la mesa
+    // (WorkflowAcciones). Si este gate bloqueara el acceso a la mesa, nunca
+    // se podría completar la revisión porque la revisión pendiente
+    // bloquearía el único lugar donde se resuelve.
+    const legalReviewActionBlocker: ApprovalBlocker = {
+      ...GATE_BLOCKER,
+      gate: 'legal_review_ready',
+      cause: 'revision_juridica.estado',
+      title: 'Verificación pendiente: revisión jurídica lista',
+    }
+    expect(decideMesaVista(matrizWith([legalReviewActionBlocker]))).toBe('mesa')
+    expect(decideMesaVista(matrizWith([DATO_BLOCKER, legalReviewActionBlocker]))).toBe('mesa')
+  })
+
+  it('legal_review_ready bloqueado por datos previos faltantes (abogado redactor) → sigue bloqueando la mesa', () => {
+    const legalReviewDataBlocker: ApprovalBlocker = {
+      ...GATE_BLOCKER,
+      gate: 'legal_review_ready',
+      cause: 'documento.abogado_redactor.nombre',
+      title: 'Verificación pendiente: revisión jurídica lista',
+    }
+    expect(decideMesaVista(matrizWith([legalReviewDataBlocker]))).toBe('preparacion')
   })
 })
 
@@ -814,6 +890,7 @@ describe('historial de generaciones (T017, US4)', () => {
     warning_acknowledged_by: 'u1',
     warning_acknowledged_at: '2026-06-11T10:00:00Z',
     generated_by: 'u1',
+    generated_by_name: 'Usuario registrado',
     generated_at: '2026-06-11T10:01:00Z',
     download_url: '/download/minuta.docx',
   }

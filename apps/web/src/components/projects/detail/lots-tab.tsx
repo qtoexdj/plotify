@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type ChangeEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -44,7 +46,12 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { File02Icon, PlusSignIcon } from '@hugeicons/core-free-icons'
+import {
+  File02Icon,
+  PlusSignIcon,
+  CheckmarkCircle02Icon,
+  ArrowRight01Icon,
+} from '@hugeicons/core-free-icons'
 import { Spinner } from '@/components/ui/spinner'
 import {
   LotWithRecord,
@@ -68,6 +75,19 @@ interface LotsTabProps {
 }
 
 export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin }: LotsTabProps) {
+  const router = useRouter()
+
+  // State for Bulk Verification
+  const [isBulkVerifyOpen, setIsBulkVerifyOpen] = useState(false)
+  const [tolerancePct, setTolerancePct] = useState(0.5)
+  const [isBulkVerifying, setIsBulkVerifying] = useState(false)
+  const [bulkResult, setBulkResult] = useState<{
+    verified: number
+    deviated: string[]
+    skipped_no_geometry: string[]
+  } | null>(null)
+  const [bulkError, setBulkError] = useState<string | null>(null)
+
   // State for Edit Sheet
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingLot, setEditingLot] = useState<LotWithRecord | null>(null)
@@ -290,6 +310,37 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
     }
   }
 
+  const handleBulkVerify = async () => {
+    setIsBulkVerifying(true)
+    setBulkError(null)
+    setBulkResult(null)
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/lots/bulk-verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tolerance_pct: tolerancePct }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al ejecutar verificación masiva')
+      }
+
+      setBulkResult(data)
+      await onRefresh()
+    } catch (err: unknown) {
+      console.error('Error in handleBulkVerify:', err)
+      const message = err instanceof Error ? err.message : 'Error en la verificación masiva'
+      setBulkError(message)
+    } finally {
+      setIsBulkVerifying(false)
+    }
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -300,179 +351,352 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
           </CardDescription>
         </div>
         {isAdmin && (
-          <AlertDialog
-            open={isCreateDialogOpen}
-            onOpenChange={(open) => {
-              setIsCreateDialogOpen(open)
-              if (!open) resetCreateForm()
-            }}
-          >
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4" />
-                Nueva ficha
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="max-w-3xl">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Nueva ficha de lote</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Completa los datos base del lote, cliente y escritura.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <div className="max-h-[70vh] overflow-y-auto pr-2">
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground">Lote</h3>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Lote</Label>
-                        <Select
-                          value={createLotForm.lot_id || undefined}
-                          onValueChange={(value) =>
-                            setCreateLotForm(() => {
-                              const selectedLot = lots.find((lot) => lot.id === value) ?? null
-                              return buildCreateFormFromLot(selectedLot)
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un lote" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {lots.length > 0 ? (
-                              lots.map((lot) => (
-                                <SelectItem key={lot.id} value={lot.id}>
-                                  Lote {lot.numero_lote || '—'}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-lots" disabled>
-                                Sin lotes disponibles
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Estado</Label>
-                        <Select
-                          value={createLotForm.estado}
-                          onValueChange={(value) =>
-                            setCreateLotForm((prev) => ({
-                              ...prev,
-                              estado: value as EstadoLote,
-                            }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Estado del lote" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="disponible">Disponible</SelectItem>
-                            <SelectItem value="reservado">Reservado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2 sm:col-span-2">
-                        <Label>Vendedor (ID)</Label>
-                        <Input
-                          value={createLotForm.vendedor_id}
-                          onChange={handleCreateFormChange('vendedor_id')}
-                          placeholder="UUID del vendedor"
-                        />
-                      </div>
-                    </div>
-                  </div>
+          <div className="flex gap-2">
+            {/* Diálogo de Verificación Masiva */}
+            <AlertDialog
+              open={isBulkVerifyOpen}
+              onOpenChange={(open) => {
+                setIsBulkVerifyOpen(open)
+                if (!open) {
+                  setBulkResult(null)
+                  setBulkError(null)
+                }
+              }}
+            >
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="gap-2 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  <HugeiconsIcon icon={CheckmarkCircle02Icon} className="h-4 w-4" />
+                  Verificar coincidencias
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <HugeiconsIcon icon={CheckmarkCircle02Icon} className="h-5 w-5 text-primary" />
+                    Verificación Masiva por Tolerancia
+                  </AlertDialogTitle>
+                  <div className="text-sm text-muted-foreground space-y-3 pt-2">
+                    <p>
+                      Compara la cabida y el perímetro calculado de la geometría contra los datos
+                      oficiales ingresados. Los lotes que coincidan dentro de la tolerancia se
+                      verificarán automáticamente como válidos para escrituración.
+                    </p>
 
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground">Cliente</h3>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>Nombre completo</Label>
-                        <Input
-                          value={createLotForm.cliente_nombre}
-                          onChange={handleCreateFormChange('cliente_nombre')}
-                          placeholder="Nombre y apellidos"
-                        />
+                    {!bulkResult && (
+                      <div className="space-y-2 pt-2">
+                        <Label htmlFor="tolerancePct" className="text-foreground">
+                          Porcentaje de Tolerancia
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="tolerancePct"
+                            type="number"
+                            step="0.05"
+                            min="0"
+                            value={tolerancePct}
+                            onChange={(e) => setTolerancePct(parseFloat(e.target.value) || 0)}
+                            className="pr-8"
+                          />
+                          <div className="absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground pointer-events-none">
+                            %
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Por ejemplo: un 0.5% permite desvíos menores debido a proyecciones o
+                          curvaturas.
+                        </p>
                       </div>
-                      <div className="space-y-2">
-                        <Label>RUN</Label>
-                        <Input
-                          value={createLotForm.cliente_run}
-                          onChange={handleCreateFormChange('cliente_run')}
-                          placeholder="12.345.678-9"
-                        />
+                    )}
+
+                    {isBulkVerifying && (
+                      <div className="flex flex-col items-center justify-center py-6 gap-3">
+                        <Spinner className="size-6 text-primary" />
+                        <span className="text-xs font-medium text-foreground">
+                          Procesando lotes...
+                        </span>
                       </div>
-                      {/* Más campos podrían ir aquí, resumido por brevedad en este ejemplo si se desea, 
-                            pero copiamos la lógica completa para mantener funcionalidad */}
-                      <div className="space-y-2">
-                        <Label>Dirección</Label>
-                        <Input
-                          value={createLotForm.cliente_direccion}
-                          onChange={handleCreateFormChange('cliente_direccion')}
-                        />
+                    )}
+
+                    {bulkError && (
+                      <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3.5 text-destructive text-xs">
+                        {bulkError}
                       </div>
-                      <div className="space-y-2">
-                        <Label>Estado civil</Label>
-                        <Input
-                          value={createLotForm.cliente_estado_civil}
-                          onChange={handleCreateFormChange('cliente_estado_civil')}
-                        />
+                    )}
+
+                    {bulkResult && (
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="rounded-lg border border-success/30 bg-success/5 p-3 text-center">
+                            <p className="text-2xl font-bold text-success">{bulkResult.verified}</p>
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase mt-1">
+                              Verificados
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-center">
+                            <p className="text-2xl font-bold text-warning">
+                              {bulkResult.deviated.length}
+                            </p>
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase mt-1">
+                              Desviados
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-border p-3 text-center bg-muted/20">
+                            <p className="text-2xl font-bold text-foreground/80">
+                              {bulkResult.skipped_no_geometry.length}
+                            </p>
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase mt-1">
+                              Sin Plano
+                            </p>
+                          </div>
+                        </div>
+
+                        {bulkResult.deviated.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-foreground">
+                              Lotes desviados para revisión manual:
+                            </p>
+                            <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto pr-1">
+                              {bulkResult.deviated.map((lotId) => {
+                                const foundLot = lots.find((l) => l.id === lotId)
+                                const label = foundLot?.numero_lote
+                                  ? `Lote ${foundLot.numero_lote}`
+                                  : 'Lote'
+                                return (
+                                  <Button
+                                    key={lotId}
+                                    variant="outline"
+                                    size="xs"
+                                    type="button"
+                                    className="h-7 text-[10px] gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                                    onClick={() => {
+                                      setIsBulkVerifyOpen(false)
+                                      router.push(
+                                        `/projects/${projectId}?tab=viewer&lotId=${lotId}`
+                                      )
+                                    }}
+                                  >
+                                    {label}
+                                    <HugeiconsIcon
+                                      icon={ArrowRight01Icon}
+                                      className="h-2.5 w-2.5"
+                                    />
+                                  </Button>
+                                )
+                              })}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">
+                              Haz clic sobre un lote para abrir su panel de edición legal manual en
+                              el visor de planos.
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <Label>Ocupación / profesión</Label>
-                        <Input
-                          value={createLotForm.cliente_ocupacion}
-                          onChange={handleCreateFormChange('cliente_ocupacion')}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Teléfono</Label>
-                        <Input
-                          value={createLotForm.cliente_telefono}
-                          onChange={handleCreateFormChange('cliente_telefono')}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Correo electrónico</Label>
-                        <Input
-                          value={createLotForm.cliente_email}
-                          onChange={handleCreateFormChange('cliente_email')}
-                        />
+                    )}
+                  </div>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="pt-2">
+                  {bulkResult ? (
+                    <AlertDialogAction
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      onClick={() => setIsBulkVerifyOpen(false)}
+                    >
+                      Entendido
+                    </AlertDialogAction>
+                  ) : (
+                    <>
+                      <AlertDialogCancel disabled={isBulkVerifying}>Cancelar</AlertDialogCancel>
+                      <Button
+                        onClick={handleBulkVerify}
+                        disabled={isBulkVerifying}
+                        type="button"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        {isBulkVerifying ? 'Procesando...' : 'Iniciar Verificación'}
+                      </Button>
+                    </>
+                  )}
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Diálogo de Nueva Ficha */}
+            <AlertDialog
+              open={isCreateDialogOpen}
+              onOpenChange={(open) => {
+                setIsCreateDialogOpen(open)
+                if (!open) resetCreateForm()
+              }}
+            >
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4" />
+                  Nueva ficha
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-3xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Nueva ficha de lote</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Completa los datos base del lote, cliente y escritura.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="max-h-[70vh] overflow-y-auto pr-2">
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-foreground">Lote</h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Lote</Label>
+                          <Select
+                            value={createLotForm.lot_id || undefined}
+                            onValueChange={(value) =>
+                              setCreateLotForm(() => {
+                                const selectedLot = lots.find((lot) => lot.id === value) ?? null
+                                return buildCreateFormFromLot(selectedLot)
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona un lote" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {lots.length > 0 ? (
+                                lots.map((lot) => (
+                                  <SelectItem key={lot.id} value={lot.id}>
+                                    Lote {lot.numero_lote || '—'}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no-lots" disabled>
+                                  Sin lotes disponibles
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Estado</Label>
+                          <Select
+                            value={createLotForm.estado}
+                            onValueChange={(value) =>
+                              setCreateLotForm((prev) => ({
+                                ...prev,
+                                estado: value as EstadoLote,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Estado del lote" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="disponible">Disponible</SelectItem>
+                              <SelectItem value="reservado">Reservado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label>Vendedor (ID)</Label>
+                          <Input
+                            value={createLotForm.vendedor_id}
+                            onChange={handleCreateFormChange('vendedor_id')}
+                            placeholder="UUID del vendedor"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {/* Campos restantes simplificados para demostración de arquitectura, 
+
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-foreground">Cliente</h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Nombre completo</Label>
+                          <Input
+                            value={createLotForm.cliente_nombre}
+                            onChange={handleCreateFormChange('cliente_nombre')}
+                            placeholder="Nombre y apellidos"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>RUN</Label>
+                          <Input
+                            value={createLotForm.cliente_run}
+                            onChange={handleCreateFormChange('cliente_run')}
+                            placeholder="12.345.678-9"
+                          />
+                        </div>
+                        {/* Más campos podrían ir aquí, resumido por brevedad en este ejemplo si se desea, 
+                            pero copiamos la lógica completa para mantener funcionalidad */}
+                        <div className="space-y-2">
+                          <Label>Dirección</Label>
+                          <Input
+                            value={createLotForm.cliente_direccion}
+                            onChange={handleCreateFormChange('cliente_direccion')}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Estado civil</Label>
+                          <Input
+                            value={createLotForm.cliente_estado_civil}
+                            onChange={handleCreateFormChange('cliente_estado_civil')}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Ocupación / profesión</Label>
+                          <Input
+                            value={createLotForm.cliente_ocupacion}
+                            onChange={handleCreateFormChange('cliente_ocupacion')}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Teléfono</Label>
+                          <Input
+                            value={createLotForm.cliente_telefono}
+                            onChange={handleCreateFormChange('cliente_telefono')}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Correo electrónico</Label>
+                          <Input
+                            value={createLotForm.cliente_email}
+                            onChange={handleCreateFormChange('cliente_email')}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Campos restantes simplificados para demostración de arquitectura, 
                         en producción incluiríamos TODOS los campos del form original */}
+                  </div>
                 </div>
-              </div>
-              <AlertDialogFooter>
-                {createLotError ? (
-                  <p className="text-sm text-destructive">{createLotError}</p>
-                ) : null}
-                <div className="flex gap-2">
-                  <AlertDialogCancel className="min-h-11" disabled={isCreatingLot}>
-                    Cancelar
-                  </AlertDialogCancel>
-                  <Button
-                    onClick={handleCreateLotRecord}
-                    disabled={isCreatingLot || !createLotForm.lot_id}
-                    className="min-h-11"
-                  >
-                    {isCreatingLot ? (
-                      <>
-                        <Spinner className="w-4 h-4 mr-2" />
-                        Guardando
-                      </>
-                    ) : (
-                      'Guardar'
-                    )}
-                  </Button>
-                </div>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                <AlertDialogFooter>
+                  {createLotError ? (
+                    <p className="text-sm text-destructive">{createLotError}</p>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <AlertDialogCancel className="min-h-11" disabled={isCreatingLot}>
+                      Cancelar
+                    </AlertDialogCancel>
+                    <Button
+                      onClick={handleCreateLotRecord}
+                      disabled={isCreatingLot || !createLotForm.lot_id}
+                      className="min-h-11"
+                    >
+                      {isCreatingLot ? (
+                        <>
+                          <Spinner className="w-4 h-4 mr-2" />
+                          Guardando
+                        </>
+                      ) : (
+                        'Guardar'
+                      )}
+                    </Button>
+                  </div>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         )}
       </CardHeader>
       <CardContent>

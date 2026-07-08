@@ -354,7 +354,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         </div>
 
         <TabsContent value="overview">
-          <OverviewTab project={project} lots={lots} />
+          <OverviewTab project={project} lots={lots} onNavigateTab={handleTabChange} />
         </TabsContent>
 
         <TabsContent value="lots">

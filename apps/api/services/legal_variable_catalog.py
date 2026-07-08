@@ -159,8 +159,10 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "comprador.domicilio",
         "comprador.estado_civil",
         "comprador.profesion_giro",
-        # SDD 008 (research D11): hecho juridico independiente; no existe en
-        # lot_records, entra manual via CCL. Nunca se infiere del nombre.
+        # SDD 016 (FR-004): puebla lot_records.cliente_nacionalidad via el
+        # puente operacional (sale_gap), igual que el resto del grupo. Antes
+        # (SDD 008 D11) entraba manual via CCL; el formulario de venta ahora
+        # lo captura, asi que nunca hace falta autoria manual.
         "comprador.nacionalidad",
     ),
     "personeria": (
@@ -215,6 +217,7 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "servidumbre.aplica",
         "servidumbre.superficie_m2",
         "servidumbre.superficie_texto",
+        "servidumbre.ancho_label",
         "servidumbre.deslindes_tramo",
         "servidumbre.predio_sirviente",
         "servidumbre.predios_dominantes",
@@ -586,6 +589,7 @@ VARIABLE_LABELS: Final[dict[str, str]] = {
     "servidumbre.aplica": "Aplica servidumbre",
     "servidumbre.superficie_m2": "Superficie de la servidumbre en metros cuadrados",
     "servidumbre.superficie_texto": "Superficie de la servidumbre en palabras",
+    "servidumbre.ancho_label": "Ancho de la servidumbre (etiqueta legible, incluye anchos variables)",
     "servidumbre.deslindes_tramo": "Deslindes del tramo de servidumbre",
     "servidumbre.predio_sirviente": "Predio sirviente",
     "servidumbre.predios_dominantes": "Predios dominantes",

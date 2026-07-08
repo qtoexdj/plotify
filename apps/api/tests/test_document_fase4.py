@@ -235,6 +235,50 @@ class TestResolveVariables:
         assert variables["org_rut"] == "76.543.210-K"
         assert variables["org_banco"] == "Banco Estado"
 
+    async def test_resolves_without_crashing_when_optional_legal_and_payment_rows_are_absent(
+        self,
+    ):
+        """maybe_single().execute() sobre organization_payment_info/lot_legal_data/
+        project_legal_data devuelve None (no un objeto con .data = None) cuando
+        hay 0 filas; ninguna de las tres es obligatoria para resolver variables
+        de documento (T008, misma clase de bug que FR-001 fuera del puente
+        operacional — _make_supabase_mock nunca reproducía este caso)."""
+
+        def table_side_effect(table_name):
+            tbl = MagicMock()
+            if table_name == "lots":
+                tbl.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(
+                    data=FAKE_LOT
+                )
+            elif table_name in (
+                "organization_payment_info",
+                "lot_legal_data",
+                "project_legal_data",
+            ):
+                tbl.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value = None
+            return tbl
+
+        supabase_mock = MagicMock()
+        supabase_mock.table.side_effect = table_side_effect
+
+        with (
+            patch(
+                "services.document_engine.get_supabase_client",
+                return_value=supabase_mock,
+            ),
+            patch(
+                "asyncio.to_thread",
+                new=AsyncMock(side_effect=lambda fn, *a, **kw: fn()),
+            ),
+        ):
+            from services.document_engine import resolve_variables
+
+            variables = await resolve_variables(LOT_ID, ORG_ID)
+
+        assert variables["cliente_nombre"] == "Juan Pérez González"
+        assert variables["org_rut"] == ""
+        assert variables["org_banco"] == ""
+
     async def test_servidumbre_ancho_label_prefiere_label_sobre_numero_legacy(self):
         """Las plantillas legacy que leen servidumbre_ancho_m reciben el label."""
         lot = {

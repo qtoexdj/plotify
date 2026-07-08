@@ -12,7 +12,7 @@ export function formatGenerationDate(value: string): string {
 }
 
 export function generationAuthor(generation: MinutaGeneration): string {
-  return generation.generated_by ? 'Usuario registrado' : 'Equipo legal'
+  return generation.generated_by_name || 'Equipo legal'
 }
 
 export function generationProjectName(generation: MinutaGeneration): string {

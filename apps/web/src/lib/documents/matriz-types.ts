@@ -232,6 +232,7 @@ export type ApprovalBlocker = BlockerMicrocopyFields &
         cause: string | null
         fix_url: string
         message?: string | null
+        inherited?: boolean
       }
     | {
         kind: 'alert_clause_missing'
@@ -353,6 +354,7 @@ export interface MinutaGeneration {
   warning_acknowledged_by: string
   warning_acknowledged_at: string
   generated_by: string | null
+  generated_by_name?: string | null
   generated_at: string
   download_url: string | null
 }
@@ -363,6 +365,13 @@ export interface MinutaGenerationListResponse {
 
 export interface GenerateMinutaRequest {
   warning_acknowledged: boolean
+}
+
+// ─── Revisión jurídica del caso (SDD16, FR-007/FR-008) ───────────────────────
+
+export interface LegalReviewDecisionRequest {
+  decision: 'aprobada' | 'rechazada'
+  comentario?: string
 }
 
 // ─── Puente operacional (US6) ────────────────────────────────────────────────

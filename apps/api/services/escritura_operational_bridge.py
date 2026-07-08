@@ -19,12 +19,15 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
+import re
+
 from core.logger import get_logger
 from services.legal_title_words import (
     hectareas_to_words,
     metros_cuadrados_to_words,
     number_to_words_spanish,
     pesos_to_words,
+    quantity_to_words,
 )
 
 logger = get_logger(__name__)
@@ -38,6 +41,7 @@ LOT_RECORD_VARIABLE_KEYS = (
     "comprador.domicilio",
     "comprador.estado_civil",
     "comprador.profesion_giro",
+    "comprador.nacionalidad",
     "transaccion.precio_numeros",
     "transaccion.moneda",
     "transaccion.forma_pago",
@@ -53,6 +57,9 @@ LOT_GEOMETRY_VARIABLE_KEYS = (
     "servidumbre.aplica",
     "servidumbre.superficie_m2",
     "servidumbre.ancho_label",
+    "servidumbre.predio_sirviente",
+    "servidumbre.predios_dominantes",
+    "servidumbre.deslindes_tramo",
 )
 DERIVED_VARIABLE_KEYS = (
     "transaccion.precio_letras",
@@ -135,51 +142,193 @@ def _distance_words(value: Any) -> str | None:
         number = float(value)
     except (TypeError, ValueError):
         return None
-    whole = int(number)
-    decimals = round((number - whole) * 100)
-    if decimals:
-        # Trailing zero decimals read naturally as the bare digit (5 for ,50).
-        if decimals % 10 == 0:
-            decimals //= 10
-        words = (
-            f"{number_to_words_spanish(whole)} coma "
-            f"{number_to_words_spanish(decimals)}"
-        )
-    else:
-        words = number_to_words_spanish(whole)
-    return f"{words} metros"
+    if number <= 0:
+        return None
+    return f"{quantity_to_words(number)} metros"
+
+
+_LOT_NUMBER_PATTERN = re.compile(r"[Ll]otes?\s+(?:N\s*[°º]\s*)?(\d+)")
+
+
+def _lot_numbers_to_words(text: str) -> str:
+    """'lote 24' / 'Lote N°2' -> 'lote veinticuatro' / 'lote dos'.
+
+    Espejo acotado de convertLotNumbersInText (deslinde-generator.ts): solo
+    convierte números precedidos por 'lote'; un número suelto ('Parcela 5',
+    'Ruta 5') se deja intacto para no inventar lotes en el texto legal.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        words = number_to_words_spanish(int(match.group(1)))
+        return f"lote {re.sub(r'un$', 'uno', words)}"
+
+    return _LOT_NUMBER_PATTERN.sub(replace, text)
+
+
+def _boundary_neighbor_text(boundary: dict[str, Any]) -> str | None:
+    """Redacción del colindante de un tramo, priorizando metadata estructurada
+    (mismo orden que formatGroupedBoundaries en deslinde-generator.ts)."""
+    metadata = boundary.get("neighbors_metadata")
+    if isinstance(metadata, list) and metadata:
+        names: list[str] = []
+        for neighbor in metadata:
+            if not isinstance(neighbor, dict):
+                continue
+            name = _clean(neighbor.get("name"))
+            if not name:
+                continue
+            prefix = "parte del " if neighbor.get("is_partial") else ""
+            names.append(_lot_numbers_to_words(f"{prefix}{name}"))
+        if names:
+            if len(names) == 1:
+                return names[0]
+            return f"{', '.join(names[:-1])} y {names[-1]}"
+    raw = _clean(boundary.get("colinda")) or _clean(boundary.get("description"))
+    return _lot_numbers_to_words(raw) if raw else None
 
 
 def compose_deslindes_text(boundaries: list[dict[str, Any]] | None) -> str | None:
     """Compose the legal deslindes sentence from ``lots.boundaries_official``.
 
     Production shape (apps/web types): ``[{label, description, distance?,
-    colinda?, es_servidumbre?}, ...]``. A boundary without ``colinda`` falls
-    back to ``description``; if both are empty the composition fails (the
-    variable stays missing) rather than rendering a silent gap.
+    colinda?, es_servidumbre?, neighbors_metadata?}, ...]``. Espejo del
+    formato oficial de deslinde-generator.ts (validado contra la escritura
+    real LOTE 29): agrupación por cardinalidad consecutiva con wrap-around,
+    'parte del' desde neighbors_metadata, números de lote en palabras,
+    sufijo 'de la misma subdivisión' y 'servidumbre de por medio' cuando el
+    tramo toca la servidumbre (``es_servidumbre``). Un tramo sin colindante
+    hace fallar la composición (la variable queda missing) en vez de
+    renderizar un hueco silencioso.
     """
     if not boundaries:
         return None
-    parts: list[str] = []
+
+    # 1. Agrupar tramos consecutivos por cardinalidad (+ wrap-around).
+    groups: list[dict[str, Any]] = []
     for boundary in boundaries:
         if not isinstance(boundary, dict):
             return None
         label = _clean(boundary.get("label"))
-        neighbor = _clean(boundary.get("colinda")) or _clean(
-            boundary.get("description")
-        )
-        if not label or not neighbor:
+        if not label:
             return None
-        distance_words = _distance_words(boundary.get("distance"))
-        if distance_words:
-            parts.append(f"al {label}, en {distance_words}, con {neighbor}")
+        label = label.upper()
+        if groups and groups[-1]["label"] == label:
+            groups[-1]["items"].append(boundary)
         else:
-            parts.append(f"al {label}, con {neighbor}")
+            groups.append({"label": label, "items": [boundary]})
+    if len(groups) > 1 and groups[0]["label"] == groups[-1]["label"]:
+        last = groups.pop()
+        groups[0]["items"] = last["items"] + groups[0]["items"]
+
+    # 2. Redactar cada grupo.
+    parts: list[str] = []
+    for group in groups:
+        tramos: list[str] = []
+        neighbor_texts: list[str] = []
+        for boundary in group["items"]:
+            neighbor = _boundary_neighbor_text(boundary)
+            if not neighbor:
+                return None
+            neighbor_texts.append(neighbor)
+            distance_words = _distance_words(boundary.get("distance"))
+            if distance_words:
+                tramos.append(f"en {distance_words} con {neighbor}")
+            else:
+                tramos.append(f"con {neighbor}")
+        joined = ", y ".join(tramos)
+
+        suffixes = ""
+        all_neighbors = " ".join(neighbor_texts)
+        # 'de la misma subdivisión' solo cuando el colindante es un lote y la
+        # redacción no lo trae ya (colindas manuales suelen incluirlo).
+        if "lote" in all_neighbors.lower() and "subdivisión" not in all_neighbors:
+            plural = (
+                len(group["items"]) > 1
+                or " y " in all_neighbors
+                or "," in all_neighbors
+            )
+            suffixes += (
+                " todos de la misma subdivisión"
+                if plural
+                else " de la misma subdivisión"
+            )
+        if any(item.get("es_servidumbre") for item in group["items"]):
+            suffixes += ", servidumbre de por medio"
+
+        parts.append(f"{group['label']}, {joined}{suffixes}")
+
     if not parts:
         return None
     if len(parts) > 1:
-        parts[-1] = f"y {parts[-1]}"
-    return "; ".join(parts)
+        return "; ".join(parts[:-1]) + f"; y {parts[-1]}"
+    return parts[0]
+
+
+def _ancho_words(lot: dict[str, Any]) -> str | None:
+    """Ancho de la servidumbre en palabras: 5 -> 'cinco'; '5 y 10' -> 'cinco y
+    diez' (ancho variable por tramo). Prefiere el label (puede describir más
+    de un ancho) y cae al ancho numérico."""
+    label = _clean(lot.get("servidumbre_ancho_label"))
+    source = label or _clean(lot.get("servidumbre_ancho_m"))
+    if not source:
+        return None
+    return re.sub(
+        r"\d+(?:[.,]\d+)?",
+        lambda match: quantity_to_words(float(match.group(0).replace(",", "."))),
+        source,
+    )
+
+
+def compose_servidumbre_tramo_text(lot: dict[str, Any]) -> str | None:
+    """Describe el tramo de servidumbre que grava el lote (clausula
+    servidumbre_transito, token ``servidumbre.deslindes_tramo``), p. ej.
+    'franja de ocho metros de ancho a lo largo del deslinde Oriente del Lote
+    N°3, según el trazado que consta en el plano de subdivisión archivado'.
+    Deriva de datos que el puente ya carga: ancho oficial + los deslindes
+    marcados ``es_servidumbre`` en la verificación del lote. Sin ancho ni
+    deslindes marcados igual produce la referencia al plano (nunca deja la
+    clausula bloqueada por un dato que solo existe dibujado en el plano)."""
+    ancho = _ancho_words(lot)
+    fragments = ["franja"]
+    if ancho:
+        fragments.append(f"de {ancho} metros de ancho")
+    else:
+        fragments.append("de servidumbre de tránsito")
+
+    boundaries = lot.get("boundaries_official")
+    if isinstance(boundaries, list):
+        directions = [
+            _clean(boundary.get("label"))
+            for boundary in boundaries
+            if isinstance(boundary, dict)
+            and boundary.get("es_servidumbre")
+            and _clean(boundary.get("label"))
+        ]
+        if directions:
+            joined = (
+                directions[0]
+                if len(directions) == 1
+                else f"{', '.join(directions[:-1])} y {directions[-1]}"
+            )
+            prefix = (
+                "a lo largo de los deslindes"
+                if len(directions) > 1
+                else "a lo largo del deslinde"
+            )
+            fragments.append(f"{prefix} {joined}")
+
+    numero = _clean(lot.get("numero_lote"))
+    if numero:
+        fragments.append(f"del Lote N°{numero}")
+    fragments.append(
+        ", según el trazado que consta en el plano de subdivisión archivado"
+    )
+    return " ".join(fragments).replace(" ,", ",")
+
+
+# Redacción estándar de la servidumbre recíproca: en una parcelación todos
+# los demás lotes son predios dominantes; el detalle fino vive en el plano.
+PREDIOS_DOMINANTES_DEFAULT = "los demás lotes de la misma subdivisión"
 
 
 def _lot_record_hash_fields(record: dict[str, Any]) -> dict[str, Any]:
@@ -189,6 +338,7 @@ def _lot_record_hash_fields(record: dict[str, Any]) -> dict[str, Any]:
         "cliente_direccion": record.get("cliente_direccion"),
         "cliente_estado_civil": record.get("cliente_estado_civil"),
         "cliente_ocupacion": record.get("cliente_ocupacion"),
+        "cliente_nacionalidad": record.get("cliente_nacionalidad"),
         "valor": record.get("valor"),
         "abono": record.get("abono"),
         "saldo": record.get("saldo"),
@@ -245,6 +395,7 @@ def map_lot_record_variables(
         system_var("comprador.domicilio", _clean(record.get("cliente_direccion"))),
         system_var("comprador.estado_civil", _clean(record.get("cliente_estado_civil"))),
         system_var("comprador.profesion_giro", _clean(record.get("cliente_ocupacion"))),
+        system_var("comprador.nacionalidad", _clean(record.get("cliente_nacionalidad"))),
     ]
 
     valor = record.get("valor")
@@ -420,6 +571,27 @@ def map_lot_geometry_variables(lot: dict[str, Any]) -> BridgeMapping:
                     servidumbre_ancho_label,
                 )
             )
+        # Tokens de la clausula servidumbre_transito (antes huérfanos: ningún
+        # productor los generaba y dejaban la matriz del caso inaprobable
+        # para todo lote con servidumbre).
+        variables.append(
+            geometry_var(
+                "servidumbre.predio_sirviente",
+                f"Lote N°{numero}" if numero else None,
+            )
+        )
+        variables.append(
+            geometry_var(
+                "servidumbre.predios_dominantes",
+                PREDIOS_DOMINANTES_DEFAULT,
+            )
+        )
+        variables.append(
+            geometry_var(
+                "servidumbre.deslindes_tramo",
+                compose_servidumbre_tramo_text(lot),
+            )
+        )
     mapped = tuple(variables)
     missing = tuple(var.variable_key for var in mapped if not var.has_value)
     return BridgeMapping(variables=mapped, missing_keys=missing)
@@ -526,6 +698,12 @@ def _first_row(data: Any) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _safe_data(result: Any) -> Any:
+    """supabase-py's maybe_single().execute() returns None (not a result
+    object with .data = None) on 0 rows; guard against AttributeError."""
+    return getattr(result, "data", None) if result is not None else None
+
+
 async def _assert_lot_scope(
     *, client: Any, organization_id: str, project_id: str, lot_id: str
 ) -> None:
@@ -540,7 +718,7 @@ async def _assert_lot_scope(
             .execute()
         )
     )
-    if not result.data:
+    if not _safe_data(result):
         raise OperationalBridgeScopeError(
             "lot_id does not belong to the requested organization/project."
         )
@@ -581,9 +759,9 @@ async def _fetch_operational_rows(
         ),
     )
     return (
-        _first_row(lot_result.data),
-        _first_row(record_result.data),
-        _first_row(payment_result.data),
+        _first_row(_safe_data(lot_result)),
+        _first_row(_safe_data(record_result)),
+        _first_row(_safe_data(payment_result)),
     )
 
 
@@ -598,7 +776,7 @@ async def _fetch_active_bridge_rows(
     result = await asyncio.to_thread(
         lambda: (
             client.table("variable_resolutions")
-            .select("id, variable_key, state, source_ref")
+            .select("id, variable_key, state, source_ref, extractor_name")
             .eq("organization_id", organization_id)
             .eq("project_id", project_id)
             .eq("lot_id", lot_id)
@@ -686,13 +864,30 @@ async def stage_operational_variables(
         existing = existing_by_key.get(variable.variable_key)
         if existing:
             state = str(existing.get("state") or "")
-            if state in PROTECTED_VARIABLE_STATES:
+            is_bridge_row = (
+                str(existing.get("extractor_name") or "")
+                == OPERATIONAL_BRIDGE_EXTRACTOR_NAME
+            )
+            # Una fila `resolved` escrita por el PROPIO puente no es una
+            # revisión humana: sigue la regla de hash (skip/supersede) para
+            # que un cambio en la fuente (p. ej. deslindes corregidos en la
+            # verificación) se refleje. Lo humano (approved/not_applicable,
+            # o resolved de otro origen) sí queda protegido (FR-021).
+            if state in PROTECTED_VARIABLE_STATES and not (
+                state == "resolved" and is_bridge_row
+            ):
                 protected.append(variable.variable_key)
                 continue
             existing_hash = (existing.get("source_ref") or {}).get("source_row_hash")
             if existing_hash == variable.source_row_hash:
-                skipped.append(variable.variable_key)
-                continue
+                # Saneo de legado pre-SDD16: el puente stageaba `proposed`
+                # (aprobación humana extra sin pantalla). Una fila proposed
+                # del propio puente con el MISMO hash se re-stagea resolved
+                # por el flujo auditado de supersesión, para que los casos
+                # viejos se curen solos al siguiente refresh del caso.
+                if not (state == "proposed" and is_bridge_row):
+                    skipped.append(variable.variable_key)
+                    continue
             superseded.append(variable.variable_key)
         to_stage.append(variable)
 
@@ -708,6 +903,15 @@ async def stage_operational_variables(
             lot_id=lot_id,
             extractor_name=OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
             confidence=1.0 if variable.has_value else None,
+            # SDD16 (SC-001/SC-002, AS2): el único pendiente humano de un caso
+            # debe ser la revisión jurídica. Estos datos ya pasaron por un
+            # humano al aprobar la venta (admin, por Telegram); tratarlos
+            # como "proposed" los deja bloqueando la mesa (BLOCKED_SNAPSHOT_
+            # STATES en matriz_token_resolution.py) sin ninguna pantalla que
+            # los apruebe uno por uno. classify_proposals igual los baja a
+            # "missing"/"conflict" si corresponde.
+            state="resolved",
+            approval_required=False,
         )
         for variable in to_stage
     ]

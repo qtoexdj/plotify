@@ -8,7 +8,9 @@ function read(relative: string) {
 
 describe('T009 - Documentos por proyecto', () => {
   it('carga proyectos y expone accesos por proyecto a escritura y variables legales', () => {
-    const source = read('src/app/(dashboard)/documentos/page.tsx')
+    // Nota: DocumentosPage fue convertida a RSC (T056); la lógica de cliente
+    // vive ahora en documentos-client.tsx
+    const source = read('src/app/(dashboard)/documentos/documentos-client.tsx')
 
     expect(source).toContain("fetch('/api/projects')")
     expect(source).toContain('aria-label="Cambiar proyecto"')

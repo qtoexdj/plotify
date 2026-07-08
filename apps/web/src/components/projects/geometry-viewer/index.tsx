@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -41,6 +42,8 @@ export function GeometryViewer({
 }: GeometryViewerProps) {
   const isMobile = useIsMobile()
   const viewerRef = useRef<HTMLDivElement | null>(null)
+  const searchParams = useSearchParams()
+  const appliedLotIdParamRef = useRef<string | null>(null)
 
   // ─────────────────────────────────────────────────────────────────────────
   // State
@@ -90,6 +93,22 @@ export function GeometryViewer({
     }
     loadFeatures()
   }, [projectId, refreshKey])
+
+  // Auto-selecciona el lote apuntado por ?lotId= (ej: desde "verificar coincidencias"
+  // en la pestaña Lotes), una sola vez por valor de lotId para no pisar la
+  // selección manual del usuario en renders posteriores.
+  useEffect(() => {
+    const targetLotId = searchParams.get('lotId')
+    if (!targetLotId || !featureCollection) return
+    if (appliedLotIdParamRef.current === targetLotId) return
+
+    const feature = featureCollection.features.find((f) => f.properties.lot_id === targetLotId)
+    if (feature) {
+      const geometryId = feature.properties.geometry_id
+      window.queueMicrotask(() => setSelectedIds(new Set([geometryId])))
+    }
+    appliedLotIdParamRef.current = targetLotId
+  }, [searchParams, featureCollection])
 
   useEffect(() => {
     const supabase = createClient()
@@ -327,19 +346,27 @@ export function GeometryViewer({
 
     if (lotIdsToUpdate.length === 0) return
 
-    await Promise.all(
-      lotIdsToUpdate.map((lotId) =>
-        fetch(`/api/onboarding/lot/${lotId}`, {
+    const responses = await Promise.all(
+      lotIdsToUpdate.map(async (lotId) => {
+        const response = await fetch(`/api/onboarding/lot/${lotId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         })
-      )
+        return { lotId, response }
+      })
     )
 
     const featuresRes = await fetch(`/api/viewer/${projectId}/feature-collection`)
     if (featuresRes.ok) {
       setFeatureCollection(await featuresRes.json())
+    }
+
+    // T045 (research R9): antes fallaba en silencio; ahora se valida cada
+    // respuesta y se avisa si algún lote no se pudo actualizar.
+    const failed = responses.filter(({ response }) => !response.ok)
+    if (failed.length > 0) {
+      throw new Error(`No se pudo actualizar ${failed.length} de ${lotIdsToUpdate.length} lotes.`)
     }
   }
 
@@ -420,9 +447,6 @@ export function GeometryViewer({
               newSet.delete(id)
               return newSet
             })
-          }}
-          onUpdateState={async (ids, newState) => {
-            await handleBulkUpdate(ids, { estado: newState })
           }}
           onUpdatePrice={async (ids, newPrice) => {
             await handleBulkUpdate(ids, { precio: newPrice })

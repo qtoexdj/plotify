@@ -93,7 +93,17 @@ export function ItemDetailPanel({
                 lotId={lotDetails.id}
                 lotNumber={lotDetails.numero_lote}
                 mode={reservationMode} // 'reservation' | 'direct_sale'
-                initialReservationValue={lotDetails.valor_reserva || 0}
+                // 'reservation' precarga el depósito (valor_reserva); una
+                // venta directa (con o sin reserva previa) debe precargar
+                // el precio total del lote, no el monto de la reserva.
+                initialReservationValue={
+                  reservationMode === 'direct_sale'
+                    ? lotDetails.precio || 0
+                    : lotDetails.valor_reserva || 0
+                }
+                initialClientData={
+                  reservationMode === 'direct_sale' ? lotDetails.client_prefill : null
+                }
                 onSuccess={() => setReservationMode(null)} // Refresh will be handled by parent/realtime
                 onCancel={() => setReservationMode(null)}
               />

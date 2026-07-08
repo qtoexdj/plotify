@@ -7,6 +7,10 @@ import { GeometryViewer } from '@/components/projects/geometry-viewer'
 import { BulkActionsPanel } from '@/components/projects/viewer/BulkActionsPanel'
 import type { ViewerFeature, ViewerFeatureCollection } from '@/types/viewer.types'
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 vi.mock('@hugeicons/react', () => ({
   HugeiconsIcon: ({ className }: { className?: string }) => (
     <span aria-hidden="true" className={className} />
@@ -189,33 +193,33 @@ describe('BulkActionsPanel', () => {
     cleanup()
   })
 
-  it('asks for confirmation before applying bulk state updates', async () => {
-    const onUpdateState = vi.fn().mockResolvedValue(undefined)
+  it('asks for confirmation before applying bulk price updates', async () => {
+    const onUpdatePrice = vi.fn().mockResolvedValue(undefined)
 
     render(
       <BulkActionsPanel
         selectedIds={['geo-1', 'geo-2']}
         allFeatures={featureCollection.features}
-        onUpdateState={onUpdateState}
-        onUpdatePrice={vi.fn()}
+        onUpdatePrice={onUpdatePrice}
         onClearSelection={vi.fn()}
         onRemoveFromSelection={vi.fn()}
       />
     )
 
-    fireEvent.click(screen.getByRole('combobox', { name: 'Nuevo estado masivo' }))
-    fireEvent.click(await screen.findByRole('option', { name: 'Reservado' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Aplicar estado masivo' }))
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Precio masivo' }), {
+      target: { value: '30000000' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar precio masivo' }))
 
-    expect(onUpdateState).not.toHaveBeenCalled()
+    expect(onUpdatePrice).not.toHaveBeenCalled()
     expect((await screen.findByRole('alertdialog')).textContent).toContain(
-      'Se cambiará el estado de 2 lotes a "reservado".'
+      'Se fijará el precio de 2 lotes'
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
 
     await waitFor(() => {
-      expect(onUpdateState).toHaveBeenCalledWith(['geo-1', 'geo-2'], 'reservado')
+      expect(onUpdatePrice).toHaveBeenCalledWith(['geo-1', 'geo-2'], 30000000)
     })
   })
 })

@@ -28,9 +28,14 @@ class FakeQuery:
         self.action = "select"
         self.payload: Any = None
         self.filters: list[tuple[str, Any]] = []
+        self.orderings: list[tuple[str, bool]] = []
         self.single = False
 
     def select(self, *_args):
+        return self
+
+    def order(self, column, desc=False):
+        self.orderings.append((column, bool(desc)))
         return self
 
     def insert(self, payload):
@@ -92,6 +97,8 @@ class FakeQuery:
                     updated.append(row)
             return SimpleNamespace(data=updated)
         rows = [row for row in table if self._matches(row)]
+        for column, desc in reversed(self.orderings):
+            rows.sort(key=lambda row: str(row.get(column) or ""), reverse=desc)
         if self.single:
             return SimpleNamespace(data=rows[0] if rows else None)
         return SimpleNamespace(data=rows)
@@ -405,6 +412,133 @@ async def test_sale_pending_notification_uses_admin_dictionary_and_deep_link(
     assert "Validar venta" in sent_message
     assert f"http://localhost:3000/projects/{PROJECT_ID}" in sent_message
     assert "Solicitud de Venta" not in sent_message
+
+
+@pytest.mark.asyncio
+async def test_sale_from_matching_reservation_shows_delta_message(monkeypatch):
+    """T043 (FR-017): sale_mode='reserved' + mismo RUT de la reserva ->
+    mensaje delta (no el formulario completo)."""
+    store = FakeSupabase()
+    store.tables["approval_requests"] = [
+        {
+            "id": "approval-sale-uuid",
+            "lot_id": LOT_ID,
+            "organization_id": ORG_ID,
+            "vendor_name": "Vendedora A",
+            "payload": {
+                "cliente_nombre": "Ana Perez",
+                "cliente_run": "12.345.678-9",
+                "valor_final": 24_000_000,
+            },
+            "request_type": "sale",
+            "sale_mode": "reserved",
+        }
+    ]
+    store.tables["lots"] = [
+        {"id": LOT_ID, "numero_lote": "12", "project_id": PROJECT_ID, "precio": 24_000_000}
+    ]
+    store.tables["projects"] = [{"id": PROJECT_ID, "name": "Teno - El Condor"}]
+    store.tables["organization_members"] = [
+        {"organization_id": ORG_ID, "role": "admin", "user_id": ADMIN_ID}
+    ]
+    store.tables["profiles"] = [
+        {"id": ADMIN_ID, "phone": None, "telegram_chat_id": "777001"}
+    ]
+    store.tables["lot_records"] = [
+        {
+            "lot_id": LOT_ID,
+            "cliente_nombre": "Ana Perez",
+            "cliente_run_normalizado": "123456789",
+            "created_at": "2026-06-01T10:00:00Z",
+        }
+    ]
+    telegram_client = SimpleNamespace(send_text=AsyncMock())
+
+    monkeypatch.setattr(approval_notifier, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(
+        approval_notifier,
+        "get_telegram_client_for_org",
+        AsyncMock(return_value=telegram_client),
+    )
+
+    result = await approval_notifier.notify_admin_approval({}, "approval-sale-uuid")
+
+    assert result == "SUCCESS"
+    telegram_client.send_text.assert_awaited_once()
+    sent_message = telegram_client.send_text.await_args.args[1]
+    assert "Ya aprobaste la reserva de" in sent_message
+    assert "Ana Perez" in sent_message
+    assert "Lote 12" in sent_message
+    assert "$24,000,000" in sent_message
+    # No repite el formulario completo (RUT, notaría, fecha de firma)
+    assert "12.345.678-9" not in sent_message
+    assert "Notaría" not in sent_message
+    # Sigue exigiendo confirmar explícito (HG-1): botones aprobar/rechazar
+    reply_markup = telegram_client.send_text.await_args.kwargs["reply_markup"]
+    callback_datas = {
+        button["callback_data"]
+        for row in reply_markup["inline_keyboard"]
+        for button in row
+    }
+    assert callback_datas == {
+        "approve:approval-sale-uuid",
+        "reject:approval-sale-uuid",
+    }
+
+
+@pytest.mark.asyncio
+async def test_sale_from_reservation_with_different_run_shows_full_message(monkeypatch):
+    """Si el RUT de la venta no coincide con el de la reserva, no hay delta:
+    se muestra el formulario completo (podría ser otro comprador)."""
+    store = FakeSupabase()
+    store.tables["approval_requests"] = [
+        {
+            "id": "approval-sale-uuid",
+            "lot_id": LOT_ID,
+            "organization_id": ORG_ID,
+            "vendor_name": "Vendedora A",
+            "payload": {
+                "cliente_nombre": "Otro Comprador",
+                "cliente_run": "9.876.543-2",
+                "valor_final": 24_000_000,
+            },
+            "request_type": "sale",
+            "sale_mode": "reserved",
+        }
+    ]
+    store.tables["lots"] = [
+        {"id": LOT_ID, "numero_lote": "12", "project_id": PROJECT_ID, "precio": 24_000_000}
+    ]
+    store.tables["projects"] = [{"id": PROJECT_ID, "name": "Teno - El Condor"}]
+    store.tables["organization_members"] = [
+        {"organization_id": ORG_ID, "role": "admin", "user_id": ADMIN_ID}
+    ]
+    store.tables["profiles"] = [
+        {"id": ADMIN_ID, "phone": None, "telegram_chat_id": "777001"}
+    ]
+    store.tables["lot_records"] = [
+        {
+            "lot_id": LOT_ID,
+            "cliente_nombre": "Ana Perez",
+            "cliente_run_normalizado": "123456789",
+            "created_at": "2026-06-01T10:00:00Z",
+        }
+    ]
+    telegram_client = SimpleNamespace(send_text=AsyncMock())
+
+    monkeypatch.setattr(approval_notifier, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(
+        approval_notifier,
+        "get_telegram_client_for_org",
+        AsyncMock(return_value=telegram_client),
+    )
+
+    result = await approval_notifier.notify_admin_approval({}, "approval-sale-uuid")
+
+    assert result == "SUCCESS"
+    sent_message = telegram_client.send_text.await_args.args[1]
+    assert "Ya aprobaste la reserva de" not in sent_message
+    assert "Venta por validar" in sent_message
     assert store.tables["notification_events"][0]["recipient_role"] == "admin"
 
 

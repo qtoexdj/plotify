@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {
   Card,
   CardAction,
@@ -14,6 +15,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { LotStatusBadge } from '@/components/projects/LotStatusBadge'
+import { getMatrizProject } from '@/lib/documents/matriz-client'
+import type { MatrizView } from '@/lib/documents/matriz-types'
+import { pendienteHref, pendienteTitle } from '@/components/documents/mesa/pendientes-list'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Calendar01Icon,
@@ -41,7 +45,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { AssignVendorDialog } from './assign-vendor-dialog'
-import { useState, useTransition } from 'react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ProjectWithMetrics } from '@/types/database.types'
 import type { LotWithRecord } from './types'
@@ -118,9 +122,18 @@ const ESTADO_PROYECTO_CONFIG: Record<
 interface OverviewTabProps {
   project: ProjectWithMetrics & { vendors?: ProjectVendorAssignment[] }
   lots: LotWithRecord[]
+  onNavigateTab?: (tab: string) => void
 }
 
-export function OverviewTab({ project, lots }: OverviewTabProps) {
+const CHECKLIST_DOC_FIELDS: (keyof ProjectWithMetrics)[] = [
+  'doc_dominio_vigente',
+  'doc_hipoteca_gravamen',
+  'doc_roles',
+  'doc_subdivision',
+  'doc_plano_oficial',
+]
+
+export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) {
   const router = useRouter()
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -130,6 +143,7 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
   const [showRevenue, setShowRevenue] = useState(false)
   const [ufValue, setUfValue] = useState<number | null>(null)
   const [ufDate, setUfDate] = useState<string | null>(null)
+  const [projectMatriz, setProjectMatriz] = useState<MatrizView | null>(null)
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false)
   const [descriptionDraft, setDescriptionDraft] = useState(project.descripcion ?? '')
   const [localDescription, setLocalDescription] = useState(project.descripcion ?? '')
@@ -150,7 +164,54 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
   const visibleActivityLots = isTableExpanded ? tableLots : tableLots.slice(0, 2)
   const revenue = lots.reduce((sum, lot) => sum + (lot.lot_records?.valor ?? lot.precio ?? 0), 0)
   const revenueUf = revenue > 0 ? Math.round(revenue / (ufValue ?? 39000)) : 0
-  const summaryStatus = projectStatusConfig[project.estado ?? 'draft'] ?? projectStatusConfig.draft
+
+  const isOperational = project.estado === 'operational' || project.estado === 'activo'
+  const hasVentas = project.lotes_reservados > 0 || project.lotes_vendidos > 0
+  const isProjectOperational = isOperational || hasVentas
+
+  const estadoProyectoReal = useMemo(() => {
+    if (isProjectOperational) return 'operational'
+
+    // /api/projects/[id]/lots filtra por vendedor_id para roles no-admin, así
+    // que `lots` no representa el proyecto completo para ellos: con esa
+    // lista parcial (o vacía) no se puede inferir cuántos lotes están
+    // verificados. project.total_lotes sí es un conteo a nivel proyecto,
+    // no filtrado por vendedor, así que alcanza para distinguir "sin
+    // geometría" de "con geometría" (project.estado no sirve: es el mismo
+    // flag fijo que T051 reemplaza para el admin).
+    if (userRole !== 'admin') return project.total_lotes > 0 ? 'imported' : 'draft'
+
+    const lotesTotal = lots.length
+    if (lotesTotal === 0) return 'draft'
+
+    const lotesVerificados = lots.filter(
+      (lot) => Boolean(lot.geometry_id) && lot.verified_status !== 'draft'
+    ).length
+    const lotesListo = lotesTotal > 0 && lotesVerificados === lotesTotal
+
+    const blockers = (projectMatriz?.approval_blockers ?? []).filter(
+      (blocker) => !(blocker.kind === 'readiness_gate' && blocker.inherited === true)
+    )
+    const tituloBlocker = blockers.find(
+      (blocker) => blocker.kind === 'readiness_gate' && blocker.gate === 'title_verified'
+    )
+    const tituloListo = Boolean(projectMatriz) && !tituloBlocker
+
+    const variableBlockers = blockers.filter(
+      (blocker) => !(blocker.kind === 'readiness_gate' && blocker.gate === 'title_verified')
+    )
+    const variablesListo = Boolean(projectMatriz) && variableBlockers.length === 0
+
+    const moldeListo = projectMatriz?.status === 'approved'
+
+    if (lotesListo && tituloListo && variablesListo && moldeListo) {
+      return 'validated'
+    }
+
+    return 'imported'
+  }, [isProjectOperational, lots, projectMatriz, userRole, project.total_lotes])
+
+  const summaryStatus = projectStatusConfig[estadoProyectoReal] ?? projectStatusConfig.draft
 
   useEffect(() => {
     if (!isLocationOpen) return
@@ -244,6 +305,25 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
     checkRole()
   }, [project.organization_id])
 
+  useEffect(() => {
+    const isProjectOperational = project.estado === 'operational' || project.estado === 'activo'
+    if (userRole !== 'admin' || isProjectOperational) return
+
+    let isMounted = true
+
+    getMatrizProject(project.id)
+      .then((result) => {
+        if (isMounted) setProjectMatriz(result.matriz)
+      })
+      .catch(() => {
+        if (isMounted) setProjectMatriz(null)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [project.id, project.estado, userRole])
+
   const isAdmin = userRole === 'admin'
 
   const handleRemoveVendor = async (vendorId: string) => {
@@ -260,7 +340,7 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
     })
   }
 
-  const handleMakeOperational = async () => {
+  const handleMakeOperational = useCallback(async () => {
     if (
       !confirm(
         '¿Estás seguro de que deseas hacer este proyecto operacional? Esto habilitará las reservas y ventas.'
@@ -282,7 +362,7 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
     } finally {
       setIsPublishing(false)
     }
-  }
+  }, [project.id])
 
   const handleOpenDescription = () => {
     setDescriptionDraft(localDescription)
@@ -352,7 +432,115 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
     }
   }
 
-  const isOperational = project.estado === 'operational' || project.estado === 'activo'
+  const checklistSteps = useMemo(() => {
+    const blockers = (projectMatriz?.approval_blockers ?? []).filter(
+      (blocker) => !(blocker.kind === 'readiness_gate' && blocker.inherited === true)
+    )
+
+    const docsCargados = CHECKLIST_DOC_FIELDS.filter((field) => Boolean(project[field])).length
+    const docsListo = docsCargados === CHECKLIST_DOC_FIELDS.length
+
+    const tituloBlocker = blockers.find(
+      (blocker) => blocker.kind === 'readiness_gate' && blocker.gate === 'title_verified'
+    )
+    const tituloListo = Boolean(projectMatriz) && !tituloBlocker
+
+    const variableBlockers = blockers.filter(
+      (blocker) => !(blocker.kind === 'readiness_gate' && blocker.gate === 'title_verified')
+    )
+    const variablesListo = Boolean(projectMatriz) && variableBlockers.length === 0
+
+    const moldeListo = projectMatriz?.status === 'approved'
+
+    const lotesTotal = lots.length
+    const lotesVerificados = lots.filter(
+      (lot) => Boolean(lot.geometry_id) && lot.verified_status !== 'draft'
+    ).length
+    const lotesListo = lotesTotal > 0 && lotesVerificados === lotesTotal
+
+    const matrizHref = `/documentos/matriz/proyecto/${project.id}`
+
+    return [
+      {
+        id: 'documentos',
+        label: 'Documentos',
+        done: docsListo,
+        detail: docsListo
+          ? 'Todos los documentos legales están cargados.'
+          : `${docsCargados} de ${CHECKLIST_DOC_FIELDS.length} documentos cargados.`,
+        ctaLabel: docsListo ? undefined : 'Cargar documentos',
+        onClick: docsListo ? undefined : () => onNavigateTab?.('documents'),
+        href: undefined as string | undefined,
+      },
+      {
+        id: 'titulo',
+        label: 'Título',
+        done: tituloListo,
+        detail: tituloBlocker
+          ? pendienteTitle(tituloBlocker)
+          : projectMatriz
+            ? 'Título verificado.'
+            : 'Esperando datos de la matriz del proyecto.',
+        ctaLabel: tituloBlocker ? (tituloBlocker.action_label ?? 'Revisar título') : undefined,
+        onClick: undefined as (() => void) | undefined,
+        href: tituloBlocker ? (pendienteHref(tituloBlocker) ?? matrizHref) : undefined,
+      },
+      {
+        id: 'variables',
+        label: 'Variables',
+        done: variablesListo,
+        detail: variablesListo
+          ? 'Todas las variables están completas o aprobadas.'
+          : `Faltan ${variableBlockers.length} dato(s) por completar o aprobar.`,
+        ctaLabel: variablesListo ? undefined : 'Completar variables',
+        onClick: undefined as (() => void) | undefined,
+        href: variablesListo ? undefined : matrizHref,
+      },
+      {
+        id: 'molde',
+        label: 'Molde',
+        done: moldeListo,
+        detail: moldeListo
+          ? 'Molde aprobado, esperando ventas.'
+          : 'El molde del proyecto aún no ha sido aprobado.',
+        ctaLabel: moldeListo ? undefined : 'Revisar molde',
+        onClick: undefined as (() => void) | undefined,
+        href: moldeListo ? undefined : matrizHref,
+      },
+      {
+        id: 'lotes',
+        label: 'Lotes',
+        done: lotesListo,
+        detail:
+          lotesTotal === 0
+            ? 'Aún no se ha importado la geometría del proyecto.'
+            : lotesListo
+              ? 'Todos los lotes están verificados.'
+              : `${lotesVerificados} de ${lotesTotal} lotes verificados.`,
+        ctaLabel: lotesListo
+          ? undefined
+          : lotesTotal === 0
+            ? 'Importar geometría'
+            : 'Verificar lotes',
+        onClick: lotesListo
+          ? undefined
+          : () => onNavigateTab?.(lotesTotal === 0 ? 'viewer' : 'lots'),
+        href: undefined as string | undefined,
+      },
+      {
+        id: 'ventas',
+        label: 'Ventas',
+        done: isProjectOperational,
+        detail: isProjectOperational
+          ? 'Las ventas están habilitadas.'
+          : 'Las ventas aún no están habilitadas para este proyecto.',
+        ctaLabel: isProjectOperational ? undefined : 'Habilitar ventas',
+        onClick: isProjectOperational ? undefined : handleMakeOperational,
+        href: undefined as string | undefined,
+      },
+    ]
+  }, [project, projectMatriz, lots, isProjectOperational, onNavigateTab, handleMakeOperational])
+
   const formattedClp = new Intl.NumberFormat('es-CL', {
     style: 'currency',
     currency: 'CLP',
@@ -376,7 +564,7 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
 
   return (
     <div className="space-y-6">
-      {!isOperational && (
+      {!isProjectOperational && (
         <Card className="w-full gap-0 overflow-hidden border-primary/30 bg-primary/5 py-0">
           <CardContent className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="min-w-0 space-y-1">
@@ -385,18 +573,18 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
                   Estado de Preparación:
                 </span>
                 <Badge className="border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
-                  {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.label}
+                  {ESTADO_PROYECTO_CONFIG[estadoProyectoReal]?.label}
                 </Badge>
               </div>
               <h4 className="mt-1 text-sm font-semibold text-foreground">
                 Proyecto en Fase de Preparación
               </h4>
               <p className="max-w-4xl text-xs leading-relaxed text-muted-foreground">
-                {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.description}
+                {ESTADO_PROYECTO_CONFIG[estadoProyectoReal]?.description}
               </p>
             </div>
 
-            {isAdmin && (
+            {isAdmin && !hasVentas && (
               <Button
                 size="sm"
                 onClick={handleMakeOperational}
@@ -406,6 +594,59 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
                 {isPublishing ? 'Publicando...' : 'Habilitar Ventas'}
               </Button>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {!isProjectOperational && isAdmin && (
+        <Card className="w-full shadow-xs">
+          <CardHeader>
+            <CardTitle>Checklist de preparación</CardTitle>
+            <CardDescription>
+              Pasos para dejar el proyecto listo para ventas y escrituras.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y divide-border/60">
+              {checklistSteps.map((step) => (
+                <li
+                  key={step.id}
+                  className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge variant={step.done ? 'success' : 'warning'}>
+                        {step.done ? 'Listo' : 'Pendiente'}
+                      </StatusBadge>
+                      <p className="text-sm font-semibold text-foreground">{step.label}</p>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{step.detail}</p>
+                  </div>
+                  {step.ctaLabel ? (
+                    step.href ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-11 shrink-0 sm:min-h-9"
+                        asChild
+                      >
+                        <Link href={step.href}>{step.ctaLabel}</Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-11 shrink-0 sm:min-h-9"
+                        onClick={step.onClick}
+                        disabled={step.id === 'ventas' && (isPublishing || isPending)}
+                      >
+                        {step.id === 'ventas' && isPublishing ? 'Publicando...' : step.ctaLabel}
+                      </Button>
+                    )
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}
@@ -600,8 +841,8 @@ export function OverviewTab({ project, lots }: OverviewTabProps) {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Estado</label>
                   <p className="text-lg mt-0.5">
-                    <Badge className={ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.className}>
-                      {ESTADO_PROYECTO_CONFIG[project.estado || 'draft']?.label}
+                    <Badge className={ESTADO_PROYECTO_CONFIG[estadoProyectoReal]?.className}>
+                      {ESTADO_PROYECTO_CONFIG[estadoProyectoReal]?.label}
                     </Badge>
                   </p>
                 </div>

@@ -14,6 +14,8 @@ interface MoldeProgressHeaderProps {
   projectName?: string
   scope?: 'project' | 'lot'
   onApproveMolde?: () => void
+  canApproveMolde?: boolean
+  approved?: boolean
   approving?: boolean
   pendingFocus?: boolean
   onPendingFocusChange?: (active: boolean) => void
@@ -24,13 +26,21 @@ export function MoldeProgressHeader({
   projectName,
   scope = 'project',
   onApproveMolde,
+  canApproveMolde = progress.moldeAprobable,
+  approved = false,
   approving = false,
   pendingFocus = false,
   onPendingFocusChange,
 }: MoldeProgressHeaderProps) {
   const pct = progress.total === 0 ? 0 : Math.round((progress.listas / progress.total) * 100)
-  const subtitulo = scope === 'lot' ? 'Borrador de venta' : 'Molde del proyecto'
+  const isProjectMoldeApproved = scope === 'project' && approved
+  const subtitulo = isProjectMoldeApproved
+    ? 'Molde aprobado · esperando ventas'
+    : scope === 'lot'
+      ? 'Borrador de venta'
+      : 'Molde del proyecto'
   const hasPending = progress.porRevisar > 0
+  const canUseApproveButton = !isProjectMoldeApproved && canApproveMolde
 
   return (
     <div className="space-y-3">
@@ -39,7 +49,7 @@ export function MoldeProgressHeader({
           <h2 className="text-lg font-semibold tracking-tight">Matriz de variables</h2>
           <p className="text-sm text-muted-foreground">
             {subtitulo}
-            {projectName ? ` · ${projectName}` : ''}
+            {projectName && !isProjectMoldeApproved ? ` · ${projectName}` : ''}
           </p>
         </div>
         <div className="flex w-full flex-wrap justify-stretch gap-2 sm:w-auto sm:justify-end">
@@ -64,13 +74,13 @@ export function MoldeProgressHeader({
             type="button"
             size="sm"
             className="min-h-10 w-full sm:w-auto"
-            disabled={!progress.moldeAprobable || approving}
+            disabled={!canUseApproveButton || approving}
             onClick={onApproveMolde}
           >
-            {progress.moldeAprobable ? null : (
+            {canUseApproveButton ? null : (
               <HugeiconsIcon icon={Lock} className="size-4" aria-hidden />
             )}
-            Aprobar molde
+            {isProjectMoldeApproved ? 'Molde aprobado' : 'Aprobar molde'}
           </Button>
         </div>
       </div>
@@ -78,12 +88,21 @@ export function MoldeProgressHeader({
         <div className="h-2 rounded-full bg-success transition-all" style={{ width: `${pct}%` }} />
       </div>
       <p className="text-sm text-muted-foreground" data-testid="molde-progress-summary">
-        <span className="font-medium text-foreground">{progress.listas}</span> de {progress.total}{' '}
-        listas ·{' '}
-        <span className={hasPending ? 'font-medium text-warning' : 'text-foreground'}>
-          {progress.porRevisar} por revisar
-        </span>{' '}
-        · los huecos de venta no cuentan
+        {isProjectMoldeApproved ? (
+          'Molde listo. Los datos de venta se completarán cuando llegue una venta.'
+        ) : (
+          <>
+            <span className="font-medium text-foreground">{progress.listas}</span> de{' '}
+            {progress.total} listas ·{' '}
+            <span className={hasPending ? 'font-medium text-warning' : 'text-foreground'}>
+              {progress.porRevisar} por revisar
+            </span>{' '}
+            ·{' '}
+            {hasPending
+              ? 'completa las variables del molde; los huecos de venta no bloquean'
+              : 'los huecos de venta no cuentan'}
+          </>
+        )}
       </p>
     </div>
   )

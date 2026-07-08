@@ -81,6 +81,31 @@ def _inventory_response():
     )
 
 
+def test_variable_resolution_response_accepts_raw_scalar_value_json():
+    """Regresión: lote.superficie_m2/servidumbre.superficie_m2 llegan del
+    puente operacional como float crudo en value_json (columna JSONB
+    genérica), no como dict/list. VariableResolutionResponse.value_json
+    debe aceptar cualquier valor JSON válido — antes fallaba con
+    ValidationError y tumbaba GET /legal-variables/project/{id} entero con
+    500 en cuanto el inventario incluyera una sola variable numérica."""
+    from schemas.legal_variables import VariableResolutionResponse
+
+    variable = VariableResolutionResponse.model_validate(
+        {
+            "id": VARIABLE_ID,
+            "organization_id": ORG_ID,
+            "project_id": PROJECT_ID,
+            "lot_id": PROJECT_ID,
+            "variable_key": "lote.superficie_m2",
+            "variable_group": "lote",
+            "value_json": 5062.17,
+            "state": "proposed",
+            "source_type": "geometry",
+        }
+    )
+    assert variable.value_json == 5062.17
+
+
 def test_get_project_legal_variables_endpoint_returns_inventory(monkeypatch):
     import api.v1.endpoints.legal_variables as endpoint
 

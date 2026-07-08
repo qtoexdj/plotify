@@ -7,12 +7,14 @@ import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.deps import verify_internal_secret
 from api.v1.endpoints import escritura_matrices, escritura_templates
+from services import escritura_readiness
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "matriz"
 
@@ -62,7 +64,7 @@ class FakeQuery:
         self.filters: list[tuple[str, object]] = []
         self.orderings: list[tuple[str, bool]] = []
         self.limit_count: int | None = None
-        self.single = False
+        self.is_single = False
 
     def select(self, *_args):
         return self
@@ -102,7 +104,11 @@ class FakeQuery:
         return self
 
     def maybe_single(self):
-        self.single = True
+        self.is_single = True
+        return self
+
+    def single(self):
+        self.is_single = True
         return self
 
     def _matches(self, row: dict[str, Any]) -> bool:
@@ -154,7 +160,7 @@ class FakeQuery:
                     updated.append(row)
             return SimpleNamespace(data=updated)
         rows = self._matched_rows()
-        if self.single:
+        if self.is_single:
             return SimpleNamespace(data=rows[0] if rows else None)
         return SimpleNamespace(data=rows)
 
@@ -590,7 +596,14 @@ class TestGetCaseMatriz:
         )
         assert store.tables.get("escritura_matrices", []) == []
 
-    def test_get_marks_snapshot_stale_without_mutating_matrix(self, monkeypatch):
+    def test_get_refreshes_snapshot_and_clears_staleness_for_draft_matrix(
+        self, monkeypatch
+    ):
+        """Un borrador (o en revisión) adopta el snapshot vigente del caso en
+        vez de quedar bloqueado para siempre, igual que la matriz del
+        proyecto (SDD16): sin esto, `snapshot_stale` nunca vuelve a
+        False y "Enviar a revisión" queda deshabilitado permanentemente
+        después de resolver/aprobar cualquier variable del caso."""
         store = FakeStore()
         template = _seed_template(store)
         case_row = _seed_case(store)
@@ -602,9 +615,12 @@ class TestGetCaseMatriz:
         assert response.status_code == 200
         body = response.json()["matriz"]
         assert body["id"] == matrix["id"]
-        assert body["snapshot_stale"] is True
-        assert body["approval_blockers"][0]["kind"] == "snapshot_stale"
-        assert store.tables["escritura_matrices"][0]["snapshot_hash"] == "old"
+        assert body["snapshot_stale"] is False
+        assert not any(
+            blocker["kind"] == "snapshot_stale" for blocker in body["approval_blockers"]
+        )
+        current_hash = escritura_matrices._json_hash(case_row["variable_snapshot"])
+        assert store.tables["escritura_matrices"][0]["snapshot_hash"] == current_hash
 
 
 class TestSaveMatriz:
@@ -880,6 +896,64 @@ class TestMatrizReviewWorkflow:
         assert approved_audit["decision_status"] == "approved"
         assert approved_audit["escritura_case_id"] is None
 
+    def test_project_matriz_approval_recomputes_variables_pending_cases(
+        self, monkeypatch
+    ):
+        """FR-005: aprobar el molde re-evalua los casos variables_pending del
+        proyecto, para que hereden los gates recien aprobados sin esperar a
+        que alguien abra la mesa manualmente."""
+        store = FakeStore()
+        template = _seed_template(store)
+        _seed_project(store)
+        project_snapshot = _project_snapshot_fixture()
+        matrix = _seed_project_matrix(
+            store,
+            template=template,
+            variable_snapshot=project_snapshot,
+            status="legal_review_pending",
+        )
+        matrix["submitted_by"] = "00000000-0000-4000-8000-000000000020"
+        _patch_project_snapshot(monkeypatch, variable_snapshot=project_snapshot)
+
+        pending_case = _seed_case(store)
+        pending_case["case_status"] = "variables_pending"
+        pending_case["lot_id"] = LOT_ID
+
+        ready_case_id = str(uuid.uuid4())
+        ready_lot_id = str(uuid.uuid4())
+        store.tables["escritura_cases"].append(
+            {
+                **pending_case,
+                "id": ready_case_id,
+                "lot_id": ready_lot_id,
+                "case_status": "ready_for_minuta",
+            }
+        )
+
+        recompute_calls: list[dict[str, Any]] = []
+
+        async def fake_snapshot(**kwargs):
+            recompute_calls.append(kwargs)
+            return {}
+
+        monkeypatch.setattr(
+            escritura_readiness, "create_escritura_case_snapshot", fake_snapshot
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/approve",
+            params={"organization_id": ORG_ID},
+            json={"approved_by": "00000000-0000-4000-8000-000000000021"},
+        )
+
+        assert response.status_code == 200
+        assert len(recompute_calls) == 1
+        call = recompute_calls[0]
+        assert call["organization_id"] == ORG_ID
+        assert call["project_id"] == PROJECT_ID
+        assert call["lot_id"] == LOT_ID
+        assert call["stage_operational"] is True
+
     def test_project_matriz_approval_blocks_project_pending_variable(
         self, monkeypatch
     ):
@@ -1073,6 +1147,155 @@ class TestMatrizReviewWorkflow:
         assert generate.json()["detail"]["code"] == "snapshot_stale"
         assert save.status_code == 409
         assert save.json()["detail"]["code"] == "snapshot_stale"
+
+
+class TestLegalReviewEndpoint:
+    """T016 (FR-007/FR-008): POST /escritura-matrices/case/{caseId}/legal-review."""
+
+    ADMIN_ID = "00000000-0000-4000-8000-000000000021"
+
+    def _seed_scope(self, store: FakeStore, *, role: str = "admin") -> dict[str, Any]:
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        _seed_matrix(store, case_row=case_row, template=template, status="approved")
+        store.tables.setdefault("organization_members", []).append(
+            {"organization_id": ORG_ID, "user_id": self.ADMIN_ID, "role": role}
+        )
+        return case_row
+
+    def _post(self, store: FakeStore, monkeypatch, case_id: str, body: dict[str, Any]):
+        return _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/case/{case_id}/legal-review",
+            params={"organization_id": ORG_ID},
+            json=body,
+        )
+
+    def test_rejects_non_admin_role(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store, role="user")
+
+        response = self._post(
+            store, monkeypatch, case_row["id"], {"decision": "aprobada", "decided_by": self.ADMIN_ID}
+        )
+
+        assert response.status_code == 403
+
+    def test_approve_blocked_without_abogado_redactor_variables(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+        monkeypatch.setattr(
+            escritura_readiness, "create_escritura_case_snapshot", AsyncMock()
+        )
+
+        response = self._post(
+            store, monkeypatch, case_row["id"], {"decision": "aprobada", "decided_by": self.ADMIN_ID}
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "abogado_redactor_incompleto"
+        assert "documento.abogado_redactor.nombre" in detail["missing"]
+        assert "documento.abogado_redactor.rut" in detail["missing"]
+
+    def test_reject_requires_comentario(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+
+        response = self._post(
+            store, monkeypatch, case_row["id"], {"decision": "rechazada", "decided_by": self.ADMIN_ID}
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["code"] == "comentario_required"
+
+    def test_approve_writes_revision_juridica_variables_and_audits(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+        store.tables.setdefault("variable_resolutions", []).extend(
+            [
+                {
+                    "id": "var-abogado-nombre",
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "lot_id": None,
+                    "escritura_case_id": None,
+                    "variable_key": "documento.abogado_redactor.nombre",
+                    "value_text": "María José Contreras Silva",
+                    "state": "resolved",
+                },
+                {
+                    "id": "var-abogado-rut",
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "lot_id": None,
+                    "escritura_case_id": None,
+                    "variable_key": "documento.abogado_redactor.rut",
+                    "value_text": "15.234.567-8",
+                    "state": "resolved",
+                },
+            ]
+        )
+        snapshot_mock = AsyncMock()
+        monkeypatch.setattr(
+            escritura_readiness, "create_escritura_case_snapshot", snapshot_mock
+        )
+
+        response = self._post(
+            store, monkeypatch, case_row["id"], {"decision": "aprobada", "decided_by": self.ADMIN_ID}
+        )
+
+        assert response.status_code == 200
+        snapshot_mock.assert_awaited_once()
+
+        revision_rows = {
+            row["variable_key"]: row
+            for row in store.tables["variable_resolutions"]
+            if row["variable_key"].startswith("revision_juridica.")
+        }
+        assert revision_rows["revision_juridica.estado"]["value_text"] == "aprobada"
+        assert revision_rows["revision_juridica.estado"]["lot_id"] == LOT_ID
+        assert revision_rows["revision_juridica.estado"]["escritura_case_id"] is None
+        assert revision_rows["revision_juridica.aprobada_por"]["value_text"] == self.ADMIN_ID
+        assert "revision_juridica.aprobada_at" in revision_rows
+
+        decisions = store.tables["legal_review_decisions"]
+        assert decisions[-1]["decision_type"] == "approve_case"
+        assert decisions[-1]["decision_status"] == "approved"
+        assert decisions[-1]["escritura_case_id"] == case_row["id"]
+
+    def test_reject_writes_only_estado_variable(self, monkeypatch):
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+        snapshot_mock = AsyncMock()
+        monkeypatch.setattr(
+            escritura_readiness, "create_escritura_case_snapshot", snapshot_mock
+        )
+
+        response = self._post(
+            store,
+            monkeypatch,
+            case_row["id"],
+            {
+                "decision": "rechazada",
+                "decided_by": self.ADMIN_ID,
+                "comentario": "Falta corregir la cláusula de servidumbre.",
+            },
+        )
+
+        assert response.status_code == 200
+        revision_rows = [
+            row
+            for row in store.tables["variable_resolutions"]
+            if row["variable_key"].startswith("revision_juridica.")
+        ]
+        assert len(revision_rows) == 1
+        assert revision_rows[0]["variable_key"] == "revision_juridica.estado"
+        assert revision_rows[0]["value_text"] == "rechazada"
+
+        decisions = store.tables["legal_review_decisions"]
+        assert decisions[-1]["decision_type"] == "reject_case"
+        assert decisions[-1]["decision_status"] == "rejected"
+        assert decisions[-1]["reason"] == "Falta corregir la cláusula de servidumbre."
 
 
 class TestAlertClauseContract:
@@ -1340,6 +1563,69 @@ class TestGenerateMinuta:
         inserted = store.tables["escritura_minuta_generations"][0]
         assert inserted["resolution_manifest"]["missing_count"] == 0
         assert inserted["warning_acknowledged_by"] == "00000000-0000-4000-8000-000000000010"
+
+    def test_generate_delivers_to_linked_org_admin(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+        admin_id = "00000000-0000-4000-8000-000000000021"
+        store.tables["organization_members"] = [
+            {"organization_id": ORG_ID, "user_id": admin_id, "role": "admin"}
+        ]
+        store.tables["profiles"] = [{"id": admin_id, "telegram_chat_id": "777001"}]
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/generate",
+            params={"organization_id": ORG_ID},
+            json={
+                "warning_acknowledged": True,
+                "generated_by": "00000000-0000-4000-8000-000000000010",
+            },
+        )
+
+        assert response.status_code == 201
+        deliveries = store.tables["escritura_deliveries"]
+        assert {row["recipient_user_id"] for row in deliveries} == {admin_id}
+        assert {row["channel"] for row in deliveries} == {"web", "telegram"}
+        assert any(row["status"] == "sent" for row in deliveries)
+        assert not [
+            row
+            for row in deliveries
+            if row["recipient_user_id"] is None and row["status"] == "sent"
+        ]
+
+    def test_generate_without_resolvable_recipient_records_unavailable(self, monkeypatch):
+        store = FakeStore()
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/generate",
+            params={"organization_id": ORG_ID},
+            json={
+                "warning_acknowledged": True,
+                "generated_by": "00000000-0000-4000-8000-000000000010",
+            },
+        )
+
+        assert response.status_code == 201
+        deliveries = store.tables["escritura_deliveries"]
+        assert len(deliveries) == 1
+        delivery = deliveries[0]
+        assert delivery["recipient_user_id"] is None
+        assert delivery["status"] == "unavailable"
+        assert delivery["sent_at"] is None
+        assert not [
+            row
+            for row in deliveries
+            if row["recipient_user_id"] is None and row["status"] == "sent"
+        ]
 
     def test_list_case_generations_returns_signed_urls(self, monkeypatch):
         store = FakeStore()

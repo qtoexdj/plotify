@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MoldeProgressHeader } from '@/components/projects/legal/variable-matrix/molde-progress-header'
 import { ProducerGroup } from '@/components/projects/legal/variable-matrix/producer-group'
 import { SaleGapPanel } from '@/components/projects/legal/variable-matrix/sale-gap-panel'
+import {
+  autoApproveMoldeCandidates,
+  VariableMatrix,
+} from '@/components/projects/legal/variable-matrix/variable-matrix'
 import { VariableInspector } from '@/components/projects/legal/variable-matrix/variable-inspector'
 import { groupByProducer } from '@/lib/legal/variable-matrix-model'
 import type {
@@ -40,7 +44,10 @@ function mk(
   }
 }
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 describe('MoldeProgressHeader', () => {
   it('muestra el conteo por revisar y deshabilita "Aprobar molde" si no es aprobable', () => {
@@ -80,6 +87,36 @@ describe('MoldeProgressHeader', () => {
     )
     const button = screen.getByRole('button', { name: /Aprobar molde/ }) as HTMLButtonElement
     expect(button.disabled).toBe(false)
+  })
+
+  it('muestra el estado post-aprobación y deshabilita el botón', () => {
+    render(
+      <MoldeProgressHeader
+        progress={{ porRevisar: 0, listas: 5, total: 5, moldeAprobable: true }}
+        approved
+      />
+    )
+
+    expect(screen.getByText('Molde aprobado · esperando ventas')).toBeTruthy()
+    expect(screen.getByTestId('molde-progress-summary').textContent).toMatch(
+      /Los datos de venta se completarán/
+    )
+    const button = screen.getByRole('button', { name: /Molde aprobado/ }) as HTMLButtonElement
+    expect(button.disabled).toBe(true)
+  })
+
+  it('ejecuta onApproveMolde al confirmar un molde aprobable', () => {
+    const onApproveMolde = vi.fn()
+    render(
+      <MoldeProgressHeader
+        progress={{ porRevisar: 0, listas: 5, total: 5, moldeAprobable: true }}
+        onApproveMolde={onApproveMolde}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Aprobar molde/ }))
+
+    expect(onApproveMolde).toHaveBeenCalledTimes(1)
   })
 
   it('en scope lote rotula el subtitulo como "Borrador de venta"', () => {
@@ -399,5 +436,131 @@ describe('SaleGapPanel', () => {
     expect(screen.getByText('Precio y pago')).toBeTruthy()
     expect(screen.getByText('Lote')).toBeTruthy()
     expect(screen.getByText('Servidumbre')).toBeTruthy()
+  })
+})
+
+describe('VariableMatrix', () => {
+  it('filtra las variables auto-aprobables por confianza y evidencia', () => {
+    const auto = mk({
+      variable_key: 'vendedor.nombre',
+      variable_group: 'vendedor',
+      producer: 'extracted',
+      state: 'proposed',
+      confidence: 0.95,
+      value_text: 'JUAN DE DIOS GALAZ ABARCA',
+      evidence: [{ document_id: 'doc-1', quote: 'Juan', page: 1 } as never],
+    })
+    const lowConfidence = mk({
+      variable_key: 'vendedor.rut',
+      variable_group: 'vendedor',
+      producer: 'extracted',
+      state: 'proposed',
+      confidence: 0.5,
+      value_text: '4.606.965-2',
+      evidence: [{ document_id: 'doc-1', quote: '4.606.965-2', page: 1 } as never],
+    })
+    const noEvidence = mk({
+      variable_key: 'sag.oficina_sectorial',
+      variable_group: 'sag',
+      producer: 'manual',
+      state: 'proposed',
+      confidence: 0.99,
+      value_text: 'Curicó',
+      evidence: [],
+    })
+
+    expect(autoApproveMoldeCandidates([auto, lowConfidence, noEvidence])).toEqual([auto])
+  })
+
+  it('ejecuta bulk-approve, submit y approve al confirmar el molde', async () => {
+    const onApproveMolde = vi.fn()
+    const item = mk({
+      variable_key: 'vendedor.nombre',
+      variable_group: 'vendedor',
+      producer: 'extracted',
+      state: 'proposed',
+      confidence: 0.95,
+      value_text: 'JUAN DE DIOS GALAZ ABARCA',
+      evidence: [{ document_id: 'doc-1', quote: 'Juan', page: 1 } as never],
+    })
+    const lowConfidence = mk({
+      variable_key: 'vendedor.rut',
+      variable_group: 'vendedor',
+      producer: 'extracted',
+      state: 'proposed',
+      confidence: 0.5,
+      value_text: '4.606.965-2',
+      evidence: [{ document_id: 'doc-1', quote: '4.606.965-2', page: 1 } as never],
+    })
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ groups: { vendedor: [item, lowConfidence] } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ matriz: { id: 'matriz-1', status: 'draft' } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ approved_count: 1, approved_keys: [item.variable_key] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ matriz: { id: 'matriz-1' } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ matriz: { id: 'matriz-1' } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ matriz: { id: 'matriz-1', status: 'approved' } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          groups: {
+            vendedor: [{ ...item, state: 'approved' }, lowConfidence],
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ matriz: { id: 'matriz-1', status: 'approved' } }),
+      } as Response)
+
+    render(
+      <VariableMatrix projectId="project-1" projectName="Teno" onApproveMolde={onApproveMolde} />
+    )
+
+    await waitFor(() => expect(screen.getByTestId('variable-matrix')).toBeTruthy())
+    fireEvent.click(screen.getByRole('button', { name: /Aprobar molde/ }))
+    const dialog = screen.getByTestId('approve-molde-dialog')
+    expect(dialog).toBeTruthy()
+    expect(within(dialog).getByText('vendedor.nombre')).toBeTruthy()
+    expect(within(dialog).queryByText('vendedor.rut')).toBeNull()
+    fireEvent.click(screen.getAllByRole('button', { name: /Aprobar molde/ }).at(-1)!)
+
+    await waitFor(() => expect(onApproveMolde).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.getByText('Molde aprobado · esperando ventas')).toBeTruthy())
+    const approvedButton = screen.getByRole('button', {
+      name: /Molde aprobado/,
+    }) as HTMLButtonElement
+    expect(approvedButton.disabled).toBe(true)
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      '/api/projects/project-1/legal-variables?include_evidence=true',
+      '/api/escritura-matrices/project/project-1',
+      '/api/projects/project-1/legal-variables/bulk-approve',
+      '/api/escritura-matrices/project/project-1',
+      '/api/escritura-matrices/matriz-1/submit',
+      '/api/escritura-matrices/matriz-1/approve',
+      '/api/projects/project-1/legal-variables?include_evidence=true',
+      '/api/escritura-matrices/project/project-1',
+    ])
+    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({
+      variable_keys: ['vendedor.nombre'],
+    })
   })
 })

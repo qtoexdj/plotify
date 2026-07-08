@@ -16,6 +16,9 @@ class ReservationPayload(BaseModel):
     cliente_ocupacion: Optional[str] = None
     cliente_email: Optional[str] = None
     cliente_telefono: Optional[str] = None
+    cliente_nacionalidad: Optional[str] = None
+    cliente_region: Optional[str] = None
+    cliente_comuna: Optional[str] = None
 
 
 class ReservationRequest(BaseModel):
@@ -43,6 +46,9 @@ class SalePayload(BaseModel):
     cliente_ocupacion: Optional[str] = None
     cliente_email: Optional[str] = None
     cliente_telefono: Optional[str] = None
+    cliente_nacionalidad: Optional[str] = None
+    cliente_region: Optional[str] = None
+    cliente_comuna: Optional[str] = None
 
 
 class SaleRequest(BaseModel):

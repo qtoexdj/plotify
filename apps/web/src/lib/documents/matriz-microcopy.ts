@@ -158,7 +158,21 @@ export const MESA_TEXT = {
   sinPendientes: 'No hay pendientes. La escritura está lista para revisión.',
   abrirMesa: 'Abrir mesa de escritura',
   noSePudoCargar: 'No se pudo cargar la escritura. Recarga para intentarlo de nuevo.',
+  noSePudoVerificar: 'No se pudo verificar el caso. Intenta de nuevo.',
   esperandoVentas: 'Esperando ventas',
+  esperandoRevisionJuridica: 'Esperando revisión jurídica',
+  aprobarRevisionJuridica: 'Aprobar revisión jurídica',
+  resumenAprobarRevisionJuridica:
+    'El caso quedará listo para generar la minuta. Este paso es tuyo como abogado o administrador, no se puede deshacer desde aquí.',
+  resumenRechazarRevisionJuridica:
+    'El caso queda a la espera de correcciones; registra qué falta para el equipo.',
+  comentarioRechazoRevisionLabel: 'Cuéntale al equipo qué corregir',
+  faltaDatosAbogadoTitle: 'Faltan los datos del abogado redactor',
+  faltaDatosAbogadoDescripcion:
+    'Antes de aprobar la revisión jurídica, completa el nombre y RUT del abogado redactor del proyecto.',
+  completarDatosAbogado: 'Completar datos del abogado',
+  noSePudoActualizarRevisionJuridica:
+    'No se pudo actualizar la revisión jurídica. Intenta de nuevo.',
 } as const
 
 /**

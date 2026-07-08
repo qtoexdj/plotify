@@ -1,18 +1,11 @@
 import { useState, useMemo } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Tick02Icon, Cancel01Icon, Money01Icon, Layers01Icon } from '@hugeicons/core-free-icons'
+import { Cancel01Icon, Money01Icon, Layers01Icon } from '@hugeicons/core-free-icons'
 import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -29,13 +22,11 @@ import {
 } from '@/components/ui/alert-dialog'
 
 import type { ViewerFeature } from '@/types/viewer.types'
-import type { EstadoLote } from '@/lib/models/lot.model'
 import { cn } from '@/lib/utils'
 
 interface BulkActionsPanelProps {
   selectedIds: string[]
   allFeatures: ViewerFeature[]
-  onUpdateState: (ids: string[], newState: EstadoLote) => Promise<void>
   onUpdatePrice: (ids: string[], newPrice: number) => Promise<void>
   onClearSelection: () => void
   onRemoveFromSelection: (id: string) => void
@@ -44,17 +35,14 @@ interface BulkActionsPanelProps {
 export function BulkActionsPanel({
   selectedIds,
   allFeatures,
-  onUpdateState,
   onUpdatePrice,
   onClearSelection,
   onRemoveFromSelection,
 }: BulkActionsPanelProps) {
-  const [isUpdatingState, setIsUpdatingState] = useState(false)
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false)
 
-  const [targetState, setTargetState] = useState<EstadoLote | ''>('')
   const [targetPrice, setTargetPrice] = useState<string>('')
-  const [pendingAction, setPendingAction] = useState<'state' | 'price' | null>(null)
+  const [pendingAction, setPendingAction] = useState<'price' | null>(null)
 
   // Computed Metrics
   const selectedFeatures = useMemo(() => {
@@ -74,38 +62,19 @@ export function BulkActionsPanel({
     return isNaN(price) || price < 0 ? null : price
   }, [targetPrice])
 
-  const pendingActionTitle =
-    pendingAction === 'state' ? 'Confirmar cambio de estado' : 'Confirmar cambio de precio'
+  const pendingActionTitle = 'Confirmar cambio de precio'
 
-  const pendingActionDescription =
-    pendingAction === 'state'
-      ? `Se cambiará el estado de ${selectedIds.length} lotes a "${targetState}".`
-      : `Se fijará el precio de ${selectedIds.length} lotes en ${
-          parsedTargetPrice === null
-            ? ''
-            : new Intl.NumberFormat('es-CL', {
-                style: 'currency',
-                currency: 'CLP',
-                maximumFractionDigits: 0,
-              }).format(parsedTargetPrice)
-        }.`
+  const pendingActionDescription = `Se fijará el precio de ${selectedIds.length} lotes en ${
+    parsedTargetPrice === null
+      ? ''
+      : new Intl.NumberFormat('es-CL', {
+          style: 'currency',
+          currency: 'CLP',
+          maximumFractionDigits: 0,
+        }).format(parsedTargetPrice)
+  }.`
 
   // Handlers
-  const handleStateUpdate = async () => {
-    if (!targetState) return
-    setIsUpdatingState(true)
-    try {
-      await onUpdateState(selectedIds, targetState)
-      toast.success(`Estado actualizado para ${selectedIds.length} lotes`)
-      setTargetState('')
-    } catch (error) {
-      console.error(error)
-      toast.error('Error al actualizar estados')
-    } finally {
-      setIsUpdatingState(false)
-    }
-  }
-
   const handlePriceUpdate = async () => {
     if (parsedTargetPrice === null) return
 
@@ -123,9 +92,7 @@ export function BulkActionsPanel({
   }
 
   const handleConfirmPendingAction = async () => {
-    if (pendingAction === 'state') {
-      await handleStateUpdate()
-    } else if (pendingAction === 'price') {
+    if (pendingAction === 'price') {
       await handlePriceUpdate()
     }
     setPendingAction(null)
@@ -183,37 +150,8 @@ export function BulkActionsPanel({
 
       {/* Actions Section */}
       <div className="space-y-4 shrink-0">
-        {/* 1. Bulk State Change */}
-        <Card className="shadow-none border-dashed bg-muted/20">
-          <CardHeader className="p-3 pb-1">
-            <CardTitle className="text-xs font-semibold flex items-center gap-2">
-              <HugeiconsIcon icon={Tick02Icon} className="w-3.5 h-3.5" />
-              Cambiar Estado Masivo
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-2 flex gap-2">
-            <Select value={targetState} onValueChange={(v) => setTargetState(v as EstadoLote)}>
-              <SelectTrigger className="h-11 text-xs" aria-label="Nuevo estado masivo">
-                <SelectValue placeholder="Nuevo estado..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="disponible">Disponible</SelectItem>
-                <SelectItem value="reservado">Reservado</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              className="h-11 px-4"
-              disabled={!targetState || isUpdatingState}
-              onClick={() => setPendingAction('state')}
-              aria-label="Aplicar estado masivo"
-            >
-              {isUpdatingState ? <Spinner className="w-3 h-3" /> : 'Aplicar'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 2. Bulk Price Change */}
+        {/* Bulk Price Change (el cambio de estado masivo se retiró: FR-018/T045,
+            pasaba solo por reserva/venta/liberación auditadas, nunca por aquí) */}
         <Card className="shadow-none border-dashed bg-muted/20">
           <CardHeader className="p-3 pb-1">
             <CardTitle className="text-xs font-semibold flex items-center gap-2">
@@ -307,13 +245,8 @@ export function BulkActionsPanel({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdatingState || isUpdatingPrice}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmPendingAction}
-              disabled={isUpdatingState || isUpdatingPrice}
-            >
+            <AlertDialogCancel disabled={isUpdatingPrice}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPendingAction} disabled={isUpdatingPrice}>
               Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>

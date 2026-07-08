@@ -42,6 +42,11 @@ export default async function VendorsPage() {
     )
   }
 
+  // Guard server-side: solo administradores tienen acceso a la vista de vendedores
+  if (workspace.role !== 'admin') {
+    redirect('/dashboard')
+  }
+
   const members = await getOrganizationMembers(workspace.organization.id)
   const isAdmin = members.find((m) => m.id === user.id)?.role === 'admin'
 

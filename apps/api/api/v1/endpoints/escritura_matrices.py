@@ -23,8 +23,11 @@ from urllib.parse import quote
 from api.deps import verify_internal_secret
 from core.logger import get_logger
 from schemas.escritura_matrices import (
+    BulkVerifyLotsRequest,
+    BulkVerifyLotsResponse,
     EscrituraTraceResponse,
     GenerateMinutaRequest,
+    LegalReviewDecisionRequest,
     MatrizApproveRequest,
     MatrizCaseResponse,
     MatrizRejectRequest,
@@ -105,6 +108,9 @@ GENERATION_COLUMNS = (
 MINUTA_STORAGE_BUCKET = "documents"
 PROJECT_MATRIZ_GATE = "project_matriz_approved"
 PROJECT_MATRIZ_MISSING_CODE = "project_matriz_approval_missing"
+INHERITED_PROJECT_READINESS_GATES = frozenset(
+    {"title_verified", "sag_plano_verified", "sii_verified"}
+)
 
 # SDD 010 (research D6): catalogo humanizado para el picker "Insertar dato",
 # construido una vez desde la fuente unica (matriz_token_resolution).
@@ -524,6 +530,7 @@ def _approval_blockers(
     case_row: dict[str, Any],
     active_clauses: list[dict[str, Any]],
     snapshot_stale: bool,
+    inherited_gates: set[str] | frozenset[str] | None = None,
 ) -> list[dict[str, Any]]:
     project_id = str(case_row["project_id"])
     fix_url = f"/projects/{project_id}?tab=legal"
@@ -592,7 +599,11 @@ def _approval_blockers(
             )
         )
 
-    blockers.extend(_readiness_gate_blockers(case_row=case_row, fix_url=fix_url))
+    blockers.extend(
+        _readiness_gate_blockers(
+            case_row=case_row, fix_url=fix_url, inherited_gates=inherited_gates
+        )
+    )
     blockers.extend(
         _alert_clause_blockers(
             variable_snapshot=_as_dict(case_row.get("variable_snapshot")),
@@ -650,20 +661,25 @@ def _alert_clause_blockers(
 
 
 def _readiness_gate_blockers(
-    *, case_row: dict[str, Any], fix_url: str
+    *,
+    case_row: dict[str, Any],
+    fix_url: str,
+    inherited_gates: set[str] | frozenset[str] | None = None,
 ) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
+    inherited_gates = inherited_gates or frozenset()
     readiness_gates = _as_dict(case_row.get("readiness_gates"))
     for gate, payload in readiness_gates.items():
         if not isinstance(payload, dict) or payload.get("status") != "blocked":
             continue
+        gate_name = str(gate)
         causes = payload.get("blocking_variables") or []
         if not causes:
             causes = [None]
         for cause in causes:
             cause_text = str(cause) if cause is not None else None
             try:
-                copy = readiness_gate_microcopy(str(gate), cause_text)
+                copy = readiness_gate_microcopy(gate_name, cause_text)
             except KeyError:
                 # Gate fuera del catalogo (futuro): texto generico, nunca 500
                 # ni codigo crudo en pantalla.
@@ -679,9 +695,10 @@ def _readiness_gate_blockers(
                 _humanized(
                     {
                         "kind": "readiness_gate",
-                        "gate": str(gate),
+                        "gate": gate_name,
                         "cause": cause_text,
                         "fix_url": fix_url,
+                        "inherited": gate_name in inherited_gates,
                     },
                     copy,
                     fix_url,
@@ -728,6 +745,16 @@ async def _case_response(
             client=client,
             matrix_row=matrix_row,
             case_row=case_row,
+            current_snapshot_hash=snapshot_hash,
+        )
+        snapshot_stale = False
+    elif snapshot_stale:
+        # Borrador (o en revisión): adopta el snapshot vigente en vez de quedar
+        # bloqueado tras resolver/aprobar variables del caso, igual que la
+        # matriz del proyecto en _project_matriz_response.
+        matrix_row = await _refresh_case_matriz_snapshot(
+            client=client,
+            matrix_row=matrix_row,
             current_snapshot_hash=snapshot_hash,
         )
         snapshot_stale = False
@@ -789,6 +816,11 @@ async def _case_response(
                     case_row=case_row,
                     active_clauses=active_clauses,
                     snapshot_stale=snapshot_stale,
+                    inherited_gates=(
+                        INHERITED_PROJECT_READINESS_GATES
+                        if matrix_row.get("source_project_matriz_id")
+                        else None
+                    ),
                 ),
                 "dismissed_alerts": _dismissed_alerts(variable_snapshot),
             },
@@ -1180,6 +1212,31 @@ async def _supersede_approved_matriz(
     return updated
 
 
+async def _refresh_case_matriz_snapshot(
+    *,
+    client: Any,
+    matrix_row: dict[str, Any],
+    current_snapshot_hash: str,
+) -> dict[str, Any]:
+    """Un borrador (o en revisión) de la matriz del caso adopta el snapshot
+    vigente cuando cambian las variables del caso: se actualiza su
+    `snapshot_hash` para que no quede "desactualizado" bloqueando el envío a
+    revisión ni la aprobación. No cambia versión ni estado. Se muta
+    `matrix_row` in situ para que el flujo de aprobación vea el hash nuevo.
+    """
+    await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_matrices")
+            .update({"snapshot_hash": current_snapshot_hash})
+            .eq("id", str(matrix_row["id"]))
+            .eq("organization_id", str(matrix_row["organization_id"]))
+            .execute()
+        )
+    )
+    matrix_row["snapshot_hash"] = current_snapshot_hash
+    return matrix_row
+
+
 async def _supersede_approved_project_matriz(
     *,
     client: Any,
@@ -1393,6 +1450,44 @@ async def _resolve_case_vendor_user_id(
     )
     vendor_rows = vendor_result.data if isinstance(vendor_result.data, list) else []
     return vendor_rows[0].get("user_id") if vendor_rows else None
+
+
+async def _resolve_org_admin_user_ids(client: Any, organization_id: str) -> list[str]:
+    """Admin user_ids de la organizacion que tienen Telegram vinculado."""
+    members_result = await asyncio.to_thread(
+        lambda: (
+            client.table("organization_members")
+            .select("user_id")
+            .eq("organization_id", organization_id)
+            .eq("role", "admin")
+            .execute()
+        )
+    )
+    member_rows = _rows(members_result.data)
+    admin_ids = [str(row["user_id"]) for row in member_rows if row.get("user_id")]
+    if not admin_ids:
+        return []
+
+    profiles_result = await asyncio.to_thread(
+        lambda: (
+            client.table("profiles")
+            .select("id, telegram_chat_id")
+            .in_("id", admin_ids)
+            .execute()
+        )
+    )
+    linked_profile_ids = {
+        str(row["id"])
+        for row in _rows(profiles_result.data)
+        if row.get("id") and row.get("telegram_chat_id")
+    }
+
+    seen: set[str] = set()
+    return [
+        user_id
+        for user_id in admin_ids
+        if user_id in linked_profile_ids and not (user_id in seen or seen.add(user_id))
+    ]
 
 
 async def _resolve_lot_label(client: Any, case_row: dict[str, Any]) -> str:
@@ -1673,18 +1768,33 @@ async def _generate_minuta_row(
         content_hash=content_hash,
     )
 
-    # SDD 011 (US4): al aceptar/generar el borrador, entregarlo al vendedor
-    # asignado (Telegram best-effort + "mis documentos"). Best-effort: una falla
-    # de entrega NUNCA invalida la generación del DOCX ya persistida.
+    # SDD 016 (US1): al aceptar/generar el borrador, entregarlo a los admins
+    # con Telegram y al vendedor asignado. Best-effort: una falla de entrega
+    # NUNCA invalida la generación del DOCX ya persistida.
     try:
+        organization_id = str(case_row["organization_id"])
+        admin_user_ids = await _resolve_org_admin_user_ids(client, organization_id)
         vendor_user_id = await _resolve_case_vendor_user_id(client, case_row)
         lot_label = await _resolve_lot_label(client, case_row)
-        await deliver_draft(
-            supabase=client,
-            generation=inserted,
-            recipient_user_id=vendor_user_id,
-            lot_label=lot_label,
-        )
+        recipient_ids = [
+            user_id
+            for user_id in dict.fromkeys([*admin_user_ids, vendor_user_id])
+            if user_id is not None
+        ]
+        if not recipient_ids:
+            await deliver_draft(
+                supabase=client,
+                generation=inserted,
+                recipient_user_id=None,
+                lot_label=lot_label,
+            )
+        for recipient_user_id in recipient_ids:
+            await deliver_draft(
+                supabase=client,
+                generation=inserted,
+                recipient_user_id=recipient_user_id,
+                lot_label=lot_label,
+            )
     except Exception as exc:  # noqa: BLE001 - entrega best-effort, jamás bloquea
         logger.warning(
             "escritura_delivery_trigger_failed",
@@ -1762,6 +1872,249 @@ async def get_case_matriz(
     if matrix_row is None:
         matrix_row = await _lazy_create_matrix(client, case_row, org_id)
     return await _case_response(client, matrix_row, case_row)
+
+
+# ─── Revisión jurídica del caso (SDD16, FR-007/FR-008) ───────────────────────
+
+ABOGADO_REDACTOR_REQUIRED_KEYS = (
+    "documento.abogado_redactor.nombre",
+    "documento.abogado_redactor.rut",
+)
+
+
+def _has_review_value(row: dict[str, Any] | None) -> bool:
+    if not row:
+        return False
+    value_text = row.get("value_text")
+    return (isinstance(value_text, str) and bool(value_text.strip())) or row.get(
+        "value_json"
+    ) is not None
+
+
+async def _missing_abogado_redactor_keys(
+    client: Any, organization_id: str, project_id: str
+) -> list[str]:
+    """FR-007: el molde en un clic (T031) o la acción mínima de T015 deben
+    haber materializado estos datos como variables project-scoped antes de
+    aprobar la revisión jurídica del caso."""
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("variable_resolutions")
+            .select("variable_key, value_text, value_json")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .is_("lot_id", "null")
+            .in_("variable_key", list(ABOGADO_REDACTOR_REQUIRED_KEYS))
+            .neq("state", "superseded")
+            .execute()
+        )
+    )
+    rows_by_key = {row["variable_key"]: row for row in _rows(getattr(result, "data", None))}
+    return [
+        key for key in ABOGADO_REDACTOR_REQUIRED_KEYS if not _has_review_value(rows_by_key.get(key))
+    ]
+
+
+async def _upsert_lot_variable(
+    client: Any,
+    *,
+    organization_id: str,
+    project_id: str,
+    lot_id: str,
+    variable_key: str,
+    value_text: str,
+    reviewed_by: str,
+    reviewed_at: str,
+) -> dict[str, Any]:
+    """Fija revision_juridica.* scope lote (nunca proyecto, a diferencia de
+    documento.abogado_redactor.*): es una decisión por caso, no un dato de
+    organización. Sin propuesta previa que aprobar -> state='resolved'."""
+    existing_result = await asyncio.to_thread(
+        lambda: (
+            client.table("variable_resolutions")
+            .select("id")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("lot_id", lot_id)
+            .is_("escritura_case_id", "null")
+            .eq("variable_key", variable_key)
+            .neq("state", "superseded")
+            .limit(1)
+            .execute()
+        )
+    )
+    existing = _first_row(getattr(existing_result, "data", None))
+    if existing:
+        update_result = await asyncio.to_thread(
+            lambda: (
+                client.table("variable_resolutions")
+                .update(
+                    {
+                        "value_text": value_text,
+                        "state": "resolved",
+                        "reviewed_by": reviewed_by,
+                        "reviewed_at": reviewed_at,
+                    }
+                )
+                .eq("id", existing["id"])
+                .execute()
+            )
+        )
+        return _first_row(getattr(update_result, "data", None)) or existing
+
+    insert_payload = {
+        "organization_id": organization_id,
+        "project_id": project_id,
+        "lot_id": lot_id,
+        "escritura_case_id": None,
+        "variable_key": variable_key,
+        "variable_group": "revision_juridica",
+        "value_text": value_text,
+        "state": "resolved",
+        "source_type": "legal_review",
+        "reviewed_by": reviewed_by,
+        "reviewed_at": reviewed_at,
+        "approval_required": False,
+    }
+    insert_result = await asyncio.to_thread(
+        lambda: client.table("variable_resolutions").insert(insert_payload).execute()
+    )
+    inserted = _first_row(getattr(insert_result, "data", None))
+    if not inserted:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo guardar la revisión jurídica.",
+        )
+    return inserted
+
+
+@router.post(
+    "/escritura-matrices/case/{escritura_case_id}/legal-review",
+    response_model=MatrizCaseResponse,
+)
+async def submit_legal_review(
+    escritura_case_id: UUID,
+    request: LegalReviewDecisionRequest,
+    organization_id: UUID = Query(...),
+) -> MatrizCaseResponse:
+    """FR-007/FR-008: acción explícita del admin/abogado sobre el caso.
+    Aprobada exige que documento.abogado_redactor.nombre/rut ya existan
+    project-scoped (T015); escribe revision_juridica.* scope lote y audita
+    en legal_review_decisions. Rechazada exige comentario y no avanza el caso.
+    """
+    from api.deps import require_admin_role
+    from api.v1.endpoints.legal_variables import (
+        ensure_legal_documents_feature_enabled,
+    )
+    from core.database import get_supabase_client
+    from services.escritura_readiness import create_escritura_case_snapshot
+
+    client = get_supabase_client()
+    org_id = str(organization_id)
+    decided_by = str(request.decided_by)
+    await require_admin_role(decided_by, org_id, supabase=client)
+
+    case_row = await _fetch_case(client, str(escritura_case_id), org_id)
+    project_id = str(case_row["project_id"])
+    lot_id = str(case_row["lot_id"])
+    ensure_legal_documents_feature_enabled(
+        organization_id=org_id, project_id=project_id
+    )
+
+    comentario = (request.comentario or "").strip()
+    if request.decision == "rechazada" and not comentario:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "comentario_required",
+                "message": "Indica un comentario para rechazar la revisión jurídica.",
+            },
+        )
+
+    if request.decision == "aprobada":
+        missing = await _missing_abogado_redactor_keys(client, org_id, project_id)
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "abogado_redactor_incompleto",
+                    "message": "Completa los datos del abogado redactor antes de aprobar la revisión jurídica.",
+                    "missing": missing,
+                },
+            )
+
+    now = _utc_now_iso()
+    estado = "aprobada" if request.decision == "aprobada" else "rechazada"
+    estado_row = await _upsert_lot_variable(
+        client,
+        organization_id=org_id,
+        project_id=project_id,
+        lot_id=lot_id,
+        variable_key="revision_juridica.estado",
+        value_text=estado,
+        reviewed_by=decided_by,
+        reviewed_at=now,
+    )
+    if request.decision == "aprobada":
+        await _upsert_lot_variable(
+            client,
+            organization_id=org_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            variable_key="revision_juridica.aprobada_por",
+            value_text=decided_by,
+            reviewed_by=decided_by,
+            reviewed_at=now,
+        )
+        await _upsert_lot_variable(
+            client,
+            organization_id=org_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            variable_key="revision_juridica.aprobada_at",
+            value_text=now,
+            reviewed_by=decided_by,
+            reviewed_at=now,
+        )
+
+    await asyncio.to_thread(
+        lambda: (
+            client.table("legal_review_decisions")
+            .insert(
+                {
+                    "organization_id": org_id,
+                    "project_id": project_id,
+                    "lot_id": lot_id,
+                    "escritura_case_id": str(escritura_case_id),
+                    "variable_resolution_id": estado_row.get("id"),
+                    "decision_type": "approve_case"
+                    if request.decision == "aprobada"
+                    else "reject_case",
+                    "decision_status": "approved"
+                    if request.decision == "aprobada"
+                    else "rejected",
+                    "reason": comentario or None,
+                    "decided_by": decided_by,
+                    "decided_at": now,
+                }
+            )
+            .execute()
+        )
+    )
+
+    await create_escritura_case_snapshot(
+        organization_id=org_id,
+        project_id=project_id,
+        lot_id=lot_id,
+        stage_operational=False,
+        supabase=client,
+    )
+
+    refreshed_case = await _fetch_case(client, str(escritura_case_id), org_id)
+    matrix_row = await _fetch_active_matrix(client, str(escritura_case_id), org_id, project_id)
+    if matrix_row is None:
+        matrix_row = await _lazy_create_matrix(client, refreshed_case, org_id)
+    return await _case_response(client, matrix_row, refreshed_case)
 
 
 @router.put(
@@ -1916,6 +2269,48 @@ async def submit_matriz(
     return await _workflow_response(client, updated, case_row)
 
 
+async def _recompute_pending_cases_after_matriz_approval(
+    *, client: Any, organization_id: str, project_id: str
+) -> None:
+    """FR-005: al aprobar el molde, re-evalúa los casos `variables_pending`
+    del proyecto para que hereden los gates recién aprobados sin esperar a
+    que alguien abra la mesa manualmente. Best-effort por caso: una falla en
+    uno no bloquea la aprobación de la matriz ni el recompute del resto."""
+    from services.escritura_readiness import create_escritura_case_snapshot
+
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_cases")
+            .select("id, lot_id")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .eq("case_status", "variables_pending")
+            .execute()
+        )
+    )
+    for case in _rows(getattr(result, "data", None)):
+        lot_id = case.get("lot_id")
+        if not lot_id:
+            continue
+        try:
+            await create_escritura_case_snapshot(
+                organization_id=organization_id,
+                project_id=project_id,
+                lot_id=str(lot_id),
+                stage_operational=True,
+                supabase=client,
+            )
+        except Exception as exc:
+            logger.error(
+                "matriz_approval_recompute_case_failed",
+                organization_id=organization_id,
+                project_id=project_id,
+                lot_id=str(lot_id),
+                escritura_case_id=case.get("id"),
+                error=str(exc),
+            )
+
+
 @router.post(
     "/escritura-matrices/{matriz_id}/approve",
     response_model=MatrizCaseResponse,
@@ -1989,6 +2384,14 @@ async def approve_matriz(
         decision_type="matriz_approved",
         decision_status="approved",
         decided_by=str(request.approved_by),
+    )
+    approved_project_id = (
+        str(case_row["project_id"]) if case_row else str(matrix_row["project_id"])
+    )
+    await _recompute_pending_cases_after_matriz_approval(
+        client=client,
+        organization_id=str(organization_id),
+        project_id=approved_project_id,
     )
     return await _workflow_response(client, updated, case_row)
 
@@ -2281,3 +2684,221 @@ async def stage_operational_variables(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
         ) from exc
     return StageOperationalResult.model_validate(outcome.to_dict())
+
+
+@router.post(
+    "/projects/{project_id}/lots/bulk-verify",
+    response_model=BulkVerifyLotsResponse,
+)
+async def bulk_verify_lots(
+    project_id: UUID,
+    request: BulkVerifyLotsRequest,
+    organization_id: UUID = Query(...),
+) -> BulkVerifyLotsResponse:
+    """US5: Acción para verificar masivamente todos los lotes de un proyecto que se encuentren
+    dentro del porcentaje de tolerancia (tolerance_pct) comparando su cabida calculada vs oficial.
+    """
+    import math
+    from api.deps import require_admin_role
+    from core.database import get_supabase_client
+    from schemas.escritura_matrices import BulkVerifyLotsResponse
+
+    client = get_supabase_client()
+    org_id = str(organization_id)
+    admin_id = str(request.admin_id)
+    proj_id = str(project_id)
+    
+    # 1. Validar rol de administrador
+    await require_admin_role(admin_id, org_id, supabase=client)
+
+    # Helper UTM y Shoelace definidos localmente
+    def get_utm_zone(lon: float) -> int:
+        return math.floor((lon + 180) / 6) + 1
+
+    def latlon_to_utm(lat: float, lon: float, zone: int) -> tuple[float, float]:
+        a = 6378137.0
+        f = 1 / 298.257223563
+        b = a * (1 - f)
+        e2 = (a**2 - b**2) / a**2
+        ep2 = (a**2 - b**2) / b**2
+        k0 = 0.9996
+        lon_origin = (zone - 1) * 6 - 180 + 3
+        lat_rad = math.radians(lat)
+        lon_rad = math.radians(lon)
+        lon_origin_rad = math.radians(lon_origin)
+        N = a / math.sqrt(1 - e2 * math.sin(lat_rad)**2)
+        T = math.tan(lat_rad)**2
+        C = ep2 * math.cos(lat_rad)**2
+        A = (lon_rad - lon_origin_rad) * math.cos(lat_rad)
+        n = f / (2 - f)
+        alpha = (a + b) / 2.0 * (1 + (n**2)/4.0 + (n**4)/64.0)
+        beta = 3.0 * n / 2.0 - 27.0 * n**3 / 32.0
+        gamma = 21.0 * n**2 / 16.0 - 55.0 * n**4 / 32.0
+        delta = 151.0 * n**3 / 96.0
+        M = alpha * (lat_rad - beta * math.sin(2*lat_rad) + gamma * math.sin(4*lat_rad) - delta * math.sin(6*lat_rad))
+        x = k0 * N * (A + (1 - T + C) * A**3 / 6.0 + (5 - 18 * T + T**2 + 72 * C - 58 * ep2) * A**5 / 120.0) + 500000.0
+        y = k0 * (M + N * math.tan(lat_rad) * (A**2 / 2.0 + (5 - T + 9 * C + 4 * C**2) * A**4 / 24.0 + (61 - 58 * T + T**2 + 600 * C - 330 * ep2) * A**6 / 720.0))
+        y += 10000000.0
+        return x, y
+
+    def clean_coordinates(coords: list[list[float]]) -> list[list[float]]:
+        if len(coords) < 3:
+            return coords
+        cleaned = []
+        for c in coords:
+            if not cleaned or abs(c[0] - cleaned[-1][0]) > 1e-9 or abs(c[1] - cleaned[-1][1]) > 1e-9:
+                cleaned.append(c)
+        if len(cleaned) > 3:
+            if abs(cleaned[0][0] - cleaned[-1][0]) < 1e-9 and abs(cleaned[0][1] - cleaned[-1][1]) < 1e-9:
+                cleaned.pop()
+        return cleaned
+
+    def calculate_shoelace_area(points: list[tuple[float, float]]) -> float:
+        area = 0.0
+        n = len(points)
+        for i in range(n):
+            j = (i + 1) % n
+            area += points[i][0] * points[j][1]
+            area -= points[j][0] * points[i][1]
+        return abs(area) / 2.0
+
+    def calculate_planar_perimeter(points: list[tuple[float, float]]) -> float:
+        perim = 0.0
+        n = len(points)
+        for i in range(n):
+            j = (i + 1) % n
+            dx = points[j][0] - points[i][0]
+            dy = points[j][1] - points[i][1]
+            perim += math.sqrt(dx * dx + dy * dy)
+        return perim
+
+    def calculate_lot_legal_metrics(geometry: dict) -> dict | None:
+        geom_type = geometry.get("type")
+        coords = geometry.get("coordinates", [])
+        if geom_type == "Polygon":
+            coords_outer = coords[0]
+        elif geom_type == "MultiPolygon":
+            coords_outer = coords[0][0]
+        elif geom_type == "LineString":
+            coords_outer = coords
+        elif geom_type == "MultiLineString":
+            coords_outer = coords[0]
+        else:
+            return None
+        
+        if not coords_outer or len(coords_outer) < 3:
+            return None
+        cleaned = clean_coordinates(coords_outer)
+        if len(cleaned) < 3:
+            return None
+        
+        zone = get_utm_zone(cleaned[0][0])
+        utm_points = []
+        for point in cleaned:
+            lon, lat = point[0], point[1]
+            x, y = latlon_to_utm(lat, lon, zone)
+            utm_points.append((x, y))
+            
+        area = calculate_shoelace_area(utm_points)
+        perimeter = calculate_planar_perimeter(utm_points)
+        return {
+            "area_legal_m2": area,
+            "perimeter_legal_m": perimeter,
+        }
+
+    # 2. Consultar lotes del proyecto
+    lots_res = await asyncio.to_thread(
+        lambda: client.table("lots")
+        .select("id, numero_lote, m2, area_official_m2, perimeter_official_m, verified_status, geometry_id")
+        .eq("project_id", proj_id)
+        .execute()
+    )
+    lots = lots_res.data or []
+
+    # 3. Consultar geometrías asignadas a lotes de este proyecto
+    geom_res = await asyncio.to_thread(
+        lambda: client.table("geometries")
+        .select("id, geometry")
+        .eq("project_id", proj_id)
+        .eq("geometry_type", "lot")
+        .execute()
+    )
+    geoms = {row["id"]: row["geometry"] for row in (geom_res.data or [])}
+
+    verified_count = 0
+    deviated: list[UUID] = []
+    skipped_no_geometry: list[UUID] = []
+    
+    # Tolerancia como fracción (ej: 0.5% -> 0.005)
+    tol = request.tolerance_pct / 100.0
+
+    # Colección de tareas asíncronas para actualización y auditoría
+    update_tasks = []
+
+    for lot in lots:
+        lot_id = UUID(lot["id"])
+        geom_id = lot["geometry_id"]
+        
+        if not geom_id or geom_id not in geoms:
+            skipped_no_geometry.append(lot_id)
+            continue
+            
+        geom = geoms[geom_id]
+        metrics = calculate_lot_legal_metrics(geom)
+        if not metrics:
+            skipped_no_geometry.append(lot_id)
+            continue
+            
+        area_calc = metrics["area_legal_m2"]
+        perim_calc = metrics["perimeter_legal_m"]
+        
+        area_off = lot["area_official_m2"]
+        perim_off = lot["perimeter_official_m"]
+        
+        # Si no tiene definidos los valores oficiales, se considera desviado o incompleto para auto-verificación
+        if area_off is None or perim_off is None:
+            deviated.append(lot_id)
+            continue
+            
+        diff_area = abs(area_off - area_calc) / area_calc
+        diff_perim = abs(perim_off - perim_calc) / perim_calc
+        
+        if diff_area <= tol and diff_perim <= tol:
+            # Dentro de tolerancia -> verified_exact
+            verified_count += 1
+
+            # Escritura vía RPC (no client.table("lots").update() directo):
+            # lots tiene el trigger trg_guard_legal_fields, que revierte en
+            # silencio verified_status/verified_at/verified_by/etc. a su
+            # valor anterior si auth.uid() no resuelve a un admin del
+            # proyecto. Con la service role key auth.uid() es NULL (no hay
+            # sesión de usuario), así que un UPDATE directo aquí nunca
+            # persiste aunque no lance error. El RPC re-verifica el rol
+            # admin server-side e impersona a admin_id solo para su propia
+            # transacción (ver 20260707020000_verify_lot_as_admin_rpc.sql).
+            def update_and_audit(l_id=lot["id"], calc_area=area_calc, calc_perim=perim_calc):
+                client.rpc(
+                    "verify_lot_as_admin",
+                    {
+                        "p_lot_id": l_id,
+                        "p_admin_id": admin_id,
+                        "p_area_calc_m2": calc_area,
+                        "p_perimeter_calc_m": calc_perim,
+                    },
+                ).execute()
+
+            update_tasks.append(asyncio.to_thread(update_and_audit))
+        else:
+            # Fuera de tolerancia -> deviated
+            deviated.append(lot_id)
+
+    # 4. Ejecutar todas las actualizaciones en lote de forma paralela
+    if update_tasks:
+        await asyncio.gather(*update_tasks)
+
+    return BulkVerifyLotsResponse(
+        verified=verified_count,
+        deviated=deviated,
+        skipped_no_geometry=skipped_no_geometry,
+    )
+

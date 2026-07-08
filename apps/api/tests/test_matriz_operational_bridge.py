@@ -12,10 +12,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
 from services import escritura_operational_bridge as bridge
+from services import legal_variable_catalog as catalog
 from services.legal_title_words import (
     hectareas_to_words,
     metros_cuadrados_to_words,
@@ -61,12 +63,17 @@ class TestLotRecordMapping:
             by_key["comprador.profesion_giro"].value_text
             == record["cliente_ocupacion"]
         )
+        assert (
+            by_key["comprador.nacionalidad"].value_text
+            == record["cliente_nacionalidad"]
+        )
         for key in (
             "comprador.nombre",
             "comprador.rut",
             "comprador.domicilio",
             "comprador.estado_civil",
             "comprador.profesion_giro",
+            "comprador.nacionalidad",
         ):
             assert by_key[key].source_type == "system"
             assert by_key[key].source == "lot_records"
@@ -129,15 +136,120 @@ class TestLotGeometryMapping:
         assert by_key["servidumbre.ancho_label"].source_type == "geometry"
 
     def test_deslindes_compose_from_boundaries_official(self):
+        """Formato oficial (espejo de deslinde-generator.ts / escritura LOTE
+        29): cardinal en mayúsculas, números de lote en palabras, sufijo 'de
+        la misma subdivisión' solo cuando no viene ya en la colinda, y
+        'servidumbre de por medio' en el tramo con es_servidumbre."""
         lot = _rows()["lot"]
         mapping = bridge.map_lot_geometry_variables(lot)
         deslindes = _by_key(mapping.variables)["lote.deslindes"].value_text
         assert deslindes == (
-            "al Norte, en sesenta metros, con Lote N°2 de la misma subdivisión; "
-            "al Sur, en sesenta metros, con Fundo El Escudo; "
-            "al Oriente, en ochenta y cinco metros, con camino interior de la subdivisión; "
-            "y al Poniente, en ochenta y cinco metros, con Lote N°4 de la misma subdivisión"
+            "NORTE, en sesenta metros con lote dos de la misma subdivisión; "
+            "SUR, en sesenta metros con Fundo El Escudo; "
+            "ORIENTE, en ochenta y cinco metros con camino interior de la "
+            "subdivisión, servidumbre de por medio; "
+            "y PONIENTE, en ochenta y cinco metros con lote cuatro de la misma subdivisión"
         )
+
+    def test_deslindes_use_neighbors_metadata_and_decimal_distances(self):
+        """Forma real de producción (lote 17 Teno): colinda 'lote 24' +
+        neighbors_metadata, distancias con decimales. El sufijo 'de la misma
+        subdivisión' se agrega porque la colinda no lo trae."""
+        lot = _rows()["lot"]
+        lot["boundaries_official"] = [
+            {
+                "label": "Surponiente",
+                "colinda": "lote 24",
+                "distance": 53.35,
+                "es_servidumbre": False,
+                "neighbors_metadata": [{"name": "lote 24", "is_partial": False}],
+            },
+            {
+                "label": "Norte",
+                "colinda": "lote 18",
+                "distance": 99.07,
+                "es_servidumbre": True,
+                "neighbors_metadata": [{"name": "lote 18", "is_partial": True}],
+            },
+        ]
+        mapping = bridge.map_lot_geometry_variables(lot)
+        deslindes = _by_key(mapping.variables)["lote.deslindes"].value_text
+        assert deslindes == (
+            "SURPONIENTE, en cincuenta y tres coma treinta y cinco metros "
+            "con lote veinticuatro de la misma subdivisión; "
+            "y NORTE, en noventa y nueve coma cero siete metros "
+            "con parte del lote dieciocho de la misma subdivisión, "
+            "servidumbre de por medio"
+        )
+
+    def test_deslindes_group_consecutive_same_cardinal(self):
+        lot = _rows()["lot"]
+        lot["boundaries_official"] = [
+            {"label": "Norte", "colinda": "lote 5", "distance": 40},
+            {"label": "Norte", "colinda": "lote 6", "distance": 20},
+            {"label": "Sur", "colinda": "camino público", "distance": 60},
+        ]
+        mapping = bridge.map_lot_geometry_variables(lot)
+        deslindes = _by_key(mapping.variables)["lote.deslindes"].value_text
+        assert deslindes == (
+            "NORTE, en cuarenta metros con lote cinco, "
+            "y en veinte metros con lote seis todos de la misma subdivisión; "
+            "y SUR, en sesenta metros con camino público"
+        )
+
+    def test_servidumbre_tramo_and_dominantes_compose_for_servidumbre_lot(self):
+        """Las 3 claves de la cláusula servidumbre_transito eran huérfanas
+        (ningún productor) y dejaban la matriz del caso inaprobable para todo
+        lote con servidumbre. Ahora las produce el puente."""
+        lot = _rows()["lot"]
+        mapping = bridge.map_lot_geometry_variables(lot)
+        by_key = _by_key(mapping.variables)
+        assert by_key["servidumbre.predio_sirviente"].value_text == "Lote N°3"
+        assert (
+            by_key["servidumbre.predios_dominantes"].value_text
+            == "los demás lotes de la misma subdivisión"
+        )
+        assert by_key["servidumbre.deslindes_tramo"].value_text == (
+            "franja de ocho metros de ancho a lo largo del deslinde Oriente "
+            "del Lote N°3, según el trazado que consta en el plano de "
+            "subdivisión archivado"
+        )
+        assert mapping.missing_keys == ()
+
+    def test_servidumbre_tramo_without_flagged_boundaries_still_resolves(self):
+        """Sin deslindes marcados es_servidumbre (datos pre-flag) el tramo
+        igual resuelve con la referencia al plano: nunca vuelve a dejar la
+        cláusula bloqueada por un dato que solo existe dibujado en el plano."""
+        lot = _rows()["lot"]
+        for boundary in lot["boundaries_official"]:
+            boundary.pop("es_servidumbre", None)
+        lot["servidumbre_ancho_label"] = None
+        lot["servidumbre_ancho_m"] = 5
+        mapping = bridge.map_lot_geometry_variables(lot)
+        tramo = _by_key(mapping.variables)["servidumbre.deslindes_tramo"].value_text
+        assert tramo == (
+            "franja de cinco metros de ancho del Lote N°3, según el trazado "
+            "que consta en el plano de subdivisión archivado"
+        )
+
+    def test_servidumbre_tramo_with_variable_width_label(self):
+        lot = _rows()["lot"]
+        lot["servidumbre_ancho_label"] = "5 y 10"
+        mapping = bridge.map_lot_geometry_variables(lot)
+        tramo = _by_key(mapping.variables)["servidumbre.deslindes_tramo"].value_text
+        assert tramo.startswith("franja de cinco y diez metros de ancho")
+
+    def test_lot_without_servidumbre_skips_servidumbre_clause_keys(self):
+        lot = _rows()["lot"]
+        lot["servidumbre_m2"] = None
+        mapping = bridge.map_lot_geometry_variables(lot)
+        by_key = _by_key(mapping.variables)
+        for key in (
+            "servidumbre.predio_sirviente",
+            "servidumbre.predios_dominantes",
+            "servidumbre.deslindes_tramo",
+        ):
+            assert key not in by_key
 
     def test_boundary_without_neighbor_fails_composition(self):
         lot = _rows()["lot"]
@@ -153,6 +265,25 @@ class TestLotGeometryMapping:
         by_key = _by_key(mapping.variables)
         assert by_key["servidumbre.aplica"].value_json is False
         assert "servidumbre.superficie_m2" not in by_key
+
+
+class TestBridgeKeysRegisteredInCatalog:
+    """Guard de regresión: el bridge produjo servidumbre.ancho_label desde
+    siempre (ver test_servidumbre_width_label_maps_from_official_lot arriba)
+    pero esa clave nunca se registró en legal_variable_catalog. El mapeo
+    puro nunca lo detectó porque no pasa por la validación de
+    propose_variable/validate_proposal — solo se manifestaba como un 500
+    real al vender un lote con servidumbre de ancho variable. Este test
+    ejercita exactamente ese chequeo para las 3 tuplas del bridge."""
+
+    def test_every_bridge_variable_key_is_a_known_catalog_key(self):
+        all_bridge_keys = (
+            bridge.LOT_RECORD_VARIABLE_KEYS
+            + bridge.LOT_GEOMETRY_VARIABLE_KEYS
+            + bridge.DERIVED_VARIABLE_KEYS
+        )
+        unknown = [key for key in all_bridge_keys if not catalog.is_variable_key(key)]
+        assert unknown == []
 
 
 # ─── T014: derivadas en palabras (motor compartido) ──────────────────────────
@@ -180,6 +311,17 @@ class TestSharedWordsEngine:
     def test_hectareas_to_words(self):
         assert hectareas_to_words(0.51) == "cero coma cincuenta y uno hectáreas"
         assert hectareas_to_words(26.82) == "veintiséis coma ochenta y dos hectáreas"
+
+    def test_decimals_under_ten_keep_leading_zero(self):
+        """5062.07 leído como 'coma siete' significa 5062,7: en un documento
+        legal el cero inicial de los decimales no se puede perder."""
+        assert metros_cuadrados_to_words(5062.07) == (
+            "cinco mil sesenta y dos coma cero siete metros cuadrados"
+        )
+        # La convención notarial ',50 → coma cinco' se mantiene.
+        assert metros_cuadrados_to_words(385.5) == (
+            "trescientos ochenta y cinco coma cinco metros cuadrados"
+        )
 
 
 class TestDerivedVariables:
@@ -325,13 +467,81 @@ class FakeSupabase:
         raise AssertionError(f"unexpected table {table.name}")
 
 
-def _active_row(key: str, state: str, row_hash: str | None) -> dict:
+# ─── T006: tolerancia a maybe_single() -> None (0 filas, sin AttributeError) ──
+
+
+class _RealisticMaybeSingleTable:
+    """A diferencia de FakeTable/FakeSupabase (arriba), reproduce el
+    comportamiento real de supabase-py: maybe_single().execute() devuelve
+    None (no un objeto con .data = None) cuando hay 0 filas."""
+
+    def __init__(self, data: Any) -> None:
+        self._data = data
+        self._maybe_single = False
+
+    def select(self, *args):
+        return self
+
+    def eq(self, *args):
+        return self
+
+    def order(self, *args, **kwargs):
+        return self
+
+    def limit(self, *args):
+        return self
+
+    def maybe_single(self):
+        self._maybe_single = True
+        return self
+
+    def execute(self):
+        if self._maybe_single and self._data is None:
+            return None
+        return SimpleNamespace(data=self._data)
+
+
+class _RealisticFakeClient:
+    def __init__(self, tables: dict[str, Any]) -> None:
+        self._tables = tables
+
+    def table(self, name: str) -> _RealisticMaybeSingleTable:
+        return _RealisticMaybeSingleTable(self._tables[name])
+
+
+class TestFetchOperationalRowsToleratesMissingPaymentInfo:
+    @pytest.mark.asyncio
+    async def test_fetch_tolerates_missing_organization_payment_info(self):
+        client = _RealisticFakeClient(
+            {
+                "lots": {"id": LOT_ID},
+                "lot_records": [{"id": "rec-1"}],
+                "organization_payment_info": None,
+            }
+        )
+
+        lot, record, payment_info = await bridge._fetch_operational_rows(
+            client=client,
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            lot_id=LOT_ID,
+        )
+
+        assert lot == {"id": LOT_ID}
+        assert record == {"id": "rec-1"}
+        assert payment_info is None
+
+
+def _active_row(
+    key: str, state: str, row_hash: str | None, extractor_name: str | None = None
+) -> dict:
     source_ref = {"source_row_hash": row_hash} if row_hash else {}
     return {
         "id": f"existing-{key}",
         "variable_key": key,
         "state": state,
         "source_ref": source_ref,
+        "extractor_name": extractor_name,
     }
 
 
@@ -367,8 +577,11 @@ class TestStagingIdempotency:
         assert outcome.missing == ()
         assert outcome.skipped_same_hash == ()
         assert outcome.protected == ()
-        # Todo lo propuesto queda en estado proposed (nunca auto-aprobado).
-        assert {payload["state"] for payload in fake.inserted} == {"proposed"}
+        # SDD16 (SC-001/SC-002): datos ya humano-aprobados en la venta quedan
+        # resolved de entrada, para que el único pendiente humano del caso
+        # sea la revisión jurídica (no ~35 aprobaciones extra por variable).
+        assert {payload["state"] for payload in fake.inserted} == {"resolved"}
+        assert {payload["approval_required"] for payload in fake.inserted} == {False}
 
     @pytest.mark.asyncio
     async def test_same_hash_skips_without_touching_rows(self):
@@ -409,6 +622,96 @@ class TestStagingIdempotency:
         assert fake.supersede_calls
 
     @pytest.mark.asyncio
+    async def test_own_resolved_rows_follow_hash_rule_not_protection(self):
+        """El puente stagea como resolved (SDD16), pero sus PROPIAS filas
+        resolved no son revisión humana: mismo hash → skip, hash cambiado →
+        supersede+re-stage. Sin esto, corregir la fuente (p. ej. deslindes
+        del lote) jamás se reflejaría en el caso."""
+        rows = _rows()
+        record_hash, _ = _current_hashes(rows)
+        active = [
+            _active_row(
+                "comprador.nombre",
+                "resolved",
+                record_hash,
+                bridge.OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
+            ),
+            _active_row(
+                "lote.deslindes",
+                "resolved",
+                "hash-viejo-de-boundaries-anteriores",
+                bridge.OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
+            ),
+        ]
+        fake = FakeSupabase(rows, active)
+        outcome = await bridge.stage_operational_variables(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            lot_id=LOT_ID,
+            supabase=fake,
+        )
+        assert "comprador.nombre" in outcome.skipped_same_hash
+        assert "lote.deslindes" in outcome.superseded
+        staged_keys = {payload["variable_key"] for payload in fake.inserted}
+        assert "lote.deslindes" in staged_keys
+        assert "comprador.nombre" not in staged_keys
+
+    @pytest.mark.asyncio
+    async def test_legacy_proposed_bridge_rows_upgrade_to_resolved(self):
+        """Saneo pre-SDD16: una fila proposed del PROPIO puente con el mismo
+        hash no se salta — se re-stagea resolved por el flujo auditado, para
+        que los casos viejos (ej. lote 17 de Teno, 21 proposed) se curen
+        solos al siguiente refresh del caso, sin SQL manual ni aprobaciones
+        una a una."""
+        rows = _rows()
+        record_hash, lot_hash = _current_hashes(rows)
+        active = [
+            _active_row(
+                "comprador.nombre",
+                "proposed",
+                record_hash,
+                bridge.OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
+            ),
+            _active_row(
+                "lote.deslindes",
+                "proposed",
+                lot_hash,
+                bridge.OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
+            ),
+        ]
+        fake = FakeSupabase(rows, active)
+        outcome = await bridge.stage_operational_variables(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            lot_id=LOT_ID,
+            supabase=fake,
+        )
+        assert "comprador.nombre" in outcome.superseded
+        assert "lote.deslindes" in outcome.superseded
+        states = {
+            payload["variable_key"]: payload["state"] for payload in fake.inserted
+        }
+        assert states["comprador.nombre"] == "resolved"
+        assert states["lote.deslindes"] == "resolved"
+
+    @pytest.mark.asyncio
+    async def test_human_resolved_rows_stay_protected(self):
+        """Una fila resolved de OTRO origen (edición humana / otro extractor)
+        sigue protegida aunque el hash de la fuente haya cambiado (FR-021)."""
+        rows = _rows()
+        active = [_active_row("comprador.nombre", "resolved", "old-hash", None)]
+        fake = FakeSupabase(rows, active)
+        outcome = await bridge.stage_operational_variables(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            lot_id=LOT_ID,
+            supabase=fake,
+        )
+        assert "comprador.nombre" in outcome.protected
+        staged_keys = {payload["variable_key"] for payload in fake.inserted}
+        assert "comprador.nombre" not in staged_keys
+
+    @pytest.mark.asyncio
     async def test_approved_values_are_never_touched(self):
         rows = _rows()
         active = [
@@ -445,4 +748,4 @@ class TestStagingIdempotency:
             payload["variable_key"]: payload["state"] for payload in fake.inserted
         }
         assert states["comprador.estado_civil"] == "missing"
-        assert states["comprador.nombre"] == "proposed"
+        assert states["comprador.nombre"] == "resolved"

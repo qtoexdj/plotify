@@ -79,6 +79,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             }}
             workspaceName={workspace?.organization?.name ?? 'Plotify'}
             leadCount={leadCount}
+            userRole={userRole}
           />
           <SidebarInset>
             <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 bg-transparent transition-all duration-300">

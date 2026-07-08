@@ -179,6 +179,34 @@ async def deliver_draft(
     telegram_sent = False
     recipient_has_telegram = False
 
+    if recipient_user_id is None:
+        created.append(
+            await _insert_delivery(
+                supabase,
+                org_id=org_id,
+                project_id=project_id,
+                case_id=case_id,
+                generation_id=generation_id,
+                recipient_user_id=None,
+                channel="web",
+                link_token=link_token,
+                link_expires_at=link_expires_at,
+                status="unavailable",
+                sent_at=None,
+            )
+        )
+        logger.warning(
+            "escritura_delivery_recipient_unavailable",
+            generation_id=generation_id,
+            escritura_case_id=case_id,
+        )
+        return DeliveryOutcome(
+            deliveries=created,
+            telegram_sent=False,
+            web_available=False,
+            recipient_has_telegram=False,
+        )
+
     # (1) Web: la vía que siempre está disponible en "mis documentos".
     if "web" in channels:
         created.append(
@@ -380,7 +408,7 @@ async def renew_delivery_link(
             .execute()
         )
     )
-    row = result.data if isinstance(result.data, dict) else None
+    row = result.data if result is not None and isinstance(result.data, dict) else None
     if not row:
         return None
     new_expires = (_now() + timedelta(days=LINK_TTL_DAYS)).isoformat()

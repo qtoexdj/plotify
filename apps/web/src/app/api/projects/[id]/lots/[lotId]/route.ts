@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { updateLotAndRecord } from '@/lib/services/lots.service'
+import { LotEstadoTransitionError } from '@/lib/models/lot-transitions'
 
 export const dynamic = 'force-dynamic'
 
@@ -112,7 +113,8 @@ export async function PATCH(
     const result = await updateLotAndRecord(
       lotId,
       hasLotUpdates ? lotUpdates : null,
-      hasRecordUpdates ? recordUpdates : null
+      hasRecordUpdates ? recordUpdates : null,
+      user.id
     )
 
     return Response.json({
@@ -120,6 +122,9 @@ export async function PATCH(
       record: result.record,
     })
   } catch (error) {
+    if (error instanceof LotEstadoTransitionError) {
+      return Response.json({ error: error.message }, { status: 409 })
+    }
     console.error('Error in PATCH /api/projects/[id]/lots/[lotId]:', error)
     return Response.json({ error: 'Error al actualizar lote' }, { status: 500 })
   }

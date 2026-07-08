@@ -177,6 +177,59 @@ async def test_upsert_creates_missing_manual_variable():
     assert len(fake._store["legal_review_decisions"]) == 1
 
 
+# ─── T015 (SDD16, FR-007): documento.abogado_redactor.* como variables ───────
+# project-scoped, camino mínimo sin depender de la pantalla de Configuración
+# (T052). El mecanismo genérico de upsert por clave (SDD 011 A4) ya cubre
+# exactamente esto: no hace falta un endpoint nuevo. `state` queda en su
+# default "resolved" (no "approved"): no hay propuesta previa que aprobar,
+# es un humano fijando el dato directamente — mismo criterio que
+# sag.plano_cbr_numero/mandato.* ya usan por este mismo camino.
+
+
+@pytest.mark.asyncio
+async def test_upsert_materializes_documento_abogado_redactor_variables():
+    from schemas.legal_variables import VariableUpsertRequest
+    from services.legal_variable_resolution import upsert_project_variable
+
+    # Una fake por clave: _FakeQuery.eq() no filtra (siempre "coincide"), así
+    # que reusar un solo store entre llamadas haría que la 2da/3ra clave
+    # "encuentren" la fila de la anterior y tomen la rama de edición en vez
+    # de creación. Con Supabase real cada llamada filtra por variable_key.
+    valores = {
+        "documento.abogado_redactor.nombre": "María José Contreras Silva",
+        "documento.abogado_redactor.rut": "15.234.567-8",
+        "documento.abogado_redactor.email": "mjcontreras@example.cl",
+    }
+
+    for variable_key, value_text in valores.items():
+        fake = _FakeSupabase({"variable_resolutions": [], "legal_review_decisions": []})
+        payload = VariableUpsertRequest(
+            variable_key=variable_key,
+            value_text=value_text,
+            reviewed_by=USER_ID,
+        )
+        result = await upsert_project_variable(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            payload=payload,
+            supabase=fake,
+        )
+        assert result.state == "resolved"
+        assert result.audit_event_id
+
+        rows = fake._store["variable_resolutions"]
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["variable_key"] == variable_key
+        assert row["value_text"] == value_text
+        assert row["variable_group"] == "documento"
+        assert row["state"] == "resolved"
+        assert row["source_type"] == "manual"
+        assert row["lot_id"] is None
+        assert row["escritura_case_id"] is None
+        assert len(fake._store["legal_review_decisions"]) == 1
+
+
 def test_bulk_approve_endpoint_delegates_to_service(monkeypatch):
     import api.v1.endpoints.legal_variables as endpoint
     from schemas.legal_variables import VariableBulkApproveResponse

@@ -34,7 +34,7 @@ export default function AuthCallbackPage() {
             setTimeout(() => router.push('/auth/login?error=exchange_error'), 2000)
             return
           }
-          console.log('Sesión establecida vía PKCE')
+          console.debug('[auth/callback] Sesión establecida vía PKCE')
           router.push('/auth/onboarding')
           return
         }
@@ -48,7 +48,7 @@ export default function AuthCallbackPage() {
         const refreshToken = hashParams.get('refresh_token')
 
         if (accessToken && refreshToken) {
-          console.log('Detectados tokens en hash fragment, estableciendo sesión...')
+          console.debug('[auth/callback] Detectados tokens en hash fragment, estableciendo sesión...')
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -61,7 +61,7 @@ export default function AuthCallbackPage() {
             return
           }
 
-          console.log('Sesión establecida vía Hash Fragment (Invitación)')
+          console.debug('[auth/callback] Sesión establecida vía Hash Fragment (Invitación)')
           router.push('/auth/onboarding')
           return
         }
@@ -72,7 +72,7 @@ export default function AuthCallbackPage() {
         } = await supabase.auth.getSession()
 
         if (session) {
-          console.log('Sesión existente detectada')
+          console.debug('[auth/callback] Sesión existente detectada')
           router.push('/auth/onboarding')
           return
         }

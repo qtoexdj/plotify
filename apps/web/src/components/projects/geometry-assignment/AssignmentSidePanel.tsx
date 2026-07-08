@@ -428,11 +428,9 @@ export function AssignmentSidePanel({
                         />
                       </div>
                       {assignAsType === 'road' && (
-                        <div className="rounded-md border border-amber-200 bg-card/70 p-2 space-y-2 dark:border-amber-800/80">
+                        <div className="rounded-md border border-warning/30 bg-card/70 p-2 space-y-2">
                           <div>
-                            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
-                              Tipo de camino
-                            </p>
+                            <p className="text-xs font-medium text-warning">Tipo de camino</p>
                             <div className="mt-1 grid grid-cols-2 gap-1">
                               {ROAD_INPUT_MODE_OPTIONS.map((option) => (
                                 <button
@@ -441,8 +439,8 @@ export function AssignmentSidePanel({
                                   onClick={() => onRoadInputModeChange(option.value)}
                                   className={`h-8 rounded-md border text-xs font-medium transition-all ${
                                     roadInputMode === option.value
-                                      ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                      : 'border-border bg-background text-muted-foreground hover:border-amber-300'
+                                      ? 'border-warning/50 bg-warning/10 text-warning'
+                                      : 'border-border bg-background text-muted-foreground hover:border-warning/40'
                                   }`}
                                 >
                                   {option.label}
@@ -451,7 +449,7 @@ export function AssignmentSidePanel({
                             </div>
                           </div>
                           <div>
-                            <label className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                            <label className="text-xs font-medium text-warning">
                               Ancho camino (m)
                             </label>
                             <Input

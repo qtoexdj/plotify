@@ -230,6 +230,31 @@ async def test_delivery_audits_token_and_expires_in_seven_days(monkeypatch: Any)
     assert timedelta(days=6, hours=23) < delta <= timedelta(days=7)
 
 
+async def test_deliver_draft_never_marks_sent_without_recipient(monkeypatch: Any) -> None:
+    fake_tg = _FakeTelegram()
+    _patch_client(monkeypatch, fake_tg)
+    supabase = _FakeSupabase()
+
+    outcome = await deliver_draft(
+        supabase=supabase, generation=GEN, recipient_user_id=None, lot_label="Lote 5"
+    )
+
+    assert outcome.telegram_sent is False
+    assert outcome.web_available is False
+    assert outcome.recipient_has_telegram is False
+    assert len(supabase.deliveries) == 1
+    delivery = supabase.deliveries[0]
+    assert delivery["recipient_user_id"] is None
+    assert delivery["status"] == "unavailable"
+    assert delivery["sent_at"] is None
+    assert not [
+        row
+        for row in supabase.deliveries
+        if row["recipient_user_id"] is None and row["status"] == "sent"
+    ]
+    assert fake_tg.sent_documents == []
+
+
 # ─── Aislamiento por vendedor "mis documentos" (FR-011 / SC-005) ─────────────
 
 
@@ -355,6 +380,43 @@ async def test_resolve_case_vendor_returns_none_without_sale() -> None:
         supabase, {"organization_id": "org-1", "lot_id": "lot-1"}
     )
     assert result is None
+
+
+async def test_resolve_org_admin_user_ids_returns_admins_with_telegram() -> None:
+    from api.v1.endpoints.escritura_matrices import _resolve_org_admin_user_ids
+
+    supabase = _FakeSupabase(
+        profiles=[
+            {"id": "admin-1", "telegram_chat_id": "111"},
+            {"id": "admin-2", "telegram_chat_id": None},
+            {"id": "user-1", "telegram_chat_id": "333"},
+            {"id": "admin-other", "telegram_chat_id": "444"},
+        ]
+    )
+    supabase._store["organization_members"] = [
+        {"organization_id": "org-1", "user_id": "admin-1", "role": "admin"},
+        {"organization_id": "org-1", "user_id": "admin-1", "role": "admin"},
+        {"organization_id": "org-1", "user_id": "admin-2", "role": "admin"},
+        {"organization_id": "org-1", "user_id": "user-1", "role": "user"},
+        {"organization_id": "org-2", "user_id": "admin-other", "role": "admin"},
+    ]
+
+    result = await _resolve_org_admin_user_ids(supabase, "org-1")
+
+    assert result == ["admin-1"]
+
+
+async def test_resolve_org_admin_user_ids_returns_empty_without_linked_admins() -> None:
+    from api.v1.endpoints.escritura_matrices import _resolve_org_admin_user_ids
+
+    supabase = _FakeSupabase(profiles=[{"id": "admin-1", "telegram_chat_id": None}])
+    supabase._store["organization_members"] = [
+        {"organization_id": "org-1", "user_id": "admin-1", "role": "admin"}
+    ]
+
+    result = await _resolve_org_admin_user_ids(supabase, "org-1")
+
+    assert result == []
 
 
 def test_delivery_sent_label_derives_from_flow_dictionary() -> None:

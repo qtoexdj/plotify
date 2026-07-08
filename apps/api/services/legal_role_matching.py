@@ -792,8 +792,9 @@ async def apply_manual_role_override(
                 .maybe_single()
                 .execute()
             )
-            if lot_res.data:
-                sii_lot_number_normalized = str(lot_res.data.get("numero_lote") or "")
+            lot_res_data = getattr(lot_res, "data", None)
+            if lot_res_data:
+                sii_lot_number_normalized = str(lot_res_data.get("numero_lote") or "")
 
         if not sii_role_record:
             sii_role_record = {
@@ -1137,7 +1138,7 @@ async def _assert_lot_scope(
             .execute()
         )
     )
-    if not result.data:
+    if not getattr(result, "data", None):
         raise LegalRoleMatchingScopeError("Lot is outside the requested organization/project")
 
 

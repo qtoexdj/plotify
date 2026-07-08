@@ -52,6 +52,69 @@ export type Database = {
           },
         ]
       }
+      agent_skill_versions: {
+        Row: {
+          approved_tool_slugs: string[]
+          change_summary: string | null
+          created_at: string
+          created_by: string | null
+          definition_markdown: string
+          id: string
+          organization_id: string | null
+          requires_role: string[]
+          skill_id: string
+          tool_definition: Json
+          validation_errors: Json
+          validation_status: string
+          version: number
+        }
+        Insert: {
+          approved_tool_slugs?: string[]
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          definition_markdown: string
+          id?: string
+          organization_id?: string | null
+          requires_role?: string[]
+          skill_id: string
+          tool_definition?: Json
+          validation_errors?: Json
+          validation_status?: string
+          version: number
+        }
+        Update: {
+          approved_tool_slugs?: string[]
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          definition_markdown?: string
+          id?: string
+          organization_id?: string | null
+          requires_role?: string[]
+          skill_id?: string
+          tool_definition?: Json
+          validation_errors?: Json
+          validation_status?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_skill_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_skill_versions_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "agent_skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_skills: {
         Row: {
           approved_tool_slugs: string[]
@@ -128,69 +191,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      agent_skill_versions: {
-        Row: {
-          approved_tool_slugs: string[]
-          change_summary: string | null
-          created_at: string
-          created_by: string | null
-          definition_markdown: string
-          id: string
-          organization_id: string | null
-          requires_role: string[]
-          skill_id: string
-          tool_definition: Json
-          validation_errors: Json
-          validation_status: string
-          version: number
-        }
-        Insert: {
-          approved_tool_slugs?: string[]
-          change_summary?: string | null
-          created_at?: string
-          created_by?: string | null
-          definition_markdown: string
-          id?: string
-          organization_id?: string | null
-          requires_role?: string[]
-          skill_id: string
-          tool_definition?: Json
-          validation_errors?: Json
-          validation_status?: string
-          version: number
-        }
-        Update: {
-          approved_tool_slugs?: string[]
-          change_summary?: string | null
-          created_at?: string
-          created_by?: string | null
-          definition_markdown?: string
-          id?: string
-          organization_id?: string | null
-          requires_role?: string[]
-          skill_id?: string
-          tool_definition?: Json
-          validation_errors?: Json
-          validation_status?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "agent_skill_versions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "agent_skill_versions_skill_id_fkey"
-            columns: ["skill_id"]
-            isOneToOne: false
-            referencedRelation: "agent_skills"
             referencedColumns: ["id"]
           },
         ]
@@ -1734,11 +1734,14 @@ export type Database = {
           cbr_fecha_salida_estimada: string | null
           cbr_numero_petitorio: string | null
           cbr_reparo: string | null
+          cliente_comuna: string | null
           cliente_direccion: string | null
           cliente_email: string | null
           cliente_estado_civil: string | null
+          cliente_nacionalidad: string | null
           cliente_nombre: string | null
           cliente_ocupacion: string | null
+          cliente_region: string | null
           cliente_run: string | null
           cliente_run_normalizado: string | null
           cliente_telefono: string | null
@@ -1765,11 +1768,14 @@ export type Database = {
           cbr_fecha_salida_estimada?: string | null
           cbr_numero_petitorio?: string | null
           cbr_reparo?: string | null
+          cliente_comuna?: string | null
           cliente_direccion?: string | null
           cliente_email?: string | null
           cliente_estado_civil?: string | null
+          cliente_nacionalidad?: string | null
           cliente_nombre?: string | null
           cliente_ocupacion?: string | null
+          cliente_region?: string | null
           cliente_run?: string | null
           cliente_run_normalizado?: string | null
           cliente_telefono?: string | null
@@ -1796,11 +1802,14 @@ export type Database = {
           cbr_fecha_salida_estimada?: string | null
           cbr_numero_petitorio?: string | null
           cbr_reparo?: string | null
+          cliente_comuna?: string | null
           cliente_direccion?: string | null
           cliente_email?: string | null
           cliente_estado_civil?: string | null
+          cliente_nacionalidad?: string | null
           cliente_nombre?: string | null
           cliente_ocupacion?: string | null
+          cliente_region?: string | null
           cliente_run?: string | null
           cliente_run_normalizado?: string | null
           cliente_telefono?: string | null

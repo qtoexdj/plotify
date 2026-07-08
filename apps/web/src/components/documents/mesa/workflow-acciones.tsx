@@ -25,10 +25,16 @@ import {
   approveMatriz,
   generateMinuta,
   rejectMatriz,
+  submitLegalReview,
   submitMatriz,
 } from '@/lib/documents/matriz-client'
 import { MESA_TEXT } from '@/lib/documents/matriz-microcopy'
-import type { MatrizCaseResponse, MatrizView, MinutaGeneration } from '@/lib/documents/matriz-types'
+import type {
+  ApprovalBlocker,
+  MatrizCaseResponse,
+  MatrizView,
+  MinutaGeneration,
+} from '@/lib/documents/matriz-types'
 import { PendientesList } from './pendientes-list'
 
 /**
@@ -40,7 +46,13 @@ import { PendientesList } from './pendientes-list'
  * lista de pendientes humanizados.
  */
 
-export type AccionWorkflow = 'enviar' | 'aprobar' | 'rechazar' | 'generar'
+export type AccionWorkflow =
+  | 'enviar'
+  | 'aprobar'
+  | 'rechazar'
+  | 'generar'
+  | 'aprobar_revision_juridica'
+  | 'rechazar_revision_juridica'
 
 export function puedeEnviar(matriz: MatrizView): boolean {
   return matriz.status === 'draft' && !matriz.snapshot_stale
@@ -55,10 +67,37 @@ export function puedeGenerarMinuta(matriz: MatrizView): boolean {
   return matriz.scope === 'lot' && matriz.status === 'approved' && !matriz.snapshot_stale
 }
 
+type ReadinessGateBlocker = Extract<ApprovalBlocker, { kind: 'readiness_gate' }>
+
+/** FR-007/FR-008: pendientes del gate legal_review_ready (uno por causa). */
+export function revisionJuridicaBlockers(
+  matriz: Pick<MatrizView, 'approval_blockers'>
+): ReadinessGateBlocker[] {
+  return matriz.approval_blockers.filter(
+    (blocker): blocker is ReadinessGateBlocker =>
+      blocker.kind === 'readiness_gate' && blocker.gate === 'legal_review_ready'
+  )
+}
+
+/** Camino mínimo (T015/T018): si falta el abogado redactor, se enlaza al
+ * Centro de Control Legal en vez de mostrar un formulario propio en la mesa. */
+export function abogadoRedactorPendiente(
+  blockers: ReadinessGateBlocker[]
+): { href: string } | null {
+  const pendiente = blockers.find(
+    (blocker) =>
+      blocker.cause === 'documento.abogado_redactor.nombre' ||
+      blocker.cause === 'documento.abogado_redactor.rut'
+  )
+  return pendiente ? { href: pendiente.fix_url } : null
+}
+
 export function resumenDeAccion(accion: AccionWorkflow): string {
   if (accion === 'enviar') return MESA_TEXT.resumenEnviar
   if (accion === 'aprobar') return MESA_TEXT.resumenAprobar
   if (accion === 'rechazar') return MESA_TEXT.resumenRechazar
+  if (accion === 'aprobar_revision_juridica') return MESA_TEXT.resumenAprobarRevisionJuridica
+  if (accion === 'rechazar_revision_juridica') return MESA_TEXT.resumenRechazarRevisionJuridica
   return MESA_TEXT.warningLegal
 }
 
@@ -66,13 +105,21 @@ export function tituloDeAccion(accion: AccionWorkflow): string {
   if (accion === 'enviar') return MESA_TEXT.enviarRevision
   if (accion === 'aprobar') return MESA_TEXT.aprobar
   if (accion === 'rechazar') return MESA_TEXT.rechazar
+  if (accion === 'aprobar_revision_juridica') return MESA_TEXT.aprobarRevisionJuridica
+  if (accion === 'rechazar_revision_juridica') return MESA_TEXT.rechazar
   return MESA_TEXT.tituloDeclaracionLegal
 }
 
 export function mensajeDeAccion(accion: AccionWorkflow): string {
-  return accion === 'generar'
-    ? MESA_TEXT.noSePudoGenerarMinuta
-    : MESA_TEXT.noSePudoActualizarRevision
+  if (accion === 'generar') return MESA_TEXT.noSePudoGenerarMinuta
+  if (accion === 'aprobar_revision_juridica' || accion === 'rechazar_revision_juridica') {
+    return MESA_TEXT.noSePudoActualizarRevisionJuridica
+  }
+  return MESA_TEXT.noSePudoActualizarRevision
+}
+
+function requiereComentario(accion: AccionWorkflow | null): boolean {
+  return accion === 'rechazar' || accion === 'rechazar_revision_juridica'
 }
 
 type WorkflowAccionesProps = {
@@ -90,7 +137,12 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
 
   const hayPendientes = matriz.approval_blockers.length > 0
   const enviarBloqueado = accion === 'enviar' && hayPendientes
-  const confirmarDeshabilitado = trabajando || (accion === 'rechazar' && razon.trim().length === 0)
+  const confirmarDeshabilitado =
+    trabajando || (requiereComentario(accion) && razon.trim().length === 0)
+
+  const revisionBlockers = revisionJuridicaBlockers(matriz)
+  const enEsperaRevisionJuridica = matriz.scope === 'lot' && revisionBlockers.length > 0
+  const abogadoPendiente = abogadoRedactorPendiente(revisionBlockers)
 
   function abrir(siguiente: AccionWorkflow) {
     setAviso(null)
@@ -105,6 +157,13 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
 
   async function confirmar() {
     if (!accion) return
+    const escrituraCaseId = matriz.escritura_case_id
+    if (
+      (accion === 'aprobar_revision_juridica' || accion === 'rechazar_revision_juridica') &&
+      !escrituraCaseId
+    ) {
+      return
+    }
     setTrabajando(true)
     setAviso(null)
     try {
@@ -114,6 +173,16 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
         onWorkflowUpdate(await approveMatriz(matriz.id))
       } else if (accion === 'rechazar') {
         onWorkflowUpdate(await rejectMatriz(matriz.id, { reason: razon.trim() }))
+      } else if (
+        accion === 'aprobar_revision_juridica' ||
+        accion === 'rechazar_revision_juridica'
+      ) {
+        onWorkflowUpdate(
+          await submitLegalReview(escrituraCaseId as string, {
+            decision: accion === 'aprobar_revision_juridica' ? 'aprobada' : 'rechazada',
+            comentario: accion === 'rechazar_revision_juridica' ? razon.trim() : undefined,
+          })
+        )
       } else {
         const nueva = await generateMinuta(matriz.id, { warning_acknowledged: true })
         setGeneracion(nueva)
@@ -187,6 +256,38 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
         </>
       ) : null}
 
+      {enEsperaRevisionJuridica ? (
+        <div
+          data-testid="revision-juridica-pendiente"
+          className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2"
+        >
+          <span className="text-sm font-medium text-warning">
+            {MESA_TEXT.esperandoRevisionJuridica}
+          </span>
+          {abogadoPendiente ? (
+            <Button type="button" variant="outline" size="sm" asChild>
+              <a href={abogadoPendiente.href}>{MESA_TEXT.completarDatosAbogado}</a>
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => abrir('rechazar_revision_juridica')}
+              >
+                <HugeiconsIcon icon={ThumbsDown} />
+                {MESA_TEXT.rechazar}
+              </Button>
+              <Button type="button" size="sm" onClick={() => abrir('aprobar_revision_juridica')}>
+                <HugeiconsIcon icon={ThumbsUp} />
+                {MESA_TEXT.aprobarRevisionJuridica}
+              </Button>
+            </>
+          )}
+        </div>
+      ) : null}
+
       <AlertDialog open={accion !== null} onOpenChange={(abierto) => (abierto ? null : cerrar())}>
         <AlertDialogContent data-testid="workflow-dialogo">
           {enviarBloqueado ? (
@@ -207,9 +308,13 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
                 <AlertDialogDescription>{resumenDeAccion(accion)}</AlertDialogDescription>
               </AlertDialogHeader>
 
-              {accion === 'rechazar' ? (
+              {requiereComentario(accion) ? (
                 <div className="space-y-2">
-                  <Label htmlFor="razon-rechazo">{MESA_TEXT.razonRechazoLabel}</Label>
+                  <Label htmlFor="razon-rechazo">
+                    {accion === 'rechazar_revision_juridica'
+                      ? MESA_TEXT.comentarioRechazoRevisionLabel
+                      : MESA_TEXT.razonRechazoLabel}
+                  </Label>
                   <Textarea
                     id="razon-rechazo"
                     value={razon}

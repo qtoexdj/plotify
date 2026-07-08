@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { LinkSquare02Icon as ExternalLink } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
+import { TitleCasePanel } from '@/components/projects/legal/title-case-panel'
 import { VariableMatrix } from '@/components/projects/legal/variable-matrix/variable-matrix'
 
 /**
@@ -44,6 +45,7 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
         </Button>
       </div>
 
+      <TitleCasePanel projectId={projectId} />
       <VariableMatrix projectId={projectId} projectName={projectName} />
     </section>
   )

@@ -2,7 +2,7 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/014-servidumbre-precision-visor/plan.md`
+`specs/016-pipeline-remediacion-ux/plan.md`
 
 <!-- SPECKIT END -->
 
@@ -18,18 +18,18 @@ shell commands, and other important information, read the current plan:
 
 This repository uses Spec Kit SDD as the implementation authority. The active feature is:
 
-- `specs/014-servidumbre-precision-visor/spec.md`
-- `specs/014-servidumbre-precision-visor/plan.md`
-- `specs/014-servidumbre-precision-visor/research.md`
-- `specs/014-servidumbre-precision-visor/data-model.md`
-- `specs/014-servidumbre-precision-visor/quickstart.md`
-- `specs/014-servidumbre-precision-visor/contracts/`
-- `specs/014-servidumbre-precision-visor/tasks.md` (created by `/speckit-tasks`)
+- `specs/016-pipeline-remediacion-ux/spec.md`
+- `specs/016-pipeline-remediacion-ux/plan.md`
+- `specs/016-pipeline-remediacion-ux/research.md`
+- `specs/016-pipeline-remediacion-ux/data-model.md`
+- `specs/016-pipeline-remediacion-ux/quickstart.md`
+- `specs/016-pipeline-remediacion-ux/contracts/`
+- `specs/016-pipeline-remediacion-ux/tasks.md` (created by `/speckit-tasks`)
 - `.specify/memory/constitution.md`
 
 Before implementation:
 
-1. Read `specs/014-servidumbre-precision-visor/tasks.md` and `plan.md`.
+1. Read `specs/016-pipeline-remediacion-ux/tasks.md` and `plan.md`.
 2. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
 3. Do not start implementation while critical analyze findings remain unresolved.
 4. Run `git status --short` and `codegraph sync .`.
@@ -49,9 +49,9 @@ Canonical implementation prompt:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/014-servidumbre-precision-visor/tasks.md.
+Implementa solo TXXX de specs/016-pipeline-remediacion-ux/tasks.md.
 No avances a otra tarea.
-Lee specs/014-servidumbre-precision-visor/tasks.md y plan.md.
+Lee specs/016-pipeline-remediacion-ux/tasks.md y plan.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.

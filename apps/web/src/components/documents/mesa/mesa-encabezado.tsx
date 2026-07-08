@@ -76,6 +76,8 @@ type MesaEncabezadoProps = {
   puedeGuardar: boolean
   guardando: boolean
   onGuardar: () => void
+  onVerificar?: () => void
+  verificando?: boolean
   soloPendientes?: boolean
   onSoloPendientesChange?: (active: boolean) => void
   acciones?: ReactNode
@@ -86,6 +88,8 @@ export function MesaEncabezado({
   puedeGuardar,
   guardando,
   onGuardar,
+  onVerificar,
+  verificando = false,
   soloPendientes = false,
   onSoloPendientesChange,
   acciones = null,
@@ -158,10 +162,11 @@ export function MesaEncabezado({
             variant="outline"
             size="lg"
             className="min-h-11"
-            onClick={() => window.location.reload()}
+            onClick={() => (onVerificar ? onVerificar() : window.location.reload())}
+            disabled={verificando}
           >
             <HugeiconsIcon icon={RefreshCw} />
-            Verificar
+            {verificando ? 'Verificando…' : 'Verificar'}
           </Button>
           <Button
             type="button"
