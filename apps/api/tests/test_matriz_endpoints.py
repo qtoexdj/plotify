@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from api.deps import verify_internal_secret
 from api.v1.endpoints import escritura_matrices, escritura_templates
-from services import escritura_readiness
+from services import escritura_case_workflow, escritura_readiness
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "matriz"
 
@@ -251,8 +251,18 @@ def _patch_project_snapshot(
             evidence_snapshot or _project_evidence_snapshot_fixture(),
         )
 
+    # SDD 017 (T005/T007): fetch_project_matriz_snapshot se llama tanto desde
+    # get_project_matriz (que sigue viviendo en escritura_matrices.py) como
+    # desde _workflow_response/_fresh_workflow_view (movidas a
+    # escritura_case_workflow.py) — cada módulo resuelve el nombre contra su
+    # propio binding de import, así que hay que parchear ambos.
     monkeypatch.setattr(
         escritura_matrices,
+        "fetch_project_matriz_snapshot",
+        fake_fetch_project_matriz_snapshot,
+    )
+    monkeypatch.setattr(
+        escritura_case_workflow,
         "fetch_project_matriz_snapshot",
         fake_fetch_project_matriz_snapshot,
     )
