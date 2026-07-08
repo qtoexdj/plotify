@@ -179,6 +179,31 @@ describe('decideMesaVista (research D7)', () => {
     expect(decideMesaVista(matrizWith([DATO_BLOCKER]))).toBe('mesa')
     expect(decideMesaVista(matrizWith([]))).toBe('mesa')
   })
+
+  it('legal_review_ready bloqueado SOLO por la acción de revisión (cause=revision_juridica.estado) → mesa, no deadlock', () => {
+    // T018: aprobar/rechazar la revisión jurídica ocurre DENTRO de la mesa
+    // (WorkflowAcciones). Si este gate bloqueara el acceso a la mesa, nunca
+    // se podría completar la revisión porque la revisión pendiente
+    // bloquearía el único lugar donde se resuelve.
+    const legalReviewActionBlocker: ApprovalBlocker = {
+      ...GATE_BLOCKER,
+      gate: 'legal_review_ready',
+      cause: 'revision_juridica.estado',
+      title: 'Verificación pendiente: revisión jurídica lista',
+    }
+    expect(decideMesaVista(matrizWith([legalReviewActionBlocker]))).toBe('mesa')
+    expect(decideMesaVista(matrizWith([DATO_BLOCKER, legalReviewActionBlocker]))).toBe('mesa')
+  })
+
+  it('legal_review_ready bloqueado por datos previos faltantes (abogado redactor) → sigue bloqueando la mesa', () => {
+    const legalReviewDataBlocker: ApprovalBlocker = {
+      ...GATE_BLOCKER,
+      gate: 'legal_review_ready',
+      cause: 'documento.abogado_redactor.nombre',
+      title: 'Verificación pendiente: revisión jurídica lista',
+    }
+    expect(decideMesaVista(matrizWith([legalReviewDataBlocker]))).toBe('preparacion')
+  })
 })
 
 describe('preparación: progreso y subtítulo', () => {

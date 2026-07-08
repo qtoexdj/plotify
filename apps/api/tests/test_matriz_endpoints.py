@@ -596,7 +596,14 @@ class TestGetCaseMatriz:
         )
         assert store.tables.get("escritura_matrices", []) == []
 
-    def test_get_marks_snapshot_stale_without_mutating_matrix(self, monkeypatch):
+    def test_get_refreshes_snapshot_and_clears_staleness_for_draft_matrix(
+        self, monkeypatch
+    ):
+        """Un borrador (o en revisión) adopta el snapshot vigente del caso en
+        vez de quedar bloqueado para siempre, igual que la matriz del
+        proyecto (SDD16): sin esto, `snapshot_stale` nunca vuelve a
+        False y "Enviar a revisión" queda deshabilitado permanentemente
+        después de resolver/aprobar cualquier variable del caso."""
         store = FakeStore()
         template = _seed_template(store)
         case_row = _seed_case(store)
@@ -608,9 +615,12 @@ class TestGetCaseMatriz:
         assert response.status_code == 200
         body = response.json()["matriz"]
         assert body["id"] == matrix["id"]
-        assert body["snapshot_stale"] is True
-        assert body["approval_blockers"][0]["kind"] == "snapshot_stale"
-        assert store.tables["escritura_matrices"][0]["snapshot_hash"] == "old"
+        assert body["snapshot_stale"] is False
+        assert not any(
+            blocker["kind"] == "snapshot_stale" for blocker in body["approval_blockers"]
+        )
+        current_hash = escritura_matrices._json_hash(case_row["variable_snapshot"])
+        assert store.tables["escritura_matrices"][0]["snapshot_hash"] == current_hash
 
 
 class TestSaveMatriz:

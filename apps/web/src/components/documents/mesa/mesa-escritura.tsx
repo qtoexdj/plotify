@@ -53,9 +53,25 @@ export function visibleApprovalBlockers(blockers: ApprovalBlocker[]): ApprovalBl
   return blockers.filter((blocker) => !isInheritedProjectGateBlocker(blocker))
 }
 
+/** La acción de aprobar/rechazar la revisión jurídica (T018) vive DENTRO de
+ * la mesa (WorkflowAcciones). Si el gate legal_review_ready solo está
+ * bloqueado por la acción en sí (cause=revision_juridica.estado, no por
+ * datos previos faltantes como el abogado redactor), no puede ser un
+ * pre-requisito para entrar a la mesa — eso crea un deadlock donde nunca
+ * se puede completar la revisión porque la revisión pendiente bloquea el
+ * único lugar donde se completa. Los demás gates siguen bloqueando: "jamás
+ * una mesa parcial" (SDD 008) se mantiene para datos realmente faltantes. */
+function isLegalReviewActionOnlyBlocker(blocker: ApprovalBlocker): boolean {
+  return (
+    blocker.kind === 'readiness_gate' &&
+    blocker.gate === 'legal_review_ready' &&
+    blocker.cause === 'revision_juridica.estado'
+  )
+}
+
 export function decideMesaVista(matriz: MatrizView): MesaVista {
   const verificacionesBloqueadas = visibleApprovalBlockers(matriz.approval_blockers).some(
-    (blocker) => blocker.kind === 'readiness_gate'
+    (blocker) => blocker.kind === 'readiness_gate' && !isLegalReviewActionOnlyBlocker(blocker)
   )
   return verificacionesBloqueadas ? 'preparacion' : 'mesa'
 }

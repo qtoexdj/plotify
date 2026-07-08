@@ -748,6 +748,16 @@ async def _case_response(
             current_snapshot_hash=snapshot_hash,
         )
         snapshot_stale = False
+    elif snapshot_stale:
+        # Borrador (o en revisión): adopta el snapshot vigente en vez de quedar
+        # bloqueado tras resolver/aprobar variables del caso, igual que la
+        # matriz del proyecto en _project_matriz_response.
+        matrix_row = await _refresh_case_matriz_snapshot(
+            client=client,
+            matrix_row=matrix_row,
+            current_snapshot_hash=snapshot_hash,
+        )
+        snapshot_stale = False
     view_clauses, active_clauses = _effective_clauses(
         template_clauses, matrix_row, variable_snapshot
     )
@@ -1200,6 +1210,31 @@ async def _supersede_approved_matriz(
         current_snapshot_hash=current_snapshot_hash,
     )
     return updated
+
+
+async def _refresh_case_matriz_snapshot(
+    *,
+    client: Any,
+    matrix_row: dict[str, Any],
+    current_snapshot_hash: str,
+) -> dict[str, Any]:
+    """Un borrador (o en revisión) de la matriz del caso adopta el snapshot
+    vigente cuando cambian las variables del caso: se actualiza su
+    `snapshot_hash` para que no quede "desactualizado" bloqueando el envío a
+    revisión ni la aprobación. No cambia versión ni estado. Se muta
+    `matrix_row` in situ para que el flujo de aprobación vea el hash nuevo.
+    """
+    await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_matrices")
+            .update({"snapshot_hash": current_snapshot_hash})
+            .eq("id", str(matrix_row["id"]))
+            .eq("organization_id", str(matrix_row["organization_id"]))
+            .execute()
+        )
+    )
+    matrix_row["snapshot_hash"] = current_snapshot_hash
+    return matrix_row
 
 
 async def _supersede_approved_project_matriz(
