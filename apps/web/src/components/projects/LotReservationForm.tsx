@@ -22,7 +22,7 @@ import {
 } from '@/lib/validations/lot-reservation.schema'
 import { requestReservationApproval, requestSaleApproval } from '@/actions/request-approval.action'
 import type { ReservationFormInput, SaleFormInput } from '@/lib/validations/approval-request.schema'
-import { CHILE_REGIONS } from '@/lib/geo/chile-location'
+import { CHILE_REGIONS, findRegionCode } from '@/lib/geo/chile-location'
 import type { LotClientPrefill } from '@/types/viewer.types'
 import { ClienteIdentificacion } from '@/components/projects/lot-reservation-form/cliente-identificacion'
 import { ClienteDomicilio } from '@/components/projects/lot-reservation-form/cliente-domicilio'
@@ -76,7 +76,14 @@ export function LotReservationForm({
       cliente_nombre: initialClientData?.cliente_nombre ?? '',
       cliente_run: initialClientData?.cliente_run ?? '',
       cliente_direccion: initialClientData?.cliente_direccion ?? '',
-      cliente_region: initialClientData?.cliente_region ?? '',
+      // cliente_region viaja como nombre legible en lot_records (el mismo
+      // formato que se guarda al enviar, ver onSubmit más abajo), pero el
+      // <Select> de región usa el código como value interno — hay que
+      // convertir nombre→código al precargar o el combobox queda vacío
+      // aunque el dato exista (T042).
+      cliente_region: initialClientData?.cliente_region
+        ? findRegionCode(initialClientData.cliente_region)
+        : '',
       cliente_comuna: initialClientData?.cliente_comuna ?? '',
       cliente_estado_civil: initialClientData?.cliente_estado_civil ?? '',
       cliente_nacionalidad: initialClientData?.cliente_nacionalidad ?? '',
