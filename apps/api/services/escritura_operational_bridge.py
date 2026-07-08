@@ -717,6 +717,15 @@ async def stage_operational_variables(
             lot_id=lot_id,
             extractor_name=OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
             confidence=1.0 if variable.has_value else None,
+            # SDD16 (SC-001/SC-002, AS2): el único pendiente humano de un caso
+            # debe ser la revisión jurídica. Estos datos ya pasaron por un
+            # humano al aprobar la venta (admin, por Telegram); tratarlos
+            # como "proposed" los deja bloqueando la mesa (BLOCKED_SNAPSHOT_
+            # STATES en matriz_token_resolution.py) sin ninguna pantalla que
+            # los apruebe uno por uno. classify_proposals igual los baja a
+            # "missing"/"conflict" si corresponde.
+            state="resolved",
+            approval_required=False,
         )
         for variable in to_stage
     ]

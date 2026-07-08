@@ -458,8 +458,11 @@ class TestStagingIdempotency:
         assert outcome.missing == ()
         assert outcome.skipped_same_hash == ()
         assert outcome.protected == ()
-        # Todo lo propuesto queda en estado proposed (nunca auto-aprobado).
-        assert {payload["state"] for payload in fake.inserted} == {"proposed"}
+        # SDD16 (SC-001/SC-002): datos ya humano-aprobados en la venta quedan
+        # resolved de entrada, para que el único pendiente humano del caso
+        # sea la revisión jurídica (no ~35 aprobaciones extra por variable).
+        assert {payload["state"] for payload in fake.inserted} == {"resolved"}
+        assert {payload["approval_required"] for payload in fake.inserted} == {False}
 
     @pytest.mark.asyncio
     async def test_same_hash_skips_without_touching_rows(self):
@@ -536,4 +539,4 @@ class TestStagingIdempotency:
             payload["variable_key"]: payload["state"] for payload in fake.inserted
         }
         assert states["comprador.estado_civil"] == "missing"
-        assert states["comprador.nombre"] == "proposed"
+        assert states["comprador.nombre"] == "resolved"
