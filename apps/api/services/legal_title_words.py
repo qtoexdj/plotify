@@ -175,16 +175,23 @@ def superficie_to_words(sup: str) -> str:
     return f"{words} {unit}"
 
 
-def _quantity_to_words(value: float) -> str:
+def quantity_to_words(value: float) -> str:
     """Whole + decimal quantity in words: 385.5 -> 'trescientos ochenta y cinco coma cinco'."""
     whole = int(value)
     decimals = round((value - whole) * 100)
     words = number_to_words_spanish(whole)
     if decimals:
-        # ,50 reads as the bare digit ('coma cinco'), matching notarial usage.
         if decimals % 10 == 0:
+            # ,50 reads as the bare digit ('coma cinco'), matching notarial usage.
             decimals //= 10
-        words = f"{words} coma {number_to_words_spanish(decimals)}"
+            dec_words = number_to_words_spanish(decimals)
+        elif decimals < 10:
+            # ,07 must keep the leading zero ('coma cero siete'): 'coma siete'
+            # reads as ,7 and misstates the quantity in a legal document.
+            dec_words = f"cero {number_to_words_spanish(decimals)}"
+        else:
+            dec_words = number_to_words_spanish(decimals)
+        words = f"{words} coma {dec_words}"
     return words
 
 
@@ -201,12 +208,12 @@ def pesos_to_words(amount: int | float) -> str:
 
 def metros_cuadrados_to_words(value: int | float) -> str:
     """5100 -> 'cinco mil cien metros cuadrados'."""
-    return f"{_quantity_to_words(float(value))} metros cuadrados"
+    return f"{quantity_to_words(float(value))} metros cuadrados"
 
 
 def hectareas_to_words(value: int | float) -> str:
     """0.51 -> 'cero coma cincuenta y uno hectáreas'."""
-    return f"{_quantity_to_words(float(value))} hectáreas"
+    return f"{quantity_to_words(float(value))} hectáreas"
 
 
 def normalize_text(text: str | None) -> str:
