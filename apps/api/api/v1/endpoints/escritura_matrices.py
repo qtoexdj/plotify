@@ -238,29 +238,31 @@ async def submit_legal_review(
         supabase=client,
     )
 
-    if request.decision == "aprobada":
-        # SDD 017 (T019): con la revisión jurídica aprobada por el humano,
-        # retomar la cascada de aprobación por excepción — es el único acto
-        # humano que promete el modo every_sale (SC-002); de aquí en más el
-        # sistema aprueba la matriz, genera y entrega solo. Best-effort: una
-        # falla de la cascada nunca revierte la revisión jurídica ya
-        # aprobada, solo deja el caso en excepción visible en la mesa.
-        from services.escritura_auto_pipeline import run_case_cascade
+    # SDD 017 (T019/FR-004): retomar la cascada tras CUALQUIER decisión de
+    # revisión jurídica — aprobada, avanza sola (único acto humano de
+    # every_sale, SC-002); rechazada, la cascada la reconoce por el valor de
+    # revision_juridica.estado (no solo su presencia) y registra una corrida
+    # exception con el comentario, para que la mesa dependa de la ÚLTIMA
+    # corrida real y no de un run_approved viejo. "review_approved" es el
+    # único trigger de este endpoint en el enum de escritura_cascade_runs —
+    # no implica que la decisión haya sido positiva. Best-effort: una falla
+    # de la cascada nunca revierte la revisión jurídica ya decidida.
+    from services.escritura_auto_pipeline import run_case_cascade
 
-        try:
-            await run_case_cascade(
-                organization_id=org_id,
-                escritura_case_id=str(escritura_case_id),
-                trigger="review_approved",
-                supabase=client,
-            )
-        except Exception as exc:  # noqa: BLE001 - cascada best-effort
-            logger.error(
-                "escritura_cascade_trigger_failed",
-                organization_id=org_id,
-                escritura_case_id=str(escritura_case_id),
-                error=str(exc),
-            )
+    try:
+        await run_case_cascade(
+            organization_id=org_id,
+            escritura_case_id=str(escritura_case_id),
+            trigger="review_approved",
+            supabase=client,
+        )
+    except Exception as exc:  # noqa: BLE001 - cascada best-effort
+        logger.error(
+            "escritura_cascade_trigger_failed",
+            organization_id=org_id,
+            escritura_case_id=str(escritura_case_id),
+            error=str(exc),
+        )
 
     refreshed_case = await _fetch_case(client, str(escritura_case_id), org_id)
     matrix_row = await _fetch_active_matrix(client, str(escritura_case_id), org_id, project_id)

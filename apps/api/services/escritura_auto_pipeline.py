@@ -124,6 +124,25 @@ async def _fetch_project_warning_ack(
     return str(by), str(at)
 
 
+async def _fetch_latest_rejection_reason(
+    client: Any, escritura_case_id: str, organization_id: str
+) -> str | None:
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("legal_review_decisions")
+            .select("reason, decided_at")
+            .eq("escritura_case_id", escritura_case_id)
+            .eq("organization_id", organization_id)
+            .eq("decision_type", "reject_case")
+            .order("decided_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    row = _first_row(getattr(result, "data", None))
+    return row.get("reason") if row else None
+
+
 async def _find_existing_generation(
     client: Any, *, escritura_case_id: str, organization_id: str, snapshot_hash: str
 ) -> dict[str, Any] | None:
@@ -476,6 +495,30 @@ async def run_case_cascade(
 
     # 3) Revisión jurídica (SDD16): el único checkpoint de política real.
     if review_pending:
+        revision_entry = _as_dict(case_row.get("variable_snapshot")).get(
+            "revision_juridica.estado"
+        )
+        revision_value = (
+            revision_entry.get("value_text") if isinstance(revision_entry, dict) else None
+        )
+        if revision_value == "rechazada":
+            # FR-004: un rechazo es una decisión humana negativa, no un
+            # checkpoint pendiente — nunca queda en awaiting_review (eso
+            # implicaría reintentar solo). Queda en excepción con el
+            # comentario del revisor.
+            reason = await _fetch_latest_rejection_reason(client, case_id, org_id)
+            steps.append({"step": "legal_review", "action": "skipped", "detail": "rejected"})
+            return await _exception(
+                [
+                    {
+                        "kind": "legal_review_rejected",
+                        "title": "Revisión jurídica rechazada",
+                        "description": reason
+                        or "El revisor rechazó la revisión jurídica del caso.",
+                        "fix_url": f"/projects/{project_id}?tab=legal",
+                    }
+                ]
+            )
         if requires_human_review:
             steps.append({"step": "legal_review", "action": "skipped", "detail": "pending_human"})
             return await _awaiting_review()

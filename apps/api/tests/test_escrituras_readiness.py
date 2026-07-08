@@ -52,7 +52,14 @@ def _approved_variable(variable_key: str, value: str = "ok") -> dict[str, object
 
 def _ready_variables() -> list[dict[str, object]]:
     return [
-        _approved_variable(variable_key)
+        # SDD 017: revision_juridica.estado es la única variable cuyo gate
+        # exige un VALOR específico ('aprobada'), no solo presencia — un
+        # placeholder genérico ("ok") deja el gate legal_review_ready
+        # bloqueado a propósito.
+        _approved_variable(
+            variable_key,
+            "aprobada" if variable_key == "revision_juridica.estado" else "ok",
+        )
         for keys in READINESS_REQUIRED_VARIABLES_BY_GATE.values()
         for variable_key in keys
     ]
@@ -154,6 +161,35 @@ def test_readiness_creates_ready_snapshot_when_all_gates_pass():
     assert set(readiness.evidence_snapshot) == {
         variable["variable_key"] for variable in variables
     }
+
+
+def test_readiness_stays_blocked_when_legal_review_was_rejected():
+    """SDD 017: un rechazo ('rechazada') tiene tanto valor como una
+    aprobación para el chequeo genérico de "¿tiene dato?" — sin el caso
+    especial, el gate legal_review_ready quedaba 'ready' tras un rechazo,
+    dejando que la matriz se aprobara (a mano o vía la cascada de
+    aprobación por excepción) pese a que un humano dijo explícitamente que
+    no."""
+    variables = _ready_variables()
+    for variable in variables:
+        if variable["variable_key"] == "revision_juridica.estado":
+            variable["value_text"] = "rechazada"
+
+    readiness = calculate_escritura_readiness(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=LOT_ID,
+        variables=variables,
+        lot_legal_data=_matched_lot_legal_data(),
+        title_analysis=_approved_title_analysis(),
+        has_title_documents=True,
+        warning_acknowledged=True,
+    )
+
+    gates = {gate.gate: gate for gate in readiness.gates}
+    assert gates["legal_review_ready"].status == "blocked"
+    assert "revision_juridica.estado" in gates["legal_review_ready"].blocking_variables
+    assert readiness.readiness_status == "blocked"
 
 
 class FakeSupabaseTable:

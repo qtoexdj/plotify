@@ -1307,6 +1307,52 @@ class TestLegalReviewEndpoint:
         assert decisions[-1]["decision_status"] == "rejected"
         assert decisions[-1]["reason"] == "Falta corregir la cláusula de servidumbre."
 
+    def test_reject_triggers_cascade_exception_run(self, monkeypatch):
+        """SDD 017 (FR-004): el rechazo retoma la cascada, que reconoce
+        'rechazada' por su valor (no solo su presencia) y registra una
+        corrida exception con el motivo — así la mesa (cascade_status,
+        derivado de la ÚLTIMA corrida) no se queda mostrando un
+        awaiting_review viejo tras el rechazo."""
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+        case_row["readiness_gates"]["legal_review_ready"] = {
+            "gate": "legal_review_ready",
+            "status": "blocked",
+            "blocking_variables": ["revision_juridica.estado"],
+            "warnings": [],
+        }
+
+        def fake_snapshot(**kwargs):
+            case_row["variable_snapshot"]["revision_juridica.estado"] = {
+                "value_text": "rechazada",
+                "state": "resolved",
+            }
+            return case_row
+
+        monkeypatch.setattr(
+            escritura_readiness,
+            "create_escritura_case_snapshot",
+            AsyncMock(side_effect=fake_snapshot),
+        )
+
+        response = self._post(
+            store,
+            monkeypatch,
+            case_row["id"],
+            {
+                "decision": "rechazada",
+                "decided_by": self.ADMIN_ID,
+                "comentario": "Falta corregir la cláusula de servidumbre.",
+            },
+        )
+
+        assert response.status_code == 200
+        runs = store.tables.get("escritura_cascade_runs", [])
+        assert len(runs) == 1
+        assert runs[0]["outcome"] == "exception"
+        assert runs[0]["causes"][0]["kind"] == "legal_review_rejected"
+        assert "servidumbre" in runs[0]["causes"][0]["description"]
+
 
 class TestAlertClauseContract:
     def test_get_blocks_clause_added_alert_without_active_clause(self, monkeypatch):

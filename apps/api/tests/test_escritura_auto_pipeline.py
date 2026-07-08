@@ -703,3 +703,89 @@ class TestMissingAbogadoRedactor:
             "documento.abogado_redactor.rut",
         }
         assert store.tables["escritura_matrices"][0]["status"] == "legal_review_pending"
+
+
+# ─── Rechazo de la revisión jurídica (FR-004) ────────────────────────────────
+
+
+class TestLegalReviewRejected:
+    @pytest.mark.asyncio
+    async def test_rejected_review_is_exception_not_awaiting_review(self, monkeypatch):
+        """SDD 017: 'rechazada' tiene tanto valor como 'aprobada' para el
+        chequeo genérico de blockers — sin el caso especial en el gate
+        (escritura_readiness._evaluate_variable_gate), un rechazo se veía
+        como 'ready' y la cascada habría avanzado a aprobar igual. Un
+        rechazo es una decisión humana negativa: nunca awaiting_review
+        (reintentar solo no cambia nada), siempre exception con el motivo."""
+        store = FakeStore()
+        _patch_admin_with_telegram(monkeypatch, store)
+        _patch_telegram(monkeypatch, FakeTelegramClient())
+        _seed_org(store, policy="every_sale")
+        _seed_project(store)
+        case_row = _seed_case(store, legal_review_pending=True)
+        case_row["variable_snapshot"]["revision_juridica.estado"]["value_text"] = "rechazada"
+        store.tables.setdefault("legal_review_decisions", []).append(
+            {
+                "id": str(uuid.uuid4()),
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "escritura_case_id": CASE_ID,
+                "decision_type": "reject_case",
+                "decision_status": "rejected",
+                "reason": "Falta corregir la cláusula de servidumbre.",
+                "decided_by": "abogado-1",
+                "decided_at": "2026-07-08T00:00:00Z",
+            }
+        )
+        template = _seed_template(store)
+        _seed_matrix(
+            store, case_row=case_row, template=template, status="legal_review_pending"
+        )
+
+        result = await pipeline.run_case_cascade(
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            trigger="review_approved",
+            supabase=store,
+        )
+
+        assert result.outcome == "exception"
+        assert result.causes[0]["kind"] == "legal_review_rejected"
+        assert "servidumbre" in result.causes[0]["description"]
+        assert result.steps[0] == {
+            "step": "submit",
+            "action": "skipped",
+            "detail": "legal_review_pending",
+        }
+        assert result.steps[1]["detail"] == "rejected"
+        # La matriz sigue en legal_review_pending: el rechazo no la toca.
+        assert store.tables["escritura_matrices"][0]["status"] == "legal_review_pending"
+        assert store.tables.get("escritura_minuta_generations") is None
+
+    @pytest.mark.asyncio
+    async def test_rejected_review_is_exception_even_in_exceptions_only(self, monkeypatch):
+        """El rechazo bloquea la cascada sin importar la política — no es un
+        checkpoint que 'exceptions_only' pueda saltarse, es una decisión ya
+        tomada por un humano."""
+        store = FakeStore()
+        _patch_admin_with_telegram(monkeypatch, store)
+        _patch_telegram(monkeypatch, FakeTelegramClient())
+        _seed_org(store, policy="exceptions_only")
+        _seed_project(store)
+        _seed_abogado_redactor(store)
+        case_row = _seed_case(store, legal_review_pending=True)
+        case_row["variable_snapshot"]["revision_juridica.estado"]["value_text"] = "rechazada"
+        template = _seed_template(store)
+        _seed_matrix(
+            store, case_row=case_row, template=template, status="legal_review_pending"
+        )
+
+        result = await pipeline.run_case_cascade(
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            trigger="manual_retry",
+            supabase=store,
+        )
+
+        assert result.outcome == "exception"
+        assert result.causes[0]["kind"] == "legal_review_rejected"
