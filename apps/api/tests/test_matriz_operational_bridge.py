@@ -657,6 +657,44 @@ class TestStagingIdempotency:
         assert "comprador.nombre" not in staged_keys
 
     @pytest.mark.asyncio
+    async def test_legacy_proposed_bridge_rows_upgrade_to_resolved(self):
+        """Saneo pre-SDD16: una fila proposed del PROPIO puente con el mismo
+        hash no se salta — se re-stagea resolved por el flujo auditado, para
+        que los casos viejos (ej. lote 17 de Teno, 21 proposed) se curen
+        solos al siguiente refresh del caso, sin SQL manual ni aprobaciones
+        una a una."""
+        rows = _rows()
+        record_hash, lot_hash = _current_hashes(rows)
+        active = [
+            _active_row(
+                "comprador.nombre",
+                "proposed",
+                record_hash,
+                bridge.OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
+            ),
+            _active_row(
+                "lote.deslindes",
+                "proposed",
+                lot_hash,
+                bridge.OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
+            ),
+        ]
+        fake = FakeSupabase(rows, active)
+        outcome = await bridge.stage_operational_variables(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            lot_id=LOT_ID,
+            supabase=fake,
+        )
+        assert "comprador.nombre" in outcome.superseded
+        assert "lote.deslindes" in outcome.superseded
+        states = {
+            payload["variable_key"]: payload["state"] for payload in fake.inserted
+        }
+        assert states["comprador.nombre"] == "resolved"
+        assert states["lote.deslindes"] == "resolved"
+
+    @pytest.mark.asyncio
     async def test_human_resolved_rows_stay_protected(self):
         """Una fila resolved de OTRO origen (edición humana / otro extractor)
         sigue protegida aunque el hash de la fuente haya cambiado (FR-021)."""

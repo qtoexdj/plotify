@@ -864,23 +864,30 @@ async def stage_operational_variables(
         existing = existing_by_key.get(variable.variable_key)
         if existing:
             state = str(existing.get("state") or "")
+            is_bridge_row = (
+                str(existing.get("extractor_name") or "")
+                == OPERATIONAL_BRIDGE_EXTRACTOR_NAME
+            )
             # Una fila `resolved` escrita por el PROPIO puente no es una
             # revisión humana: sigue la regla de hash (skip/supersede) para
             # que un cambio en la fuente (p. ej. deslindes corregidos en la
             # verificación) se refleje. Lo humano (approved/not_applicable,
             # o resolved de otro origen) sí queda protegido (FR-021).
-            own_resolved_row = (
-                state == "resolved"
-                and str(existing.get("extractor_name") or "")
-                == OPERATIONAL_BRIDGE_EXTRACTOR_NAME
-            )
-            if state in PROTECTED_VARIABLE_STATES and not own_resolved_row:
+            if state in PROTECTED_VARIABLE_STATES and not (
+                state == "resolved" and is_bridge_row
+            ):
                 protected.append(variable.variable_key)
                 continue
             existing_hash = (existing.get("source_ref") or {}).get("source_row_hash")
             if existing_hash == variable.source_row_hash:
-                skipped.append(variable.variable_key)
-                continue
+                # Saneo de legado pre-SDD16: el puente stageaba `proposed`
+                # (aprobación humana extra sin pantalla). Una fila proposed
+                # del propio puente con el MISMO hash se re-stagea resolved
+                # por el flujo auditado de supersesión, para que los casos
+                # viejos se curen solos al siguiente refresh del caso.
+                if not (state == "proposed" and is_bridge_row):
+                    skipped.append(variable.variable_key)
+                    continue
             superseded.append(variable.variable_key)
         to_stage.append(variable)
 
