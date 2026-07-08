@@ -25,6 +25,7 @@ import {
   approveMatriz,
   generateMinuta,
   rejectMatriz,
+  retryCascade,
   submitLegalReview,
   submitMatriz,
 } from '@/lib/documents/matriz-client'
@@ -143,6 +144,9 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
   const revisionBlockers = revisionJuridicaBlockers(matriz)
   const enEsperaRevisionJuridica = matriz.scope === 'lot' && revisionBlockers.length > 0
   const abogadoPendiente = abogadoRedactorPendiente(revisionBlockers)
+  const cascadeStatus = matriz.cascade_status ?? 'legacy'
+  const esCasoConCascada = matriz.scope === 'lot' && cascadeStatus !== 'legacy'
+  const puedeMostrarWorkflowManual = !esCasoConCascada
 
   function abrir(siguiente: AccionWorkflow) {
     setAviso(null)
@@ -184,7 +188,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
           })
         )
       } else {
-        const nueva = await generateMinuta(matriz.id, { warning_acknowledged: true })
+        const nueva = await generateMinuta(matriz.id, { warning_acknowledged: false })
         setGeneracion(nueva)
         onGenerada?.(nueva)
       }
@@ -196,9 +200,45 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
     }
   }
 
+  async function generarDirecto() {
+    setTrabajando(true)
+    setAviso(null)
+    try {
+      const nueva = await generateMinuta(matriz.id, { warning_acknowledged: false })
+      setGeneracion(nueva)
+      onGenerada?.(nueva)
+    } catch {
+      setAviso(MESA_TEXT.noSePudoGenerarMinuta)
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  async function reintentarCascada() {
+    const escrituraCaseId = matriz.escritura_case_id
+    if (!escrituraCaseId) return
+    setTrabajando(true)
+    setAviso(null)
+    try {
+      await retryCascade(escrituraCaseId)
+      window.location.reload()
+    } catch {
+      setAviso(MESA_TEXT.noSePudoReintentarCascada)
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
   return (
     <div data-testid="workflow-acciones" className="flex flex-wrap items-center gap-2">
-      {matriz.status === 'draft' ? (
+      {cascadeStatus === 'exception' ? (
+        <Button type="button" size="sm" disabled={trabajando} onClick={reintentarCascada}>
+          <HugeiconsIcon icon={FileCheck2} />
+          {MESA_TEXT.reintentarCascada}
+        </Button>
+      ) : null}
+
+      {matriz.status === 'draft' && puedeMostrarWorkflowManual ? (
         <Button
           type="button"
           size="sm"
@@ -210,7 +250,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
         </Button>
       ) : null}
 
-      {matriz.status === 'legal_review_pending' ? (
+      {matriz.status === 'legal_review_pending' && puedeMostrarWorkflowManual ? (
         <>
           <Button
             type="button"
@@ -234,7 +274,7 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
         </>
       ) : null}
 
-      {matriz.status === 'approved' && matriz.scope === 'lot' ? (
+      {matriz.status === 'approved' && matriz.scope === 'lot' && cascadeStatus !== 'completed' ? (
         <>
           {generacion?.download_url ? (
             <Button type="button" variant="outline" size="sm" asChild>
@@ -247,8 +287,8 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
           <Button
             type="button"
             size="sm"
-            disabled={!puedeGenerarMinuta(matriz)}
-            onClick={() => abrir('generar')}
+            disabled={!puedeGenerarMinuta(matriz) || trabajando}
+            onClick={generarDirecto}
           >
             <HugeiconsIcon icon={FileCheck2} />
             {MESA_TEXT.generarMinuta}
@@ -288,7 +328,39 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
         </div>
       ) : null}
 
-      <AlertDialog open={accion !== null} onOpenChange={(abierto) => (abierto ? null : cerrar())}>
+      {accion && requiereComentario(accion) ? (
+        <div className="w-full space-y-2 rounded-lg border border-border bg-card p-3">
+          <Label htmlFor="razon-rechazo">
+            {accion === 'rechazar_revision_juridica'
+              ? MESA_TEXT.comentarioRechazoRevisionLabel
+              : MESA_TEXT.razonRechazoLabel}
+          </Label>
+          <Textarea
+            id="razon-rechazo"
+            value={razon}
+            onChange={(event) => setRazon(event.target.value)}
+            rows={3}
+          />
+          {aviso ? (
+            <p role="alert" className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
+              {aviso}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={cerrar} disabled={trabajando}>
+              {MESA_TEXT.cancelar}
+            </Button>
+            <Button type="button" onClick={confirmar} disabled={confirmarDeshabilitado}>
+              {MESA_TEXT.confirmar}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <AlertDialog
+        open={accion !== null && !requiereComentario(accion)}
+        onOpenChange={(abierto) => (abierto ? null : cerrar())}
+      >
         <AlertDialogContent data-testid="workflow-dialogo">
           {enviarBloqueado ? (
             <>
@@ -307,22 +379,6 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
                 <AlertDialogTitle>{tituloDeAccion(accion)}</AlertDialogTitle>
                 <AlertDialogDescription>{resumenDeAccion(accion)}</AlertDialogDescription>
               </AlertDialogHeader>
-
-              {requiereComentario(accion) ? (
-                <div className="space-y-2">
-                  <Label htmlFor="razon-rechazo">
-                    {accion === 'rechazar_revision_juridica'
-                      ? MESA_TEXT.comentarioRechazoRevisionLabel
-                      : MESA_TEXT.razonRechazoLabel}
-                  </Label>
-                  <Textarea
-                    id="razon-rechazo"
-                    value={razon}
-                    onChange={(event) => setRazon(event.target.value)}
-                    rows={3}
-                  />
-                </div>
-              ) : null}
 
               {aviso ? (
                 <p
@@ -343,6 +399,14 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
           ) : null}
         </AlertDialogContent>
       </AlertDialog>
+      {aviso && accion === null ? (
+        <p
+          role="alert"
+          className="w-full rounded-md bg-destructive/10 p-2 text-sm text-destructive"
+        >
+          {aviso}
+        </p>
+      ) : null}
     </div>
   )
 }

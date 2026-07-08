@@ -4,6 +4,8 @@ import { getActiveWorkspace } from '@/lib/services/workspace.service'
 import { WorkspaceSettingsForm } from '@/components/dashboard/workspace-settings-form'
 import { WorkspaceEscrituraConfigForm } from '@/components/dashboard/workspace-escritura-config-form'
 import { WorkspaceTelegramBotForm } from '@/components/dashboard/workspace-telegram-bot-form'
+import { WorkspaceEscrituraReviewPolicyForm } from '@/components/dashboard/workspace-escritura-review-policy-form'
+import type { EscrituraReviewPolicy } from '../actions'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { PageHeader } from '@/components/dashboard/page-header'
 import { BentoGrid } from '@/components/dashboard/bento-grid'
@@ -86,6 +88,15 @@ export default async function WorkspaceSettingsPage() {
     .eq('organization_id', workspace.organization.id)
     .maybeSingle()
 
+  // 4. Política de revisión jurídica de la cascada de aprobación por excepción (SDD 017)
+  const { data: orgSettings } = await supabase
+    .from('organizations')
+    .select('escritura_review_policy')
+    .eq('id', workspace.organization.id)
+    .maybeSingle()
+  const escrituraReviewPolicy: EscrituraReviewPolicy =
+    orgSettings?.escritura_review_policy === 'exceptions_only' ? 'exceptions_only' : 'every_sale'
+
   const isAdmin = workspace.role === 'admin'
 
   return (
@@ -112,6 +123,13 @@ export default async function WorkspaceSettingsPage() {
             orgId={workspace.organization.id}
             isAdmin={isAdmin}
             initialBot={telegramBot}
+          />
+        </div>
+        <div className="md:col-span-12 mt-6">
+          <WorkspaceEscrituraReviewPolicyForm
+            orgId={workspace.organization.id}
+            isAdmin={isAdmin}
+            initialPolicy={escrituraReviewPolicy}
           />
         </div>
       </BentoGrid>

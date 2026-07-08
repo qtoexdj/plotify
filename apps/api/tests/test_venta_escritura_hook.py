@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from services import escritura_sale_hook
+from services import escritura_auto_pipeline, escritura_sale_hook
 from workers.tasks import approval_notifier, approval_processor
 
 ORG_ID = "00000000-0000-4000-8000-000000000001"
@@ -353,7 +353,140 @@ async def test_admin_sale_approval_runs_escritura_hook(monkeypatch):
     assert result["escritura_hook_error"] is None
     audit_payload = audit.await_args.kwargs["payload"]
     assert audit_payload["escritura_hook"]["ready_for_borrador"] is True
-    assert audit_payload["escritura_hook_error"] is None
+
+
+@pytest.mark.asyncio
+async def test_sale_approval_triggers_cascade_when_borrador_ready(monkeypatch):
+    """SDD 017 (T011): con el borrador listo (molde de proyecto ya
+    aprobado), la venta validada dispara la cascada de aprobación por
+    excepción — best-effort, con el mismo caso/organización del hook."""
+    store = FakeSupabase()
+    store.tables["approval_requests"] = [
+        {
+            "id": "approval-sale-uuid",
+            "organization_id": ORG_ID,
+            "request_type": "sale",
+            "sale_mode": "direct",
+            "previous_lot_state": "disponible",
+        }
+    ]
+    hook_result = escritura_sale_hook.SaleEscrituraHookResult(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=LOT_ID,
+        escritura_case_id=CASE_ID,
+        project_matriz_id=PROJECT_MATRIZ_ID,
+        borrador_matriz_id="00000000-0000-4000-8000-000000000008",
+        created_borrador=True,
+        ready_for_borrador=True,
+    )
+    hook = AsyncMock(return_value=hook_result)
+    cascade = AsyncMock()
+
+    monkeypatch.setattr(approval_processor, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(escritura_sale_hook, "handle_sale_validated_for_escritura", hook)
+    monkeypatch.setattr(escritura_auto_pipeline, "run_case_cascade", cascade)
+    monkeypatch.setattr(approval_processor, "log_agent_action", AsyncMock())
+
+    await approval_processor.execute_admin_decision_db(
+        org_id=ORG_ID,
+        approval_id="approval-sale-uuid",
+        action="approve",
+        admin_id=ADMIN_ID,
+    )
+
+    cascade.assert_awaited_once_with(
+        organization_id=ORG_ID,
+        escritura_case_id=CASE_ID,
+        trigger="sale_validated",
+        supabase=store,
+    )
+
+
+@pytest.mark.asyncio
+async def test_sale_approval_skips_cascade_when_borrador_not_ready(monkeypatch):
+    """Sin molde de proyecto aprobado (ready_for_borrador=False) no hay nada
+    que la cascada pueda avanzar: el caso queda variables_pending como hoy,
+    sin siquiera intentar la cascada."""
+    store = FakeSupabase()
+    store.tables["approval_requests"] = [
+        {
+            "id": "approval-sale-uuid",
+            "organization_id": ORG_ID,
+            "request_type": "sale",
+            "sale_mode": "direct",
+            "previous_lot_state": "disponible",
+        }
+    ]
+    hook_result = escritura_sale_hook.SaleEscrituraHookResult(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=LOT_ID,
+        escritura_case_id=CASE_ID,
+        project_matriz_id=None,
+        borrador_matriz_id=None,
+        created_borrador=False,
+        ready_for_borrador=False,
+    )
+    hook = AsyncMock(return_value=hook_result)
+    cascade = AsyncMock()
+
+    monkeypatch.setattr(approval_processor, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(escritura_sale_hook, "handle_sale_validated_for_escritura", hook)
+    monkeypatch.setattr(escritura_auto_pipeline, "run_case_cascade", cascade)
+    monkeypatch.setattr(approval_processor, "log_agent_action", AsyncMock())
+
+    await approval_processor.execute_admin_decision_db(
+        org_id=ORG_ID,
+        approval_id="approval-sale-uuid",
+        action="approve",
+        admin_id=ADMIN_ID,
+    )
+
+    cascade.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_sale_approval_survives_cascade_failure(monkeypatch):
+    """La cascada es best-effort: si revienta, la venta ya aprobada y el
+    hook legal no se revierten ni se reportan como error de la venta."""
+    store = FakeSupabase()
+    store.tables["approval_requests"] = [
+        {
+            "id": "approval-sale-uuid",
+            "organization_id": ORG_ID,
+            "request_type": "sale",
+            "sale_mode": "direct",
+            "previous_lot_state": "disponible",
+        }
+    ]
+    hook_result = escritura_sale_hook.SaleEscrituraHookResult(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=LOT_ID,
+        escritura_case_id=CASE_ID,
+        project_matriz_id=PROJECT_MATRIZ_ID,
+        borrador_matriz_id="00000000-0000-4000-8000-000000000008",
+        created_borrador=True,
+        ready_for_borrador=True,
+    )
+    hook = AsyncMock(return_value=hook_result)
+    cascade = AsyncMock(side_effect=RuntimeError("boom"))
+
+    monkeypatch.setattr(approval_processor, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(escritura_sale_hook, "handle_sale_validated_for_escritura", hook)
+    monkeypatch.setattr(escritura_auto_pipeline, "run_case_cascade", cascade)
+    monkeypatch.setattr(approval_processor, "log_agent_action", AsyncMock())
+
+    result = await approval_processor.execute_admin_decision_db(
+        org_id=ORG_ID,
+        approval_id="approval-sale-uuid",
+        action="approve",
+        admin_id=ADMIN_ID,
+    )
+
+    assert result["escritura_hook_error"] is None
+    assert result["escritura_hook"]["ready_for_borrador"] is True
 
 
 @pytest.mark.asyncio

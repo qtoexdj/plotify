@@ -55,7 +55,6 @@ function convertLotNumbersInText(text: string): string {
  * y consolida la redacción uniendo los tramos repetidos con "y en".
  */
 function formatGroupedBoundaries(boundaries: OfficialBoundary[]): string[] {
-
   if (boundaries.length === 0) return []
 
   const groups: { label: string; items: OfficialBoundary[] }[] = []

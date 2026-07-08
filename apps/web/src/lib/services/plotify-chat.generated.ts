@@ -66,6 +66,14 @@ export interface components {
       "skipped_no_geometry"?: Array<string>
       "verified": number
     }
+    "CascadeRunResponse": {
+      "causes"?: Array<Record<string, unknown>>
+      "created_at"?: string | null
+      "generation_id"?: string | null
+      "outcome": "completed" | "exception" | "awaiting_review"
+      "run_id"?: string | null
+      "steps"?: Array<Record<string, unknown>>
+    }
     "ClauseUpsertRequest": {
       "alert_tipo"?: string | null
       "condition_key"?: string | null
@@ -331,6 +339,7 @@ export interface components {
     "InvalidateCacheRequest": {
       "organization_id": string
     }
+    "JsonValue": unknown
     "LegalDocumentArchiveResponse": {
       "extraction_status": string
       "legal_document_id": string
@@ -480,6 +489,10 @@ export interface components {
     }
     "MatrizView": {
       "approval_blockers"?: Array<components["schemas"]["ApprovalBlocker"]>
+      "approval_origin"?: "human" | "system"
+      "cascade_causes"?: Array<Record<string, unknown>>
+      "cascade_last_run_at"?: string | null
+      "cascade_status"?: "completed" | "exception" | "awaiting_review" | "legacy" | null
       "clause_order"?: Array<string>
       "clauses"?: Array<components["schemas"]["MatrizClauseView"]>
       "dismissed_alerts"?: Array<components["schemas"]["DismissedAlert"]>
@@ -962,7 +975,7 @@ export interface components {
       "state": string
       "superseded_by"?: string | null
       "updated_at"?: string | null
-      "value_json"?: Record<string, unknown> | Array<unknown> | null
+      "value_json"?: components["schemas"]["JsonValue"] | null
       "value_text"?: string | null
       "variable_group": string
       "variable_key": string
@@ -987,14 +1000,14 @@ export interface components {
       "evidence_policy"?: string
       "reviewed_by"?: string | null
       "state"?: string | null
-      "value_json"?: Record<string, unknown> | Array<unknown> | null
+      "value_json"?: components["schemas"]["JsonValue"] | null
       "value_text"?: string | null
     }
     "VariableUpsertRequest": {
       "correction_reason"?: string | null
       "reviewed_by"?: string | null
       "state"?: string
-      "value_json"?: Record<string, unknown> | Array<unknown> | null
+      "value_json"?: components["schemas"]["JsonValue"] | null
       "value_text"?: string | null
       "variable_key": string
     }
@@ -1127,6 +1140,12 @@ export interface operations {
     path: "/api/v1/escritura-cases/lots/{lot_id}/readiness"
     requestBody: never
     response: components["schemas"]["EscrituraReadinessResponse"]
+  }
+  "retry_cascade_api_v1_escritura_cases__escritura_case_id__retry_cascade_post": {
+    method: "POST"
+    path: "/api/v1/escritura-cases/{escritura_case_id}/retry-cascade"
+    requestBody: never
+    response: components["schemas"]["CascadeRunResponse"]
   }
   "stage_operational_variables_api_v1_escritura_cases__escritura_case_id__stage_operational_post": {
     method: "POST"

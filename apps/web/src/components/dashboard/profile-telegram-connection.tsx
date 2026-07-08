@@ -169,11 +169,7 @@ export function ProfileTelegramConnection({
               disabled={isPending || isGeneratingLink}
               className="w-full bg-[#229ED9] hover:bg-[#229ED9]/95 text-white rounded-lg h-9 text-xs"
             >
-              {isGeneratingLink ? (
-                <Spinner className="h-4 w-4" />
-              ) : (
-                'Abrir Telegram y Conectar'
-              )}
+              {isGeneratingLink ? <Spinner className="h-4 w-4" /> : 'Abrir Telegram y Conectar'}
             </Button>
           </div>
         ) : (

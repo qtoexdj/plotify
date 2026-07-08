@@ -307,6 +307,14 @@ export interface MatrizView {
   resolution: ResolutionManifest
   approval_blockers: ApprovalBlocker[]
   dismissed_alerts: DismissedAlert[]
+  /** SDD 017: estado de la última corrida de la cascada de aprobación por
+   * excepción (solo scope `lot`; `null` en scope proyecto). `legacy` = caso
+   * previo a SDD017, sin ninguna corrida — sigue el flujo manual. */
+  cascade_status?: 'completed' | 'exception' | 'awaiting_review' | 'legacy' | null
+  cascade_causes?: Record<string, unknown>[]
+  cascade_last_run_at?: string | null
+  /** SDD 017: quién aprobó esta versión — humano (default) o la cascada. */
+  approval_origin?: 'human' | 'system'
 }
 
 /** SDD 010 (research D6): catálogo humanizado para el picker "Insertar dato". */
@@ -383,6 +391,17 @@ export interface StageOperationalResult {
   missing: string[]
   /** Claves con estado revisado (approved/resolved/not_applicable): el puente no las toca. */
   protected: string[]
+}
+
+// ─── Cascada de aprobación por excepción (SDD 017) ────────────────────────────
+
+export interface CascadeRunResult {
+  run_id: string | null
+  outcome: 'completed' | 'exception' | 'awaiting_review'
+  causes: Record<string, unknown>[]
+  steps: Record<string, unknown>[]
+  generation_id: string | null
+  created_at: string | null
 }
 
 // ─── Entrega del borrador al vendedor (SDD 011, data-model §4) ────────────────

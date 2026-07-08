@@ -1,4 +1,5 @@
 import type {
+  CascadeRunResult,
   ClauseUpsertRequest,
   EscrituraTemplateDetail,
   GenerateMinutaRequest,
@@ -158,6 +159,14 @@ export async function listMinutaGenerations(caseId: string): Promise<MinutaGener
 export async function stageOperationalVariables(caseId: string): Promise<StageOperationalResult> {
   return requestJson<StageOperationalResult>(
     `/api/escritura-matrices/case/${encodeURIComponent(caseId)}/stage-operational`,
+    { method: 'POST' }
+  )
+}
+
+/** SDD 017: reintenta la cascada de aprobación por excepción del caso. */
+export async function retryCascade(caseId: string): Promise<CascadeRunResult> {
+  return requestJson<CascadeRunResult>(
+    `/api/escritura-matrices/case/${encodeURIComponent(caseId)}/retry-cascade`,
     { method: 'POST' }
   )
 }

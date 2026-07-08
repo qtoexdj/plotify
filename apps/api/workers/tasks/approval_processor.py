@@ -93,6 +93,29 @@ async def execute_admin_decision_db(
                 supabase=supabase,
             )
             escritura_hook_result = hook_result.to_dict()
+            # SDD 017 (T011): con el borrador del caso listo, intentar la
+            # cascada de aprobación por excepción — best-effort, jamás
+            # revierte la venta ya aprobada. Sin molde de proyecto todavía
+            # (ready_for_borrador=False) no hay nada que la cascada pueda
+            # avanzar; el caso queda variables_pending como hasta ahora.
+            if hook_result.ready_for_borrador and hook_result.escritura_case_id:
+                from services.escritura_auto_pipeline import run_case_cascade
+
+                try:
+                    await run_case_cascade(
+                        organization_id=org_id,
+                        escritura_case_id=hook_result.escritura_case_id,
+                        trigger="sale_validated",
+                        supabase=supabase,
+                    )
+                except Exception as exc:  # noqa: BLE001 - cascada best-effort
+                    logger.error(
+                        "escritura_cascade_trigger_failed",
+                        organization_id=org_id,
+                        approval_id=approval_id,
+                        escritura_case_id=hook_result.escritura_case_id,
+                        error=str(exc),
+                    )
         except Exception as exc:  # pragma: no cover - defensive non-blocking path
             escritura_hook_error = str(exc)
             logger.error(

@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from api.deps import verify_internal_secret
 from api.v1.endpoints import escritura_matrices, escritura_templates
-from services import escritura_readiness
+from services import escritura_case_workflow, escritura_readiness
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "matriz"
 
@@ -251,8 +251,18 @@ def _patch_project_snapshot(
             evidence_snapshot or _project_evidence_snapshot_fixture(),
         )
 
+    # SDD 017 (T005/T007): fetch_project_matriz_snapshot se llama tanto desde
+    # get_project_matriz (que sigue viviendo en escritura_matrices.py) como
+    # desde _workflow_response/_fresh_workflow_view (movidas a
+    # escritura_case_workflow.py) — cada módulo resuelve el nombre contra su
+    # propio binding de import, así que hay que parchear ambos.
     monkeypatch.setattr(
         escritura_matrices,
+        "fetch_project_matriz_snapshot",
+        fake_fetch_project_matriz_snapshot,
+    )
+    monkeypatch.setattr(
+        escritura_case_workflow,
         "fetch_project_matriz_snapshot",
         fake_fetch_project_matriz_snapshot,
     )
@@ -1297,6 +1307,52 @@ class TestLegalReviewEndpoint:
         assert decisions[-1]["decision_status"] == "rejected"
         assert decisions[-1]["reason"] == "Falta corregir la cláusula de servidumbre."
 
+    def test_reject_triggers_cascade_exception_run(self, monkeypatch):
+        """SDD 017 (FR-004): el rechazo retoma la cascada, que reconoce
+        'rechazada' por su valor (no solo su presencia) y registra una
+        corrida exception con el motivo — así la mesa (cascade_status,
+        derivado de la ÚLTIMA corrida) no se queda mostrando un
+        awaiting_review viejo tras el rechazo."""
+        store = FakeStore()
+        case_row = self._seed_scope(store)
+        case_row["readiness_gates"]["legal_review_ready"] = {
+            "gate": "legal_review_ready",
+            "status": "blocked",
+            "blocking_variables": ["revision_juridica.estado"],
+            "warnings": [],
+        }
+
+        def fake_snapshot(**kwargs):
+            case_row["variable_snapshot"]["revision_juridica.estado"] = {
+                "value_text": "rechazada",
+                "state": "resolved",
+            }
+            return case_row
+
+        monkeypatch.setattr(
+            escritura_readiness,
+            "create_escritura_case_snapshot",
+            AsyncMock(side_effect=fake_snapshot),
+        )
+
+        response = self._post(
+            store,
+            monkeypatch,
+            case_row["id"],
+            {
+                "decision": "rechazada",
+                "decided_by": self.ADMIN_ID,
+                "comentario": "Falta corregir la cláusula de servidumbre.",
+            },
+        )
+
+        assert response.status_code == 200
+        runs = store.tables.get("escritura_cascade_runs", [])
+        assert len(runs) == 1
+        assert runs[0]["outcome"] == "exception"
+        assert runs[0]["causes"][0]["kind"] == "legal_review_rejected"
+        assert "servidumbre" in runs[0]["causes"][0]["description"]
+
 
 class TestAlertClauseContract:
     def test_get_blocks_clause_added_alert_without_active_clause(self, monkeypatch):
@@ -1447,7 +1503,40 @@ class TestGenerateMinuta:
         assert response.status_code == 422
         assert response.json()["detail"]["code"] == "warning_required"
         assert store.storage.uploads == []
-        assert store.tables.get("escritura_minuta_generations") is None
+        assert not store.tables.get("escritura_minuta_generations")
+
+    def test_generate_copies_project_warning_ack_without_request_flag(
+        self, monkeypatch
+    ):
+        store = FakeStore()
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        for row in store.tables.get("projects", []):
+            if row["id"] == PROJECT_ID:
+                row["minuta_warning_acknowledged_by"] = (
+                    "00000000-0000-4000-8000-000000000090"
+                )
+                row["minuta_warning_acknowledged_at"] = "2026-07-01T00:00:00Z"
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/generate",
+            params={"organization_id": ORG_ID},
+            json={
+                "warning_acknowledged": False,
+                "generated_by": "00000000-0000-4000-8000-000000000010",
+            },
+        )
+
+        assert response.status_code == 201
+        inserted = store.tables["escritura_minuta_generations"][0]
+        assert (
+            inserted["warning_acknowledged_by"]
+            == "00000000-0000-4000-8000-000000000090"
+        )
+        assert inserted["warning_acknowledged_at"] == "2026-07-01T00:00:00Z"
 
     def test_generate_requires_approved_matrix(self, monkeypatch):
         store = FakeStore()
@@ -1534,7 +1623,7 @@ class TestGenerateMinuta:
         assert blocking["action_label"] == "Revisar estudio de título"
         assert blocking["action_href"] == f"/projects/{PROJECT_ID}?tab=legal"
         assert store.storage.uploads == []
-        assert store.tables.get("escritura_minuta_generations") is None
+        assert not store.tables.get("escritura_minuta_generations")
 
     def test_generate_persists_docx_generation_and_signed_url(self, monkeypatch):
         store = FakeStore()
@@ -1659,3 +1748,169 @@ class TestGenerateMinuta:
         generation = response.json()["generations"][0]
         assert generation["download_url"].startswith("https://storage.test/")
         assert store.storage.signed_urls[0]["expires_in"] == 604800
+
+
+class TestRetryCascade:
+    """SDD 017 (T013): POST /escritura-cases/{caseId}/retry-cascade."""
+
+    def _seed_abogado_redactor(self, store: FakeStore) -> None:
+        for key in ("documento.abogado_redactor.nombre", "documento.abogado_redactor.rut"):
+            store.tables.setdefault("variable_resolutions", []).append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "lot_id": None,
+                    "escritura_case_id": None,
+                    "variable_key": key,
+                    "value_text": "dato de prueba",
+                    "state": "approved",
+                }
+            )
+
+    def _mark_project_warning_acknowledged(self, store: FakeStore) -> None:
+        for row in store.tables.get("projects", []):
+            if row["id"] == PROJECT_ID:
+                row["minuta_warning_acknowledged_by"] = "00000000-0000-4000-8000-000000000090"
+                row["minuta_warning_acknowledged_at"] = "2026-07-01T00:00:00Z"
+
+    def test_retry_cascade_completes_case_without_human_action(self, monkeypatch):
+        store = FakeStore()
+        store.tables.setdefault("organizations", []).append(
+            {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
+        )
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        self._mark_project_warning_acknowledged(store)
+        self._seed_abogado_redactor(store)
+        matrix = _seed_matrix(store, case_row=case_row, template=template, status="draft")
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["outcome"] == "completed"
+        assert body["generation_id"] is not None
+        assert [s["step"] for s in body["steps"]] == [
+            "submit",
+            "legal_review",
+            "approve",
+            "generate",
+        ]
+
+        updated = next(
+            row for row in store.tables["escritura_matrices"] if row["id"] == matrix["id"]
+        )
+        assert updated["status"] == "approved"
+        assert updated["approval_origin"] == "system"
+
+    def test_retry_cascade_is_idempotent_on_completed_case(self, monkeypatch):
+        store = FakeStore()
+        store.tables.setdefault("organizations", []).append(
+            {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
+        )
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        self._mark_project_warning_acknowledged(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+        store.tables.setdefault("escritura_minuta_generations", []).append(
+            {
+                "id": str(uuid.uuid4()),
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "escritura_case_id": CASE_ID,
+                "matriz_id": matrix["id"],
+                "matriz_version": matrix["version"],
+                "snapshot_hash": matrix["snapshot_hash"],
+                "storage_path": f"{ORG_ID}/escritura-minutas/{CASE_ID}/prev.docx",
+                "generated_at": "2026-07-01T00:00:00Z",
+            }
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["outcome"] == "completed"
+        assert all(step["action"] == "skipped" for step in body["steps"])
+        assert len(store.tables["escritura_minuta_generations"]) == 1
+        assert store.storage.uploads == []
+
+    def test_retry_cascade_rejects_outdated_delivered_case(self, monkeypatch):
+        """FR-011: minuta entregada + datos del caso corregidos después →
+        409 case_outdated; la cascada no regenera sola ni registra corrida."""
+        store = FakeStore()
+        store.tables.setdefault("organizations", []).append(
+            {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
+        )
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        self._mark_project_warning_acknowledged(store)
+        self._seed_abogado_redactor(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+        stale_hash = "hash-de-datos-anteriores"
+        matrix["snapshot_hash"] = stale_hash
+        store.tables.setdefault("escritura_minuta_generations", []).append(
+            {
+                "id": str(uuid.uuid4()),
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "escritura_case_id": CASE_ID,
+                "matriz_id": matrix["id"],
+                "matriz_version": matrix["version"],
+                "snapshot_hash": stale_hash,
+                "storage_path": f"{ORG_ID}/escritura-minutas/{CASE_ID}/prev.docx",
+                "generated_at": "2026-07-01T00:00:00Z",
+            }
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 409
+        assert response.json()["detail"]["code"] == "case_outdated"
+        assert len(store.tables["escritura_minuta_generations"]) == 1
+        assert not store.tables.get("escritura_cascade_runs")
+        assert store.storage.uploads == []
+
+    def test_retry_cascade_returns_exception_with_causes(self, monkeypatch):
+        store = FakeStore()
+        store.tables.setdefault("organizations", []).append(
+            {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
+        )
+        template = _seed_template(store)
+        case_row = _seed_case(
+            store,
+            readiness_gates={
+                "title_verified": {
+                    "gate": "title_verified",
+                    "status": "blocked",
+                    "blocking_variables": ["titulo.clausula_primero_texto"],
+                    "warnings": [],
+                }
+            },
+        )
+        _seed_matrix(store, case_row=case_row, template=template, status="draft")
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["outcome"] == "exception"
+        assert body["causes"][0]["gate"] == "title_verified"
+        assert body["generation_id"] is None

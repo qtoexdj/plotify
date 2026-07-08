@@ -55,6 +55,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useEffect } from 'react'
 import type { ProjectVendorAssignment } from '@/lib/services/vendors.service'
 import { makeProjectOperational } from '@/actions/lot-verification.action'
+import { acknowledgeMinutaWarningAction } from '@/actions/escritura-warning.action'
 import {
   CHILE_COMMUNES_BY_REGION,
   CHILE_REGIONS,
@@ -139,6 +140,10 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
   const [isPending, startTransition] = useTransition()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [isAcknowledgingWarning, setIsAcknowledgingWarning] = useState(false)
+  const [warningAcknowledged, setWarningAcknowledged] = useState(
+    Boolean(project.minuta_warning_acknowledged_by)
+  )
   const [isTableExpanded, setIsTableExpanded] = useState(false)
   const [showRevenue, setShowRevenue] = useState(false)
   const [ufValue, setUfValue] = useState<number | null>(null)
@@ -364,6 +369,23 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
     }
   }, [project.id])
 
+  const handleAcknowledgeWarning = useCallback(async () => {
+    setIsAcknowledgingWarning(true)
+    try {
+      const result = await acknowledgeMinutaWarningAction(project.id)
+      if ('success' in result) {
+        setWarningAcknowledged(true)
+        toast.success('Aviso legal confirmado. Ampara todas las minutas de este proyecto.')
+      } else {
+        toast.error(result.error)
+      }
+    } catch {
+      toast.error('Error inesperado al confirmar el aviso legal')
+    } finally {
+      setIsAcknowledgingWarning(false)
+    }
+  }, [project.id])
+
   const handleOpenDescription = () => {
     setDescriptionDraft(localDescription)
     setIsDescriptionOpen(true)
@@ -538,8 +560,28 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
         onClick: isProjectOperational ? undefined : handleMakeOperational,
         href: undefined as string | undefined,
       },
+      {
+        id: 'aviso_legal',
+        label: 'Aviso legal',
+        done: warningAcknowledged,
+        detail: warningAcknowledged
+          ? 'Aviso de borrador confirmado: ampara todas las minutas del proyecto.'
+          : 'Falta confirmar (una vez) el aviso legal de borrador antes de que las escrituras puedan generarse solas.',
+        ctaLabel: warningAcknowledged ? undefined : 'Confirmar aviso',
+        onClick: warningAcknowledged ? undefined : handleAcknowledgeWarning,
+        href: undefined as string | undefined,
+      },
     ]
-  }, [project, projectMatriz, lots, isProjectOperational, onNavigateTab, handleMakeOperational])
+  }, [
+    project,
+    projectMatriz,
+    lots,
+    isProjectOperational,
+    onNavigateTab,
+    handleMakeOperational,
+    warningAcknowledged,
+    handleAcknowledgeWarning,
+  ])
 
   const formattedClp = new Intl.NumberFormat('es-CL', {
     style: 'currency',
@@ -638,9 +680,16 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
                         size="sm"
                         className="min-h-11 shrink-0 sm:min-h-9"
                         onClick={step.onClick}
-                        disabled={step.id === 'ventas' && (isPublishing || isPending)}
+                        disabled={
+                          (step.id === 'ventas' && (isPublishing || isPending)) ||
+                          (step.id === 'aviso_legal' && isAcknowledgingWarning)
+                        }
                       >
-                        {step.id === 'ventas' && isPublishing ? 'Publicando...' : step.ctaLabel}
+                        {step.id === 'ventas' && isPublishing
+                          ? 'Publicando...'
+                          : step.id === 'aviso_legal' && isAcknowledgingWarning
+                            ? 'Confirmando...'
+                            : step.ctaLabel}
                       </Button>
                     )
                   ) : null}

@@ -407,6 +407,71 @@
         "title": "BulkVerifyLotsResponse",
         "type": "object"
       },
+      "CascadeRunResponse": {
+        "description": "SDD 017: resultado de una corrida de la cascada (contracts §1).",
+        "properties": {
+          "causes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Causes",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "generation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Id"
+          },
+          "outcome": {
+            "enum": ["completed", "exception", "awaiting_review"],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "steps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": ["outcome"],
+        "title": "CascadeRunResponse",
+        "type": "object"
+      },
       "ClauseUpsertRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2064,6 +2129,7 @@
         "title": "InvalidateCacheRequest",
         "type": "object"
       },
+      "JsonValue": {},
       "LegalDocumentArchiveResponse": {
         "properties": {
           "extraction_status": {
@@ -3015,6 +3081,44 @@
             },
             "title": "Approval Blockers",
             "type": "array"
+          },
+          "approval_origin": {
+            "default": "human",
+            "enum": ["human", "system"],
+            "title": "Approval Origin",
+            "type": "string"
+          },
+          "cascade_causes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Cascade Causes",
+            "type": "array"
+          },
+          "cascade_last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cascade Last Run At"
+          },
+          "cascade_status": {
+            "anyOf": [
+              {
+                "enum": ["completed", "exception", "awaiting_review", "legacy"],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cascade Status"
           },
           "clause_order": {
             "items": {
@@ -6097,18 +6201,12 @@
           "value_json": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
+                "$ref": "#/components/schemas/JsonValue"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Value Json"
+            ]
           },
           "value_text": {
             "anyOf": [
@@ -6271,18 +6369,12 @@
           "value_json": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
+                "$ref": "#/components/schemas/JsonValue"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Value Json"
+            ]
           },
           "value_text": {
             "anyOf": [
@@ -6334,18 +6426,12 @@
           "value_json": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
+                "$ref": "#/components/schemas/JsonValue"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Value Json"
+            ]
           },
           "value_text": {
             "anyOf": [
@@ -7481,6 +7567,63 @@
         ],
         "summary": "Get Escritura Readiness",
         "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/escritura-cases/{escritura_case_id}/retry-cascade": {
+      "post": {
+        "description": "SDD 017 (T013): reintenta la cascada de aprobación por excepción de un\ncaso (contracts §1). Idempotente — sobre un caso ya `completed` responde\nel estado final sin efectos (D6).",
+        "operationId": "retry_cascade_api_v1_escritura_cases__escritura_case_id__retry_cascade_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "escritura_case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Escritura Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Organization Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CascadeRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Retry Cascade",
+        "tags": ["escritura-matrices"]
       }
     },
     "/api/v1/escritura-cases/{escritura_case_id}/stage-operational": {

@@ -183,6 +183,16 @@ def _evaluate_variable_gate(
         if state in BLOCKING_VARIABLE_STATES or not _has_value(variable):
             blocking.append(key)
             continue
+        # SDD 017: revision_juridica.estado es la ÚNICA variable cuyo VALOR
+        # (no solo su presencia) decide el gate — 'rechazada' tiene un valor
+        # tan válido como 'aprobada' para el chequeo genérico de arriba, pero
+        # un rechazo NO satisface la revisión jurídica. Sin este caso especial
+        # el gate quedaba "ready" tras un rechazo y la cascada de aprobación
+        # por excepción (o los botones manuales de la matriz) podían avanzar
+        # un caso que un humano explícitamente rechazó.
+        if key == "revision_juridica.estado" and variable.get("value_text") != "aprobada":
+            blocking.append(key)
+            continue
         if state in REVIEW_VARIABLE_STATES:
             warnings.append(key)
             continue

@@ -38,6 +38,8 @@ const project: ProjectWithMetrics = {
   doc_subdivision: null,
   doc_plano_oficial: null,
   doc_otros: null,
+  minuta_warning_acknowledged_by: null,
+  minuta_warning_acknowledged_at: null,
   created_at: '2026-06-05T00:00:00.000Z',
   updated_at: '2026-06-05T00:00:00.000Z',
   lotes_libres: 53,
