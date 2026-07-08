@@ -1503,7 +1503,40 @@ class TestGenerateMinuta:
         assert response.status_code == 422
         assert response.json()["detail"]["code"] == "warning_required"
         assert store.storage.uploads == []
-        assert store.tables.get("escritura_minuta_generations") is None
+        assert not store.tables.get("escritura_minuta_generations")
+
+    def test_generate_copies_project_warning_ack_without_request_flag(
+        self, monkeypatch
+    ):
+        store = FakeStore()
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        for row in store.tables.get("projects", []):
+            if row["id"] == PROJECT_ID:
+                row["minuta_warning_acknowledged_by"] = (
+                    "00000000-0000-4000-8000-000000000090"
+                )
+                row["minuta_warning_acknowledged_at"] = "2026-07-01T00:00:00Z"
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-matrices/{matrix['id']}/generate",
+            params={"organization_id": ORG_ID},
+            json={
+                "warning_acknowledged": False,
+                "generated_by": "00000000-0000-4000-8000-000000000010",
+            },
+        )
+
+        assert response.status_code == 201
+        inserted = store.tables["escritura_minuta_generations"][0]
+        assert (
+            inserted["warning_acknowledged_by"]
+            == "00000000-0000-4000-8000-000000000090"
+        )
+        assert inserted["warning_acknowledged_at"] == "2026-07-01T00:00:00Z"
 
     def test_generate_requires_approved_matrix(self, monkeypatch):
         store = FakeStore()
@@ -1590,7 +1623,7 @@ class TestGenerateMinuta:
         assert blocking["action_label"] == "Revisar estudio de título"
         assert blocking["action_href"] == f"/projects/{PROJECT_ID}?tab=legal"
         assert store.storage.uploads == []
-        assert store.tables.get("escritura_minuta_generations") is None
+        assert not store.tables.get("escritura_minuta_generations")
 
     def test_generate_persists_docx_generation_and_signed_url(self, monkeypatch):
         store = FakeStore()
@@ -1809,6 +1842,47 @@ class TestRetryCascade:
         assert body["outcome"] == "completed"
         assert all(step["action"] == "skipped" for step in body["steps"])
         assert len(store.tables["escritura_minuta_generations"]) == 1
+        assert store.storage.uploads == []
+
+    def test_retry_cascade_rejects_outdated_delivered_case(self, monkeypatch):
+        """FR-011: minuta entregada + datos del caso corregidos después →
+        409 case_outdated; la cascada no regenera sola ni registra corrida."""
+        store = FakeStore()
+        store.tables.setdefault("organizations", []).append(
+            {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
+        )
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        self._mark_project_warning_acknowledged(store)
+        self._seed_abogado_redactor(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+        stale_hash = "hash-de-datos-anteriores"
+        matrix["snapshot_hash"] = stale_hash
+        store.tables.setdefault("escritura_minuta_generations", []).append(
+            {
+                "id": str(uuid.uuid4()),
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "escritura_case_id": CASE_ID,
+                "matriz_id": matrix["id"],
+                "matriz_version": matrix["version"],
+                "snapshot_hash": stale_hash,
+                "storage_path": f"{ORG_ID}/escritura-minutas/{CASE_ID}/prev.docx",
+                "generated_at": "2026-07-01T00:00:00Z",
+            }
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 409
+        assert response.json()["detail"]["code"] == "case_outdated"
+        assert len(store.tables["escritura_minuta_generations"]) == 1
+        assert not store.tables.get("escritura_cascade_runs")
         assert store.storage.uploads == []
 
     def test_retry_cascade_returns_exception_with_causes(self, monkeypatch):

@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-08
 
-**Status**: Draft
+**Status**: Implementado (validado contra Teno real, 2026-07-08)
 
 **Input**: User description: "El pipeline debe ser: la inmobiliaria sube sus documentos y su KMZ, revisa los deslindes, se aprueba el molde una vez y se habilita la venta. De ahí en adelante, por cada venta solo varían el lote (sus deslindes) y los datos del comprador — la escritura debe salir sola. No tengo por qué tener una ceremonia de matriz para cada lote: hay muchas aprobaciones que están de más. La idea del código es solucionar, mejorar y simplificar la vida."
 
@@ -45,7 +45,7 @@ Como organización, quiero decidir cuánta supervisión legal quiero por venta: 
 1. **Given** una organización en modo "revisar cada venta", **When** se aprueba una venta sin pendientes, **Then** el caso queda esperando únicamente la revisión jurídica (ningún otro acto), y al aprobarla la cascada termina sola (aprobación del caso + generación + entrega).
 2. **Given** una organización en modo "solo excepciones", **When** se aprueba una venta sin pendientes, **Then** la cascada corre completa sin ningún acto humano.
 3. **Given** una revisión jurídica rechazada con comentario, **When** el revisor rechaza, **Then** el caso pasa a excepción con la razón visible y la cascada no continúa hasta que se corrija y se reintente.
-4. **Given** cualquier organización, **When** un admin cambia el modo de revisión, **Then** el cambio queda auditado (quién, cuándo, de qué modo a qué modo) y aplica a las ventas siguientes, no a los casos ya en curso.
+4. **Given** cualquier organización, **When** un admin cambia el modo de revisión, **Then** el cambio queda auditado (quién, cuándo, de qué modo a qué modo) y aplica a las corridas siguientes de la cascada — ventas nuevas y reintentos de casos en curso; las corridas ya terminadas no cambian.
 
 ---
 
@@ -97,7 +97,7 @@ Como administradora, quiero confirmar el aviso legal sobre el carácter de borra
 
 - **FR-001**: Al validarse una venta, el sistema DEBE ejecutar automáticamente la cadena completa: completar el expediente del caso con los datos operacionales, refrescar su snapshot y evaluar pendientes; si no hay ninguno (y la política de revisión no exige acto humano), aprobar el caso, generar la minuta y entregarla — sin intervención humana.
 - **FR-002**: Toda aprobación automática DEBE quedar registrada como decisión del sistema con trazabilidad completa: qué molde y qué versión hereda, hash del snapshot aprobado, momento y gatillo (venta validada / reintento / revisión aprobada). Las decisiones del sistema DEBEN ser distinguibles de las humanas en la trazabilidad del caso.
-- **FR-003**: La organización DEBE poder elegir su política de revisión jurídica entre "revisar cada venta" (default) y "revisar solo excepciones". El cambio de política DEBE quedar auditado y aplicar solo a ventas posteriores.
+- **FR-003**: La organización DEBE poder elegir su política de revisión jurídica entre "revisar cada venta" (default) y "revisar solo excepciones". El cambio de política DEBE quedar auditado y rige para las corridas siguientes de la cascada: ventas posteriores y reintentos manuales de casos en curso (la política no se congela por caso); las corridas ya terminadas no cambian.
 - **FR-004**: En modo "revisar cada venta", el único acto humano del camino feliz DEBE ser aprobar o rechazar la revisión jurídica; al aprobarla, el resto de la cascada DEBE continuar sin más actos. El rechazo DEBE llevar el caso a excepción con el comentario del revisor.
 - **FR-005**: Cuando la cascada encuentre pendientes (dato faltante, conflicto, lote sin verificar, gate no cumplido), el caso DEBE quedar en estado de excepción con la lista de causas accionables (qué falta y dónde corregirlo), sin generar documento parcial, y DEBE notificarse al admin por el canal de entrega configurado.
 - **FR-006**: El caso en excepción DEBE poder reintentarse (manual) una vez corregida la causa; el reintento DEBE reanudar la cascada desde el punto pendiente y ser idempotente (sin duplicar aprobaciones, minutas ni entregas ya realizadas).

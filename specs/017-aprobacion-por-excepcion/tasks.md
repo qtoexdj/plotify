@@ -26,7 +26,7 @@ Monorepo: `apps/api` (FastAPI), `apps/web` (Next.js), `packages/database/supabas
 - [x] T001 [P] Migración `packages/database/supabase/migrations/20260708000100_escritura_review_policy.sql`: `organizations.escritura_review_policy` text not null default 'every_sale' + check ('every_sale','exceptions_only')
 - [x] T002 [P] Migración `packages/database/supabase/migrations/20260708000200_project_minuta_warning_ack.sql`: `projects.minuta_warning_acknowledged_by` (uuid ref auth.users) + `minuta_warning_acknowledged_at` (timestamptz)
 - [x] T003 [P] Migración `packages/database/supabase/migrations/20260708000300_escritura_cascade_runs.sql`: tabla `escritura_cascade_runs` (trigger/outcome/causes/steps + índice por caso + RLS admin/member/service_role), `escritura_matrices.approval_origin` ('human' default | 'system'), extensión `legal_review_decisions` (decided_by ahora nullable, origin/trigger/inherited_from_matriz_id/inherited_matriz_version)
-- [x] T004 Aplicado por el usuario (2026-07-08) vía `supabase db push`. Trampa de siempre: `verify_lot_as_admin_rpc` (SDD16) estaba en el historial remoto con el timestamp de aplicación (`20260707144949`) en vez del timestamp del archivo (`20260707020000`) — se reconcilió con `supabase migration repair --status reverted 20260707144949` + `--status applied 20260707020000` antes del push (contenido ya coincidía, verificado por SQL de solo lectura que el RPC existía). Las 3 migraciones de SDD017 se aplicaron limpias. Verificado por SQL de solo lectura: `organizations.escritura_review_policy` (default 'every_sale'), `projects.minuta_warning_acknowledged_by/_at` (nullable), `escritura_cascade_runs` existe, `escritura_matrices.approval_origin` (not null), `legal_review_decisions.decided_by` ahora nullable + origin/trigger/inherited_* presentes. `pnpm verify:migrations` verde.
+- [x] T004 Aplicado por el usuario (2026-07-08) vía `supabase db push`. Trampa de siempre: `verify_lot_as_admin_rpc` (SDD16) estaba en el historial remoto con el timestamp de aplicación (`20260707144949`) en vez del timestamp del archivo (`20260707020000`) — se reconcilió con `supabase migration repair --status reverted 20260707144949` + `--status applied 20260707020000` antes del push (contenido ya coincidía, verificado por SQL de solo lectura que el RPC existía). Las 3 migraciones de SDD017 se aplicaron limpias. Verificado por SQL de solo lectura: `organizations.escritura_review_policy` (default `every_sale`), `projects.minuta_warning_acknowledged_by/_at` (nullable), `escritura_cascade_runs` existe, `escritura_matrices.approval_origin` (not null), `legal_review_decisions.decided_by` ahora nullable + `origin`/`trigger`/`inherited_from_matriz_id`/`inherited_matriz_version` presentes. `pnpm verify:migrations` verde.
 
 **Checkpoint**: esquema listo; `pnpm verify:migrations` verde.
 
@@ -57,9 +57,9 @@ Monorepo: `apps/api` (FastAPI), `apps/web` (Next.js), `packages/database/supabas
 
 ### Implementation for User Story 1
 
-- [x] T010 [US1] `apps/api/services/escritura_auto_pipeline.py`: `run_case_cascade()` — filtra el blocker "revision_juridica.estado pendiente" (checkpoint de política, espejo de `isLegalReviewActionOnlyBlocker`) de los blockers reales; sin blockers reales avanza submit→revisión jurídica (según policy+four-eyes, D8)→approve→generar+entregar a nombre del sistema; exige el warning del proyecto (US4) antes de generar; idempotente por paso (D6); registra `escritura_cascade_runs`. Requirió extender `escritura_case_workflow.py` (aditivo): `_insert_matriz_review_decision`/`_upsert_lot_variable` aceptan actor `None` + origin/trigger/inherited_*; `_generate_minuta_row` desacopla `generated_by` (nullable) de `warning_acknowledged_by/_at` (explícitos)
+- [x] T010 [US1] `apps/api/services/escritura_auto_pipeline.py`: `run_case_cascade()` — filtra el blocker `revision_juridica.estado pendiente` (checkpoint de política, espejo de `isLegalReviewActionOnlyBlocker`) de los blockers reales; sin blockers reales avanza submit→revisión jurídica (según policy+four-eyes, D8)→approve→generar+entregar a nombre del sistema; exige el warning del proyecto (US4) antes de generar; idempotente por paso (D6); registra `escritura_cascade_runs`. Requirió extender `escritura_case_workflow.py` (aditivo): `_insert_matriz_review_decision`/`_upsert_lot_variable` aceptan actor `None` + `origin`/`trigger`/`inherited_from_matriz_id`/`inherited_matriz_version`; `_generate_minuta_row` desacopla `generated_by` (nullable) de `warning_acknowledged_by/_at` (explícitos)
 - [x] T011 [US1] `apps/api/workers/tasks/approval_processor.py`: tras el sale hook con `ready_for_borrador=True`, dispara `run_case_cascade(trigger='sale_validated')` best-effort. 3 tests nuevos en `test_venta_escritura_hook.py`
-- [x] T012 [US1] Notificación de excepción: Telegram directo a admins con Telegram vinculado (`_resolve_org_admin_user_ids` + `_recipient_chat_id`), best-effort. **Desviación de contracts §5**: no se modeló como fila de `escritura_deliveries` (esa tabla exige `generation_id NOT NULL` + `channel` acotado a telegram/web — no hay generación en una excepción); en vez de eso queda trazado en `escritura_cascade_runs.steps`/`causes`. Contracts pendiente de actualizar para reflejar esto.
+- [x] T012 [US1] Notificación de excepción: Telegram directo a admins con Telegram vinculado (`_resolve_org_admin_user_ids` + `_recipient_chat_id`), best-effort. **Desviación de contracts §5**: no se modeló como fila de `escritura_deliveries` (esa tabla exige `generation_id NOT NULL` + `channel` acotado a telegram/web — no hay generación en una excepción); en vez de eso queda trazado en `escritura_cascade_runs.steps`/`causes`. Contracts §5 actualizado con esta forma final (T037).
 - [x] T013 [US1] `POST /escritura-cases/{case_id}/retry-cascade` + proxy web `escritura-matrices/case/[caseId]/retry-cascade/route.ts` (nombre de ruta ajustado al patrón real de `stage-operational`, no `escritura-cases/[caseId]/...`) + `retryCascade()` en `matriz-client.ts`
 - [x] T014 [US1] Campos `cascade_status`/`cascade_causes`/`cascade_last_run_at`/`approval_origin` en `MatrizView`, derivados en `_case_response` de la última fila de `escritura_cascade_runs`; `pnpm contracts:generate` corrido (OpenAPI + `matriz-types.ts` mirror, patrón establecido de esta feature)
 - [x] T015 [US1] 692 tests de API + 821 web verdes; `typecheck:web` limpio
@@ -103,13 +103,13 @@ Monorepo: `apps/api` (FastAPI), `apps/web` (Next.js), `packages/database/supabas
 
 ### Tests for User Story 4 (primero, deben fallar)
 
-- [ ] T023 [P] [US4] Tests en dos capas: Vitest del server action de confirmación (solo admin, idempotente — repetir responde la vigente sin sobre-escribir, registra `logAudit`) en `apps/web/tests/settings-actions.test.ts` o archivo propio; pytest en `apps/api/tests/test_matriz_endpoints.py` de que la generación copia el amparo del proyecto en `warning_acknowledged_by/_at`
+- [x] T023 [P] [US4] Tests en dos capas: Vitest del server action de confirmación (solo admin, idempotente — repetir responde la vigente sin sobre-escribir, registra `logAudit`) en `apps/web/tests/settings-actions.test.ts` o archivo propio; pytest en `apps/api/tests/test_matriz_endpoints.py` de que la generación copia el amparo del proyecto en `warning_acknowledged_by/_at`
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Server action `acknowledgeMinutaWarningAction` (patrón casa: chequeo admin + update de `projects.minuta_warning_acknowledged_by/_at` + `logAudit`), en las actions del proyecto o de settings según dónde viva el checklist — contracts §3
-- [ ] T025 [US4] `generate_case_minuta` (workflow service T005): exige amparo del proyecto (no el flag por-request) y copia `minuta_warning_acknowledged_by/_at` del proyecto a la generación; el parámetro `warning_acknowledged` del request queda como fallback legacy para proyectos pre-SDD017 (primera generación lo persiste al proyecto)
-- [ ] T026 [US4] Paso "Confirmar aviso legal de minutas" en el checklist de preparación del proyecto (`apps/web/src/components/projects/` — checklist de SDD016), con quién/cuándo una vez confirmado; test Vitest
+- [x] T024 [US4] Server action `acknowledgeMinutaWarningAction` (patrón casa: chequeo admin + update de `projects.minuta_warning_acknowledged_by/_at` + `logAudit`), en las actions del proyecto o de settings según dónde viva el checklist — contracts §3
+- [x] T025 [US4] `generate_case_minuta` (workflow service T005): exige amparo del proyecto (no el flag por-request) y copia `minuta_warning_acknowledged_by/_at` del proyecto a la generación; el parámetro `warning_acknowledged` del request queda como fallback legacy para proyectos pre-SDD017 (primera generación lo persiste al proyecto)
+- [x] T026 [US4] Paso "Confirmar aviso legal de minutas" en el checklist de preparación del proyecto (`apps/web/src/components/projects/` — checklist de SDD016), con quién/cuándo una vez confirmado; test Vitest
 
 **Checkpoint**: la cascada corre sin diálogo de warning en proyectos confirmados.
 
@@ -123,15 +123,15 @@ Monorepo: `apps/api` (FastAPI), `apps/web` (Next.js), `packages/database/supabas
 
 ### Tests for User Story 3 (primero, deben fallar)
 
-- [ ] T027 [P] [US3] Tests en `apps/web/tests/mesa-escritura.test.ts`: vista por `cascade_status` (completed → entregada sin botones de workflow; exception → causas + Reintentar; awaiting_review → solo aprobar/rechazar revisión; legacy → comportamiento actual intacto)
+- [x] T027 [P] [US3] Tests en `apps/web/tests/mesa-escritura.test.ts`: vista por `cascade_status` (completed → entregada sin botones de workflow; exception → causas + Reintentar; awaiting_review → solo aprobar/rechazar revisión; legacy → comportamiento actual intacto)
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] `apps/web/src/components/documents/mesa/mesa-escritura.tsx`: rama por `cascade_status` (tipos del cliente generado); `legacy` conserva el flujo actual
-- [ ] T029 [US3] `apps/web/src/components/documents/mesa/workflow-acciones.tsx`: quitar "Enviar a revisión"/"Aprobar" para casos con cascada; botón "Reintentar" → `POST retry-cascade`; quitar AlertDialogs de acciones reversibles (reintentar/regenerar; rechazar conserva el campo razón inline); quitar el diálogo de warning en "Generar" (el amparo viene del proyecto, US4)
-- [ ] T030 [US3] `apps/web/src/components/documents/mesa/estado-preparacion.tsx` + `pendientes-list.tsx`: excepciones con causa humanizada + link de corrección (fix_url) + estado de la última corrida (`cascade_last_run_at`)
-- [ ] T031 [US3] Vista "Minuta entregada": descarga + historial (`historial-generaciones.tsx`) + trazabilidad visible de aprobación system (molde/versión heredados — SC-005)
-- [ ] T032 [US3] Gates de la historia: `pnpm --filter web test`, `pnpm typecheck:web`, `pnpm build:web` verdes
+- [x] T028 [US3] `apps/web/src/components/documents/mesa/mesa-escritura.tsx`: rama por `cascade_status` (tipos del cliente generado); `legacy` conserva el flujo actual
+- [x] T029 [US3] `apps/web/src/components/documents/mesa/workflow-acciones.tsx`: quitar "Enviar a revisión"/"Aprobar" para casos con cascada; botón "Reintentar" → `POST retry-cascade`; quitar AlertDialogs de acciones reversibles (reintentar/regenerar; rechazar conserva el campo razón inline); quitar el diálogo de warning en "Generar" (el amparo viene del proyecto, US4)
+- [x] T030 [US3] `apps/web/src/components/documents/mesa/estado-preparacion.tsx` + `pendientes-list.tsx`: excepciones con causa humanizada + link de corrección (fix_url) + estado de la última corrida (`cascade_last_run_at`)
+- [x] T031 [US3] Vista "Minuta entregada": descarga + historial (`historial-generaciones.tsx`) + trazabilidad visible de aprobación system (molde/versión heredados — SC-005)
+- [x] T032 [US3] Gates de la historia: `pnpm --filter web test`, `pnpm typecheck:web`, `pnpm build:web` verdes
 
 **Checkpoint**: todas las historias funcionales de punta a punta.
 
@@ -139,10 +139,11 @@ Monorepo: `apps/api` (FastAPI), `apps/web` (Next.js), `packages/database/supabas
 
 ## Phase 7: Polish & Cierre
 
-- [ ] T033 Ejecutar quickstart.md completo contra Teno real (4 escenarios) y registrar mediciones al pie (SC-001/002/003/004/006)
-- [ ] T034 [P] Verificar conteo de acciones humanas del camino feliz: `every_sale` = 1, `exceptions_only` = 0 (SC-001/SC-002) y documentar en quickstart
-- [ ] T035 [P] Actualizar handoff en `plotify_memori/50 - Implementaciones/` (SDD017) con decisiones y estado final
-- [ ] T036 Gates finales completos: `pnpm test:api && pnpm --filter web test && pnpm typecheck:web && pnpm build:web && pnpm verify:migrations && pnpm contracts:generate` (sin diffs pendientes)
+- [x] T033 Ejecutar quickstart.md completo contra Teno real (4 escenarios) y registrar mediciones al pie (SC-001/002/003/004/006)
+- [x] T034 [P] Verificar conteo de acciones humanas del camino feliz: `every_sale` = 1, `exceptions_only` = 0 (SC-001/SC-002) y documentar en quickstart
+- [x] T035 [P] Actualizar handoff en `plotify_memori/50 - Implementaciones/` (SDD017) con decisiones y estado final
+- [x] T036 Gates finales completos: `pnpm test:api` (699 passed, 2 skipped), `pnpm --filter web test` (834 passed), `pnpm typecheck:web`, `pnpm build:web`, `pnpm verify:migrations`, `pnpm contracts:generate`, `pnpm format:check`, `pnpm --filter web lint` y `codegraph sync .` verdes. Nota: quedan diffs de implementación/documentación pendientes de commit; `contracts:generate` fue corrido y el OpenAPI generado se formateó con Prettier para dejar `format:check` verde.
+- [x] T037 Remediaciones de la revisión post-implementación (speckit-analyze, 2026-07-08): **(C1, alta)** el proxy `retry-cascade` no exigía rol admin como sus rutas hermanas y como pedía contracts §1 — guard 403 agregado + `apps/web/tests/retry-cascade-route.test.ts` (3 tests). **(I1, FR-011)** un `POST retry-cascade` sobre un caso `completed` con datos corregidos después regeneraba y re-entregaba en silencio (la matriz aprobada se supersedía a draft y la cascada generaba con el hash nuevo) — ahora `run_case_cascade` corta con `CaseOutdatedError` ANTES de registrar corrida (la mesa sigue mostrando "entregada") y el endpoint responde 409 `case_outdated`; regenerar sigue siendo acción explícita. Tests: pipeline + endpoint. **(I2, FR-003)** spec enmendado: la política se lee viva en cada corrida (aplica a reintentos de casos en curso), con test que fija el comportamiento. **(D1/D2)** contracts §1 y §5 actualizados a la implementación real (sin 409 legacy; notificación de excepción sin fila de delivery). **(D3)** spec marcado Implementado.
 
 ---
 

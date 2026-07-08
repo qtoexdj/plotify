@@ -261,6 +261,29 @@ async def _fetch_project(
     return row
 
 
+async def _fetch_project_warning_ack(
+    client: Any, project_id: str, organization_id: str
+) -> tuple[str, str] | None:
+    """SDD 017 (FR-009): amparo vigente del aviso legal de borrador del
+    proyecto — None si nunca se confirmó."""
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("projects")
+            .select("minuta_warning_acknowledged_by, minuta_warning_acknowledged_at")
+            .eq("id", project_id)
+            .eq("organization_id", organization_id)
+            .maybe_single()
+            .execute()
+        )
+    )
+    row = _first_row(getattr(result, "data", None))
+    by = row.get("minuta_warning_acknowledged_by") if row else None
+    at = row.get("minuta_warning_acknowledged_at") if row else None
+    if not by or not at:
+        return None
+    return str(by), str(at)
+
+
 async def _fetch_published_template(
     client: Any, organization_id: str
 ) -> dict[str, Any]:
@@ -664,6 +687,10 @@ def _readiness_gate_blockers(
             causes = [None]
         for cause in causes:
             cause_text = str(cause) if cause is not None else None
+            if gate_name in inherited_gates and cause_text:
+                producer = variable_producer(cause_text)
+                if producer in {"sale_gap", "signing"}:
+                    continue
             try:
                 copy = readiness_gate_microcopy(gate_name, cause_text)
             except KeyError:
@@ -2212,15 +2239,6 @@ async def generate_case_minuta(
     )
     from core.database import get_supabase_client
 
-    if not request.warning_acknowledged:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={
-                "code": "warning_required",
-                "message": "Debes confirmar el warning legal antes de generar la minuta.",
-            },
-        )
-
     client = get_supabase_client()
     org_id = str(organization_id)
     matrix_row = await _fetch_matrix_by_id(client, str(matriz_id), org_id)
@@ -2234,6 +2252,45 @@ async def generate_case_minuta(
         organization_id=org_id,
         project_id=str(case_row["project_id"]),
     )
+
+    # SDD 017 (T025, FR-009): el aviso legal se confirma una vez por
+    # proyecto (checklist de preparación), no por cada minuta. Si el
+    # proyecto ya tiene un amparo vigente, la generación lo hereda sin
+    # volver a pedir el flag por-request. Proyectos pre-SDD017 que nunca
+    # pasaron por el checklist siguen el camino legacy (exige el flag del
+    # request) y esta primera generación autosana el amparo del proyecto
+    # (se persiste una vez, las siguientes ya lo heredan).
+    project_id = str(case_row["project_id"])
+    warning_ack = await _fetch_project_warning_ack(client, project_id, org_id)
+    if warning_ack is None:
+        if not request.warning_acknowledged:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "warning_required",
+                    "message": "Debes confirmar el warning legal antes de generar la minuta.",
+                },
+            )
+        warning_ack_by = str(request.generated_by)
+        warning_ack_at = _utc_now_iso()
+        await asyncio.to_thread(
+            lambda: (
+                client.table("projects")
+                .update(
+                    {
+                        "minuta_warning_acknowledged_by": warning_ack_by,
+                        "minuta_warning_acknowledged_at": warning_ack_at,
+                    }
+                )
+                .eq("id", project_id)
+                .eq("organization_id", org_id)
+                .is_("minuta_warning_acknowledged_by", "null")
+                .execute()
+            )
+        )
+    else:
+        warning_ack_by, warning_ack_at = warning_ack
+
     if matrix_row.get("status") != "approved":
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -2293,8 +2350,8 @@ async def generate_case_minuta(
         template=template,
         active_clauses=active_clauses,
         generated_by=str(request.generated_by),
-        warning_acknowledged_by=str(request.generated_by),
-        warning_acknowledged_at=_utc_now_iso(),
+        warning_acknowledged_by=warning_ack_by,
+        warning_acknowledged_at=warning_ack_at,
     )
 
 
@@ -2327,6 +2384,7 @@ __all__ = [
     "_fetch_case",
     "_fetch_project_context",
     "_fetch_project",
+    "_fetch_project_warning_ack",
     "_fetch_published_template",
     "_fetch_template",
     "_fetch_template_clauses",

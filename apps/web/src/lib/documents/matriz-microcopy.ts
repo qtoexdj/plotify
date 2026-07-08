@@ -118,6 +118,17 @@ export const MESA_TEXT = {
   entendido: 'Entendido',
   noSePudoActualizarRevision: 'No se pudo actualizar la revisión. Intenta de nuevo.',
   noSePudoGenerarMinuta: 'No se pudo generar la minuta. Intenta de nuevo.',
+  noSePudoReintentarCascada: 'No se pudo reintentar la cascada. Intenta de nuevo.',
+  reintentarCascada: 'Reintentar',
+  minutaEntregadaTitle: 'Minuta entregada',
+  minutaEntregadaDescription:
+    'La cascada terminó: el caso fue aprobado por el sistema y la minuta quedó disponible.',
+  excepcionTitle: 'Caso en excepción',
+  excepcionDescription: 'Corrige las causas y reintenta la cascada desde la mesa.',
+  esperandoRevisionDescription:
+    'Este caso espera solo la revisión jurídica. Al aprobarla, la cascada continúa sola.',
+  trazabilidadSistema: 'Aprobación del sistema trazada con molde, versión y expediente vigente.',
+  ultimaCorrida: 'Última corrida',
   descargarMinuta: 'Descargar minuta',
   sinMinutas: 'Aún no se han generado minutas.',
   declaracionAceptada: 'Declaración legal aceptada al generar.',

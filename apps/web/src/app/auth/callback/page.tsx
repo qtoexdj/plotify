@@ -48,7 +48,9 @@ export default function AuthCallbackPage() {
         const refreshToken = hashParams.get('refresh_token')
 
         if (accessToken && refreshToken) {
-          console.debug('[auth/callback] Detectados tokens en hash fragment, estableciendo sesión...')
+          console.debug(
+            '[auth/callback] Detectados tokens en hash fragment, estableciendo sesión...'
+          )
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,

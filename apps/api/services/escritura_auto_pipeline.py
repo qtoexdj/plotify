@@ -28,6 +28,7 @@ from services.escritura_case_workflow import (
     _fetch_active_matrix,
     _fetch_case,
     _fetch_matrix_by_id,
+    _fetch_project_warning_ack,
     _fetch_template,
     _fetch_template_clauses,
     _first_row,
@@ -41,6 +42,7 @@ from services.escritura_case_workflow import (
     _resolve_org_admin_user_ids,
     _upsert_lot_variable,
     _utc_now_iso,
+    INHERITED_PROJECT_READINESS_GATES,
 )
 from services.escritura_delivery import _recipient_chat_id
 
@@ -54,6 +56,12 @@ class CascadeError(Exception):
     """Error de la cascada que no debe tratarse como excepción del caso
     (p. ej. trigger desconocido, caso fuera de tenant): el llamador decide
     cómo reaccionar, no se registra como una corrida."""
+
+
+class CaseOutdatedError(CascadeError):
+    """FR-011: el caso ya tiene una minuta entregada y sus datos cambiaron
+    después — la cascada NUNCA regenera sola sobre eso. Regenerar es una
+    acción humana explícita; el retry responde 409 sin registrar corrida."""
 
 
 @dataclass(frozen=True)
@@ -103,27 +111,6 @@ async def _fetch_org_review_policy(client: Any, organization_id: str) -> str:
     return str(policy) if policy else "every_sale"
 
 
-async def _fetch_project_warning_ack(
-    client: Any, project_id: str, organization_id: str
-) -> tuple[str, str] | None:
-    result = await asyncio.to_thread(
-        lambda: (
-            client.table("projects")
-            .select("minuta_warning_acknowledged_by, minuta_warning_acknowledged_at")
-            .eq("id", project_id)
-            .eq("organization_id", organization_id)
-            .maybe_single()
-            .execute()
-        )
-    )
-    row = _first_row(getattr(result, "data", None))
-    by = row.get("minuta_warning_acknowledged_by") if row else None
-    at = row.get("minuta_warning_acknowledged_at") if row else None
-    if not by or not at:
-        return None
-    return str(by), str(at)
-
-
 async def _fetch_latest_rejection_reason(
     client: Any, escritura_case_id: str, organization_id: str
 ) -> str | None:
@@ -155,6 +142,26 @@ async def _find_existing_generation(
             .eq("escritura_case_id", escritura_case_id)
             .eq("organization_id", organization_id)
             .eq("snapshot_hash", snapshot_hash)
+            .order("generated_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    return _first_row(getattr(result, "data", None))
+
+
+async def _fetch_latest_case_generation(
+    client: Any, *, escritura_case_id: str, organization_id: str
+) -> dict[str, Any] | None:
+    """Última generación del caso sin filtrar por hash: si existe y su hash no
+    coincide con el snapshot vigente, el documento entregado quedó
+    desactualizado (FR-011)."""
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_minuta_generations")
+            .select("id, snapshot_hash")
+            .eq("escritura_case_id", escritura_case_id)
+            .eq("organization_id", organization_id)
             .order("generated_at", desc=True)
             .limit(1)
             .execute()
@@ -451,6 +458,58 @@ async def run_case_cascade(
     matrix_row = (
         await _fetch_active_matrix(client, case_id, org_id, project_id) or matrix_row
     )
+    snapshot_hash = str(matrix_row["snapshot_hash"])
+    # FR-011: si el caso ya tiene una minuta y los datos cambiaron después
+    # (el hash vigente ya no calza con el de la última generación), la
+    # cascada no regenera sola — regenerar es una acción humana explícita.
+    # Se corta ANTES de registrar corrida para no pisar el estado
+    # "completed" que la mesa muestra como entregada.
+    latest_generation = await _fetch_latest_case_generation(
+        client, escritura_case_id=case_id, organization_id=org_id
+    )
+    if latest_generation and str(latest_generation.get("snapshot_hash")) != snapshot_hash:
+        raise CaseOutdatedError(
+            "case_outdated: el caso tiene una minuta entregada con datos "
+            "anteriores; regenerar es una acción explícita (FR-011)."
+        )
+    existing_generation = None
+    if matrix_row.get("status") == "approved":
+        existing_generation = await _find_existing_generation(
+            client,
+            escritura_case_id=case_id,
+            organization_id=org_id,
+            snapshot_hash=snapshot_hash,
+        )
+    if existing_generation:
+        steps.extend(
+            [
+                {"step": "submit", "action": "skipped", "detail": "approved"},
+                {
+                    "step": "legal_review",
+                    "action": "skipped",
+                    "detail": "already_approved",
+                },
+                {"step": "approve", "action": "skipped", "detail": "already_approved"},
+                {"step": "generate", "action": "skipped", "detail": "already_generated"},
+            ]
+        )
+        run_row = await _insert_cascade_run(
+            client,
+            organization_id=org_id,
+            escritura_case_id=case_id,
+            trigger=trigger,
+            outcome="completed",
+            causes=[],
+            steps=steps,
+        )
+        return CascadeRunResult(
+            run_id=str(run_row["id"]) if run_row.get("id") else None,
+            outcome="completed",
+            causes=[],
+            steps=steps,
+            generation_id=str(existing_generation["id"]),
+            created_at=run_row.get("created_at"),
+        )
 
     real_blockers = [b for b in blockers if not _is_review_checkpoint_blocker(b)]
     review_pending = any(_is_review_checkpoint_blocker(b) for b in blockers)
@@ -596,9 +655,11 @@ async def run_case_cascade(
     warning_ack_by, warning_ack_at = warning_ack
 
     # 6) Generar + entregar (idempotente por snapshot_hash del caso, D6).
-    snapshot_hash = str(matrix_row["snapshot_hash"])
     existing_generation = await _find_existing_generation(
-        client, escritura_case_id=case_id, organization_id=org_id, snapshot_hash=snapshot_hash
+        client,
+        escritura_case_id=case_id,
+        organization_id=org_id,
+        snapshot_hash=snapshot_hash,
     )
     if existing_generation:
         steps.append({"step": "generate", "action": "skipped", "detail": "already_generated"})
@@ -615,7 +676,13 @@ async def run_case_cascade(
             fix_url="/documentos/plantillas",
         )
         readiness_blockers = _readiness_gate_blockers(
-            case_row=case_row, fix_url=f"/projects/{project_id}?tab=legal"
+            case_row=case_row,
+            fix_url=f"/projects/{project_id}?tab=legal",
+            inherited_gates=(
+                INHERITED_PROJECT_READINESS_GATES
+                if matrix_row.get("source_project_matriz_id")
+                else None
+            ),
         )
         generation_blockers = [
             b

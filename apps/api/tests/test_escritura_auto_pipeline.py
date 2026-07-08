@@ -435,6 +435,46 @@ class TestHappyPathExceptionsOnly:
         assert runs[0]["outcome"] == "completed"
         assert runs[0]["escritura_case_id"] == CASE_ID
 
+    @pytest.mark.asyncio
+    async def test_ignores_inherited_project_gate_for_sale_scoped_role(self, monkeypatch):
+        """La matriz proyecto puede arrastrar un gate viejo que menciona
+        variables de lote; esas variables se validan en el caso."""
+        store = FakeStore()
+        _patch_admin_with_telegram(monkeypatch, store)
+        _patch_telegram(monkeypatch, FakeTelegramClient())
+        _seed_org(store, policy="exceptions_only")
+        _seed_project(store)
+        _seed_abogado_redactor(store)
+        case_row = _seed_case(
+            store,
+            legal_review_pending=True,
+            extra_readiness_gates={
+                "sii_verified": {
+                    "gate": "sii_verified",
+                    "status": "blocked",
+                    "blocking_variables": ["lote.rol_tramite"],
+                    "warnings": [],
+                }
+            },
+        )
+        template = _seed_template(store)
+        _seed_matrix(
+            store,
+            case_row=case_row,
+            template=template,
+            status="draft",
+            source_project_matriz_id=str(uuid.uuid4()),
+        )
+
+        result = await pipeline.run_case_cascade(
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            trigger="manual_retry",
+            supabase=store,
+        )
+
+        assert result.outcome == "completed"
+
 
 # ─── (b) every_sale → se detiene en awaiting_review ──────────────────────────
 
@@ -459,7 +499,7 @@ class TestEverySalePolicy:
         updated_matrix = store.tables["escritura_matrices"][0]
         assert updated_matrix["status"] == "legal_review_pending"
         assert updated_matrix["submitted_by"] is None
-        assert store.tables.get("escritura_minuta_generations") is None
+        assert not store.tables.get("escritura_minuta_generations")
 
     @pytest.mark.asyncio
     async def test_review_approved_trigger_resumes_and_completes(self, monkeypatch):
@@ -530,7 +570,7 @@ class TestRealBlockersException:
         assert len(result.causes) == 1
         assert result.causes[0]["kind"] == "readiness_gate"
         assert result.causes[0]["gate"] == "title_verified"
-        assert store.tables.get("escritura_minuta_generations") is None
+        assert not store.tables.get("escritura_minuta_generations")
 
         # No se tocó el status de la matriz (nunca se llegó a someterla).
         assert store.tables["escritura_matrices"][0]["status"] == "draft"
@@ -617,6 +657,135 @@ class TestIdempotencyAndResume:
         assert len(store.tables["escritura_minuta_generations"]) == 1
         assert store.storage.uploads == []
 
+    @pytest.mark.asyncio
+    async def test_retry_over_completed_case_ignores_current_every_sale_policy(
+        self, monkeypatch
+    ):
+        store = FakeStore()
+        _patch_admin_with_telegram(monkeypatch, store)
+        _patch_telegram(monkeypatch, FakeTelegramClient())
+        _seed_org(store, policy="every_sale")
+        _seed_project(store)
+        _seed_abogado_redactor(store)
+        case_row = _seed_case(store, legal_review_pending=True)
+        template = _seed_template(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+        generation_id = str(uuid.uuid4())
+        store.tables.setdefault("escritura_minuta_generations", []).append(
+            {
+                "id": generation_id,
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "escritura_case_id": CASE_ID,
+                "matriz_id": matrix["id"],
+                "matriz_version": matrix["version"],
+                "snapshot_hash": matrix["snapshot_hash"],
+                "storage_path": "org/escritura-minutas/case/prev.docx",
+                "generated_at": "2026-07-08T00:00:00Z",
+            }
+        )
+
+        result = await pipeline.run_case_cascade(
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            trigger="manual_retry",
+            supabase=store,
+        )
+
+        assert result.outcome == "completed"
+        assert result.generation_id == generation_id
+        assert result.steps[-1] == {
+            "step": "generate",
+            "action": "skipped",
+            "detail": "already_generated",
+        }
+        assert len(store.tables["escritura_minuta_generations"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_data_corrected_after_delivery_never_regenerates(self, monkeypatch):
+        """FR-011: caso con minuta entregada + datos corregidos después →
+        la cascada corta con CaseOutdatedError sin registrar corrida (la mesa
+        sigue mostrando "entregada"), sin regenerar y sin notificar."""
+        store = FakeStore()
+        _patch_admin_with_telegram(monkeypatch, store)
+        telegram = FakeTelegramClient()
+        _patch_telegram(monkeypatch, telegram)
+        _seed_org(store, policy="exceptions_only")
+        _seed_project(store)
+        _seed_abogado_redactor(store)
+        case_row = _seed_case(store, legal_review_pending=False)
+        template = _seed_template(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+        # La minuta se generó con los datos ANTERIORES del caso: su hash ya no
+        # calza con el snapshot vigente.
+        stale_hash = "hash-de-datos-anteriores"
+        matrix["snapshot_hash"] = stale_hash
+        store.tables.setdefault("escritura_minuta_generations", []).append(
+            {
+                "id": str(uuid.uuid4()),
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "escritura_case_id": CASE_ID,
+                "matriz_id": matrix["id"],
+                "matriz_version": matrix["version"],
+                "snapshot_hash": stale_hash,
+                "storage_path": "org/escritura-minutas/case/prev.docx",
+                "generated_at": "2026-07-08T00:00:00Z",
+            }
+        )
+
+        with pytest.raises(pipeline.CaseOutdatedError):
+            await pipeline.run_case_cascade(
+                organization_id=ORG_ID,
+                escritura_case_id=CASE_ID,
+                trigger="manual_retry",
+                supabase=store,
+            )
+
+        assert len(store.tables["escritura_minuta_generations"]) == 1
+        assert not store.tables.get("escritura_cascade_runs")
+        assert store.storage.uploads == []
+        assert telegram.sent == []
+
+    @pytest.mark.asyncio
+    async def test_policy_change_applies_to_in_course_case_on_retry(self, monkeypatch):
+        """FR-003 (enmendado en la revisión SDD017): la cascada lee la
+        política VIGENTE en cada corrida — un caso awaiting_review creado bajo
+        every_sale completa solo al reintentar tras cambiar la organización a
+        exceptions_only. Las corridas ya terminadas no cambian."""
+        store = FakeStore()
+        _patch_admin_with_telegram(monkeypatch, store)
+        _patch_telegram(monkeypatch, FakeTelegramClient())
+        _seed_org(store, policy="every_sale")
+        _seed_project(store)
+        _seed_abogado_redactor(store)
+        case_row = _seed_case(store, legal_review_pending=True)
+        template = _seed_template(store)
+        _seed_matrix(store, case_row=case_row, template=template, status="draft")
+
+        first = await pipeline.run_case_cascade(
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            trigger="sale_validated",
+            supabase=store,
+        )
+        assert first.outcome == "awaiting_review"
+
+        store.tables["organizations"][0]["escritura_review_policy"] = "exceptions_only"
+
+        second = await pipeline.run_case_cascade(
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            trigger="manual_retry",
+            supabase=store,
+        )
+        assert second.outcome == "completed"
+        assert len(store.tables["escritura_minuta_generations"]) == 1
+
 
 # ─── (f) Warning legal del proyecto ausente ──────────────────────────────────
 
@@ -646,7 +815,7 @@ class TestProjectWarningMissing:
         # Llegó hasta aprobar la matriz antes de toparse con el aviso legal.
         assert [s["step"] for s in result.steps] == ["submit", "legal_review", "approve"]
         assert store.tables["escritura_matrices"][0]["status"] == "approved"
-        assert store.tables.get("escritura_minuta_generations") is None
+        assert not store.tables.get("escritura_minuta_generations")
 
 
 # ─── Four-eyes + exceptions_only (research D8) ──────────────────────────────
@@ -760,7 +929,7 @@ class TestLegalReviewRejected:
         assert result.steps[1]["detail"] == "rejected"
         # La matriz sigue en legal_review_pending: el rechazo no la toca.
         assert store.tables["escritura_matrices"][0]["status"] == "legal_review_pending"
-        assert store.tables.get("escritura_minuta_generations") is None
+        assert not store.tables.get("escritura_minuta_generations")
 
     @pytest.mark.asyncio
     async def test_rejected_review_is_exception_even_in_exceptions_only(self, monkeypatch):

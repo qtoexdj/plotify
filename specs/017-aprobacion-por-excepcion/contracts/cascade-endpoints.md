@@ -14,14 +14,14 @@ Reintenta la cascada de un caso (gatillo `manual_retry`). Idempotente: sobre un 
 {
   "run_id": "uuid",
   "outcome": "completed | exception | awaiting_review",
-  "causes": [ { "kind": "...", "title": "...", "description": "...", "fix_url": "..." } ],
-  "steps": [ { "step": "approve", "action": "skipped", "detail": "already approved" } ],
+  "causes": [{ "kind": "...", "title": "...", "description": "...", "fix_url": "..." }],
+  "steps": [{ "step": "approve", "action": "skipped", "detail": "already approved" }],
   "generation_id": "uuid | null",
   "created_at": "iso8601"
 }
 ```
 
-**Errores**: 404 caso fuera de la organización; 409 caso legacy sin corrida previa y matriz en flujo manual intermedio (usar el flujo manual o migrarlo con el primer retry — decidir en tasks).
+**Errores**: 404 caso fuera de la organización; 403 (proxy web) si el solicitante no es admin de la organización; 409 `case_outdated` cuando el caso ya tiene una minuta entregada y sus datos cambiaron después — la cascada nunca regenera sola, regenerar es una acción humana explícita (FR-011). Los casos legacy NO reciben 409 (decisión tomada en implementación): la cascada corre igual sobre ellos y la primera corrida los migra a la vista de cascada; el flujo manual sigue disponible mientras no haya corridas.
 
 ## 2. Política de revisión — Server Action (patrón casa, no OpenAPI)
 
@@ -51,7 +51,9 @@ Campos nuevos (aditivos, no breaking):
 ```json
 {
   "cascade_status": "completed | exception | awaiting_review | legacy",
-  "cascade_causes": [ /* blockers humanizados de la última corrida */ ],
+  "cascade_causes": [
+    /* blockers humanizados de la última corrida */
+  ],
   "cascade_last_run_at": "iso8601 | null",
   "approval_origin": "human | system"
 }
@@ -70,4 +72,4 @@ Mensaje nuevo del canal de `escritura_delivery` (best-effort):
 → {link a la mesa del caso}
 ```
 
-Registrado como delivery con tipo `exception_notice` para trazabilidad (no reintenta solo; el retry de cascada re-notifica si vuelve a caer en excepción).
+**Desviación aplicada en T012** (esta es la forma final): NO se registra como fila de `escritura_deliveries` — esa tabla exige `generation_id NOT NULL` y en una excepción no existe generación. El aviso va como mensaje Telegram directo a los admins con Telegram vinculado (best-effort, nunca bloquea la corrida) y la trazabilidad queda en `escritura_cascade_runs` (`causes`/`steps` de la corrida `exception`). No reintenta solo; el retry de cascada re-notifica si vuelve a caer en excepción.

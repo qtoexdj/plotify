@@ -12,6 +12,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { caseId } = await params
     const scope = await resolveCaseScope(request, caseId)
     if ('error' in scope) return scope.error
+    if (scope.role !== 'admin') {
+      return Response.json({ error: 'Solo un admin puede reintentar la cascada' }, { status: 403 })
+    }
 
     const upstreamParams = new URLSearchParams({ organization_id: scope.organizationId })
     const { data, error, status } = await microserviceFetch<CascadeRunResult>(

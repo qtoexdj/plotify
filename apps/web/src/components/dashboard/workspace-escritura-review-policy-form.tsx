@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -92,9 +91,7 @@ export function WorkspaceEscrituraReviewPolicyForm({
             <SelectItem value="exceptions_only">{POLICY_LABELS.exceptions_only}</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground/80 max-w-xl">
-          {POLICY_DESCRIPTIONS[policy]}
-        </p>
+        <p className="text-xs text-muted-foreground/80 max-w-xl">{POLICY_DESCRIPTIONS[policy]}</p>
         {isPending && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Spinner className="h-3 w-3" />

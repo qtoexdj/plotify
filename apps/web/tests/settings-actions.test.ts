@@ -26,6 +26,7 @@ vi.mock('@/lib/services/audit.service', () => ({
 import { createClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/services/audit.service'
 import { updateEscrituraReviewPolicyAction } from '@/app/(dashboard)/settings/actions'
+import { acknowledgeMinutaWarningAction } from '@/actions/escritura-warning.action'
 
 const ORG_ID = 'org-uuid-1'
 const USER_ID = 'user-uuid-1'
@@ -33,9 +34,7 @@ const USER_ID = 'user-uuid-1'
 function buildClientMock({
   user = { id: USER_ID } as { id: string } | null,
   member = { role: 'admin' } as { role: string } | null,
-  current = { escritura_review_policy: 'every_sale' } as
-    | { escritura_review_policy: string }
-    | null,
+  current = { escritura_review_policy: 'every_sale' } as { escritura_review_policy: string } | null,
   readError = null as string | null,
   updateError = null as string | null,
 }: {
@@ -175,5 +174,120 @@ describe('updateEscrituraReviewPolicyAction', () => {
     const result = await updateEscrituraReviewPolicyAction(ORG_ID, 'exceptions_only')
 
     expect(result.error).toBe('Error al leer la política actual.')
+  })
+})
+
+function buildWarningClientMock({
+  user = { id: USER_ID } as { id: string } | null,
+  isProjectAdmin = true,
+  isSuperAdmin = false,
+  project = {
+    minuta_warning_acknowledged_by: null,
+    minuta_warning_acknowledged_at: null,
+    organization_id: ORG_ID,
+  } as {
+    minuta_warning_acknowledged_by: string | null
+    minuta_warning_acknowledged_at: string | null
+    organization_id: string | null
+  } | null,
+  readError = null as string | null,
+  updateError = null as string | null,
+}: {
+  user?: { id: string } | null
+  isProjectAdmin?: boolean
+  isSuperAdmin?: boolean
+  project?: {
+    minuta_warning_acknowledged_by: string | null
+    minuta_warning_acknowledged_at: string | null
+    organization_id: string | null
+  } | null
+  readError?: string | null
+  updateError?: string | null
+} = {}) {
+  const getUser = vi.fn().mockResolvedValue({ data: { user }, error: null })
+  const rpc = vi.fn((name: string) => {
+    if (name === 'is_project_admin') return Promise.resolve({ data: isProjectAdmin, error: null })
+    if (name === 'is_super_admin') return Promise.resolve({ data: isSuperAdmin, error: null })
+    return Promise.resolve({ data: null, error: { message: `Unexpected rpc: ${name}` } })
+  })
+
+  const maybeSingle = vi.fn().mockResolvedValue({
+    data: project,
+    error: readError ? { message: readError } : null,
+  })
+  const selectEq = vi.fn().mockReturnValue({ maybeSingle })
+  const select = vi.fn().mockReturnValue({ eq: selectEq })
+  const updateEq = vi.fn().mockResolvedValue({
+    error: updateError ? { message: updateError } : null,
+  })
+  const update = vi.fn().mockReturnValue({ eq: updateEq })
+  const from = vi.fn((table: string) => {
+    if (table === 'projects') return { select, update }
+    throw new Error(`Unexpected table: ${table}`)
+  })
+
+  return {
+    client: { auth: { getUser }, rpc, from },
+    spies: { rpc, select, update, updateEq },
+  }
+}
+
+describe('acknowledgeMinutaWarningAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects users without project admin permissions', async () => {
+    const { client, spies } = buildWarningClientMock({ isProjectAdmin: false, isSuperAdmin: false })
+    vi.mocked(createClient).mockResolvedValue(client as never)
+
+    const result = await acknowledgeMinutaWarningAction('project-1')
+
+    expect('error' in result ? result.error : '').toContain('administrador')
+    expect(spies.update).not.toHaveBeenCalled()
+  })
+
+  it('is idempotent when the project already has an acknowledgement', async () => {
+    const { client, spies } = buildWarningClientMock({
+      project: {
+        minuta_warning_acknowledged_by: 'existing-user',
+        minuta_warning_acknowledged_at: '2026-07-08T12:00:00.000Z',
+        organization_id: ORG_ID,
+      },
+    })
+    vi.mocked(createClient).mockResolvedValue(client as never)
+
+    const result = await acknowledgeMinutaWarningAction('project-1')
+
+    expect(result).toEqual({
+      success: true,
+      acknowledgedBy: 'existing-user',
+      acknowledgedAt: '2026-07-08T12:00:00.000Z',
+    })
+    expect(spies.update).not.toHaveBeenCalled()
+    expect(logAudit).not.toHaveBeenCalled()
+  })
+
+  it('writes the project acknowledgement and audits the event once', async () => {
+    const { client, spies } = buildWarningClientMock()
+    vi.mocked(createClient).mockResolvedValue(client as never)
+
+    const result = await acknowledgeMinutaWarningAction('project-1')
+
+    expect('success' in result ? result.success : false).toBe(true)
+    expect(spies.update).toHaveBeenCalledWith({
+      minuta_warning_acknowledged_by: USER_ID,
+      minuta_warning_acknowledged_at: expect.any(String),
+    })
+    expect(spies.updateEq).toHaveBeenCalledWith('id', 'project-1')
+    expect(logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actor: USER_ID,
+        entity: 'projects',
+        entity_id: 'project-1',
+        organization_id: ORG_ID,
+        payload: expect.objectContaining({ event: 'minuta_warning_acknowledged' }),
+      })
+    )
   })
 })

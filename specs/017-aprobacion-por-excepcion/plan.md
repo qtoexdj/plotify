@@ -32,14 +32,14 @@ Al validarse una venta, una **cascada server-side** completa el caso de escritur
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| Principio | Evaluación |
-| --- | --- |
-| I. Producto piloto primero | PASS — elimina fricción del flujo core (venta → documento) sin agregar features experimentales. La cascada respeta "aprobación administrativa web de reservas/ventas" (la venta sigue siendo aprobada por un humano). |
-| II. Geometría como origen | PASS — no toca deslindes ni geometría; consume lo que SDD016 dejó (puente produce servidumbre/deslindes). |
-| III. Migraciones canónicas | PASS — 3 migraciones nuevas en `packages/database/supabase/migrations` (política de revisión, warning por proyecto, corridas de cascada); `pnpm verify:migrations` en el gate. **Recordatorio de memoria**: aplicar vía `supabase db push`, NO vía MCP `apply_migration` (evita divergencia del historial). |
-| IV. Contratos tipados | PASS — endpoints nuevos (retry, política de revisión, warning-ack) y campos nuevos en `MatrizCaseResponse` entran al OpenAPI y se regenera el cliente con `pnpm contracts:generate`. |
-| V. Multi-tenant + auditoría | PASS — la cascada corre server-side con tenant inferido del caso (nunca del frontend); toda decisión del sistema se registra en `legal_review_decisions` con origen `system`, gatillo y molde/versión heredado; el cambio de política de revisión se audita. |
-| VI. Testing obligatorio | PASS — toca generación de documentos y transacciones de venta ⇒ tests exigidos: pytest de la cascada (feliz/excepción/reanudación/idempotencia/four-eyes), tests de endpoints con FakeStore, Vitest de la mesa; gates verdes por user story (SC-007). |
+| Principio                   | Evaluación                                                                                                                                                                                                                                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I. Producto piloto primero  | PASS — elimina fricción del flujo core (venta → documento) sin agregar features experimentales. La cascada respeta "aprobación administrativa web de reservas/ventas" (la venta sigue siendo aprobada por un humano).                                                                                       |
+| II. Geometría como origen   | PASS — no toca deslindes ni geometría; consume lo que SDD016 dejó (puente produce servidumbre/deslindes).                                                                                                                                                                                                   |
+| III. Migraciones canónicas  | PASS — 3 migraciones nuevas en `packages/database/supabase/migrations` (política de revisión, warning por proyecto, corridas de cascada); `pnpm verify:migrations` en el gate. **Recordatorio de memoria**: aplicar vía `supabase db push`, NO vía MCP `apply_migration` (evita divergencia del historial). |
+| IV. Contratos tipados       | PASS — endpoints nuevos (retry, política de revisión, warning-ack) y campos nuevos en `MatrizCaseResponse` entran al OpenAPI y se regenera el cliente con `pnpm contracts:generate`.                                                                                                                        |
+| V. Multi-tenant + auditoría | PASS — la cascada corre server-side con tenant inferido del caso (nunca del frontend); toda decisión del sistema se registra en `legal_review_decisions` con origen `system`, gatillo y molde/versión heredado; el cambio de política de revisión se audita.                                                |
+| VI. Testing obligatorio     | PASS — toca generación de documentos y transacciones de venta ⇒ tests exigidos: pytest de la cascada (feliz/excepción/reanudación/idempotencia/four-eyes), tests de endpoints con FakeStore, Vitest de la mesa; gates verdes por user story (SC-007).                                                       |
 
 **Violaciones**: ninguna. `Complexity Tracking` queda vacío.
 

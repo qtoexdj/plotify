@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import {
   getMatrizCase,
   getMatrizProject,
+  listMinutaGenerations,
   saveMatriz,
   stageOperationalVariables,
   MatrizClientError,
@@ -25,8 +26,10 @@ import type {
   MatrizClauseOverride,
   MatrizClauseView,
   MatrizView,
+  MinutaGeneration,
 } from '@/lib/documents/matriz-types'
 import { EstadoPreparacion } from './estado-preparacion'
+import { HistorialGeneraciones } from './historial-generaciones'
 import { MesaDocumento, clausulasOrdenadas } from './mesa-documento'
 import { MesaEncabezado } from './mesa-encabezado'
 import { MesaIndice } from './mesa-indice'
@@ -44,6 +47,7 @@ import { WorkflowAcciones } from './workflow-acciones'
  */
 
 export type MesaVista = 'preparacion' | 'mesa'
+export type CascadeMesaVista = 'completed' | 'exception' | 'awaiting_review' | 'legacy'
 
 export function isInheritedProjectGateBlocker(blocker: ApprovalBlocker): boolean {
   return blocker.kind === 'readiness_gate' && blocker.inherited === true
@@ -70,10 +74,17 @@ function isLegalReviewActionOnlyBlocker(blocker: ApprovalBlocker): boolean {
 }
 
 export function decideMesaVista(matriz: MatrizView): MesaVista {
+  if (matriz.cascade_status === 'completed' || matriz.cascade_status === 'exception') {
+    return 'mesa'
+  }
   const verificacionesBloqueadas = visibleApprovalBlockers(matriz.approval_blockers).some(
     (blocker) => blocker.kind === 'readiness_gate' && !isLegalReviewActionOnlyBlocker(blocker)
   )
   return verificacionesBloqueadas ? 'preparacion' : 'mesa'
+}
+
+export function decideCascadeMesaVista(matriz: MatrizView): CascadeMesaVista {
+  return matriz.cascade_status ?? 'legacy'
 }
 
 /** Resumen del caso para encabezado e índice (migrado del builder SDD 008). */
@@ -155,6 +166,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
   const isCompact = useIsCompactMesa()
   const [indiceSheetOpen, setIndiceSheetOpen] = useState(false)
   const [datosSheetOpen, setDatosSheetOpen] = useState(false)
+  const [generations, setGenerations] = useState<MinutaGeneration[]>([])
 
   useEffect(() => {
     if (initialData || missingSource) return
@@ -182,6 +194,25 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
     [matriz]
   )
   const ordenadas = useMemo(() => (matriz ? clausulasOrdenadas(matriz) : []), [matriz])
+  const cascadeVista = matriz ? decideCascadeMesaVista(matriz) : 'legacy'
+
+  useEffect(() => {
+    const escrituraCaseId = matriz?.escritura_case_id
+    if (!escrituraCaseId || cascadeVista !== 'completed') {
+      return
+    }
+    let active = true
+    listMinutaGenerations(escrituraCaseId)
+      .then((response) => {
+        if (active) setGenerations(response.generations)
+      })
+      .catch(() => {
+        if (active) setGenerations([])
+      })
+    return () => {
+      active = false
+    }
+  }, [matriz?.escritura_case_id, cascadeVista])
 
   function handleReordenar(reordenadas: MatrizClauseView[]) {
     setData((current) => {
@@ -315,11 +346,61 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
 
   const datosContent = (
     <div className="space-y-4">
+      {cascadeVista === 'completed' ? (
+        <section className="rounded-lg border border-success/30 bg-success/10 p-4 text-card-foreground">
+          <h3 className="text-sm font-semibold text-success">{MESA_TEXT.minutaEntregadaTitle}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {MESA_TEXT.minutaEntregadaDescription}
+          </p>
+          {matriz.approval_origin === 'system' ? (
+            <p className="mt-2 text-xs text-muted-foreground">{MESA_TEXT.trazabilidadSistema}</p>
+          ) : null}
+          {matriz.cascade_last_run_at ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {MESA_TEXT.ultimaCorrida}:{' '}
+              {new Date(matriz.cascade_last_run_at).toLocaleString('es-CL')}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {cascadeVista === 'exception' ? (
+        <section className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-card-foreground">
+          <h3 className="text-sm font-semibold text-warning">{MESA_TEXT.excepcionTitle}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{MESA_TEXT.excepcionDescription}</p>
+          {matriz.cascade_last_run_at ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {MESA_TEXT.ultimaCorrida}:{' '}
+              {new Date(matriz.cascade_last_run_at).toLocaleString('es-CL')}
+            </p>
+          ) : null}
+          <div className="mt-3">
+            <PendientesList
+              blockers={
+                (matriz.cascade_causes as ApprovalBlocker[] | undefined) ?? blockersVisibles
+              }
+              compact
+            />
+          </div>
+        </section>
+      ) : null}
+
+      {cascadeVista === 'awaiting_review' ? (
+        <section className="rounded-lg border border-info/30 bg-info/10 p-4 text-card-foreground">
+          <h3 className="text-sm font-semibold text-info">{MESA_TEXT.esperandoRevisionJuridica}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {MESA_TEXT.esperandoRevisionDescription}
+          </p>
+        </section>
+      ) : null}
+
       <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
         <WorkflowAcciones matriz={matriz} onWorkflowUpdate={handleWorkflowUpdate} />
       </section>
 
-      {blockersVisibles.length > 0 ? (
+      {cascadeVista === 'completed' ? <HistorialGeneraciones generations={generations} /> : null}
+
+      {blockersVisibles.length > 0 && cascadeVista !== 'completed' ? (
         <section className="rounded-lg border border-border bg-card p-4 text-card-foreground">
           <h3 className="mb-3 text-sm font-semibold">{MESA_TEXT.pendientesTitle}</h3>
           {matriz.scope === 'project' ? (

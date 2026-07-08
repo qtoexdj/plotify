@@ -202,6 +202,10 @@ export interface Project {
   doc_subdivision: string | null
   doc_plano_oficial: string | null
   doc_otros: string | null
+  // SDD 017: aviso legal de borrador confirmado una vez por proyecto (ampara
+  // todas las generaciones de minuta, manuales y automáticas).
+  minuta_warning_acknowledged_by: string | null
+  minuta_warning_acknowledged_at: string | null
   created_at: string
   updated_at: string
 }

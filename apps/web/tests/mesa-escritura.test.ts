@@ -11,6 +11,7 @@ import fs from 'fs'
 import path from 'path'
 
 import {
+  decideCascadeMesaVista,
   decideMesaVista,
   isInheritedProjectGateBlocker,
   mensajeDeGuardado,
@@ -203,6 +204,21 @@ describe('decideMesaVista (research D7)', () => {
       title: 'Verificación pendiente: revisión jurídica lista',
     }
     expect(decideMesaVista(matrizWith([legalReviewDataBlocker]))).toBe('preparacion')
+  })
+
+  it('SDD017 decide la vista por estado de cascada sin reabrir peajes del camino feliz', () => {
+    expect(decideCascadeMesaVista({ ...matrizWith([]), cascade_status: 'completed' })).toBe(
+      'completed'
+    )
+    expect(decideCascadeMesaVista({ ...matrizWith([]), cascade_status: 'exception' })).toBe(
+      'exception'
+    )
+    expect(decideCascadeMesaVista({ ...matrizWith([]), cascade_status: 'awaiting_review' })).toBe(
+      'awaiting_review'
+    )
+    expect(decideMesaVista({ ...matrizWith([GATE_BLOCKER]), cascade_status: 'exception' })).toBe(
+      'mesa'
+    )
   })
 })
 
@@ -954,7 +970,21 @@ describe('cableado de la ruta y los componentes', () => {
     expect(source).toContain('PanelDatos')
     expect(source).toContain('PendientesList')
     expect(source).toContain('WorkflowAcciones')
+    expect(source).toContain('decideCascadeMesaVista')
+    expect(source).toContain('MESA_TEXT.minutaEntregadaTitle')
+    expect(source).toContain('MESA_TEXT.excepcionTitle')
+    expect(source).toContain('HistorialGeneraciones')
     expect(source).not.toContain('MatrizBuilder')
+  })
+
+  it('SDD017 quita acciones manuales del camino feliz y reintenta excepciones', () => {
+    const workflow = read('src/components/documents/mesa/workflow-acciones.tsx')
+    expect(workflow).toContain('retryCascade')
+    expect(workflow).toContain("cascadeStatus === 'exception'")
+    expect(workflow).toContain('puedeMostrarWorkflowManual')
+    expect(workflow).toContain('warning_acknowledged: false')
+    expect(workflow).toContain('open={accion !== null && !requiereComentario(accion)}')
+    expect(workflow).not.toContain("onClick={() => abrir('generar')}")
   })
 
   it('el índice reordena con dnd-kit y las fijas ancladas (T013)', () => {

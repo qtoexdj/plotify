@@ -479,10 +479,11 @@ async def retry_cascade(
 ) -> CascadeRunResponse:
     """SDD 017 (T013): reintenta la cascada de aprobación por excepción de un
     caso (contracts §1). Idempotente — sobre un caso ya `completed` responde
-    el estado final sin efectos (D6)."""
+    el estado final sin efectos (D6). Sobre un caso con minuta entregada y
+    datos corregidos después responde 409 (FR-011: regenerar es explícito)."""
     from api.v1.endpoints.legal_variables import ensure_legal_documents_feature_enabled
     from core.database import get_supabase_client
-    from services.escritura_auto_pipeline import run_case_cascade
+    from services.escritura_auto_pipeline import CaseOutdatedError, run_case_cascade
 
     client = get_supabase_client()
     org_id = str(organization_id)
@@ -490,12 +491,24 @@ async def retry_cascade(
     ensure_legal_documents_feature_enabled(
         organization_id=org_id, project_id=str(case_row["project_id"])
     )
-    result = await run_case_cascade(
-        organization_id=org_id,
-        escritura_case_id=str(escritura_case_id),
-        trigger="manual_retry",
-        supabase=client,
-    )
+    try:
+        result = await run_case_cascade(
+            organization_id=org_id,
+            escritura_case_id=str(escritura_case_id),
+            trigger="manual_retry",
+            supabase=client,
+        )
+    except CaseOutdatedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "case_outdated",
+                "message": (
+                    "El caso tiene una minuta entregada con datos anteriores; "
+                    "regenerar es una acción explícita."
+                ),
+            },
+        )
     return CascadeRunResponse.model_validate(result.to_dict())
 
 
