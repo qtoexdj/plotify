@@ -78,18 +78,20 @@ Monorepo: `apps/api` (FastAPI), `apps/web` (Next.js), `packages/database/supabas
 
 ### Tests for User Story 2 (primero, deben fallar)
 
-- [ ] T016 [P] [US2] Vitest del server action de política en `apps/web/tests/settings-actions.test.ts`: solo admin de la org puede cambiarla, valor inválido rechazado, escribe `organizations.escritura_review_policy` y registra el cambio (de→a) vía `logAudit` en `audit_logs`
-- [ ] T017 [P] [US2] Tests de reanudación en `apps/api/tests/test_escritura_auto_pipeline.py`: aprobar revisión → cascada continúa (trigger `review_approved`) hasta completed; rechazo → exception con comentario del revisor; four-eyes activo + `exceptions_only` → awaiting_review (research D8, gana el control más estricto)
+- [x] T016 [P] [US2] `apps/web/tests/settings-actions.test.ts` (8 tests): sin sesión, no-admin rechazado, membresía ausente rechazada, escribe+audita from→to, no-op idempotente sin cambio real, default 'every_sale' cuando la org no tiene valor previo, errores de lectura/escritura propagados
+- [x] T017 [P] [US2] Cubierto en `test_escritura_auto_pipeline.py`: reanudación (`TestEverySalePolicy::test_review_approved_trigger_resumes_and_completes`), four-eyes+exceptions_only (`TestFourEyesInteraction`), y — encontrado al implementar, no estaba en el plan original — rechazo→exception con comentario (`TestLegalReviewRejected`, 2 tests) + test de endpoint (`test_reject_triggers_cascade_exception_run`)
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Server action `updateEscrituraReviewPolicyAction` en `apps/web/src/app/(dashboard)/settings/actions.ts` (patrón casa de SDD016: chequeo admin vía `organization_members` + escritura directa + `logAudit` de `apps/web/src/lib/services/audit.service.ts` con valor anterior→nuevo). La cascada (FastAPI) solo LEE la columna — contracts §2
-- [ ] T019 [US2] `submit_legal_review` (`apps/api/api/v1/endpoints/escritura_matrices.py`): decisión `aprobada` → `run_case_cascade(trigger='review_approved')`; `rechazada` → corrida exception con causa "revisión rechazada" + comentario
-- [ ] T020 [US2] Interacción four-eyes en `escritura_auto_pipeline.py`: envío origin system satisface el distinct-reviewer para cualquier humano; `exceptions_only` + flag activo → detenerse en awaiting_review (D8)
-- [ ] T021 [US2] Toggle de política en `apps/web/src/app/(dashboard)/settings/workspace/page.tsx` (pantalla de org de SDD016): selector con descripción de cada modo + quién/cuándo del último cambio; test Vitest del componente
-- [ ] T022 [US2] Gates de la historia verdes (`pnpm test:api`, `pnpm --filter web test`, `pnpm typecheck:web`)
+- [x] T018 [US2] `updateEscrituraReviewPolicyAction` en `settings/actions.ts` (patrón casa: chequeo admin + escritura directa + `logAudit` con from→to). La cascada solo LEE la columna, ya implementado en T010.
+- [x] T019 [US2] `submit_legal_review` retoma la cascada tras CUALQUIER decisión (no solo aprobada) con `trigger='review_approved'` — necesario para que el rechazo también quede reflejado como la corrida más reciente en `cascade_status`.
+- [x] T020 [US2] Four-eyes ya implementado dentro de `run_case_cascade` (T010): `requires_human_review = policy=='every_sale' or (policy=='exceptions_only' and four_eyes_active)`.
+- [x] T021 [US2] `WorkspaceEscrituraReviewPolicyForm` (selector + descripción de cada modo) montado en `settings/workspace/page.tsx`.
+- [x] T022 [US2] `pnpm test:api` (696), `pnpm --filter web test` (829), `pnpm typecheck:web` y `pnpm build` (producción) verdes.
 
-**Checkpoint**: quickstart Escenario 1 (1 acto) y Escenario 2 (0 actos) completos contra Teno real.
+**Bug real encontrado y corregido al implementar T017** (no estaba en el diseño original, D8 no lo previó): `_evaluate_variable_gate` (`escritura_readiness.py`) solo chequeaba que `revision_juridica.estado` TUVIERA un valor, no cuál — 'rechazada' satisfacía el gate `legal_review_ready` igual que 'aprobada'. Sin el fix, un caso rechazado podía aprobarse igual (a mano o vía la cascada). Corregido: esa variable es la única cuyo valor exacto decide el gate. La cascada distingue "revisión pendiente" (awaiting_review) de "revisión rechazada" (exception inmediata con el motivo, nunca awaiting_review).
+
+**Checkpoint alcanzado en código y tests (FakeStore + Vitest). Pendiente**: correr el quickstart Escenario 1 (1 acto) y Escenario 2 (0 actos) contra Teno real — Escenario 3 (excepción con causas reales + notificación Telegram) ya se validó en vivo contra el lote 14 de Teno.
 
 ---
 
