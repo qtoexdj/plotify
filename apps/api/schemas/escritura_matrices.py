@@ -248,11 +248,31 @@ class MatrizView(MatrizResponseModel):
     resolution: ResolutionManifest = Field(default_factory=ResolutionManifest)
     approval_blockers: list[ApprovalBlocker] = Field(default_factory=list)
     dismissed_alerts: list[DismissedAlert] = Field(default_factory=list)
+    # SDD 017 (T014): estado de la última corrida de la cascada de
+    # aprobación por excepción (solo scope=lot; None en scope=proyecto y en
+    # casos anteriores a SDD017 sin ninguna corrida — "legacy").
+    cascade_status: Literal["completed", "exception", "awaiting_review", "legacy"] | None = None
+    cascade_causes: list[dict[str, Any]] = Field(default_factory=list)
+    cascade_last_run_at: datetime | None = None
+    # SDD 017 (T005/D2): quién aprobó esta versión de la matriz — humano
+    # (default, incluye todo lo histórico) o el sistema, vía la cascada.
+    approval_origin: Literal["human", "system"] = "human"
 
 
 class MatrizCaseResponse(MatrizResponseModel):
     matriz: MatrizView
     insertable_variables: list[InsertableVariable] = Field(default_factory=list)
+
+
+class CascadeRunResponse(MatrizResponseModel):
+    """SDD 017: resultado de una corrida de la cascada (contracts §1)."""
+
+    run_id: UUID | None = None
+    outcome: Literal["completed", "exception", "awaiting_review"]
+    causes: list[dict[str, Any]] = Field(default_factory=list)
+    steps: list[dict[str, Any]] = Field(default_factory=list)
+    generation_id: UUID | None = None
+    created_at: datetime | None = None
 
 
 class MatrizClauseOverride(MatrizBaseModel):

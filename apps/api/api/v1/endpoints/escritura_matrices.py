@@ -15,9 +15,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.deps import verify_internal_secret
+from core.logger import get_logger
 from schemas.escritura_matrices import (
     BulkVerifyLotsRequest,
     BulkVerifyLotsResponse,
+    CascadeRunResponse,
     EscrituraTraceResponse,
     GenerateMinutaRequest,
     LegalReviewDecisionRequest,
@@ -32,6 +34,8 @@ from schemas.escritura_matrices import (
 )
 from services.escritura_readiness import fetch_project_matriz_snapshot
 from services.escritura_case_workflow import *  # noqa: F401,F403
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     tags=["escritura-matrices"],
@@ -233,6 +237,30 @@ async def submit_legal_review(
         stage_operational=False,
         supabase=client,
     )
+
+    if request.decision == "aprobada":
+        # SDD 017 (T019): con la revisión jurídica aprobada por el humano,
+        # retomar la cascada de aprobación por excepción — es el único acto
+        # humano que promete el modo every_sale (SC-002); de aquí en más el
+        # sistema aprueba la matriz, genera y entrega solo. Best-effort: una
+        # falla de la cascada nunca revierte la revisión jurídica ya
+        # aprobada, solo deja el caso en excepción visible en la mesa.
+        from services.escritura_auto_pipeline import run_case_cascade
+
+        try:
+            await run_case_cascade(
+                organization_id=org_id,
+                escritura_case_id=str(escritura_case_id),
+                trigger="review_approved",
+                supabase=client,
+            )
+        except Exception as exc:  # noqa: BLE001 - cascada best-effort
+            logger.error(
+                "escritura_cascade_trigger_failed",
+                organization_id=org_id,
+                escritura_case_id=str(escritura_case_id),
+                error=str(exc),
+            )
 
     refreshed_case = await _fetch_case(client, str(escritura_case_id), org_id)
     matrix_row = await _fetch_active_matrix(client, str(escritura_case_id), org_id, project_id)
@@ -437,6 +465,36 @@ async def get_escritura_trace(
     )
     trace = await _build_escritura_trace(client, case_row)
     return EscrituraTraceResponse.model_validate(trace)
+
+
+@router.post(
+    "/escritura-cases/{escritura_case_id}/retry-cascade",
+    response_model=CascadeRunResponse,
+)
+async def retry_cascade(
+    escritura_case_id: UUID,
+    organization_id: UUID = Query(...),
+) -> CascadeRunResponse:
+    """SDD 017 (T013): reintenta la cascada de aprobación por excepción de un
+    caso (contracts §1). Idempotente — sobre un caso ya `completed` responde
+    el estado final sin efectos (D6)."""
+    from api.v1.endpoints.legal_variables import ensure_legal_documents_feature_enabled
+    from core.database import get_supabase_client
+    from services.escritura_auto_pipeline import run_case_cascade
+
+    client = get_supabase_client()
+    org_id = str(organization_id)
+    case_row = await _fetch_case(client, str(escritura_case_id), org_id)
+    ensure_legal_documents_feature_enabled(
+        organization_id=org_id, project_id=str(case_row["project_id"])
+    )
+    result = await run_case_cascade(
+        organization_id=org_id,
+        escritura_case_id=str(escritura_case_id),
+        trigger="manual_retry",
+        supabase=client,
+    )
+    return CascadeRunResponse.model_validate(result.to_dict())
 
 
 @router.post(

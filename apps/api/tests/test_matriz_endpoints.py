@@ -1669,3 +1669,128 @@ class TestGenerateMinuta:
         generation = response.json()["generations"][0]
         assert generation["download_url"].startswith("https://storage.test/")
         assert store.storage.signed_urls[0]["expires_in"] == 604800
+
+
+class TestRetryCascade:
+    """SDD 017 (T013): POST /escritura-cases/{caseId}/retry-cascade."""
+
+    def _seed_abogado_redactor(self, store: FakeStore) -> None:
+        for key in ("documento.abogado_redactor.nombre", "documento.abogado_redactor.rut"):
+            store.tables.setdefault("variable_resolutions", []).append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "lot_id": None,
+                    "escritura_case_id": None,
+                    "variable_key": key,
+                    "value_text": "dato de prueba",
+                    "state": "approved",
+                }
+            )
+
+    def _mark_project_warning_acknowledged(self, store: FakeStore) -> None:
+        for row in store.tables.get("projects", []):
+            if row["id"] == PROJECT_ID:
+                row["minuta_warning_acknowledged_by"] = "00000000-0000-4000-8000-000000000090"
+                row["minuta_warning_acknowledged_at"] = "2026-07-01T00:00:00Z"
+
+    def test_retry_cascade_completes_case_without_human_action(self, monkeypatch):
+        store = FakeStore()
+        store.tables.setdefault("organizations", []).append(
+            {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
+        )
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        self._mark_project_warning_acknowledged(store)
+        self._seed_abogado_redactor(store)
+        matrix = _seed_matrix(store, case_row=case_row, template=template, status="draft")
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["outcome"] == "completed"
+        assert body["generation_id"] is not None
+        assert [s["step"] for s in body["steps"]] == [
+            "submit",
+            "legal_review",
+            "approve",
+            "generate",
+        ]
+
+        updated = next(
+            row for row in store.tables["escritura_matrices"] if row["id"] == matrix["id"]
+        )
+        assert updated["status"] == "approved"
+        assert updated["approval_origin"] == "system"
+
+    def test_retry_cascade_is_idempotent_on_completed_case(self, monkeypatch):
+        store = FakeStore()
+        store.tables.setdefault("organizations", []).append(
+            {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
+        )
+        template = _seed_template(store)
+        case_row = _seed_case(store)
+        self._mark_project_warning_acknowledged(store)
+        matrix = _seed_matrix(
+            store, case_row=case_row, template=template, status="approved"
+        )
+        store.tables.setdefault("escritura_minuta_generations", []).append(
+            {
+                "id": str(uuid.uuid4()),
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "escritura_case_id": CASE_ID,
+                "matriz_id": matrix["id"],
+                "matriz_version": matrix["version"],
+                "snapshot_hash": matrix["snapshot_hash"],
+                "storage_path": f"{ORG_ID}/escritura-minutas/{CASE_ID}/prev.docx",
+                "generated_at": "2026-07-01T00:00:00Z",
+            }
+        )
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["outcome"] == "completed"
+        assert all(step["action"] == "skipped" for step in body["steps"])
+        assert len(store.tables["escritura_minuta_generations"]) == 1
+        assert store.storage.uploads == []
+
+    def test_retry_cascade_returns_exception_with_causes(self, monkeypatch):
+        store = FakeStore()
+        store.tables.setdefault("organizations", []).append(
+            {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
+        )
+        template = _seed_template(store)
+        case_row = _seed_case(
+            store,
+            readiness_gates={
+                "title_verified": {
+                    "gate": "title_verified",
+                    "status": "blocked",
+                    "blocking_variables": ["titulo.clausula_primero_texto"],
+                    "warnings": [],
+                }
+            },
+        )
+        _seed_matrix(store, case_row=case_row, template=template, status="draft")
+
+        response = _client(_build_app(store, monkeypatch)).post(
+            f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
+            params={"organization_id": ORG_ID},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["outcome"] == "exception"
+        assert body["causes"][0]["gate"] == "title_verified"
+        assert body["generation_id"] is None

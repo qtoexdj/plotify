@@ -714,6 +714,27 @@ def _dismissed_alerts(variable_snapshot: dict[str, Any]) -> list[dict[str, Any]]
     return dismissed
 
 
+async def _fetch_latest_cascade_run(
+    client: Any, escritura_case_id: str, organization_id: str
+) -> dict[str, Any] | None:
+    """SDD 017 (T014): la mesa deriva su vista del caso de la ÚLTIMA corrida
+    de la cascada — sin columna de estado mutable, para no perder el
+    historial de reintentos (D3)."""
+    result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_cascade_runs")
+            .select("outcome, causes, created_at")
+            .eq("escritura_case_id", escritura_case_id)
+            .eq("organization_id", organization_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    rows = result.data if isinstance(result.data, list) else []
+    return rows[0] if rows else None
+
+
 async def _case_response(
     client: Any, matrix_row: dict[str, Any], case_row: dict[str, Any]
 ) -> MatrizCaseResponse:
@@ -774,6 +795,9 @@ async def _case_response(
         clause["resolved_content"] = resolved_content_by_clause.get(
             str(clause.get("clause_key"))
         )
+    latest_run = await _fetch_latest_cascade_run(
+        client, str(case_row["id"]), organization_id
+    )
     return MatrizCaseResponse.model_validate(
         {
             "matriz": {
@@ -809,6 +833,12 @@ async def _case_response(
                     ),
                 ),
                 "dismissed_alerts": _dismissed_alerts(variable_snapshot),
+                "cascade_status": (
+                    latest_run["outcome"] if latest_run else "legacy"
+                ),
+                "cascade_causes": (latest_run or {}).get("causes") or [],
+                "cascade_last_run_at": (latest_run or {}).get("created_at"),
+                "approval_origin": matrix_row.get("approval_origin") or "human",
             },
             "insertable_variables": INSERTABLE_VARIABLES,
         }
