@@ -1127,8 +1127,16 @@ async def _insert_matriz_review_decision(
     case_row: dict[str, Any] | None,
     decision_type: str,
     decision_status: str,
-    decided_by: str,
+    decided_by: str | None,
     reason: str | None = None,
+    # SDD 017 (T010, D2): una decisión origin='system' la toma la cascada de
+    # aprobación por excepción, no un humano — decided_by queda NULL (no
+    # existe un usuario "sistema" que contamine la membresía de la org).
+    # trigger/inherited_* dan la trazabilidad completa exigida por FR-002.
+    origin: str = "human",
+    trigger: str | None = None,
+    inherited_from_matriz_id: str | None = None,
+    inherited_matriz_version: int | None = None,
 ) -> None:
     organization_id = str(
         case_row["organization_id"] if case_row else matrix_row["organization_id"]
@@ -1145,6 +1153,10 @@ async def _insert_matriz_review_decision(
         "decision_status": decision_status,
         "reason": reason,
         "decided_by": decided_by,
+        "origin": origin,
+        "trigger": trigger,
+        "inherited_from_matriz_id": inherited_from_matriz_id,
+        "inherited_matriz_version": inherited_matriz_version,
     }
     await asyncio.to_thread(
         lambda: client.table("legal_review_decisions").insert(payload).execute()
@@ -1156,6 +1168,7 @@ async def _insert_matriz_review_decision(
         matriz_id=str(matrix_row["id"]),
         decision_type=decision_type,
         decision_status=decision_status,
+        origin=origin,
     )
 
 
@@ -1642,7 +1655,9 @@ async def _generate_minuta_row(
     case_row: dict[str, Any],
     template: dict[str, Any],
     active_clauses: list[dict[str, Any]],
-    request: GenerateMinutaRequest,
+    generated_by: str | None,
+    warning_acknowledged_by: str,
+    warning_acknowledged_at: str,
 ) -> MinutaGeneration:
     variable_snapshot = _as_dict(case_row.get("variable_snapshot"))
     evidence_snapshot = _as_dict(case_row.get("evidence_snapshot"))
@@ -1736,9 +1751,9 @@ async def _generate_minuta_row(
         "resolution_manifest": resolution.manifest_dict(),
         "content_hash": content_hash,
         "storage_path": storage_path,
-        "warning_acknowledged_by": str(request.generated_by),
-        "warning_acknowledged_at": now,
-        "generated_by": str(request.generated_by),
+        "warning_acknowledged_by": warning_acknowledged_by,
+        "warning_acknowledged_at": warning_acknowledged_at,
+        "generated_by": generated_by,
         "generated_at": now,
     }
     result = await asyncio.to_thread(
@@ -1840,7 +1855,7 @@ async def _upsert_lot_variable(
     lot_id: str,
     variable_key: str,
     value_text: str,
-    reviewed_by: str,
+    reviewed_by: str | None,
     reviewed_at: str,
 ) -> dict[str, Any]:
     """Fija revision_juridica.* scope lote (nunca proyecto, a diferencia de
@@ -2247,7 +2262,9 @@ async def generate_case_minuta(
         case_row=case_row,
         template=template,
         active_clauses=active_clauses,
-        request=request,
+        generated_by=str(request.generated_by),
+        warning_acknowledged_by=str(request.generated_by),
+        warning_acknowledged_at=_utc_now_iso(),
     )
 
 
