@@ -30,7 +30,7 @@ Decisiones de la Fase 0. Contexto medido en el código el 2026-07-07: el camino 
 
 ## D4 — Política de revisión jurídica
 
-**Decision**: `organizations.escritura_review_policy` enum (`'every_sale'` default | `'exceptions_only'`), editable solo por admin vía endpoint dedicado que registra el cambio (quién/cuándo/de-a) en la auditoría existente. La cascada la lee al momento de correr; los casos en curso no cambian de política retroactivamente (FR-003).
+**Decision**: `organizations.escritura_review_policy` enum (`'every_sale'` default | `'exceptions_only'`), editable solo por admin vía Server Action del patrón casa de SDD016 (`settings/actions.ts`: chequeo `organization_members` + escritura directa + `logAudit` a `audit_logs` con quién/cuándo/de→a). La cascada la lee al momento de correr; los casos en curso no cambian de política retroactivamente (FR-003).
 
 **Rationale**: Es una política de la organización (no del proyecto): la confianza es en el molde y el equipo, y una sola perilla es explicable. Default conservador alineado con SC-001 de SDD016.
 

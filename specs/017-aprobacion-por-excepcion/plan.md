@@ -67,11 +67,9 @@ apps/api/
 │   ├── escritura_case_workflow.py    # NUEVO: submit/approve/generate extraídos de escritura_matrices.py
 │   ├── escritura_auto_pipeline.py    # NUEVO: la cascada (evaluar → revisar → aprobar → generar → entregar → notificar)
 │   ├── escritura_sale_hook.py        # MOD: dispara la cascada al validar la venta
-│   ├── escritura_delivery.py         # MOD: mensaje de notificación de excepción
-│   └── organization_settings.py      # MOD/NUEVO: política de revisión (lectura/cambio auditado)
+│   └── escritura_delivery.py         # MOD: mensaje de notificación de excepción
 ├── api/v1/endpoints/
-│   ├── escritura_matrices.py         # MOD: endpoints delegan al workflow service; retry-cascade; campos cascade en responses
-│   └── organizations.py              # MOD: GET/PATCH política de revisión
+│   └── escritura_matrices.py         # MOD: endpoints delegan al workflow service; retry-cascade; campos cascade en responses
 └── tests/
     ├── test_escritura_auto_pipeline.py   # NUEVO
     └── test_matriz_endpoints.py          # MOD
@@ -81,7 +79,11 @@ apps/web/src/
 │   ├── mesa-escritura.tsx            # MOD: vista "minuta entregada" / "excepción"
 │   ├── workflow-acciones.tsx         # MOD: fuera enviar/aprobar del camino feliz; acción Reintentar; sin AlertDialogs reversibles
 │   └── estado-preparacion.tsx        # MOD: causas de excepción accionables
-├── components/settings/              # MOD: toggle de política de revisión en config de organización (SDD016)
+├── app/(dashboard)/settings/
+│   ├── actions.ts                    # MOD: server actions de política de revisión y warning-ack (patrón casa SDD016 + logAudit)
+│   └── workspace/page.tsx            # MOD: toggle de política de revisión
+├── app/api/escritura-cases/          # NUEVO: proxy retry-cascade (patrón escritura-matrices existente)
+├── lib/documents/matriz-client.ts    # MOD: retryCascade()
 └── components/projects/              # MOD: warning legal en el checklist del proyecto (una vez)
 
 packages/database/supabase/migrations/

@@ -23,23 +23,26 @@ Reintenta la cascada de un caso (gatillo `manual_retry`). Idempotente: sobre un 
 
 **Errores**: 404 caso fuera de la organización; 409 caso legacy sin corrida previa y matriz en flujo manual intermedio (usar el flujo manual o migrarlo con el primer retry — decidir en tasks).
 
-## 2. `GET | PATCH /api/v1/organizations/{organization_id}/escritura-review-policy`
+## 2. Política de revisión — Server Action (patrón casa, no OpenAPI)
 
-Lee/cambia la política de revisión jurídica.
+La configuración de organización de SDD016 vive en Server Actions de Next
+(`apps/web/src/app/(dashboard)/settings/actions.ts`) que escriben directo a
+Supabase con chequeo de membresía admin (`organization_members`) — se sigue el
+mismo patrón: `updateEscrituraReviewPolicyAction(orgId, policy)`.
 
-**Auth**: GET miembro; PATCH solo admin.
+- **Valida**: rol admin del solicitante en la org; `policy ∈ {'every_sale','exceptions_only'}`.
+- **Escribe**: `organizations.escritura_review_policy`.
+- **Audita**: `logAudit` (`apps/web/src/lib/services/audit.service.ts` → tabla `audit_logs`) con valor anterior → nuevo (Principio V).
+- El microservicio (cascada) solo LEE la columna al correr; aplica a ventas posteriores (FR-003).
 
-**PATCH body**: `{ "policy": "every_sale" | "exceptions_only" }`
+## 3. Warning legal del proyecto — Server Action (patrón casa, no OpenAPI)
 
-**Response 200**: `{ "policy": "...", "changed_by": "uuid", "changed_at": "iso8601" }`
+`acknowledgeMinutaWarningAction(projectId)`:
 
-El PATCH registra el cambio en la auditoría (valor anterior → nuevo). Aplica a ventas posteriores (FR-003).
-
-## 3. `POST /api/v1/projects/{project_id}/minuta-warning-ack`
-
-Confirma el aviso legal de borrador para el proyecto (una vez; FR-009).
-
-**Auth**: admin. **Response 200**: `{ "acknowledged_by": "uuid", "acknowledged_at": "iso8601" }`. Repetir la llamada responde la confirmación vigente (idempotente, no la sobre-escribe).
+- **Valida**: rol admin; si el proyecto ya tiene confirmación vigente, responde la existente sin sobre-escribir (idempotente, FR-009).
+- **Escribe**: `projects.minuta_warning_acknowledged_by/_at`.
+- **Audita**: `logAudit` con el evento de confirmación.
+- FastAPI la consume en `generate_case_minuta` (exige el amparo y lo copia a la generación).
 
 ## 4. Cambios en `MatrizCaseResponse` (existente)
 
