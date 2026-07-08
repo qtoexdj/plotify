@@ -2,7 +2,7 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/016-pipeline-remediacion-ux/plan.md`
+`specs/017-aprobacion-por-excepcion/plan.md`
 
 <!-- SPECKIT END -->
 
@@ -18,18 +18,18 @@ shell commands, and other important information, read the current plan:
 
 This repository uses Spec Kit SDD as the implementation authority. The active feature is:
 
-- `specs/016-pipeline-remediacion-ux/spec.md`
-- `specs/016-pipeline-remediacion-ux/plan.md`
-- `specs/016-pipeline-remediacion-ux/research.md`
-- `specs/016-pipeline-remediacion-ux/data-model.md`
-- `specs/016-pipeline-remediacion-ux/quickstart.md`
-- `specs/016-pipeline-remediacion-ux/contracts/`
-- `specs/016-pipeline-remediacion-ux/tasks.md` (created by `/speckit-tasks`)
+- `specs/017-aprobacion-por-excepcion/spec.md`
+- `specs/017-aprobacion-por-excepcion/plan.md`
+- `specs/017-aprobacion-por-excepcion/research.md`
+- `specs/017-aprobacion-por-excepcion/data-model.md`
+- `specs/017-aprobacion-por-excepcion/quickstart.md`
+- `specs/017-aprobacion-por-excepcion/contracts/`
+- `specs/017-aprobacion-por-excepcion/tasks.md` (created by `/speckit-tasks`)
 - `.specify/memory/constitution.md`
 
 Before implementation:
 
-1. Read `specs/016-pipeline-remediacion-ux/tasks.md` and `plan.md`.
+1. Read `specs/017-aprobacion-por-excepcion/tasks.md` and `plan.md`.
 2. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
 3. Do not start implementation while critical analyze findings remain unresolved.
 4. Run `git status --short` and `codegraph sync .`.
@@ -49,9 +49,9 @@ Canonical implementation prompt:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/016-pipeline-remediacion-ux/tasks.md.
+Implementa solo TXXX de specs/017-aprobacion-por-excepcion/tasks.md.
 No avances a otra tarea.
-Lee specs/016-pipeline-remediacion-ux/tasks.md y plan.md.
+Lee specs/017-aprobacion-por-excepcion/tasks.md y plan.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.
