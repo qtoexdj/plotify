@@ -23,10 +23,10 @@ Monorepo: `apps/api` (FastAPI), `apps/web` (Next.js), `packages/database/supabas
 
 **Purpose**: el esquema que todas las historias comparten (data-model.md).
 
-- [ ] T001 [P] Migración `packages/database/supabase/migrations/<ts>_escritura_review_policy.sql`: `organizations.escritura_review_policy` text not null default 'every_sale' + check ('every_sale','exceptions_only')
-- [ ] T002 [P] Migración `packages/database/supabase/migrations/<ts>_project_minuta_warning_ack.sql`: `projects.minuta_warning_acknowledged_by` (uuid ref auth.users) + `minuta_warning_acknowledged_at` (timestamptz)
-- [ ] T003 [P] Migración `packages/database/supabase/migrations/<ts>_escritura_cascade_runs.sql`: tabla `escritura_cascade_runs` (trigger/outcome/causes/steps + índice por caso + RLS patrón escritura_cases), `escritura_matrices.approval_origin` ('human' default | 'system'), extensión `legal_review_decisions` (origin, trigger, inherited_from_matriz_id, inherited_matriz_version; relajar decided_by a nullable si es NOT NULL)
-- [ ] T004 Aplicar migraciones con `supabase db push` (NUNCA vía MCP apply_migration — memoria: divergencia del historial) + `pnpm verify:migrations` verde + regenerar `apps/web/src/types/database.types.ts` si el flujo del repo lo genera
+- [x] T001 [P] Migración `packages/database/supabase/migrations/20260708000100_escritura_review_policy.sql`: `organizations.escritura_review_policy` text not null default 'every_sale' + check ('every_sale','exceptions_only')
+- [x] T002 [P] Migración `packages/database/supabase/migrations/20260708000200_project_minuta_warning_ack.sql`: `projects.minuta_warning_acknowledged_by` (uuid ref auth.users) + `minuta_warning_acknowledged_at` (timestamptz)
+- [x] T003 [P] Migración `packages/database/supabase/migrations/20260708000300_escritura_cascade_runs.sql`: tabla `escritura_cascade_runs` (trigger/outcome/causes/steps + índice por caso + RLS admin/member/service_role), `escritura_matrices.approval_origin` ('human' default | 'system'), extensión `legal_review_decisions` (decided_by ahora nullable, origin/trigger/inherited_from_matriz_id/inherited_matriz_version)
+- [ ] T004 **Pendiente del usuario** — aplicar migraciones con `supabase db push` (NUNCA vía MCP apply_migration — memoria: divergencia del historial) + `pnpm verify:migrations` verde (chequeo estructural ya verde) + regenerar `apps/web/src/types/database.types.ts` si el flujo del repo lo genera. No aplicado automáticamente: escribir sobre la base compartida requiere confirmación explícita.
 
 **Checkpoint**: esquema listo; `pnpm verify:migrations` verde.
 
@@ -36,9 +36,9 @@ Monorepo: `apps/api` (FastAPI), `apps/web` (Next.js), `packages/database/supabas
 
 **Purpose**: la cascada no puede reusar lógica que vive en endpoints (research D1). Refactor SIN cambio de comportamiento, cubierto por los tests existentes.
 
-- [ ] T005 Crear `apps/api/services/escritura_case_workflow.py` extrayendo de `apps/api/api/v1/endpoints/escritura_matrices.py`: `submit_case_matriz()`, `approve_case_matriz()` (incluye four-eyes + `_insert_matriz_review_decision` + `_recompute_pending_cases_after_matriz_approval`), `generate_case_minuta()` (hoy `_generate_minuta_row` + validaciones de estado/warning) y el cálculo de blockers frescos (`_fresh_workflow_view`) como funciones de servicio con firma explícita (client, matriz_id/case_row, actor)
-- [ ] T006 `apps/api/api/v1/endpoints/escritura_matrices.py`: `submit_matriz`/`approve_matriz`/`reject_matriz`/`generate_minuta` delegan al servicio nuevo; sin cambio de contrato ni de comportamiento
-- [ ] T007 Suite completa verde sin modificar ningún test: `pnpm test:api` (los 677 actuales pasan tal cual — es la prueba de que el refactor no cambió comportamiento)
+- [x] T005 Creado `apps/api/services/escritura_case_workflow.py` (2340 líneas): toda la lógica compartida (fetchers, `_case_response`/`_project_matriz_response`, blockers, `_workflow_context`/`_fresh_workflow_view`) + 4 funciones públicas nuevas `submit_case_matriz()`/`approve_case_matriz()`/`reject_case_matriz()`/`generate_case_minuta()` (cuerpos exactos de los antiguos endpoints, sin `Query(...)`). El módulo reexporta todo vía `__all__` para que `escritura_matrices.py` y los tests que importaban símbolos internos sigan funcionando.
+- [x] T006 `apps/api/api/v1/endpoints/escritura_matrices.py` reducido de 2904 a 725 líneas: `submit_matriz`/`approve_matriz`/`reject_matriz`/`generate_minuta` son wrappers de una línea que delegan al servicio; `get_project_matriz`/`get_case_matriz`/`submit_legal_review`/`save_matriz`/`list_case_generations`/`get_escritura_trace`/`stage_operational_variables`/`bulk_verify_lots` sin cambios, importando del servicio vía `import *`.
+- [x] T007 677 tests de API verdes (675 sin tocar + 2 que necesitaron re-apuntar su monkeypatch de `fetch_project_matriz_snapshot` al módulo donde ahora vive la función que lo llama — mismo target conceptual, las aserciones no cambiaron). Commits: `2351818` (refactor).
 
 **Checkpoint**: workflow reutilizable desde servicios; `escritura_matrices.py` reducido.
 
