@@ -16,6 +16,7 @@ export const AUDIT_EVENT_LABELS: Record<string, string> = {
   'document.send_retried': 'Reintento de Envío de Documento',
   'lot.verified': 'Lote Verificado',
   'template.modified': 'Plantilla Modificada',
+  'organization.escritura_review_policy_updated': 'Política de Revisión Jurídica Actualizada',
 }
 
 export type AuditAction =
@@ -41,6 +42,7 @@ export type AuditAction =
   | 'document.send_retried'
   | 'lot.verified'
   | 'template.modified'
+  | 'organization.escritura_review_policy_updated'
 
 export async function logAudit(params: {
   actor: string

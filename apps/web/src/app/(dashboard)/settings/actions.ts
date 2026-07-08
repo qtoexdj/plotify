@@ -1,6 +1,7 @@
 'use server'
 
 import { updateWorkspace } from '@/lib/services/workspace.service'
+import { logAudit } from '@/lib/services/audit.service'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
@@ -224,6 +225,83 @@ export async function registerTelegramBotAction(
     return { success: true }
   } catch (error) {
     console.error('Unexpected error registering telegram bot:', error)
+    return { error: error instanceof Error ? error.message : 'Error inesperado' }
+  }
+}
+
+export type EscrituraReviewPolicy = 'every_sale' | 'exceptions_only'
+
+/**
+ * SDD 017 (T018): política de revisión jurídica que lee la cascada de
+ * aprobación por excepción al correr (research D4). 'every_sale' (default)
+ * exige aprobar la revisión jurídica de cada venta; 'exceptions_only' deja
+ * correr la cascada sin ese acto humano salvo que haya una excepción real.
+ * El microservicio (FastAPI) solo LEE esta columna — el cambio se hace acá,
+ * patrón casa de settings/actions.ts, no por un router FastAPI.
+ */
+export async function updateEscrituraReviewPolicyAction(
+  orgId: string,
+  policy: EscrituraReviewPolicy
+) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'No autorizado' }
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', orgId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (memberError || member?.role !== 'admin') {
+    return { error: 'No tienes permisos de administrador para realizar esta acción.' }
+  }
+
+  try {
+    const { data: current, error: currentError } = await supabase
+      .from('organizations')
+      .select('escritura_review_policy')
+      .eq('id', orgId)
+      .maybeSingle()
+
+    if (currentError) {
+      console.error('Error reading current escritura_review_policy:', currentError)
+      return { error: 'Error al leer la política actual.' }
+    }
+
+    const previousPolicy = current?.escritura_review_policy ?? 'every_sale'
+    if (previousPolicy === policy) {
+      return { success: true, data: { policy } }
+    }
+
+    const { error: updateError } = await supabase
+      .from('organizations')
+      .update({ escritura_review_policy: policy })
+      .eq('id', orgId)
+
+    if (updateError) {
+      console.error('Error updating escritura_review_policy:', updateError)
+      return { error: 'Error al actualizar la política de revisión jurídica.' }
+    }
+
+    await logAudit({
+      actor: user.id,
+      action: 'organization.escritura_review_policy_updated',
+      entity: 'organizations',
+      entity_id: orgId,
+      organization_id: orgId,
+      payload: { from: previousPolicy, to: policy },
+    })
+
+    revalidatePath('/settings/workspace')
+    return { success: true, data: { policy } }
+  } catch (error) {
+    console.error('Unexpected error updating escritura_review_policy:', error)
     return { error: error instanceof Error ? error.message : 'Error inesperado' }
   }
 }
