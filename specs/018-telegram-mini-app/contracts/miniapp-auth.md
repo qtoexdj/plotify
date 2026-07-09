@@ -49,13 +49,13 @@ Emite la sesión de mini app validando el `initData` de Telegram.
 
 ### Errores
 
-| Código | Cuerpo | Cuándo |
-|---|---|---|
-| 401 `invalid_initdata` | genérico, sin detalle | hash no coincide, formato inválido |
-| 401 `initdata_expired` | indica reintento | `auth_date` fuera de ventana |
-| 403 `not_linked` | instruye vincular | chat sin perfil |
-| 403 `not_member` | genérico | perfil sin membresía vigente en la org |
-| 404 | genérico | org sin bot configurado |
+| Código                 | Cuerpo                | Cuándo                                 |
+| ---------------------- | --------------------- | -------------------------------------- |
+| 401 `invalid_initdata` | genérico, sin detalle | hash no coincide, formato inválido     |
+| 401 `initdata_expired` | indica reintento      | `auth_date` fuera de ventana           |
+| 403 `not_linked`       | instruye vincular     | chat sin perfil                        |
+| 403 `not_member`       | genérico              | perfil sin membresía vigente en la org |
+| 404                    | genérico              | org sin bot configurado                |
 
 Los cuerpos de error NUNCA revelan si la org existe, cuántos miembros tiene, ni nada enumerable.
 

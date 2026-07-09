@@ -1,5 +1,6 @@
 import re
 
+from core.config import get_settings
 from core.logger import get_logger
 from core.database import get_supabase_client
 from integrations.telegram_client import get_telegram_client_for_org
@@ -218,6 +219,10 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             phone = contact.get("phone")
 
             if tg_chat_id:
+                settings = get_settings()
+                mini_app_url = settings.TELEGRAM_MINI_APP_URL or "http://localhost:3000"
+                web_app_url = f"{mini_app_url}/mini/admin?org_id={org_id}"
+                
                 reply_markup = {
                     "inline_keyboard": [
                         [
@@ -229,6 +234,12 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
                                 "text": "❌ Rechazar",
                                 "callback_data": f"reject:{approval_id}",
                             },
+                        ],
+                        [
+                            {
+                                "text": "⚡ Abrir Bandeja (Mini App)",
+                                "web_app": {"url": web_app_url},
+                            }
                         ]
                     ]
                 }

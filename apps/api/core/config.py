@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     # Telegram API
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_WEBHOOK_SECRET: str = ""
+    TELEGRAM_MINI_APP_URL: str = ""  # URL de la Mini App (ej. https://app.plotify.cl)
+    MINIAPP_SESSION_SECRET: str = "plotify-miniapp-session-secret-CHANGE-IN-PRODUCTION"
+    MINIAPP_SESSION_EXPIRE_SECONDS: int = 3600
+    TELEGRAM_INIT_DATA_MAX_AGE_SECONDS: int = 600
 
     # LLM APIs
     OPENAI_API_KEY: str = ""

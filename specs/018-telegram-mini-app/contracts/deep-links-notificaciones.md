@@ -6,13 +6,13 @@
 
 Base: `TELEGRAM_MINI_APP_URL` (env del API, ej. `https://app.plotify.cl`). Rutas canónicas:
 
-| Entidad | URL |
-|---|---|
-| Home (rol decide destino) | `{BASE}/mini?org={org_id}` |
+| Entidad                      | URL                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Home (rol decide destino)    | `{BASE}/mini?org={org_id}`                                                                                    |
 | Detalle de caso de escritura | `{BASE}/mini/bandeja/{case_id}?org={org_id}` (admin) / `{BASE}/mini/ventas/{case_id}?org={org_id}` (vendedor) |
-| Detalle de reserva pendiente | `{BASE}/mini/bandeja/{approval_id}?org={org_id}&tipo=reserva` |
-| Documento entregado | `{BASE}/mini/documentos?org={org_id}&destacar={delivery_id}` |
-| Ficha de lote (compartir) | `https://t.me/{bot_username}/{app_name}?startapp=lot_{lot_id}` |
+| Detalle de reserva pendiente | `{BASE}/mini/bandeja/{approval_id}?org={org_id}&tipo=reserva`                                                 |
+| Documento entregado          | `{BASE}/mini/documentos?org={org_id}&destacar={delivery_id}`                                                  |
+| Ficha de lote (compartir)    | `https://t.me/{bot_username}/{app_name}?startapp=lot_{lot_id}`                                                |
 
 Reglas:
 

@@ -27,8 +27,18 @@ const ALLOWED_FILES = new Set([
   path.join(SRC_DIR, 'components', 'ui', 'brand-loader.tsx'),
 ])
 
+// La mini app de Telegram (SDD018) no es superficie CRM: su tema sigue
+// `themeParams`/la paleta oscura nativa de Telegram, no la dirección
+// monocroma de SDD015 — está fuera del alcance de este guard por diseño.
+const ALLOWED_DIR_PREFIXES = [
+  path.join(SRC_DIR, 'app', 'mini') + path.sep,
+  path.join(SRC_DIR, 'lib', 'miniapp') + path.sep,
+]
+
 describe('Test de guardia: loaders prohibidos (SDD 015 FR-009)', () => {
-  const files = listTsxFiles(SRC_DIR).filter((file) => !ALLOWED_FILES.has(file))
+  const files = listTsxFiles(SRC_DIR).filter(
+    (file) => !ALLOWED_FILES.has(file) && !ALLOWED_DIR_PREFIXES.some((p) => file.startsWith(p))
+  )
 
   it('no usa Loader2, LoaderCircle ni Loading01/02/03Icon en código de producto', () => {
     const offenders = files.filter((file) => FORBIDDEN_PATTERN.test(fs.readFileSync(file, 'utf-8')))

@@ -86,6 +86,15 @@ async def register_bot(payload: RegisterBotRequest):
             status_code=500, detail="Error interno guardando configuración del bot"
         )
 
+    # 4. Configurar menú persistente (Mini App) y comandos del bot. Aditivo:
+    # un fallo aquí no debe revertir un registro ya guardado exitosamente.
+    try:
+        from services.bot_registration import setup_bot_defaults
+
+        await setup_bot_defaults(bot_token=token, org_id=org_id)
+    except Exception as e:
+        logger.error(f"Error configurando menú/comandos del bot: {e}")
+
     return BotResponse(bot_username=bot_username, is_active=True)
 
 

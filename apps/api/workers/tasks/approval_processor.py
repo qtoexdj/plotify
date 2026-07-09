@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from core.config import get_settings
 from core.logger import get_logger
 from core.database import get_supabase_client
 from integrations.telegram_client import get_telegram_client_for_org
@@ -26,6 +27,7 @@ async def execute_admin_decision_db(
     approval_id: str,
     action: str,
     admin_id: str,
+    channel: str | None = None,
 ) -> dict:
     """
     Realiza las operaciones de base de datos de manera atómica (validar tenant, RPC, y registrar auditoría).
@@ -132,7 +134,11 @@ async def execute_admin_decision_db(
     else:
         audit_action = EVENT_RESERVATION_APPROVED if action == "approve" else EVENT_RESERVATION_REJECTED
     
-    channel = "telegram" if admin_id.isdigit() else "web"
+    # admin_id es numérico solo para el bot de Telegram (chat_id); tanto la
+    # mesa web como la mini app usan UUIDs de profiles, así que el llamador
+    # debe marcar explícitamente su origen cuando no sea Telegram.
+    if channel is None:
+        channel = "telegram" if admin_id.isdigit() else "web"
 
     await log_agent_action(
         actor=admin_id,
@@ -397,7 +403,24 @@ async def send_decision_notifications(
             logger.info(
                 "Enviando confirmación final al administrador en Telegram.", admin_id=admin_id
             )
-            await telegram_client.send_text(admin_id, admin_msg)
+            
+            reply_markup = None
+            if "borrador" in admin_msg.lower() or "matriz" in admin_msg.lower():
+                settings = get_settings()
+                mini_app_url = settings.TELEGRAM_MINI_APP_URL or "http://localhost:3000"
+                web_app_url = f"{mini_app_url}/mini/admin?org_id={org_id}"
+                reply_markup = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "⚡ Abrir Bandeja (Mini App)",
+                                "web_app": {"url": web_app_url},
+                            }
+                        ]
+                    ]
+                }
+                
+            await telegram_client.send_text(admin_id, admin_msg, reply_markup=reply_markup)
 
         return "SUCCESS"
 
@@ -411,10 +434,11 @@ async def send_decision_notifications(
 
 
 async def process_admin_decision(
-    ctx: dict, org_id: str, approval_id: str, action: str, admin_id: str
+    ctx: dict, org_id: str, approval_id: str, action: str, admin_id: str, channel: str | None = None
 ) -> str:
     """
-    Job ARQ: Procesa la decisión del Admin (aprobar/rechazar) de forma asíncrona completa (para canal Telegram).
+    Job ARQ: Procesa la decisión del Admin (aprobar/rechazar) de forma asíncrona completa
+    (canal Telegram por defecto; `channel` permite marcar otros orígenes como "miniapp").
     """
     try:
         db_result = await execute_admin_decision_db(
@@ -422,6 +446,7 @@ async def process_admin_decision(
             approval_id=approval_id,
             action=action,
             admin_id=admin_id,
+            channel=channel,
         )
         await send_decision_notifications(
             ctx=ctx,

@@ -1,0 +1,561 @@
+import time
+import pytest
+import uuid
+import jwt
+from unittest.mock import patch, MagicMock
+from fastapi.testclient import TestClient
+from fastapi import status
+
+from main import app
+from core.config import get_settings
+from core.miniapp_session import create_miniapp_session
+
+# Constantes de prueba
+ORG_ID = str(uuid.uuid4())
+ADMIN_ID = str(uuid.uuid4())
+VENDOR_ID = str(uuid.uuid4())
+CHAT_ID = 123456789
+
+
+def _obtener_headers_admin() -> dict:
+    """Genera headers de autorización con un token JWT de admin válido."""
+    token = create_miniapp_session(
+        user_id=ADMIN_ID,
+        org_id=ORG_ID,
+        role="admin",
+        chat_id=CHAT_ID
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _obtener_headers_vendedor() -> dict:
+    """Genera headers de autorización con un token JWT de vendedor válido (debe dar 403)."""
+    token = create_miniapp_session(
+        user_id=VENDOR_ID,
+        org_id=ORG_ID,
+        role="vendor",
+        chat_id=CHAT_ID
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_bandeja_vacio(mock_supabase_client):
+    """Prueba que si no hay elementos en la base de datos, la bandeja retorne una lista vacía."""
+    # Configurar mock de Supabase para retornar listas vacías en las tablas de interés
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    # Mock para approval_requests
+    mock_select_approval = MagicMock()
+    mock_select_approval.eq.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+
+    # Mock para escritura_cases
+    mock_select_cases = MagicMock()
+    mock_select_cases.eq.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+
+    # Ruteo por nombre de tabla
+    def mock_table(table_name):
+        if table_name == "approval_requests":
+            mock_table_obj = MagicMock()
+            mock_table_obj.select.return_value = mock_select_approval
+            return mock_table_obj
+        elif table_name == "escritura_cases":
+            mock_table_obj = MagicMock()
+            mock_table_obj.select.return_value = mock_select_cases
+            return mock_table_obj
+        return MagicMock()
+
+    mock_supabase.table.side_effect = mock_table
+
+    client = TestClient(app)
+    response = client.get("/api/v1/miniapp/bandeja", headers=_obtener_headers_admin())
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_bandeja_con_datos(mock_supabase_client):
+    """Prueba que la bandeja unifique solicitudes pendientes y casos en excepción de la organización."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    # Datos simulados de solicitudes de aprobación pendientes
+    approval_uuid = str(uuid.uuid4())
+    approval_data = [
+        {
+            "id": approval_uuid,
+            "request_type": "reservation",
+            "vendor_name": "Pedro Vendedor",
+            "created_at": "2026-07-09T10:00:00Z",
+            "status": "pending",
+            "lot_id": str(uuid.uuid4()),
+            "lots": {"numero_lote": "45"}
+        }
+    ]
+
+    # Datos simulados de excepciones de escritura
+    case_uuid = str(uuid.uuid4())
+    cases_data = [
+        {
+            "id": case_uuid,
+            "lot_id": str(uuid.uuid4()),
+            "created_at": "2026-07-09T08:00:00Z",
+            "status": "exception",
+            "lots": {"numero_lote": "12", "projects": {"name": "Lomas de Teno"}},
+            "escritura_cascade_runs": [
+                {
+                    "error_cause": "Falta aprobación de la matriz de proyecto"
+                }
+            ]
+        }
+    ]
+
+    # Configuración de los mocks de Supabase
+    mock_select_approval = MagicMock()
+    mock_select_approval.eq.return_value.eq.return_value.execute.return_value = MagicMock(data=approval_data)
+
+    mock_select_cases = MagicMock()
+    mock_select_cases.eq.return_value.eq.return_value.execute.return_value = MagicMock(data=cases_data)
+
+    def mock_table(table_name):
+        if table_name == "approval_requests":
+            mock_table_obj = MagicMock()
+            mock_table_obj.select.return_value = mock_select_approval
+            return mock_table_obj
+        elif table_name == "escritura_cases":
+            mock_table_obj = MagicMock()
+            mock_table_obj.select.return_value = mock_select_cases
+            return mock_table_obj
+        return MagicMock()
+
+    mock_supabase.table.side_effect = mock_table
+
+    client = TestClient(app)
+    response = client.get("/api/v1/miniapp/bandeja", headers=_obtener_headers_admin())
+
+    assert response.status_code == 200
+    res_data = response.json()
+    assert len(res_data) == 2
+
+    # Verificar que el item unificado de reserva esté correcto
+    reserva_item = next(item for item in res_data if item["tipo"] == "reserva")
+    assert reserva_item["id"] == approval_uuid
+    assert "Lote 45" in reserva_item["titulo"]
+    assert reserva_item["estado"] == "pending"
+
+    # Verificar que el item unificado de excepción esté correcto
+    excepcion_item = next(item for item in res_data if item["tipo"] == "excepcion")
+    assert excepcion_item["id"] == case_uuid
+    assert "Lote 12" in excepcion_item["titulo"]
+    assert "Lomas de Teno" in excepcion_item["titulo"]
+    assert excepcion_item["estado"] == "exception"
+    assert "matriz" in excepcion_item["causa"].lower()
+
+
+def test_get_bandeja_forbidden_para_vendedor():
+    """Prueba que un vendedor reciba 403 Forbidden al intentar ver la bandeja."""
+    client = TestClient(app)
+    response = client.get("/api/v1/miniapp/bandeja", headers=_obtener_headers_vendedor())
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_bandeja_detail_reserva(mock_supabase_client):
+    """Prueba la obtención del detalle para un item de tipo reserva."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    approval_uuid = str(uuid.uuid4())
+    approval_detail = {
+        "id": approval_uuid,
+        "request_type": "reservation",
+        "vendor_name": "Pedro Vendedor",
+        "created_at": "2026-07-09T10:00:00Z",
+        "status": "pending",
+        "lot_id": str(uuid.uuid4()),
+        "payload": {
+            "cliente_nombre": "Maria Diaz",
+            "cliente_run": "9.876.543-2",
+            "cliente_email": "maria@example.com",
+            "cliente_telefono": "+56911223344",
+            "valor_reserva": 500000
+        },
+        "lots": {
+            "numero_lote": "45",
+            "precio": 15000000,
+            "projects": {"name": "Lomas de Teno"}
+        }
+    }
+
+    mock_select = MagicMock()
+    mock_select.eq.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[approval_detail])
+    mock_supabase.table.return_value.select.return_value = mock_select
+
+    client = TestClient(app)
+    response = client.get(f"/api/v1/miniapp/bandeja/{approval_uuid}?tipo=reserva", headers=_obtener_headers_admin())
+
+    assert response.status_code == 200
+    res_data = response.json()
+    assert res_data["id"] == approval_uuid
+    assert res_data["tipo"] == "reserva"
+    assert res_data["comprador"]["nombre"] == "Maria Diaz"
+    assert res_data["comprador"]["rut"] == "9.876.543-2"
+    assert res_data["detalles_lote"]["numero"] == "45"
+    assert res_data["detalles_lote"]["precio"] == 15000000
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_bandeja_detail_excepcion(mock_supabase_client):
+    """Prueba la obtención del detalle para un item de tipo excepción de cascada."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    case_uuid = str(uuid.uuid4())
+    case_detail = {
+        "id": case_uuid,
+        "lot_id": str(uuid.uuid4()),
+        "created_at": "2026-07-09T08:00:00Z",
+        "status": "exception",
+        "lots": {
+            "numero_lote": "12",
+            "precio": 18000000,
+            "projects": {"name": "Lomas de Teno"}
+        },
+        "escritura_cascade_runs": [
+            {
+                "error_cause": "Conflicto en datos de escrituración",
+                "variables_state": {
+                    "cliente_nombre": {
+                        "vendedor": "Juan Gomez",
+                        "certificado": "Juan Gomez Perez",
+                        "diferencia": "Nombre no coincide exactamente con certificado de matrimonio"
+                    }
+                }
+            }
+        ],
+        "escritura_deliveries": [
+            {
+                "id": str(uuid.uuid4()),
+                "file_path": "minutas/lote_12_borrador.pdf"
+            }
+        ]
+    }
+
+    # Simular la llamada del select para el caso de escritura
+    mock_select = MagicMock()
+    mock_select.eq.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[case_detail])
+    mock_supabase.table.return_value.select.return_value = mock_select
+
+    # Simular almacenamiento firmado si existe
+    mock_supabase.storage.from_.return_value.create_signed_url.return_value = {
+        "signedURL": "https://storage.supabase.com/signed/minutas/lote_12_borrador.pdf"
+    }
+
+    client = TestClient(app)
+    response = client.get(f"/api/v1/miniapp/bandeja/{case_uuid}?tipo=excepcion", headers=_obtener_headers_admin())
+
+    assert response.status_code == 200
+    res_data = response.json()
+    assert res_data["id"] == case_uuid
+    assert res_data["tipo"] == "excepcion"
+    assert len(res_data["conflictos"]) == 1
+    assert res_data["conflictos"][0]["nombre"] == "cliente_nombre"
+    assert res_data["conflictos"][0]["valor_vendedor"] == "Juan Gomez"
+    assert res_data["conflictos"][0]["valor_certificado"] == "Juan Gomez Perez"
+    assert "storage.supabase.com" in res_data["evidencia_url"]
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+@patch("api.v1.endpoints.miniapp.process_admin_decision", create=True)
+def test_post_bandeja_decidir(mock_process_decision, mock_supabase_client):
+    """Prueba que la decisión del admin (approve) invoque la lógica correspondiente."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    approval_uuid = str(uuid.uuid4())
+    mock_process_decision.return_value = "SUCCESS"
+
+    # Verificar que el approval request existe
+    mock_select = MagicMock()
+    mock_select.eq.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[{"id": approval_uuid}])
+    mock_supabase.table.return_value.select.return_value = mock_select
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/v1/miniapp/bandeja/{approval_uuid}/decidir",
+        headers=_obtener_headers_admin(),
+        json={"decision": "approve", "comentario": "Aprobado desde la Mini App"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    mock_process_decision.assert_called_once_with(
+        ctx={},
+        org_id=ORG_ID,
+        approval_id=approval_uuid,
+        action="approve",
+        admin_id=ADMIN_ID,
+        channel="miniapp"
+    )
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+@patch("api.v1.endpoints.miniapp.reintentar_cascada_workflow", create=True)
+def test_post_bandeja_reintentar_cascada(mock_reintentar, mock_supabase_client):
+    """Prueba que el reintento de cascada invoque el servicio correspondiente."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    case_uuid = str(uuid.uuid4())
+    mock_reintentar.return_value = {"status": "processing", "message": "Cascade processing started"}
+
+    # Verificar que el caso de escritura existe
+    mock_select = MagicMock()
+    mock_select.eq.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(data=[{"id": case_uuid}])
+    mock_supabase.table.return_value.select.return_value = mock_select
+
+    client = TestClient(app)
+    response = client.post(
+        f"/api/v1/miniapp/bandeja/{case_uuid}/reintentar-cascada",
+        headers=_obtener_headers_admin()
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "processing"
+    mock_reintentar.assert_called_once_with(case_id=case_uuid)
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_ventas_vendedor(mock_supabase_client):
+    """Prueba que el vendedor pueda listar sus ventas con etapa y blockers humanizados."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    case_uuid = str(uuid.uuid4())
+    lot_uuid = str(uuid.uuid4())
+    
+    # Mock de respuesta para casos de escritura asignados a este vendedor
+    mock_select = MagicMock()
+    mock_select.eq.return_value = mock_select
+    mock_select.limit.return_value = mock_select
+    mock_select.execute.return_value = MagicMock(
+        data=[
+            {
+                "id": case_uuid,
+                "project_id": str(uuid.uuid4()),
+                "lot_id": lot_uuid,
+                "vendedor_id": VENDOR_ID,
+                "status": "in_progress",
+                "current_stage": "validacion",
+                "blockers": ["missing_buyer_marital_status", "invalid_buyer_rut"],
+                "created_at": "2026-07-09T08:00:00Z",
+                "projects": {"name": "Lomas de Frutillar"},
+                "lots": {"numero_lote": "104"}
+            }
+        ]
+    )
+    mock_supabase.table.return_value.select.return_value = mock_select
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/v1/miniapp/ventas",
+        headers=_obtener_headers_vendedor()
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["id"] == case_uuid
+    assert data[0]["etapa"] == "validacion"
+    # Verificar humanización de blockers
+    assert "Falta definir el estado civil del comprador" in data[0]["blockers_humanizados"]
+    assert "El RUT del comprador no es válido" in data[0]["blockers_humanizados"]
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_venta_detalle_vendedor(mock_supabase_client):
+    """Prueba la consulta de detalle de una venta específica de un vendedor."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    case_uuid = str(uuid.uuid4())
+    lot_uuid = str(uuid.uuid4())
+
+    mock_select = MagicMock()
+    mock_select.eq.return_value = mock_select
+    mock_select.limit.return_value = mock_select
+    mock_select.execute.return_value = MagicMock(
+        data=[
+            {
+                "id": case_uuid,
+                "project_id": str(uuid.uuid4()),
+                "lot_id": lot_uuid,
+                "vendedor_id": VENDOR_ID,
+                "status": "in_progress",
+                "current_stage": "revision",
+                "blockers": ["missing_buyer_signature"],
+                "created_at": "2026-07-09T08:00:00Z",
+                "projects": {"name": "Lomas de Frutillar"},
+                "lots": {"numero_lote": "104"}
+            }
+        ]
+    )
+    mock_supabase.table.return_value.select.return_value = mock_select
+
+    client = TestClient(app)
+    response = client.get(
+        f"/api/v1/miniapp/ventas/{case_uuid}",
+        headers=_obtener_headers_vendedor()
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == case_uuid
+    assert data["etapa"] == "revision"
+    assert "Falta la firma del comprador en la documentación" in data["blockers_humanizados"]
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_documentos_vendedor(mock_supabase_client):
+    """Prueba que el vendedor pueda listar las minutas entregadas con enlaces firmados."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    delivery_uuid = str(uuid.uuid4())
+    case_uuid = str(uuid.uuid4())
+
+    # Datos simulados de entregas de documentos
+    mock_select = MagicMock()
+    mock_select.eq.return_value = mock_select
+    mock_select.execute.return_value = MagicMock(
+        data=[
+            {
+                "id": delivery_uuid,
+                "escritura_case_id": case_uuid,
+                "file_path": "organizaciones/minutas/minuta_104.pdf",
+                "delivered_at": "2026-07-09T09:00:00Z",
+                "expires_at": "2026-07-16T09:00:00Z",  # Vigente
+                "escritura_cases": {
+                    "vendedor_id": VENDOR_ID,
+                    "organization_id": ORG_ID,
+                    "projects": {"name": "Lomas de Frutillar"},
+                    "lots": {"numero_lote": "104"}
+                }
+            }
+        ]
+    )
+    mock_supabase.table.return_value.select.return_value = mock_select
+    mock_supabase.storage.from_().create_signed_url.return_value = {"signedURL": "https://supabase.co/signed-url/minuta_104"}
+
+    client = TestClient(app)
+    response = client.get(
+        "/api/v1/miniapp/documentos",
+        headers=_obtener_headers_vendedor()
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["id"] == delivery_uuid
+    assert data[0]["url_descarga"] == "https://supabase.co/signed-url/minuta_104"
+    assert data[0]["vencido"] is False
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_proyecto_mapa_miniapp(mock_supabase_client):
+    """Prueba que se pueda obtener el GeoJSON del mapa del proyecto desde la Mini App."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    project_uuid = str(uuid.uuid4())
+
+    mock_select = MagicMock()
+    mock_select.eq.return_value = mock_select
+    mock_select.not_.is_.return_value = mock_select
+    mock_select.execute.return_value = MagicMock(
+        data=[
+            {
+                "id": str(uuid.uuid4()),
+                "project_id": project_uuid,
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]]
+                },
+                "lots": {
+                    "id": str(uuid.uuid4()),
+                    "numero_lote": "104",
+                    "estado": "disponible"
+                }
+            }
+        ]
+    )
+    mock_supabase.table.return_value.select.return_value = mock_select
+
+    client = TestClient(app)
+    response = client.get(
+        f"/api/v1/miniapp/proyectos/{project_uuid}/mapa",
+        headers=_obtener_headers_vendedor()
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["type"] == "FeatureCollection"
+    assert len(data["features"]) == 1
+    assert data["features"][0]["properties"]["numero_lote"] == "104"
+    assert data["features"][0]["geometry"]["type"] == "Polygon"
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_lote_detalle_miniapp(mock_supabase_client):
+    """Prueba que se pueda obtener el detalle técnico de un lote específico desde la Mini App."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    lot_uuid = str(uuid.uuid4())
+    project_uuid = str(uuid.uuid4())
+
+    mock_select = MagicMock()
+    mock_select.eq.return_value = mock_select
+    mock_select.limit.return_value = mock_select
+    mock_select.execute.return_value = MagicMock(
+        data=[
+            {
+                "id": lot_uuid,
+                "project_id": project_uuid,
+                "numero_lote": "104",
+                "estado": "disponible",
+                "area_official_m2": 5000.0,
+                "superficie_neta_m2": None,
+                "m2": None,
+                "precio": 45000000,
+                "boundaries_official": None,
+                "projects": {"name": "Lomas de Frutillar"},
+                "lot_legal_data": {
+                    "sii_definitive_role": "123-45",
+                    "sii_pre_role": None,
+                    "sii_role_in_process_text": None
+                }
+              }
+        ]
+    )
+    mock_supabase.table.return_value.select.return_value = mock_select
+
+    client = TestClient(app)
+    response = client.get(
+        f"/api/v1/miniapp/lotes/{lot_uuid}",
+        headers=_obtener_headers_vendedor()
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == lot_uuid
+    assert data["numero_lote"] == "104"
+    assert data["status"] == "disponible"
+    assert data["superficie"] == 5000.0
+    assert data["precio"] == 45000000
+    assert data["numero_rol"] == "123-45"
+    assert data["proyecto_nombre"] == "Lomas de Frutillar"
+
+

@@ -36,18 +36,18 @@ Regla: si un detalle de API externa no fue verificado contra context7 (o la doc 
 
 Invocar la skill ANTES de trabajar en su área. Este mapeo es parte del contrato:
 
-| Área | Skills obligatorias | Cuándo |
-|---|---|---|
-| Todo lo Telegram | `telegram-mini-app`, `telegram-integration` | Antes de la US1; releer la sección de validación de initData y la de Mini App |
-| Sesión / initData | `auth-implementation-patterns`, `security-and-hardening` | Antes de diseñar el endpoint de sesión y la dependencia FastAPI |
-| Endpoints FastAPI | `fastapi-templates`, `api-design-principles`, `async-python-patterns`, `error-handling-patterns` | Antes de crear el router `miniapp` |
-| Frontend mini app | `nextjs-app-router-patterns`, `next-best-practices`, `react-best-practices`, `frontend-ui-engineering`, `tailwind-v4-shadcn` | Antes de la estructura `/mini` y de cada pantalla |
-| Formulario reserva | `react-hook-form`, `zod` | US5 |
-| Tests API | `python-testing-patterns`, `test-driven-development` | Antes de escribir el primer test de cada endpoint |
-| Tests web | `javascript-testing-patterns`, `vitest`, `e2e-testing-patterns` | Antes de los tests de componentes/flujo |
-| Migraciones (si hubiera) | `supabase-postgres-best-practices`, `postgresql-table-design` | Solo si un contrato exige DDL (este SDD no debería necesitarlo) |
-| Flujo de trabajo | `speckit-implement`, `incremental-implementation`, `code-review-and-quality` | Al partir y al cerrar cada user story |
-| Monorepo | `monorepo-management` | Si se tocan configs de workspace |
+| Área                     | Skills obligatorias                                                                                                          | Cuándo                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Todo lo Telegram         | `telegram-mini-app`, `telegram-integration`                                                                                  | Antes de la US1; releer la sección de validación de initData y la de Mini App |
+| Sesión / initData        | `auth-implementation-patterns`, `security-and-hardening`                                                                     | Antes de diseñar el endpoint de sesión y la dependencia FastAPI               |
+| Endpoints FastAPI        | `fastapi-templates`, `api-design-principles`, `async-python-patterns`, `error-handling-patterns`                             | Antes de crear el router `miniapp`                                            |
+| Frontend mini app        | `nextjs-app-router-patterns`, `next-best-practices`, `react-best-practices`, `frontend-ui-engineering`, `tailwind-v4-shadcn` | Antes de la estructura `/mini` y de cada pantalla                             |
+| Formulario reserva       | `react-hook-form`, `zod`                                                                                                     | US5                                                                           |
+| Tests API                | `python-testing-patterns`, `test-driven-development`                                                                         | Antes de escribir el primer test de cada endpoint                             |
+| Tests web                | `javascript-testing-patterns`, `vitest`, `e2e-testing-patterns`                                                              | Antes de los tests de componentes/flujo                                       |
+| Migraciones (si hubiera) | `supabase-postgres-best-practices`, `postgresql-table-design`                                                                | Solo si un contrato exige DDL (este SDD no debería necesitarlo)               |
+| Flujo de trabajo         | `speckit-implement`, `incremental-implementation`, `code-review-and-quality`                                                 | Al partir y al cerrar cada user story                                         |
+| Monorepo                 | `monorepo-management`                                                                                                        | Si se tocan configs de workspace                                              |
 
 ## 4. Tests de funcionalidad real (regla de la casa, no negociable)
 

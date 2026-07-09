@@ -612,6 +612,7 @@ async def test_sale_from_matching_reservation_shows_delta_message(monkeypatch):
         button["callback_data"]
         for row in reply_markup["inline_keyboard"]
         for button in row
+        if "callback_data" in button
     }
     assert callback_datas == {
         "approve:approval-sale-uuid",

@@ -8,19 +8,22 @@ Requiere sesión de mini app con rol `vendor` (o `admin`).
 
 ### Request
 
+**Desviación implementada** (justificación: espejo directo del `MiniappReservationRequest` de Pydantic en `apps/api/api/v1/endpoints/miniapp.py`, cubierto por `tests/test_miniapp_reserva.py`): la clave de idempotencia va en el header `X-Idempotency-Key`, no en el body, y los campos del comprador van planos (`buyer_*`) en vez de anidados en `comprador`. El zod schema del cliente (`apps/web/src/lib/miniapp/validation.ts`) es el espejo de esta forma real.
+
 ```json
 {
-  "idempotency_key": "<uuid generado por el cliente al abrir el formulario>",
   "lot_id": "<uuid>",
-  "comprador": {
-    "nombre": "Juan Soto Pérez",
-    "rut": "12.345.678-5",
-    "telefono": "+56 9 1234 5678",
-    "email": "juan@correo.cl"
-  },
-  "nota": "opcional, texto corto"
+  "buyer_name": "Juan Soto Pérez",
+  "buyer_rut": "12.345.678-5",
+  "buyer_phone": "+56912345678",
+  "buyer_email": "juan@correo.cl",
+  "payment_method": "transfer",
+  "payment_evidence_url": "opcional",
+  "observation": "opcional, texto corto"
 }
 ```
+
+Header: `X-Idempotency-Key: <uuid generado por el cliente al abrir el formulario>`
 
 **Protección de datos (restricción legal)**: el formulario NO incluye carga de imágenes de la cédula de identidad ni de ningún documento de identidad — por ley no se pueden almacenar. Se capturan únicamente los datos tipeados. El campo "adjuntar cédula" del wireframe 3 quedó descartado; no implementarlo bajo ninguna variante (foto, PDF, OCR) sin autorización legal explícita del usuario.
 
@@ -41,8 +44,7 @@ Requiere sesión de mini app con rol `vendor` (o `admin`).
 
 ### Response
 
-- **201**: `{ "approval_id": "...", "estado": "pendiente" }`
-- **200**: misma forma, cuando la idempotency_key ya existía.
+- **201**: `{ "approval_id": "...", "status": "pending", "message": "..." }` — la respuesta cacheada por idempotencia también sale con 201 (el router fija `status_code=201` a nivel de decorador para toda la ruta); no se implementó el 200 diferenciado que sugería este contrato originalmente.
 - **409 `lote_no_disponible`**: el estado del lote cambió entre la ficha y el envío; el cuerpo trae el estado actual para que la UI lo muestre ("este lote acaba de reservarse").
 - **422**: detalle por campo (el cliente los pinta bajo cada input).
 - **403**: vendedor sin el proyecto asignado / lote de otra org.

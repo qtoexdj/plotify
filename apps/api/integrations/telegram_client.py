@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 TELEGRAM_API_HOST = "api.telegram.org"
 TELEGRAM_SEND_TIMEOUT_SECONDS = 10.0
 TELEGRAM_CALLBACK_TIMEOUT_SECONDS = 5.0
-_ALLOWED_BOT_METHODS = {"sendMessage", "sendDocument", "answerCallbackQuery", "editMessageText"}
+_ALLOWED_BOT_METHODS = {"sendMessage", "sendDocument", "answerCallbackQuery", "editMessageText", "setChatMenuButton", "setMyCommands"}
 
 
 class TelegramClient:
@@ -162,6 +162,95 @@ class TelegramClient:
                     }
                 )
         return None
+
+    async def set_menu_button(
+        self, menu_button: dict, chat_id: Optional[str] = None
+    ) -> Optional[dict]:
+        """Configura el botón de menú de Telegram.
+
+        Sin `chat_id` configura el botón por DEFECTO para todos los chats
+        privados con el bot (uso: registro/actualización del bot de una
+        org, antes de que exista ningún chat_id conocido). Con `chat_id`
+        sobreescribe el botón de un chat puntual.
+        """
+        if not self.bot_token:
+            logger.warning(
+                "TELEGRAM_BOT_TOKEN no configurado. No se puede configurar el botón de menú."
+            )
+            return None
+
+        payload: Dict[str, object] = {"menu_button": menu_button}
+        if chat_id is not None:
+            payload["chat_id"] = int(chat_id)
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    self._bot_api_url("setChatMenuButton"),
+                    json=payload,
+                    timeout=TELEGRAM_SEND_TIMEOUT_SECONDS,
+                )
+                response.raise_for_status()
+                data = response.json()
+                logger.info(
+                    f"Botón de menú configurado exitosamente en Telegram (Chat ID: {chat_id or 'default'})."
+                )
+                return data
+            except httpx.HTTPStatusError as e:
+                logger.error(
+                    "Telegram API failure in setChatMenuButton (HTTPStatusError)",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "setChatMenuButton",
+                        "chat_id": chat_id,
+                        "status_code": e.response.status_code,
+                        "error_detail": e.response.text,
+                    }
+                )
+                return None
+            except Exception as e:
+                logger.error(
+                    f"Fallo inesperado al conectar con Telegram API en setChatMenuButton: {str(e)}"
+                )
+                return None
+
+    async def set_my_commands(self, commands: list) -> Optional[dict]:
+        """Configura la lista de comandos del bot (menú '/' de Telegram)."""
+        if not self.bot_token:
+            logger.warning(
+                "TELEGRAM_BOT_TOKEN no configurado. No se pueden configurar los comandos del bot."
+            )
+            return None
+
+        payload = {"commands": commands}
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    self._bot_api_url("setMyCommands"),
+                    json=payload,
+                    timeout=TELEGRAM_SEND_TIMEOUT_SECONDS,
+                )
+                response.raise_for_status()
+                data = response.json()
+                logger.info("Comandos del bot configurados exitosamente en Telegram.")
+                return data
+            except httpx.HTTPStatusError as e:
+                logger.error(
+                    "Telegram API failure in setMyCommands (HTTPStatusError)",
+                    extra={
+                        "event": "telegram_api_failure",
+                        "method": "setMyCommands",
+                        "status_code": e.response.status_code,
+                        "error_detail": e.response.text,
+                    }
+                )
+                return None
+            except Exception as e:
+                logger.error(
+                    f"Fallo inesperado al conectar con Telegram API en setMyCommands: {str(e)}"
+                )
+                return None
 
     async def send_document(
         self,
