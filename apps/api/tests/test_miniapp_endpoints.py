@@ -34,7 +34,8 @@ def _obtener_headers_vendedor() -> dict:
         user_id=VENDOR_ID,
         org_id=ORG_ID,
         role="vendor",
-        chat_id=CHAT_ID
+        chat_id=CHAT_ID,
+        vendor_id=VENDOR_ID,
     )
     return {"Authorization": f"Bearer {token}"}
 
@@ -97,6 +98,7 @@ def test_get_bandeja_con_datos(mock_supabase_client):
 
     # Datos simulados de excepciones de escritura
     case_uuid = str(uuid.uuid4())
+    generation_uuid = str(uuid.uuid4())
     cases_data = [
         {
             "id": case_uuid,
@@ -339,6 +341,7 @@ def test_get_ventas_vendedor(mock_supabase_client):
     # Mock de respuesta para casos de escritura asignados a este vendedor
     mock_select = MagicMock()
     mock_select.eq.return_value = mock_select
+    mock_select.order.return_value = mock_select
     mock_select.limit.return_value = mock_select
     mock_select.execute.return_value = MagicMock(
         data=[
@@ -425,29 +428,41 @@ def test_get_documentos_vendedor(mock_supabase_client):
 
     delivery_uuid = str(uuid.uuid4())
     case_uuid = str(uuid.uuid4())
+    generation_uuid = str(uuid.uuid4())
 
     # Datos simulados de entregas de documentos
     mock_select = MagicMock()
     mock_select.eq.return_value = mock_select
+    mock_select.order.return_value = mock_select
     mock_select.execute.return_value = MagicMock(
         data=[
             {
                 "id": delivery_uuid,
                 "escritura_case_id": case_uuid,
-                "file_path": "organizaciones/minutas/minuta_104.pdf",
-                "delivered_at": "2026-07-09T09:00:00Z",
-                "expires_at": "2026-07-16T09:00:00Z",  # Vigente
-                "escritura_cases": {
-                    "vendedor_id": VENDOR_ID,
-                    "organization_id": ORG_ID,
-                    "projects": {"name": "Lomas de Frutillar"},
-                    "lots": {"numero_lote": "104"}
-                }
+                "generation_id": generation_uuid,
+                "organization_id": ORG_ID,
+                "recipient_user_id": VENDOR_ID,
+                "channel": "web",
+                "status": "sent",
+                "link_expires_at": "2099-07-16T09:00:00+00:00",
+                "sent_at": "2026-07-09T09:00:00Z",
+                "created_at": "2026-07-09T09:00:00Z",
             }
         ]
     )
-    mock_supabase.table.return_value.select.return_value = mock_select
-    mock_supabase.storage.from_().create_signed_url.return_value = {"signedURL": "https://supabase.co/signed-url/minuta_104"}
+    mock_generation_select = MagicMock()
+    mock_generation_select.eq.return_value.in_.return_value = mock_generation_select
+    mock_generation_select.execute.return_value = MagicMock(
+        data=[{"id": generation_uuid, "storage_path": "minutas/minuta_104.pdf"}]
+    )
+    mock_supabase.table.side_effect = lambda table: (
+        MagicMock(select=MagicMock(return_value=mock_select))
+        if table == "escritura_deliveries"
+        else MagicMock(select=MagicMock(return_value=mock_generation_select))
+    )
+    mock_supabase.storage.from_("documents").create_signed_url.return_value = {
+        "signedURL": "https://supabase.co/signed-url/minuta_104"
+    }
 
     client = TestClient(app)
     response = client.get(
@@ -459,8 +474,27 @@ def test_get_documentos_vendedor(mock_supabase_client):
     data = response.json()
     assert len(data) == 1
     assert data[0]["id"] == delivery_uuid
-    assert data[0]["url_descarga"] == "https://supabase.co/signed-url/minuta_104"
-    assert data[0]["vencido"] is False
+    assert data[0]["download_url"] == "https://supabase.co/signed-url/minuta_104"
+    assert data[0]["status"] == "sent"
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_renovar_documento_rechaza_entrega_de_otro_destinatario(mock_supabase_client):
+    """La renovación reutiliza el scope recipient_user_id + organization_id."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+    query = MagicMock()
+    query.eq.return_value = query
+    query.maybe_single.return_value = query
+    query.execute.return_value = MagicMock(data=None)
+    mock_supabase.table.return_value.select.return_value = query
+
+    response = TestClient(app).post(
+        f"/api/v1/miniapp/documentos/{uuid.uuid4()}/renovar",
+        headers=_obtener_headers_vendedor(),
+    )
+
+    assert response.status_code == 404
 
 
 @patch("api.v1.endpoints.miniapp.get_supabase_client")
@@ -531,7 +565,7 @@ def test_get_lote_detalle_miniapp(mock_supabase_client):
                 "m2": None,
                 "precio": 45000000,
                 "boundaries_official": None,
-                "projects": {"name": "Lomas de Frutillar"},
+                "projects": {"name": "Lomas de Frutillar", "organization_id": ORG_ID},
                 "lot_legal_data": {
                     "sii_definitive_role": "123-45",
                     "sii_pre_role": None,
@@ -540,7 +574,27 @@ def test_get_lote_detalle_miniapp(mock_supabase_client):
               }
         ]
     )
-    mock_supabase.table.return_value.select.return_value = mock_select
+    assignment_query = MagicMock()
+    assignment_query.eq.return_value = assignment_query
+    assignment_query.limit.return_value = assignment_query
+    assignment_query.execute.return_value = MagicMock(data=[{"vendor_id": VENDOR_ID}])
+
+    project_query = MagicMock()
+    project_query.eq.return_value = project_query
+    project_query.limit.return_value = project_query
+    project_query.execute.return_value = MagicMock(data=[{"id": project_uuid}])
+
+    def table(name):
+        query = MagicMock()
+        if name == "lots":
+            query.select.return_value = mock_select
+        elif name == "projects":
+            query.select.return_value = project_query
+        elif name == "vendor_projects":
+            query.select.return_value = assignment_query
+        return query
+
+    mock_supabase.table.side_effect = table
 
     client = TestClient(app)
     response = client.get(
@@ -559,3 +613,81 @@ def test_get_lote_detalle_miniapp(mock_supabase_client):
     assert data["proyecto_nombre"] == "Lomas de Frutillar"
 
 
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_mapa_no_expone_un_proyecto_fuera_de_la_organizacion(mock_supabase_client):
+    """Una sesión de Mini App no puede inferir geometrías de otro tenant."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    geometry_query = MagicMock()
+    geometry_query.eq.return_value = geometry_query
+    geometry_query.not_.is_.return_value = geometry_query
+    geometry_query.execute.return_value = MagicMock(data=[{"geometry": {"type": "Polygon"}}])
+
+    project_query = MagicMock()
+    project_query.eq.return_value = project_query
+    project_query.limit.return_value = project_query
+    project_query.execute.return_value = MagicMock(data=[])
+
+    def table(name):
+        query = MagicMock()
+        if name == "projects":
+            query.select.return_value = project_query
+        elif name == "geometries":
+            query.select.return_value = geometry_query
+        return query
+
+    mock_supabase.table.side_effect = table
+
+    client = TestClient(app)
+    response = client.get(
+        f"/api/v1/miniapp/proyectos/{uuid.uuid4()}/mapa",
+        headers=_obtener_headers_admin(),
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_lote_no_expone_ficha_a_vendedor_sin_proyecto_asignado(mock_supabase_client):
+    """Un vendedor solo puede abrir fichas de lotes de proyectos asignados."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    lot_query = MagicMock()
+    lot_query.eq.return_value = lot_query
+    lot_query.limit.return_value = lot_query
+    lot_query.execute.return_value = MagicMock(
+        data=[
+            {
+                "id": str(uuid.uuid4()),
+                "project_id": str(uuid.uuid4()),
+                "numero_lote": "104",
+                "estado": "disponible",
+                "projects": {"name": "Proyecto ajeno", "organization_id": ORG_ID},
+            }
+        ]
+    )
+
+    assignment_query = MagicMock()
+    assignment_query.eq.return_value = assignment_query
+    assignment_query.limit.return_value = assignment_query
+    assignment_query.execute.return_value = MagicMock(data=[])
+
+    def table(name):
+        query = MagicMock()
+        if name == "lots":
+            query.select.return_value = lot_query
+        elif name == "vendor_projects":
+            query.select.return_value = assignment_query
+        return query
+
+    mock_supabase.table.side_effect = table
+
+    client = TestClient(app)
+    response = client.get(
+        f"/api/v1/miniapp/lotes/{uuid.uuid4()}",
+        headers=_obtener_headers_vendedor(),
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -18,6 +18,7 @@ from utils.audit import (
 )
 
 logger = get_logger(__name__)
+_MINI_APP_URL_WARNED = False
 
 
 import asyncio
@@ -405,20 +406,30 @@ async def send_decision_notifications(
             )
             
             reply_markup = None
-            if "borrador" in admin_msg.lower() or "matriz" in admin_msg.lower():
-                settings = get_settings()
-                mini_app_url = settings.TELEGRAM_MINI_APP_URL or "http://localhost:3000"
-                web_app_url = f"{mini_app_url}/mini/admin?org_id={org_id}"
+            mini_app_url = get_settings().TELEGRAM_MINI_APP_URL.rstrip()
+            if ("borrador" in admin_msg.lower() or "matriz" in admin_msg.lower()) and mini_app_url:
                 reply_markup = {
                     "inline_keyboard": [
                         [
                             {
-                                "text": "⚡ Abrir Bandeja (Mini App)",
-                                "web_app": {"url": web_app_url},
+                                "text": "⚡ Abrir en la app",
+                                "web_app": {
+                                    "url": (
+                                        f"{mini_app_url.rstrip('/')}/mini/bandeja/{approval_id}"
+                                        f"?org={org_id}&tipo=reserva"
+                                    )
+                                },
                             }
                         ]
                     ]
                 }
+            elif "borrador" in admin_msg.lower() or "matriz" in admin_msg.lower():
+                global _MINI_APP_URL_WARNED
+                if not _MINI_APP_URL_WARNED:
+                    logger.warning(
+                        "TELEGRAM_MINI_APP_URL no configurada; se omite el botón web_app de decisión."
+                    )
+                    _MINI_APP_URL_WARNED = True
                 
             await telegram_client.send_text(admin_id, admin_msg, reply_markup=reply_markup)
 

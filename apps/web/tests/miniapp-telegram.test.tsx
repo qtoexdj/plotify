@@ -61,6 +61,8 @@ describe('Telegram Web App SDK Hook (useTelegram)', () => {
             onClick: vi.fn().mockReturnThis(),
             offClick: vi.fn().mockReturnThis(),
           },
+          onEvent: vi.fn(),
+          offEvent: vi.fn(),
           enableClosingConfirmation: vi.fn(),
           disableClosingConfirmation: vi.fn(),
         },
@@ -80,6 +82,12 @@ describe('Telegram Web App SDK Hook (useTelegram)', () => {
       'query_id=AA&user=%7B%22id%22%3A123%7D&hash=xyz'
     )
     expect(screen.getByTestId('user-id').textContent).toBe('123')
+    expect(window.Telegram?.WebApp.ready).toHaveBeenCalled()
+    expect(window.Telegram?.WebApp.expand).toHaveBeenCalled()
+    expect(window.Telegram?.WebApp.onEvent).toHaveBeenCalledWith(
+      'themeChanged',
+      expect.any(Function)
+    )
   })
 
   it('debe resolver isAvailable como false y webApp null si window.Telegram no existe', () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, Suspense } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTelegram } from '@/lib/miniapp/telegram'
 import {
@@ -10,6 +10,9 @@ import {
   isSessionExpired,
   MiniappSession,
 } from '@/lib/miniapp/session'
+import { miniAppOrgId, miniAppUrl } from '@/lib/miniapp/routes'
+
+const SESSION_REQUEST_TIMEOUT_MS = 15_000
 
 interface MiniAppContextType {
   session: MiniappSession | null
@@ -31,26 +34,32 @@ export const useMiniApp = () => useContext(MiniAppContext)
 
 function MiniAppContent({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const routerRef = useRef(router)
   const searchParams = useSearchParams()
+
+  useEffect(() => {
+    routerRef.current = router
+  }, [router])
 
   const { isAvailable, webApp, initData } = useTelegram()
   const [session, setSession] = useState<MiniappSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const queryOrgId = searchParams.get('org_id')
+  const queryOrgId = miniAppOrgId(searchParams)
+  const bypass = searchParams.get('bypass') === 'true'
   const tgOrgId = webApp?.initDataUnsafe
     ? (webApp.initDataUnsafe as { start_param?: string }).start_param
     : null
+  const telegramChatId = webApp?.initDataUnsafe?.user?.id || ''
   const orgId = queryOrgId || tgOrgId || null
 
   useEffect(() => {
     // Recuperar sesión persistida
     const savedSession = getMiniappSession()
     const targetOrgId = orgId || savedSession?.user.org_id
-
     if (!targetOrgId) {
       Promise.resolve().then(() => {
-        setError('Organización no provista (?org_id=...)')
+        setError('Organización no provista (?org=...)')
         setLoading(false)
       })
       return
@@ -72,33 +81,47 @@ function MiniAppContent({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // Si no estamos en Telegram (entorno local / desarrollo)
-        if (!isAvailable) {
-          const bypass =
-            searchParams.get('bypass') === 'true' || process.env.NODE_ENV === 'development'
-          if (bypass) {
-            const devSession: MiniappSession = {
-              token: 'jwt-mock-dev-token',
-              role: 'admin',
-              user: {
-                id: '00000000-0000-4000-8000-000000000777',
-                nombre: 'Vendedor Desarrollo (Bypass)',
-                org_id: targetOrgId as string,
-                org_nombre: 'Plotify Local Dev',
-              },
-            }
-            setMiniappSession(devSession)
-            setSession(devSession)
-            setLoading(false)
-            return
+        // El script oficial puede crear window.Telegram fuera del cliente de
+        // Telegram. El bypass de desarrollo debe resolverse antes de usar esa
+        // presencia como señal de disponibilidad real.
+        if (bypass || (process.env.NODE_ENV === 'development' && !initData)) {
+          const devSession: MiniappSession = {
+            token: 'jwt-mock-dev-token',
+            role: 'admin',
+            user: {
+              id: '00000000-0000-4000-8000-000000000777',
+              nombre: 'Vendedor Desarrollo (Bypass)',
+              org_id: targetOrgId as string,
+              org_nombre: 'Plotify Local Dev',
+            },
           }
+          setMiniappSession(devSession)
+          setSession(devSession)
+          setLoading(false)
+          return
+        }
 
+        // Si no estamos en Telegram, no existe initData verificable.
+        if (!isAvailable) {
           setError('Esta aplicación solo está disponible dentro de Telegram.')
           setLoading(false)
           return
         }
 
+        if (!initData) {
+          setError(
+            'Telegram no entregó los datos de inicio. Cierra esta ventana y vuelve a abrir la Mini App desde el bot.'
+          )
+          setLoading(false)
+          return
+        }
+
         // Autenticar llamando al API proxy de Next.js
+        const abortController = new AbortController()
+        const timeoutId = window.setTimeout(
+          () => abortController.abort(),
+          SESSION_REQUEST_TIMEOUT_MS
+        )
         const res = await fetch('/api/miniapp/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -106,17 +129,28 @@ function MiniAppContent({ children }: { children: React.ReactNode }) {
             org_id: targetOrgId,
             init_data: initData,
           }),
-        })
+          signal: abortController.signal,
+        }).finally(() => window.clearTimeout(timeoutId))
 
         if (res.status === 403) {
           const detail = await res.json()
           if (detail.error === 'not_linked') {
             clearMiniappSession()
-            const chatId = webApp?.initDataUnsafe?.user?.id || ''
-            router.push(`/mini/vincular?org_id=${targetOrgId}&chat_id=${chatId}`)
+            setLoading(false)
+            routerRef.current.push(
+              miniAppUrl('/mini/vincular', targetOrgId as string, {
+                chat_id: String(telegramChatId),
+              })
+            )
             return
           } else if (detail.error === 'not_member') {
             setError('Acceso denegado: No tienes membresía activa en esta organización.')
+            setLoading(false)
+            return
+          } else if (detail.error === 'not_vendor') {
+            setError(
+              'Tu cuenta no tiene un perfil de vendedor activo en esta organización. Pide a un administrador que te asigne como vendedor.'
+            )
             setLoading(false)
             return
           }
@@ -135,13 +169,17 @@ function MiniAppContent({ children }: { children: React.ReactNode }) {
         setLoading(false)
       } catch (err) {
         console.error('Error autenticando sesión de mini app:', err)
-        setError('Fallo de conexión de red con el servidor.')
+        setError(
+          err instanceof DOMException && err.name === 'AbortError'
+            ? 'La verificación de sesión tardó demasiado. Cierra esta ventana y vuelve a abrir la Mini App.'
+            : 'Fallo de conexión de red con el servidor.'
+        )
         setLoading(false)
       }
     }
 
     authenticate()
-  }, [isAvailable, initData, webApp, searchParams, router, orgId])
+  }, [bypass, initData, isAvailable, orgId, telegramChatId])
 
   return (
     <MiniAppContext.Provider

@@ -1,14 +1,16 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMiniApp } from './layout'
+import { useMiniApp } from '@/lib/miniapp/mini-app-shell'
 import { useTelegram } from '@/lib/miniapp/telegram'
+import { miniAppUrl } from '@/lib/miniapp/routes'
 
 export default function MiniAppRouterPage() {
   const router = useRouter()
   const { session, loading, error } = useMiniApp()
   const { startParam } = useTelegram()
+  const [roleError, setRoleError] = useState<string | null>(null)
 
   useEffect(() => {
     if (loading || error || !session) return
@@ -16,13 +18,18 @@ export default function MiniAppRouterPage() {
     const role = session.role.toLowerCase()
     const orgId = session.user.org_id
 
+    // El backend (resolve_miniapp_user) solo emite sesiones con role
+    // "admin" o "vendor" — nunca el valor crudo "user" de organization_members.
+    // Este else es defensivo ante un rol futuro no contemplado: evita dejar
+    // el spinner girando para siempre.
     const redirectDefaultRole = () => {
       if (role === 'admin' || role === 'superadmin') {
-        router.replace(`/mini/admin?org_id=${orgId}`)
+        router.replace(miniAppUrl('/mini/admin', orgId))
       } else if (role === 'vendor' || role === 'vendedor') {
-        router.replace(`/mini/vendedor?org_id=${orgId}`)
+        router.replace(miniAppUrl('/mini/vendedor', orgId))
       } else {
         console.warn(`Rol no reconocido para la mini app: ${session.role}`)
+        setRoleError(`Rol no soportado por la mini app: ${session.role}`)
       }
     }
 
@@ -56,6 +63,15 @@ export default function MiniAppRouterPage() {
 
     redirectDefaultRole()
   }, [session, loading, error, router, startParam])
+
+  if (roleError) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#17212b] p-6 text-center text-white">
+        <h2 className="text-lg font-semibold">Error de Acceso</h2>
+        <p className="mt-2 text-sm text-gray-400 max-w-xs">{roleError}</p>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

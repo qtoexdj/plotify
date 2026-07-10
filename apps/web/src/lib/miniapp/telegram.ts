@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export interface TelegramUser {
   id: number
@@ -54,6 +54,8 @@ export interface TelegramWebApp {
     onClick(callback: () => void): any
     offClick(callback: () => void): any
   }
+  onEvent(eventType: 'themeChanged' | 'backButtonClicked', callback: () => void): void
+  offEvent(eventType: 'themeChanged' | 'backButtonClicked', callback: () => void): void
   enableClosingConfirmation(): void
   disableClosingConfirmation(): void
 }
@@ -78,10 +80,27 @@ export function useTelegram() {
     return typeof window !== 'undefined' && !!window.Telegram?.WebApp
   })
 
+  const [themeParams, setThemeParams] = useState<TelegramWebApp['themeParams']>({})
+
   useEffect(() => {
-    if (webApp) {
-      webApp.ready()
+    if (!webApp) return
+
+    const applyTheme = () => {
+      const theme = webApp.themeParams
+      setThemeParams({ ...theme })
+      const root = document.documentElement.style
+      if (theme.bg_color) root.setProperty('--tg-theme-bg-color', theme.bg_color)
+      if (theme.text_color) root.setProperty('--tg-theme-text-color', theme.text_color)
+      if (theme.button_color) root.setProperty('--tg-theme-button-color', theme.button_color)
+      if (theme.button_text_color)
+        root.setProperty('--tg-theme-button-text-color', theme.button_text_color)
     }
+
+    webApp.ready()
+    webApp.expand()
+    applyTheme()
+    webApp.onEvent('themeChanged', applyTheme)
+    return () => webApp.offEvent('themeChanged', applyTheme)
   }, [webApp])
 
   const user = webApp?.initDataUnsafe?.user || null
@@ -110,5 +129,26 @@ export function useTelegram() {
     ready,
     expand,
     close,
+    themeParams,
   }
+}
+
+export function useTelegramBackButton(onBack: () => void, enabled = true) {
+  const { webApp } = useTelegram()
+  const callbackRef = useRef(onBack)
+
+  useEffect(() => {
+    callbackRef.current = onBack
+  }, [onBack])
+
+  useEffect(() => {
+    if (!webApp || !enabled) return
+    const handleBack = () => callbackRef.current()
+    webApp.BackButton.show()
+    webApp.BackButton.onClick(handleBack)
+    return () => {
+      webApp.BackButton.offClick(handleBack)
+      webApp.BackButton.hide()
+    }
+  }, [webApp, enabled])
 }

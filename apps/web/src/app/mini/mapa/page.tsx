@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import MapLibreGL from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { useMiniApp } from '../layout'
+import { useMiniApp } from '@/lib/miniapp/mini-app-shell'
 import { LotSheet } from './lot-sheet'
 
 interface Proyecto {

@@ -384,3 +384,132 @@ async def test_telegram_client_set_menu_button():
         assert kwargs["json"]["menu_button"]["type"] == "web_app"
 
 
+# --- resolve_miniapp_user: rol operativo (admin | vendor vía tabla vendors) ---
+# El enum real de organization_members.role es SOLO "admin" | "user" (no
+# existe "vendor"). Un "user" es vendedor si tiene fila activa en `vendors`;
+# si no, se rechaza con "not_vendor". Ver memoria de proyecto
+# sdd18-miniapp-schema-role-bugs.md para el modelo verificado contra la
+# base real (Supabase project swkrnjdpnlrgxgotmfxy).
+
+
+def _mock_chain(data):
+    """MagicMock que soporta cualquier cadena .select().eq().eq().limit().execute()
+    y siempre devuelve `data` en el .execute() final, sin importar cuántos
+    .eq()/.limit() se encadenen (distinto por tabla en el código real)."""
+    from unittest.mock import MagicMock as _MM
+    from types import SimpleNamespace
+
+    node = _MM()
+    node.select.return_value = node
+    node.eq.return_value = node
+    node.limit.return_value = node
+    node.execute.return_value = SimpleNamespace(data=data)
+    return node
+
+
+def _mock_supabase(profiles=None, members=None, vendors=None):
+    from unittest.mock import MagicMock as _MM
+
+    tables = {
+        "profiles": _mock_chain(profiles or []),
+        "organization_members": _mock_chain(members or []),
+        "vendors": _mock_chain(vendors or []),
+    }
+    supabase = _MM()
+    supabase.table.side_effect = lambda name: tables[name]
+    return supabase
+
+
+@pytest.mark.asyncio
+async def test_resolve_miniapp_user_admin():
+    """organization_members.role='admin' -> role resuelto 'admin', sin vendor_id."""
+    from core.miniapp_session import resolve_miniapp_user
+
+    org_id = str(uuid.uuid4())
+    profile_id = str(uuid.uuid4())
+    supabase = _mock_supabase(
+        profiles=[{"id": profile_id, "first_name": "Ana", "last_name": "Admin"}],
+        members=[{"role": "admin", "organization_id": org_id, "organizations": {"name": "Org Test"}}],
+    )
+
+    with patch("core.database.get_supabase_client", return_value=supabase):
+        error, detail = await resolve_miniapp_user(org_id, "111")
+
+    assert error is None
+    assert detail["role"] == "admin"
+    assert detail["vendor_id"] is None
+    assert detail["user_id"] == profile_id
+
+
+@pytest.mark.asyncio
+async def test_resolve_miniapp_user_vendedor_con_fila_activa():
+    """organization_members.role='user' + fila activa en vendors -> role='vendor', vendor_id=vendors.id."""
+    from core.miniapp_session import resolve_miniapp_user
+
+    org_id = str(uuid.uuid4())
+    profile_id = str(uuid.uuid4())
+    vendor_id = str(uuid.uuid4())
+    supabase = _mock_supabase(
+        profiles=[{"id": profile_id, "first_name": "Beto", "last_name": "Vendedor"}],
+        members=[{"role": "user", "organization_id": org_id, "organizations": {"name": "Org Test"}}],
+        vendors=[{"id": vendor_id}],
+    )
+
+    with patch("core.database.get_supabase_client", return_value=supabase):
+        error, detail = await resolve_miniapp_user(org_id, "222")
+
+    assert error is None
+    assert detail["role"] == "vendor"
+    assert detail["vendor_id"] == vendor_id
+
+
+@pytest.mark.asyncio
+async def test_resolve_miniapp_user_user_sin_fila_vendors_es_rechazado():
+    """organization_members.role='user' SIN fila en vendors -> 'not_vendor' (sin sesión emitida)."""
+    from core.miniapp_session import resolve_miniapp_user
+
+    org_id = str(uuid.uuid4())
+    profile_id = str(uuid.uuid4())
+    supabase = _mock_supabase(
+        profiles=[{"id": profile_id, "first_name": "Cami", "last_name": "SinVentas"}],
+        members=[{"role": "user", "organization_id": org_id, "organizations": {"name": "Org Test"}}],
+        vendors=[],
+    )
+
+    with patch("core.database.get_supabase_client", return_value=supabase):
+        error, detail = await resolve_miniapp_user(org_id, "333")
+
+    assert error == "not_vendor"
+    assert detail is None
+
+
+@pytest.mark.asyncio
+async def test_resolve_miniapp_user_not_linked():
+    from core.miniapp_session import resolve_miniapp_user
+
+    supabase = _mock_supabase(profiles=[])
+
+    with patch("core.database.get_supabase_client", return_value=supabase):
+        error, detail = await resolve_miniapp_user(str(uuid.uuid4()), "444")
+
+    assert error == "not_linked"
+    assert detail is None
+
+
+@pytest.mark.asyncio
+async def test_resolve_miniapp_user_not_member():
+    from core.miniapp_session import resolve_miniapp_user
+
+    profile_id = str(uuid.uuid4())
+    supabase = _mock_supabase(
+        profiles=[{"id": profile_id, "first_name": "Dani", "last_name": "SinOrg"}],
+        members=[],
+    )
+
+    with patch("core.database.get_supabase_client", return_value=supabase):
+        error, detail = await resolve_miniapp_user(str(uuid.uuid4()), "555")
+
+    assert error == "not_member"
+    assert detail is None
+
+

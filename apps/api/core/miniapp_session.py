@@ -107,9 +107,16 @@ class MiniappUserContext(BaseModel):
     org_id: uuid.UUID
     role: str
     chat_id: int
+    # vendors.id (NO profiles.id): es la llave real que usa todo el dominio
+    # de ventas (vendor_projects.vendor_id, approval_requests.vendor_id,
+    # lots.vendedor_id son FK a vendors.id, nunca a profiles.id). Presente
+    # solo cuando role == "vendor"; None para admin.
+    vendor_id: Optional[uuid.UUID] = None
 
 
-def create_miniapp_session(user_id: str, org_id: str, role: str, chat_id: int) -> str:
+def create_miniapp_session(
+    user_id: str, org_id: str, role: str, chat_id: int, vendor_id: str | None = None
+) -> str:
     """
     Genera un token JWT de sesión de corta duración firmado para la Mini App.
     """
@@ -120,6 +127,7 @@ def create_miniapp_session(user_id: str, org_id: str, role: str, chat_id: int) -
         "org": str(org_id),
         "role": role,
         "chat_id": chat_id,
+        "vendor_id": str(vendor_id) if vendor_id else None,
         "iat": now,
         "exp": now + settings.MINIAPP_SESSION_EXPIRE_SECONDS
     }
@@ -149,18 +157,20 @@ async def verify_miniapp_session(
         org_id = payload.get("org")
         role = payload.get("role")
         chat_id = payload.get("chat_id")
-        
+        vendor_id = payload.get("vendor_id")
+
         if not all([user_id, org_id, role, chat_id]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload"
             )
-            
+
         return MiniappUserContext(
             user_id=uuid.UUID(user_id),
             org_id=uuid.UUID(org_id),
             role=role,
-            chat_id=int(chat_id)
+            chat_id=int(chat_id),
+            vendor_id=uuid.UUID(vendor_id) if vendor_id else None
         )
         
     except jwt.ExpiredSignatureError:
@@ -192,22 +202,30 @@ async def require_miniapp_admin(
 
 async def resolve_miniapp_user(org_id: str, chat_id: str) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """
-    Resuelve el perfil y membresía para la Mini App.
+    Resuelve el perfil, membresía y rol operativo para la Mini App.
     Retorna (status_error, user_context_dict).
-    status_error puede ser: None, "not_linked", "not_member".
+    status_error puede ser: None, "not_linked", "not_member", "not_vendor".
+
+    El enum real de organization_members.role es SOLO "admin" | "user" (no
+    existe "vendor" en la base). Un miembro "user" es vendedor si y solo si
+    tiene una fila activa en `vendors` (vendors.user_id = profiles.id); esa
+    fila da el `vendors.id` que usa todo el dominio de ventas
+    (vendor_projects, approval_requests, lots.vendedor_id son FK a
+    vendors.id, nunca a profiles.id). Un "user" sin fila en vendors no tiene
+    rol operativo en la mini app: se rechaza con "not_vendor".
     """
     from core.database import get_supabase_client
     supabase = get_supabase_client()
-    
+
     # 1. Buscar perfil por telegram_chat_id
     profile_res = supabase.table("profiles").select("id, first_name, last_name").eq("telegram_chat_id", str(chat_id)).limit(1).execute()
     if not profile_res.data:
         return "not_linked", None
-        
+
     profile = profile_res.data[0]
     profile_id = profile["id"]
     nombre = f"{profile.get('first_name') or ''} {profile.get('last_name') or ''}".strip() or "Usuario"
-    
+
     # 2. Buscar membresía en organization_members
     member_res = (
         supabase.table("organization_members")
@@ -219,18 +237,40 @@ async def resolve_miniapp_user(org_id: str, chat_id: str) -> Tuple[Optional[str]
     )
     if not member_res.data:
         return "not_member", None
-        
+
     member = member_res.data[0]
     org_nombre = "Inmobiliaria"
     if member.get("organizations"):
         org_nombre = member["organizations"].get("name") or "Inmobiliaria"
-        
+
+    resolved_org_id = member["organization_id"]
+    vendor_id: Optional[str] = None
+
+    # 3. Resolver rol operativo: admin directo, o vendedor vía tabla vendors.
+    if member["role"] == "admin":
+        role = "admin"
+    else:
+        vendor_res = (
+            supabase.table("vendors")
+            .select("id")
+            .eq("user_id", profile_id)
+            .eq("organization_id", resolved_org_id)
+            .eq("active", True)
+            .limit(1)
+            .execute()
+        )
+        if not vendor_res.data:
+            return "not_vendor", None
+        role = "vendor"
+        vendor_id = vendor_res.data[0]["id"]
+
     user_detail = {
         "user_id": profile_id,
         "nombre": nombre,
-        "org_id": member["organization_id"],
+        "org_id": resolved_org_id,
         "org_nombre": org_nombre,
-        "role": member["role"]
+        "role": role,
+        "vendor_id": vendor_id,
     }
     return None, user_detail
 

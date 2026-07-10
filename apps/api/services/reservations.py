@@ -19,6 +19,7 @@ async def create_reservation_request_service(
     buyer_payload: Dict[str, Any],
     redis: ArqRedis,
     supabase: Any = None,
+    idempotency_key: str | None = None,
 ) -> Dict[str, Any]:
     """
     Servicio centralizado de creación de solicitudes de reserva.
@@ -127,22 +128,51 @@ async def create_reservation_request_service(
         "vendor_platform": vendor_platform,
         "payload": payload_data,
         "status": "pending",
+        "idempotency_key": idempotency_key,
     }
 
     def _insert_approval():
-        return client.table("approval_requests").insert(insert_data).execute()
+        if not idempotency_key:
+            return client.table("approval_requests").insert(insert_data).execute()
+        return (
+            client.table("approval_requests")
+            .upsert(
+                insert_data,
+                on_conflict="organization_id,vendor_id,idempotency_key",
+                ignore_duplicates=True,
+            )
+            .execute()
+        )
     
     insert_res = await asyncio.to_thread(_insert_approval)
-    if not insert_res.data:
-        raise HTTPException(
-            status_code=500, detail="Error al crear la solicitud de aprobación."
-        )
+    created = bool(insert_res.data)
+    if created:
+        approval_record = insert_res.data[0]
+    elif idempotency_key:
+        def _fetch_idempotent_request():
+            return (
+                client.table("approval_requests")
+                .select("*")
+                .eq("organization_id", resolved_org_id)
+                .eq("vendor_id", vendor_id)
+                .eq("idempotency_key", idempotency_key)
+                .limit(1)
+                .execute()
+            )
 
-    approval_record = insert_res.data[0]
+        existing_res = await asyncio.to_thread(_fetch_idempotent_request)
+        if not existing_res.data:
+            raise HTTPException(status_code=500, detail="Error al recuperar la solicitud idempotente.")
+        approval_record = existing_res.data[0]
+    else:
+        raise HTTPException(status_code=500, detail="Error al crear la solicitud de aprobación.")
+
+    approval_record["_created"] = created
     approval_id = approval_record["id"]
 
     # 7. Encolar notificación al admin vía Redis
-    await redis.enqueue_job("notify_admin_approval", approval_id)
+    if created:
+        await redis.enqueue_job("notify_admin_approval", approval_id)
     
     logger.info(
         "Solicitud de reserva creada exitosamente vía servicio compartido.",

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, use, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMiniApp } from '../../layout'
+import { useMiniApp } from '@/lib/miniapp/mini-app-shell'
 
 interface DetalleVenta {
   id: string

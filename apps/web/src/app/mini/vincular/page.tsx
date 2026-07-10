@@ -5,13 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useTelegram } from '@/lib/miniapp/telegram'
+import { miniAppOrgId, miniAppUrl } from '@/lib/miniapp/routes'
 
 function VincularContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { webApp } = useTelegram()
 
-  const qOrgId = searchParams.get('org_id')
+  const qOrgId = miniAppOrgId(searchParams)
   const qChatId = searchParams.get('chat_id')
   const tgChatId = webApp?.initDataUnsafe?.user?.id ? String(webApp.initDataUnsafe.user.id) : null
 
@@ -103,7 +104,7 @@ function VincularContent() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push(`/mini?org_id=${orgId}`)
+        router.push(miniAppUrl('/mini', orgId))
       }, 2000)
     } catch (err) {
       console.error('Error al confirmar OTP:', err)

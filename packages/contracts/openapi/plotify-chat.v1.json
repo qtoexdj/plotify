@@ -44,6 +44,30 @@
         "title": "AddBlockToTemplateRequest",
         "type": "object"
       },
+      "AdminDecisionRequest": {
+        "description": "Acción de decisión del administrador (aprobar o rechazar).",
+        "properties": {
+          "comentario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario"
+          },
+          "decision": {
+            "pattern": "^(approve|reject)$",
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": ["decision"],
+        "title": "AdminDecisionRequest",
+        "type": "object"
+      },
       "Adquirente": {
         "additionalProperties": false,
         "properties": {
@@ -307,6 +331,121 @@
           "payload"
         ],
         "title": "ApprovalRequestDetailResponse",
+        "type": "object"
+      },
+      "BandejaDetail": {
+        "description": "Detalle de un caso o reserva pendiente en la bandeja admin.",
+        "properties": {
+          "antiguedad_segundos": {
+            "title": "Antiguedad Segundos",
+            "type": "integer"
+          },
+          "causa": {
+            "title": "Causa",
+            "type": "string"
+          },
+          "comprador": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comprador"
+          },
+          "conflictos": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DiscrepanciaVariable"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conflictos"
+          },
+          "detalles_lote": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detalles Lote"
+          },
+          "estado": {
+            "title": "Estado",
+            "type": "string"
+          },
+          "evidencia_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidencia Url"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          }
+        },
+        "required": ["id", "tipo", "titulo", "estado", "causa", "antiguedad_segundos"],
+        "title": "BandejaDetail",
+        "type": "object"
+      },
+      "BandejaItem": {
+        "description": "Item resumido para la lista unificada del administrador.",
+        "properties": {
+          "antiguedad_segundos": {
+            "title": "Antiguedad Segundos",
+            "type": "integer"
+          },
+          "causa": {
+            "title": "Causa",
+            "type": "string"
+          },
+          "estado": {
+            "title": "Estado",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          }
+        },
+        "required": ["id", "tipo", "titulo", "causa", "antiguedad_segundos", "estado"],
+        "title": "BandejaItem",
         "type": "object"
       },
       "BlockResolution": {
@@ -1013,6 +1152,30 @@
         },
         "required": ["success"],
         "title": "DecisionResponse",
+        "type": "object"
+      },
+      "DiscrepanciaVariable": {
+        "description": "Detalle de una diferencia de variables lado a lado.",
+        "properties": {
+          "diferencia_detectada": {
+            "title": "Diferencia Detectada",
+            "type": "string"
+          },
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          },
+          "valor_certificado": {
+            "title": "Valor Certificado",
+            "type": "string"
+          },
+          "valor_vendedor": {
+            "title": "Valor Vendedor",
+            "type": "string"
+          }
+        },
+        "required": ["nombre", "valor_certificado", "valor_vendedor", "diferencia_detectada"],
+        "title": "DiscrepanciaVariable",
         "type": "object"
       },
       "DismissedAlert": {
@@ -3375,6 +3538,182 @@
         },
         "required": ["object", "entry"],
         "title": "MetaWebhookPayload",
+        "type": "object"
+      },
+      "MiniappReservationRequest": {
+        "properties": {
+          "buyer_email": {
+            "pattern": "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$",
+            "title": "Buyer Email",
+            "type": "string"
+          },
+          "buyer_name": {
+            "minLength": 2,
+            "title": "Buyer Name",
+            "type": "string"
+          },
+          "buyer_phone": {
+            "pattern": "^\\+?[1-9]\\d{1,14}$",
+            "title": "Buyer Phone",
+            "type": "string"
+          },
+          "buyer_rut": {
+            "minLength": 7,
+            "title": "Buyer Rut",
+            "type": "string"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "string"
+          },
+          "observation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation"
+          },
+          "payment_evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Evidence Url"
+          },
+          "payment_method": {
+            "title": "Payment Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lot_id",
+          "buyer_name",
+          "buyer_rut",
+          "buyer_email",
+          "buyer_phone",
+          "payment_method"
+        ],
+        "title": "MiniappReservationRequest",
+        "type": "object"
+      },
+      "MiniappSessionRequest": {
+        "description": "Solicitud de sesión de mini app validando initData.",
+        "properties": {
+          "init_data": {
+            "title": "Init Data",
+            "type": "string"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          }
+        },
+        "required": ["org_id", "init_data"],
+        "title": "MiniappSessionRequest",
+        "type": "object"
+      },
+      "MiniappSessionResponse": {
+        "description": "Respuesta con token firmado de sesión.",
+        "properties": {
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/MiniappUserDetail"
+          }
+        },
+        "required": ["token", "expires_in", "role", "user"],
+        "title": "MiniappSessionResponse",
+        "type": "object"
+      },
+      "MiniappUserDetail": {
+        "description": "Detalle del usuario dentro de la sesión.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nombre": {
+            "title": "Nombre",
+            "type": "string"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          },
+          "org_nombre": {
+            "title": "Org Nombre",
+            "type": "string"
+          }
+        },
+        "required": ["id", "nombre", "org_id", "org_nombre"],
+        "title": "MiniappUserDetail",
+        "type": "object"
+      },
+      "MiniappVincularConfirmarRequest": {
+        "description": "Confirmación del código OTP para vincular la cuenta de Telegram con el perfil.",
+        "properties": {
+          "chat_id": {
+            "title": "Chat Id",
+            "type": "integer"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          }
+        },
+        "required": ["email", "chat_id", "org_id", "code"],
+        "title": "MiniappVincularConfirmarRequest",
+        "type": "object"
+      },
+      "MiniappVincularSolicitarRequest": {
+        "description": "Solicitud para generar un código OTP de vinculación y enviarlo por Telegram.",
+        "properties": {
+          "chat_id": {
+            "title": "Chat Id",
+            "type": "integer"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          }
+        },
+        "required": ["email", "chat_id", "org_id"],
+        "title": "MiniappVincularSolicitarRequest",
         "type": "object"
       },
       "MinutaGeneration": {
@@ -6459,6 +6798,10 @@
         "in": "header",
         "name": "X-Internal-Secret",
         "type": "apiKey"
+      },
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
       }
     }
   },
@@ -6470,7 +6813,7 @@
   "paths": {
     "/api/v1/approvals/request-reservation": {
       "post": {
-        "description": "Recibe una solicitud de reserva desde el Frontend.\n1. Valida que el lote esté disponible.\n2. Valida que no haya otra solicitud pendiente para ese lote.\n3. Inserta en approval_requests.\n4. Encola notificación al Admin vía Redis.",
+        "description": "Recibe una solicitud de reserva desde el Frontend.\n1. Llama al servicio compartido para procesar y validar las reglas operacionales.\n2. Retorna la respuesta con el approval_id asignado.",
         "operationId": "requestReservationApproval",
         "requestBody": {
           "content": {
@@ -7571,7 +7914,7 @@
     },
     "/api/v1/escritura-cases/{escritura_case_id}/retry-cascade": {
       "post": {
-        "description": "SDD 017 (T013): reintenta la cascada de aprobación por excepción de un\ncaso (contracts §1). Idempotente — sobre un caso ya `completed` responde\nel estado final sin efectos (D6).",
+        "description": "SDD 017 (T013): reintenta la cascada de aprobación por excepción de un\ncaso (contracts §1). Idempotente — sobre un caso ya `completed` responde\nel estado final sin efectos (D6). Sobre un caso con minuta entregada y\ndatos corregidos después responde 409 (FR-011: regenerar es explícito).",
         "operationId": "retry_cascade_api_v1_escritura_cases__escritura_case_id__retry_cascade_post",
         "parameters": [
           {
@@ -10056,6 +10399,611 @@
         ],
         "summary": "Update Legal Variable",
         "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/miniapp/bandeja": {
+      "get": {
+        "description": "Lista unificada de solicitudes pendientes y casos en excepción para la organización del administrador.",
+        "operationId": "get_bandeja_api_v1_miniapp_bandeja_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BandejaItem"
+                  },
+                  "title": "Response Get Bandeja Api V1 Miniapp Bandeja Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Bandeja",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/bandeja/{approval_id}/decidir": {
+      "post": {
+        "description": "Ejecuta la decisión del administrador (approve o reject) sobre una solicitud de reserva/venta pendiente.",
+        "operationId": "decidir_solicitud_api_v1_miniapp_bandeja__approval_id__decidir_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decidir Solicitud",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/bandeja/{case_id}/reintentar-cascada": {
+      "post": {
+        "description": "Reintenta el pipeline de cascada de aprobación para un caso de escrituración que quedó en excepción.",
+        "operationId": "reintentar_cascada_api_v1_miniapp_bandeja__case_id__reintentar_cascada_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reintentar Cascada",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/bandeja/{item_id}": {
+      "get": {
+        "description": "Obtiene el detalle completo de un ítem de la bandeja (ya sea solicitud de aprobación o excepción de cascada).",
+        "operationId": "get_bandeja_detail_api_v1_miniapp_bandeja__item_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tipo",
+            "required": true,
+            "schema": {
+              "title": "Tipo",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BandejaDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Bandeja Detail",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/documentos": {
+      "get": {
+        "description": "Retorna el listado de documentos/minutas entregados de las ventas del vendedor.\nGenera un enlace firmado temporal para la descarga.",
+        "operationId": "get_documentos_api_v1_miniapp_documentos_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Documentos",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/documentos/{delivery_id}/renovar": {
+      "post": {
+        "description": "Regenera el enlace de una entrega propia sin exponer tokens internos.",
+        "operationId": "renovar_documento_miniapp_api_v1_miniapp_documentos__delivery_id__renovar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": {
+              "title": "Delivery Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Renovar Documento Miniapp",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/health": {
+      "get": {
+        "description": "Health check endpoint for the Mini App router.",
+        "operationId": "miniapp_health_api_v1_miniapp_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Miniapp Health",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/lotes/{lot_id}": {
+      "get": {
+        "description": "Retorna la ficha técnica de un lote específico.",
+        "operationId": "get_lote_detalle_api_v1_miniapp_lotes__lot_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lot_id",
+            "required": true,
+            "schema": {
+              "title": "Lot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Lote Detalle",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/proyectos/{project_id}/mapa": {
+      "get": {
+        "description": "Retorna el mapa GeoJSON FeatureCollection de lotes del proyecto.",
+        "operationId": "get_proyecto_mapa_api_v1_miniapp_proyectos__project_id__mapa_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Proyecto Mapa",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/reservas": {
+      "post": {
+        "description": "Crea una solicitud de reserva desde el frontend de la Mini App para vendedores.\nAplica idempotencia durable en Supabase mediante la clave X-Idempotency-Key.",
+        "operationId": "crear_reserva_miniapp_api_v1_miniapp_reservas_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MiniappReservationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Crear Reserva Miniapp",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/session": {
+      "post": {
+        "description": "Autentica al usuario de la Mini App mediante initData de Telegram y emite un token de sesión.",
+        "operationId": "create_session_api_v1_miniapp_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MiniappSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MiniappSessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Session",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/ventas": {
+      "get": {
+        "description": "Retorna el listado de ventas del vendedor autenticado con su etapa y blockers humanizados.",
+        "operationId": "get_ventas_api_v1_miniapp_ventas_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Ventas",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/ventas/{case_id}": {
+      "get": {
+        "description": "Retorna el detalle de una venta específica con su etapa y blockers humanizados.",
+        "operationId": "get_venta_detalle_api_v1_miniapp_ventas__case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Venta Detalle",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/vincular/confirmar": {
+      "post": {
+        "description": "Confirma el código OTP. Si es correcto, vincula el telegram_chat_id del perfil.",
+        "operationId": "confirmar_vinculacion_api_v1_miniapp_vincular_confirmar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MiniappVincularConfirmarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirmar Vinculacion",
+        "tags": ["miniapp", "miniapp"]
+      }
+    },
+    "/api/v1/miniapp/vincular/solicitar": {
+      "post": {
+        "description": "Solicita la vinculación de Telegram ingresando el correo registrado en Plotify.\nSi el correo pertenece a la organización, envía un código OTP de 6 dígitos al chat de Telegram usando el bot de la org.",
+        "operationId": "solicitar_vinculacion_api_v1_miniapp_vincular_solicitar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MiniappVincularSolicitarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Solicitar Vinculacion",
+        "tags": ["miniapp", "miniapp"]
       }
     },
     "/api/v1/notifications/": {

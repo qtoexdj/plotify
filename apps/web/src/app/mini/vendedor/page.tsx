@@ -2,15 +2,15 @@
 
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { miniAppOrgId, miniAppUrl } from '@/lib/miniapp/routes'
 
 function VendedorRedirectContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const orgId = searchParams.get('org_id')
-    const query = orgId ? `?org_id=${orgId}` : ''
-    router.replace(`/mini/ventas${query}`)
+    const orgId = miniAppOrgId(searchParams)
+    router.replace(orgId ? miniAppUrl('/mini/ventas', orgId) : '/mini/ventas')
   }, [router, searchParams])
 
   return (

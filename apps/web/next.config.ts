@@ -1,8 +1,23 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // La Mini App de desarrollo se abre desde Telegram mediante un túnel
+  // ngrok. Next.js bloquea por defecto sus recursos internos cuando el
+  // hostname del navegador no coincide con el dev server.
+  allowedDevOrigins: ['*.ngrok-free.app'],
   experimental: {
     proxyClientMaxBodySize: '260mb',
+  },
+  async rewrites() {
+    return [
+      {
+        // Un único túnel ngrok apunta a Next.js (:3000). Los webhooks y
+        // demás rutas públicas de FastAPI conservan su URL /api/v1/* y se
+        // reenvían internamente al API local (:8005).
+        source: '/api/v1/:path*',
+        destination: 'http://127.0.0.1:8005/api/v1/:path*',
+      },
+    ]
   },
   async headers() {
     return [

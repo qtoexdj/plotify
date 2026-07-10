@@ -11,6 +11,7 @@ from services.escritura_notifications import (
 )
 
 logger = get_logger(__name__)
+_MINI_APP_URL_WARNED = False
 
 
 def _normalize_run(value: str | None) -> str:
@@ -219,10 +220,6 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             phone = contact.get("phone")
 
             if tg_chat_id:
-                settings = get_settings()
-                mini_app_url = settings.TELEGRAM_MINI_APP_URL or "http://localhost:3000"
-                web_app_url = f"{mini_app_url}/mini/admin?org_id={org_id}"
-                
                 reply_markup = {
                     "inline_keyboard": [
                         [
@@ -235,14 +232,30 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
                                 "callback_data": f"reject:{approval_id}",
                             },
                         ],
-                        [
-                            {
-                                "text": "⚡ Abrir Bandeja (Mini App)",
-                                "web_app": {"url": web_app_url},
-                            }
-                        ]
                     ]
                 }
+                mini_app_url = get_settings().TELEGRAM_MINI_APP_URL.rstrip('/')
+                if mini_app_url:
+                    reply_markup["inline_keyboard"].append(
+                        [
+                            {
+                                "text": "⚡ Abrir en la app",
+                                "web_app": {
+                                    "url": (
+                                        f"{mini_app_url}/mini/bandeja/{approval_id}"
+                                        f"?org={org_id}&tipo=reserva"
+                                    )
+                                },
+                            }
+                        ]
+                    )
+                else:
+                    global _MINI_APP_URL_WARNED
+                    if not _MINI_APP_URL_WARNED:
+                        logger.warning(
+                            "TELEGRAM_MINI_APP_URL no configurada; se omite el botón web_app de aprobación."
+                        )
+                        _MINI_APP_URL_WARNED = True
                 telegram_client = await get_telegram_client_for_org(org_id)
                 if telegram_client:
                     await telegram_client.send_text(

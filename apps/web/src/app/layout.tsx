@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Bricolage_Grotesque, Geist_Mono, Onest, Source_Serif_4 } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 
 const onest = Onest({
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body
         className={`${bricolageGrotesque.variable} ${sourceSerif4.variable} ${geistMono.variable} antialiased`}
       >
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

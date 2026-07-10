@@ -11,6 +11,10 @@ export interface components {
       "overrides"?: Record<string, unknown> | null
       "position": number
     }
+    "AdminDecisionRequest": {
+      "comentario"?: string | null
+      "decision": string
+    }
     "Adquirente": {
       "cuota"?: string | null
       "nombre"?: components["schemas"]["EvidencedValue"] | null
@@ -46,6 +50,26 @@ export interface components {
       "vendor_name": string
       "vendor_phone"?: string | null
       "vendor_platform": string
+    }
+    "BandejaDetail": {
+      "antiguedad_segundos": number
+      "causa": string
+      "comprador"?: Record<string, unknown> | null
+      "conflictos"?: Array<components["schemas"]["DiscrepanciaVariable"]> | null
+      "detalles_lote"?: Record<string, unknown> | null
+      "estado": string
+      "evidencia_url"?: string | null
+      "id": string
+      "tipo": string
+      "titulo": string
+    }
+    "BandejaItem": {
+      "antiguedad_segundos": number
+      "causa": string
+      "estado": string
+      "id": string
+      "tipo": string
+      "titulo": string
     }
     "BlockResolution": {
       "blockKey": string
@@ -158,6 +182,12 @@ export interface components {
     "DecisionResponse": {
       "error"?: string | null
       "success": boolean
+    }
+    "DiscrepanciaVariable": {
+      "diferencia_detectada": string
+      "nombre": string
+      "valor_certificado": string
+      "valor_vendedor": string
     }
     "DismissedAlert": {
       "reason"?: string | null
@@ -539,6 +569,43 @@ export interface components {
     "MetaWebhookPayload": {
       "entry": Array<components["schemas"]["MetaEntry"]>
       "object": string
+    }
+    "MiniappReservationRequest": {
+      "buyer_email": string
+      "buyer_name": string
+      "buyer_phone": string
+      "buyer_rut": string
+      "lot_id": string
+      "observation"?: string | null
+      "payment_evidence_url"?: string | null
+      "payment_method": string
+    }
+    "MiniappSessionRequest": {
+      "init_data": string
+      "org_id": string
+    }
+    "MiniappSessionResponse": {
+      "expires_in": number
+      "role": string
+      "token": string
+      "user": components["schemas"]["MiniappUserDetail"]
+    }
+    "MiniappUserDetail": {
+      "id": string
+      "nombre": string
+      "org_id": string
+      "org_nombre": string
+    }
+    "MiniappVincularConfirmarRequest": {
+      "chat_id": number
+      "code": string
+      "email": string
+      "org_id": string
+    }
+    "MiniappVincularSolicitarRequest": {
+      "chat_id": number
+      "email": string
+      "org_id": string
     }
     "MinutaGeneration": {
       "content_hash": string
@@ -1380,6 +1447,96 @@ export interface operations {
     path: "/api/v1/legal-variables/{variable_resolution_id}"
     requestBody: components["schemas"]["VariableUpdateRequest"]
     response: components["schemas"]["VariableReviewResponse"]
+  }
+  "get_bandeja_api_v1_miniapp_bandeja_get": {
+    method: "GET"
+    path: "/api/v1/miniapp/bandeja"
+    requestBody: never
+    response: Array<components["schemas"]["BandejaItem"]>
+  }
+  "decidir_solicitud_api_v1_miniapp_bandeja__approval_id__decidir_post": {
+    method: "POST"
+    path: "/api/v1/miniapp/bandeja/{approval_id}/decidir"
+    requestBody: components["schemas"]["AdminDecisionRequest"]
+    response: void
+  }
+  "reintentar_cascada_api_v1_miniapp_bandeja__case_id__reintentar_cascada_post": {
+    method: "POST"
+    path: "/api/v1/miniapp/bandeja/{case_id}/reintentar-cascada"
+    requestBody: never
+    response: void
+  }
+  "get_bandeja_detail_api_v1_miniapp_bandeja__item_id__get": {
+    method: "GET"
+    path: "/api/v1/miniapp/bandeja/{item_id}"
+    requestBody: never
+    response: components["schemas"]["BandejaDetail"]
+  }
+  "get_documentos_api_v1_miniapp_documentos_get": {
+    method: "GET"
+    path: "/api/v1/miniapp/documentos"
+    requestBody: never
+    response: void
+  }
+  "renovar_documento_miniapp_api_v1_miniapp_documentos__delivery_id__renovar_post": {
+    method: "POST"
+    path: "/api/v1/miniapp/documentos/{delivery_id}/renovar"
+    requestBody: never
+    response: void
+  }
+  "miniapp_health_api_v1_miniapp_health_get": {
+    method: "GET"
+    path: "/api/v1/miniapp/health"
+    requestBody: never
+    response: void
+  }
+  "get_lote_detalle_api_v1_miniapp_lotes__lot_id__get": {
+    method: "GET"
+    path: "/api/v1/miniapp/lotes/{lot_id}"
+    requestBody: never
+    response: void
+  }
+  "get_proyecto_mapa_api_v1_miniapp_proyectos__project_id__mapa_get": {
+    method: "GET"
+    path: "/api/v1/miniapp/proyectos/{project_id}/mapa"
+    requestBody: never
+    response: void
+  }
+  "crear_reserva_miniapp_api_v1_miniapp_reservas_post": {
+    method: "POST"
+    path: "/api/v1/miniapp/reservas"
+    requestBody: components["schemas"]["MiniappReservationRequest"]
+    response: components["schemas"]["ReservationResponse"]
+  }
+  "create_session_api_v1_miniapp_session_post": {
+    method: "POST"
+    path: "/api/v1/miniapp/session"
+    requestBody: components["schemas"]["MiniappSessionRequest"]
+    response: components["schemas"]["MiniappSessionResponse"]
+  }
+  "get_ventas_api_v1_miniapp_ventas_get": {
+    method: "GET"
+    path: "/api/v1/miniapp/ventas"
+    requestBody: never
+    response: void
+  }
+  "get_venta_detalle_api_v1_miniapp_ventas__case_id__get": {
+    method: "GET"
+    path: "/api/v1/miniapp/ventas/{case_id}"
+    requestBody: never
+    response: void
+  }
+  "confirmar_vinculacion_api_v1_miniapp_vincular_confirmar_post": {
+    method: "POST"
+    path: "/api/v1/miniapp/vincular/confirmar"
+    requestBody: components["schemas"]["MiniappVincularConfirmarRequest"]
+    response: void
+  }
+  "solicitar_vinculacion_api_v1_miniapp_vincular_solicitar_post": {
+    method: "POST"
+    path: "/api/v1/miniapp/vincular/solicitar"
+    requestBody: components["schemas"]["MiniappVincularSolicitarRequest"]
+    response: void
   }
   "listNotifications": {
     method: "GET"

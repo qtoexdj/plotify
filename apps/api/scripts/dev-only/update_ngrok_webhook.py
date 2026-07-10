@@ -1,5 +1,6 @@
 import sys
 import os
+import asyncio
 import httpx
 from pathlib import Path
 
@@ -10,6 +11,9 @@ sys.path.insert(0, str(api_dir))
 
 from core.config import get_settings
 from core.database import get_supabase_client
+from services.bot_registration import setup_bot_defaults
+
+PUBLIC_URL_ENV_KEYS = ("API_PUBLIC_URL", "TELEGRAM_MINI_APP_URL")
 
 def get_current_ngrok_url():
     """Tries to query the local ngrok client API to find the active public URL."""
@@ -26,31 +30,38 @@ def get_current_ngrok_url():
     return None
 
 def update_env_file(env_path: Path, new_url: str):
-    """Updates the API_PUBLIC_URL in the .env file."""
+    """Sincroniza las URLs públicas del webhook y de la Mini App."""
     if not env_path.exists():
         print(f"⚠️  No se encontró el archivo .env en: {env_path}")
         return False
 
     content = env_path.read_text()
     lines = content.splitlines()
-    updated = False
-    
-    for i, line in enumerate(lines):
-        if line.strip().startswith("API_PUBLIC_URL="):
-            lines[i] = f'API_PUBLIC_URL="{new_url}"'
-            updated = True
-            break
-            
-    if updated:
-        env_path.write_text("\n".join(lines) + "\n")
-        print(f"✅ Archivo .env actualizado con API_PUBLIC_URL=\"{new_url}\"")
-        return True
-    else:
-        # Append if not found
-        lines.append(f'API_PUBLIC_URL="{new_url}"')
-        env_path.write_text("\n".join(lines) + "\n")
-        print(f"➕ API_PUBLIC_URL agregada al archivo .env: \"{new_url}\"")
-        return True
+    found_keys: set[str] = set()
+
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        for key in PUBLIC_URL_ENV_KEYS:
+            if stripped.startswith(f"{key}="):
+                lines[index] = f'{key}="{new_url}"'
+                found_keys.add(key)
+                break
+
+    for key in PUBLIC_URL_ENV_KEYS:
+        if key not in found_keys:
+            lines.append(f'{key}="{new_url}"')
+
+    env_path.write_text("\n".join(lines) + "\n")
+    print(
+        "✅ Archivo .env actualizado con "
+        f"API_PUBLIC_URL y TELEGRAM_MINI_APP_URL=\"{new_url}\""
+    )
+    return True
+
+
+def update_bot_menu(bot_token: str, org_id: str) -> None:
+    """Actualiza comandos y menú persistente con la URL pública vigente."""
+    asyncio.run(setup_bot_defaults(bot_token=bot_token, org_id=org_id))
 
 def main():
     # 1. Determine the new URL
@@ -75,12 +86,15 @@ def main():
     # 3. Reload settings (force load new env)
     # We set environment variables manually so pydantic-settings reads the updated values
     os.environ["API_PUBLIC_URL"] = new_url
+    os.environ["TELEGRAM_MINI_APP_URL"] = new_url
     
     # Bypass settings cache by instantiating Settings directly or clearing lru_cache
     from core.config import Settings
+    get_settings.cache_clear()
     settings = Settings()
     
     print(f"⚙️  Configuración cargada. Public URL: {settings.API_PUBLIC_URL}")
+    print(f"📱 Mini App URL: {settings.TELEGRAM_MINI_APP_URL}/mini")
 
     # 4. Get active bots from database
     supabase = get_supabase_client()
@@ -149,8 +163,17 @@ def main():
         except Exception as e:
             print(f"❌ Error actualizando la base de datos para @{username}: {e}")
 
+        try:
+            update_bot_menu(bot_token=token, org_id=org_id)
+            print("✅ Botón de menú de la Mini App actualizado en Telegram.")
+        except Exception as e:
+            print(f"❌ Error actualizando el menú de Telegram para @{username}: {e}")
 
-    print("\n🎉 ¡Proceso finalizado! Si la API está corriendo en segundo plano, te recomendamos reiniciarla para asegurar que cargue la nueva variable de entorno.")
+
+    print(
+        "\n🎉 ¡Proceso finalizado! Reinicia la API si ya estaba corriendo "
+        "para que cargue las URLs actualizadas."
+    )
 
 if __name__ == "__main__":
     main()

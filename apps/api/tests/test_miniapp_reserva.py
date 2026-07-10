@@ -14,13 +14,23 @@ VENDOR_ID = str(uuid.uuid4())
 CHAT_ID = 123456789
 LOT_ID = str(uuid.uuid4())
 
+
+@pytest.fixture(autouse=True)
+def _override_reservation_redis():
+    redis = MagicMock()
+    redis.enqueue_job = AsyncMock()
+    app.dependency_overrides[get_arq_pool] = lambda: redis
+    yield redis
+    app.dependency_overrides.pop(get_arq_pool, None)
+
 def _obtener_headers_vendedor() -> dict:
     """Genera headers de autorización con un token JWT de vendedor válido."""
     token = create_miniapp_session(
         user_id=VENDOR_ID,
         org_id=ORG_ID,
         role="vendor",
-        chat_id=CHAT_ID
+        chat_id=CHAT_ID,
+        vendor_id=VENDOR_ID,
     )
     return {
         "Authorization": f"Bearer {token}",
@@ -90,6 +100,7 @@ def test_crear_reserva_exito(mock_supabase_client):
             mock_table_obj = MagicMock()
             mock_table_obj.select.return_value = mock_pending_select
             mock_table_obj.insert.return_value = mock_insert
+            mock_table_obj.upsert.return_value = mock_insert
             return mock_table_obj
         return MagicMock()
 
@@ -273,24 +284,30 @@ def test_crear_reserva_idempotencia(mock_supabase_client):
             mock_table_obj = MagicMock()
             mock_table_obj.select.return_value = mock_pending_select
             mock_table_obj.insert.return_value = mock_insert
+            mock_table_obj.upsert.return_value = mock_insert
             return mock_table_obj
         return MagicMock()
 
     mock_supabase.table.side_effect = mock_table
 
-    # Mock de Redis para almacenar y recuperar la respuesta idempotente
-    idempotency_cache = {}
-    idempotency_key = f"idempotency:miniapp_reserva:{ORG_ID}:test-key-123"
+    # El primer upsert inserta. El segundo representa el conflicto único y
+    # fuerza al servicio a recuperar la fila ya persistida (sin Redis).
+    mock_insert.execute.side_effect = [MagicMock(data=[{"id": approval_id}]), MagicMock(data=[])]
+    mock_existing_select = MagicMock()
+    mock_existing_select.eq.return_value = mock_existing_select
+    mock_existing_select.limit.return_value = mock_existing_select
+    mock_existing_select.execute.return_value = MagicMock(data=[{"id": approval_id, "status": "pending"}])
+    approval_table = MagicMock()
+    approval_table.select.side_effect = [mock_pending_select, mock_pending_select, mock_existing_select]
+    approval_table.insert.return_value = mock_insert
+    approval_table.upsert.return_value = mock_insert
 
-    async def mock_get(key):
-        return idempotency_cache.get(key)
+    def mock_table_with_persisted_conflict(table_name):
+        if table_name == "approval_requests":
+            return approval_table
+        return mock_table(table_name)
 
-    async def mock_set(key, val, ex=None):
-        idempotency_cache[key] = val
-        return True
-
-    mock_redis.get.side_effect = mock_get
-    mock_redis.set.side_effect = mock_set
+    mock_supabase.table.side_effect = mock_table_with_persisted_conflict
 
     try:
         client = TestClient(app)
@@ -317,7 +334,7 @@ def test_crear_reserva_idempotencia(mock_supabase_client):
         data1 = response1.json()
         assert data1["approval_id"] == approval_id
 
-        # Segunda petición (misma clave): Debe retornar el mismo body en caché sin llamar insert otra vez
+        # Segunda petición tras un reinicio: el conflicto único devuelve la misma fila persistida.
         response2 = client.post(
             "/api/v1/miniapp/reservas",
             json=payload,
@@ -326,6 +343,7 @@ def test_crear_reserva_idempotencia(mock_supabase_client):
         assert response2.status_code == status.HTTP_201_CREATED
         data2 = response2.json()
         assert data2["approval_id"] == approval_id
-        assert mock_insert.execute.call_count == 1  # Solo se insertó una vez
+        assert mock_insert.execute.call_count == 2
+        mock_redis.enqueue_job.assert_awaited_once_with("notify_admin_approval", approval_id)
     finally:
         app.dependency_overrides.pop(get_arq_pool, None)

@@ -533,7 +533,6 @@ async def test_sale_pending_notification_uses_admin_dictionary_and_deep_link(
         "get_telegram_client_for_org",
         AsyncMock(return_value=telegram_client),
     )
-
     result = await approval_notifier.notify_admin_approval(
         {}, "approval-sale-uuid"
     )
@@ -593,6 +592,11 @@ async def test_sale_from_matching_reservation_shows_delta_message(monkeypatch):
         "get_telegram_client_for_org",
         AsyncMock(return_value=telegram_client),
     )
+    monkeypatch.setattr(
+        approval_notifier,
+        "get_settings",
+        lambda: SimpleNamespace(TELEGRAM_MINI_APP_URL="https://mini.plotify.test"),
+    )
 
     result = await approval_notifier.notify_admin_approval({}, "approval-sale-uuid")
 
@@ -618,6 +622,16 @@ async def test_sale_from_matching_reservation_shows_delta_message(monkeypatch):
         "approve:approval-sale-uuid",
         "reject:approval-sale-uuid",
     }
+    web_app_button = next(
+        button
+        for row in reply_markup["inline_keyboard"]
+        for button in row
+        if "web_app" in button
+    )
+    assert web_app_button["web_app"]["url"] == (
+        f"https://mini.plotify.test/mini/bandeja/approval-sale-uuid"
+        f"?org={ORG_ID}&tipo=reserva"
+    )
 
 
 @pytest.mark.asyncio
