@@ -18,11 +18,11 @@
 | `LEGAL_TEXT_VISION_ENABLED` | `false` | Habilita transcripción multimodal por visión para PDFs de CBR escaneados (SDD 009). |
 | `LEGAL_TITLE_AGENT_ENABLED` | `false` | Habilita el agente de títulos legal (LLM) a nivel proyecto. |
 
-## Supabase (local)
+## Supabase (cloud linked)
 
 | Variable | Valor | Proposito |
 |----------|-------|-----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `http://127.0.0.1:8000` | URL del Supabase local (Docker). |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://swkrnjdpnlrgxgotmfxy.supabase.co` | URL del proyecto cloud linked. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *(key)* | Clave anonima para cliente browser. |
 | `SUPABASE_SERVICE_ROLE_KEY` | *(key)* | Clave service-role para server-side (bypass RLS). |
 

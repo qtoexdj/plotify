@@ -17,23 +17,23 @@ function entrega(over: Partial<EscrituraDeliveryView>): EscrituraDeliveryView {
     id: 'd1',
     escritura_case_id: 'c1',
     generation_id: 'g1',
+    fileId: 'g1',
     recipient_user_id: 'vendor-1',
     channel: 'web',
     status: 'sent',
     link_expires_at: null,
     sent_at: null,
     created_at: '2026-06-16T00:00:00Z',
-    download_url: 'https://signed.example/doc.docx',
     status_label: 'Entregada',
     ...over,
   }
 }
 
 describe('SDD 011 T017 — mis documentos del vendedor', () => {
-  it('descargable solo si fue entregada y conserva URL', () => {
+  it('descargable solo si fue entregada y conserva fileId', () => {
     expect(puedeDescargar(entrega({}))).toBe(true)
-    expect(puedeDescargar(entrega({ download_url: null }))).toBe(false)
-    expect(puedeDescargar(entrega({ status: 'expired', download_url: null }))).toBe(false)
+    expect(puedeDescargar(entrega({ fileId: null }))).toBe(false)
+    expect(puedeDescargar(entrega({ status: 'expired', fileId: null }))).toBe(false)
   })
 
   it('renovable solo cuando el enlace venció', () => {

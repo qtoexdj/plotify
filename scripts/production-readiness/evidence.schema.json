@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plotify.local/schemas/evidence.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "criterionIds",
+    "reviewer",
+    "generatedAt",
+    "sourceSha",
+    "verdict",
+    "evidence"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": {
+      "enum": [
+        "a11y-manual",
+        "geometry-load",
+        "story-gate",
+        "source-manifest",
+        "backup",
+        "migration-repair-approval",
+        "migration-repair",
+        "migration-push-approval",
+        "migration-push",
+        "restore-approval",
+        "restore-qualification",
+        "restore",
+        "capability-cutover-plan",
+        "capability-cutover-approval",
+        "capability-cutover",
+        "legacy-preflight",
+        "final-target-approval",
+        "final-target-preflight",
+        "browser-network",
+        "live-state-change-approval",
+        "browser-run",
+        "rollout-approval",
+        "human-gates",
+        "expected-blockers",
+        "security-a11y",
+        "speckit-analyze",
+        "release-receipt",
+        "rollout-receipt",
+        "auth-hardening-approval",
+        "auth-hardening",
+        "evidence-manifest"
+      ]
+    },
+    "criterionIds": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^(FR|SC)-[0-9]{3}[a-z]?$" },
+      "uniqueItems": true
+    },
+    "reviewer": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "sourceSha": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+    "verdict": { "enum": ["PASS", "FAIL", "NO-GO"] },
+    "targetFingerprint": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "deploymentManifestDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "sourceManifestDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "preflightDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "backupDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "blockers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "details": { "type": "object" },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "digest", "redacted"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "redacted": { "const": true }
+        }
+      }
+    }
+  }
+}

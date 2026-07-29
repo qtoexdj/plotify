@@ -8,7 +8,7 @@ export interface MinutaHistoryProject {
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
-type MinutaGenerationRow = Omit<MinutaGeneration, 'download_url'> & {
+type MinutaGenerationRow = Omit<MinutaGeneration, 'fileId'> & {
   organization_id: string
   project_id: string
 }
@@ -65,7 +65,7 @@ export async function listOrganizationMinutaGenerations(
   let query = supabase
     .from('escritura_minuta_generations')
     .select(
-      'id, organization_id, project_id, escritura_case_id, matriz_id, matriz_version, template_id, snapshot_hash, content_hash, storage_path, warning_acknowledged_by, warning_acknowledged_at, generated_by, generated_at'
+      'id, organization_id, project_id, escritura_case_id, matriz_id, matriz_version, template_id, snapshot_hash, content_hash, warning_acknowledged_by, warning_acknowledged_at, generated_by, generated_at'
     )
     .eq('organization_id', organizationId)
 
@@ -145,10 +145,6 @@ export async function listOrganizationMinutaGenerations(
       const escrituraCase = casesById.get(row.escritura_case_id)
       const lot = escrituraCase?.lot_id ? lotsById.get(escrituraCase.lot_id) : null
       const project = projectsById.get(row.project_id)
-      const { data: signed } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(row.storage_path, 60 * 60 * 24 * 7)
-
       const actorProfile = row.generated_by ? profilesById.get(row.generated_by) : null
       const actorName = actorProfile
         ? `${actorProfile.first_name ?? ''} ${actorProfile.last_name ?? ''}`.trim()
@@ -156,10 +152,10 @@ export async function listOrganizationMinutaGenerations(
 
       return {
         ...row,
+        fileId: row.id,
         project_name: project?.name ?? 'Proyecto sin nombre',
         lot_id: escrituraCase?.lot_id ?? null,
         lot_label: lot?.numero_lote ? `Lote ${lot.numero_lote}` : null,
-        download_url: signed?.signedUrl ?? null,
         generated_by_name: actorName || null,
       }
     })

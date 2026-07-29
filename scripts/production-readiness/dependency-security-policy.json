@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "policy": "Critical/high reachable runtime vulnerabilities block. Unreachable or dev-only exceptions require evidence, owner and an unexpired review boundary.",
+  "exceptions": []
+}

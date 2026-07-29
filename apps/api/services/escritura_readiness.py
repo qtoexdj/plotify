@@ -1034,6 +1034,32 @@ async def get_escritura_readiness(
         has_title_documents=has_title_documents,
         warning_acknowledged=warning_acknowledged,
     )
+    if supabase is None:
+        from core.database import get_supabase_client
+
+        supabase = get_supabase_client()
+    enrichment_result = await asyncio.to_thread(
+        lambda: (
+            supabase.table("geometry_enrichment_jobs")
+            .select("status,last_error_code")
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .or_(f"lot_id.eq.{lot_id},lot_id.is.null")
+            .in_("status", ["pending", "leased", "retry_scheduled", "dead_letter"])
+            .execute()
+        )
+    )
+    enrichment_rows = enrichment_result.data if isinstance(enrichment_result.data, list) else []
+    if enrichment_rows:
+        failed = any(row.get("status") == "dead_letter" for row in enrichment_rows)
+        code = "GEOMETRY_ENRICHMENT_FAILED" if failed else "GEOMETRY_ENRICHMENT_PENDING"
+        geometry_gate = ReadinessGate(gate="geometry_enrichment", status="blocked", blocking_variables=(code,))
+        gates = (*readiness.gates, geometry_gate)
+        readiness = EscrituraReadiness(
+            organization_id=readiness.organization_id, project_id=readiness.project_id,
+            lot_id=readiness.lot_id, readiness_status=_overall_status(gates), gates=gates,
+            variable_snapshot=readiness.variable_snapshot, evidence_snapshot=readiness.evidence_snapshot,
+        )
     logger.info(
         "escritura_readiness_calculated",
         organization_id=organization_id,

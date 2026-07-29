@@ -1,13 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Sheet,
+  SheetBody,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -22,6 +22,11 @@ import {
   type LegalVariableEditPayload,
   type VariableInventoryItem,
 } from '@/lib/legal/variable-resolution-types'
+import type {
+  ComparecienteFieldResolutionRequest,
+  SellerFact,
+  VendedorCompareciente,
+} from '@/lib/documents/matriz-types'
 import { legalVariableDescription, legalVariableDisplayLabel } from '@/lib/legal/variable-labels'
 import { LegalEvidenceViewer } from './legal-evidence-viewer'
 
@@ -42,6 +47,48 @@ interface LegalVariableEditorProps {
     variable: VariableInventoryItem,
     payload: LegalVariableEditPayload
   ) => Promise<void> | void
+}
+
+export const COMPARECIENTES_VARIABLE_KEY = 'vendedor.comparecientes[]'
+
+export function isComparecientesVariable(
+  variable: Pick<VariableInventoryItem, 'variable_key' | 'value_json'> | null
+): boolean {
+  return (
+    variable?.variable_key === COMPARECIENTES_VARIABLE_KEY && Array.isArray(variable.value_json)
+  )
+}
+
+export function parseComparecientes(value: unknown): VendedorCompareciente[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(
+    (person): person is VendedorCompareciente =>
+      typeof person === 'object' && person !== null && typeof person.personId === 'string'
+  )
+}
+
+export function buildComparecienteResolution(
+  input: ComparecienteFieldResolutionRequest,
+  grantActive: boolean
+): ComparecienteFieldResolutionRequest {
+  if (!grantActive) throw new Error('LEGAL_APPROVAL_REQUIRED')
+  if (!input.personId || !input.field || !input.value.trim()) {
+    throw new Error('SELLER_FACT_VALUE_REQUIRED')
+  }
+  if (!input.reason.trim()) throw new Error('SELLER_FACT_REASON_REQUIRED')
+  if (!input.attestationRef.trim()) throw new Error('SELLER_FACT_ATTESTATION_REQUIRED')
+  if (!input.legalApprovalGrantId) throw new Error('LEGAL_APPROVAL_REQUIRED')
+  return {
+    ...input,
+    value: input.value.trim(),
+    reason: input.reason.trim(),
+    attestationRef: input.attestationRef.trim(),
+  }
+}
+
+function factLabel(fact: SellerFact | undefined): string {
+  if (!fact || fact.value === null || fact.value === '') return 'Faltante'
+  return `${fact.value} · ${fact.state === 'manual_approved' ? 'Aprobación manual' : 'Con evidencia'}`
 }
 
 function formatValue(variable: VariableInventoryItem | null) {
@@ -76,11 +123,12 @@ export function LegalVariableEditor({
   if (!variable) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-xl">
+        <SheetContent data-testid="sheet-legal-editor" className="sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>Variable legal</SheetTitle>
             <SheetDescription>Selecciona una variable para revisar su detalle.</SheetDescription>
           </SheetHeader>
+          <SheetBody />
         </SheetContent>
       </Sheet>
     )
@@ -111,6 +159,12 @@ function LegalVariableEditorContent({
 }: Omit<LegalVariableEditorProps, 'variable'> & { variable: VariableInventoryItem }) {
   const [valueText, setValueText] = useState(() => formatValue(variable))
   const [correctionReason, setCorrectionReason] = useState(() => variable.correction_reason ?? '')
+  const returnFocusRef = useRef<HTMLElement | null>(null)
+  const comparecientes = parseComparecientes(variable.value_json)
+
+  useEffect(() => {
+    if (open) returnFocusRef.current = document.activeElement as HTMLElement | null
+  }, [open])
 
   const trimmedReason = correctionReason.trim()
   const trimmedValue = valueText.trim()
@@ -132,13 +186,21 @@ function LegalVariableEditorContent({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl">
+      <SheetContent
+        data-testid="sheet-legal-editor"
+        className="sm:max-w-2xl"
+        onCloseAutoFocus={(event) => {
+          if (!returnFocusRef.current) return
+          event.preventDefault()
+          returnFocusRef.current.focus()
+        }}
+      >
         <SheetHeader>
           <SheetTitle>{legalVariableDisplayLabel(variable)}</SheetTitle>
           <SheetDescription>{legalVariableDescription(variable)}</SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="min-h-0 flex-1 px-6">
+        <SheetBody className="px-6">
           <div className="space-y-6 pb-6">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg border p-3">
@@ -169,15 +231,51 @@ function LegalVariableEditorContent({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="legal-variable-value">Valor actual</Label>
-              <Input
-                id="legal-variable-value"
-                value={valueText}
-                onChange={(event) => setValueText(event.target.value)}
-                placeholder="Ingresa el valor revisado"
-              />
-            </div>
+            {isComparecientesVariable(variable) ? (
+              <div className="space-y-3" data-testid="comparecientes-editor">
+                <div>
+                  <Label>Comparecientes vendedores</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Cada persona y campo conserva identidad, evidencia y versión propias. Las
+                    correcciones requieren delegación jurídica, motivo y referencia de respaldo.
+                  </p>
+                </div>
+                {comparecientes.map((person) => (
+                  <div key={person.personId} className="rounded-lg border p-3">
+                    <p className="font-medium">{person.nombre?.value ?? 'Vendedor sin nombre'}</p>
+                    <p className="text-xs text-muted-foreground">ID: {person.personId}</p>
+                    <dl className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt>Nacionalidad</dt>
+                        <dd>{factLabel(person.nacionalidad)}</dd>
+                      </div>
+                      <div>
+                        <dt>Estado civil</dt>
+                        <dd>{factLabel(person.estadoCivil)}</dd>
+                      </div>
+                      <div>
+                        <dt>Tratamiento</dt>
+                        <dd>{factLabel(person.tratamiento)}</dd>
+                      </div>
+                      <div>
+                        <dt>RUT</dt>
+                        <dd>{factLabel(person.rut)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="legal-variable-value">Valor actual</Label>
+                <Input
+                  id="legal-variable-value"
+                  value={valueText}
+                  onChange={(event) => setValueText(event.target.value)}
+                  placeholder="Ingresa el valor revisado"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="legal-variable-reason">Motivo o nota (opcional)</Label>
@@ -206,14 +304,22 @@ function LegalVariableEditorContent({
 
             <LegalEvidenceViewer evidence={variable.evidence} compact />
           </div>
-        </ScrollArea>
+        </SheetBody>
 
         <SheetFooter className="border-t">
+          <p role="status" aria-live="polite" className="sr-only">
+            {isSaving ? 'Guardando variable legal' : 'Formulario listo para revisión'}
+          </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="outline"
-              disabled={isSaving || !trimmedValue || (requiresReason && !trimmedReason)}
+              disabled={
+                isSaving ||
+                isComparecientesVariable(variable) ||
+                !trimmedValue ||
+                (requiresReason && !trimmedReason)
+              }
               onClick={() => onSave(variable, basePayload)}
             >
               Guardar
@@ -221,7 +327,12 @@ function LegalVariableEditorContent({
             <Button
               type="button"
               variant="secondary"
-              disabled={isSaving || !trimmedValue || (requiresReason && !trimmedReason)}
+              disabled={
+                isSaving ||
+                isComparecientesVariable(variable) ||
+                !trimmedValue ||
+                (requiresReason && !trimmedReason)
+              }
               onClick={() =>
                 onApprove(variable, {
                   ...basePayload,

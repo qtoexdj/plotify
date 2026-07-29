@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { projectFileHref } from '@/lib/projects/project-media'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge, type statusBadgeVariants } from '@/components/ui/status-badge'
@@ -52,7 +53,6 @@ interface ProjectCardProps extends VariantProps<typeof projectCardVariants> {
   deletingId: string | null
   onDelete: (id: string) => void
   projectHref: string
-  getFullUrl: (path: string | null | undefined) => string
   statusLabel?: string
   statusVariant?: StatusVariant
   className?: string
@@ -73,7 +73,6 @@ export function ProjectCard({
   deletingId,
   onDelete,
   projectHref,
-  getFullUrl,
   statusLabel,
   statusVariant,
   layout,
@@ -84,7 +83,7 @@ export function ProjectCard({
   const isCompact = layout === 'compact'
 
   const coverImageUrl =
-    project.images && project.images.length > 0 ? getFullUrl(project.images[0]) : ''
+    project.images && project.images.length > 0 ? projectFileHref(project.images[0]) : ''
 
   const renderStatusBadge = () => (
     <StatusBadge variant={statusVariant ?? 'neutral'} className="shadow-xs">

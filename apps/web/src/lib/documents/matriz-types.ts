@@ -8,7 +8,7 @@
 
 // ─── ProseMirror JSON canónico (schema_version 1, research D2) ───────────────
 
-export type MatrizSchemaVersion = 1
+export type MatrizSchemaVersion = 1 | 2
 
 /** Formato de render de un token: palabras legales vía motor compartido. */
 export type TokenFormat = 'words' | 'date_words' | 'rut_words'
@@ -60,12 +60,22 @@ export interface ConditionalSectionJson {
   content: BlockNodeJson[]
 }
 
-export type InlineNodeJson = TextNodeJson | VariableTokenJson
+export interface OptionalPhraseJson {
+  type: 'optional_phrase'
+  attrs: {
+    conditionKey: string
+    mode: ConditionMode
+  }
+  content: (TextNodeJson | VariableTokenJson)[]
+}
+
+export type InlineNodeJson = TextNodeJson | VariableTokenJson | OptionalPhraseJson
 export type BlockNodeJson =
   | ParagraphNodeJson
   | BlockTokenJson
   | RepeatSectionJson
   | ConditionalSectionJson
+  | OptionalPhraseJson
 
 export interface ClauseContentJson {
   schema_version: MatrizSchemaVersion
@@ -154,6 +164,45 @@ export interface InvalidTemplateKey {
 // ─── Matriz por caso ─────────────────────────────────────────────────────────
 
 export type MatrizStatus = 'draft' | 'legal_review_pending' | 'approved' | 'superseded'
+export type SemanticStatus = 'unverified' | 'failed' | 'passed'
+export type GenerationReadinessStatus = 'unverified' | 'ready'
+export type GenerationStatus = 'pending' | 'processing' | 'ready' | 'failed' | 'unverified'
+export type CapabilityStatus = 'none' | 'active' | 'expired' | 'revoked'
+export type SignatureStatus = 'awaiting' | 'recorded'
+
+export interface SellerFact<T = string> {
+  value: T | null
+  state: 'missing' | 'evidenced' | 'manual_approved'
+  version: number
+  evidenceRef?: string | null
+  attestationRef?: string | null
+  legalApprovalGrantId?: string | null
+  reason?: string | null
+}
+
+export interface VendedorCompareciente {
+  personId: string
+  upstreamSubjectId?: string | null
+  normalizedRut?: string | null
+  tratamiento: SellerFact
+  nombre: SellerFact
+  rut: SellerFact
+  nacionalidad: SellerFact
+  estadoCivil: SellerFact
+  profesionGiro?: SellerFact
+  domicilio?: SellerFact
+}
+
+export interface ComparecienteFieldResolutionRequest {
+  operationKey: string
+  personId: string
+  field: keyof Omit<VendedorCompareciente, 'personId' | 'upstreamSubjectId' | 'normalizedRut'>
+  value: string
+  reason: string
+  attestationRef: string
+  expectedVersion: number
+  legalApprovalGrantId: string
+}
 
 /** SDD 011 (data-model §1): scope de la matriz. `project` => escritura_case_id
  * null ("esperando ventas"); `lot` => borrador instanciado al validar la venta. */
@@ -315,6 +364,19 @@ export interface MatrizView {
   cascade_last_run_at?: string | null
   /** SDD 017: quién aprobó esta versión — humano (default) o la cascada. */
   approval_origin?: 'human' | 'system'
+  semantic_status?: SemanticStatus
+  generationStatus?: GenerationStatus
+  deliveryStatus?: DeliveryStatus
+  capabilityStatus?: CapabilityStatus
+  signatureStatus?: SignatureStatus
+  attemptCount?: number
+  nextRetryAt?: string | null
+  lastErrorCode?: string | null
+  availableAt?: string | null
+  firstAccessedAt?: string | null
+  semantic_issue_count?: number
+  legal_approval_grant_active?: boolean
+  legal_approval_grant_expires_at?: string | null
 }
 
 /** SDD 010 (research D6): catálogo humanizado para el picker "Insertar dato". */
@@ -338,7 +400,10 @@ export interface MatrizSaveRequest {
 
 export type MatrizSubmitRequest = Record<string, never>
 
-export type MatrizApproveRequest = Record<string, never>
+export interface MatrizApproveRequest {
+  operation_key?: string
+  legal_approval_grant_id?: string
+}
 
 export interface MatrizRejectRequest {
   reason: string
@@ -348,6 +413,7 @@ export interface MatrizRejectRequest {
 
 export interface MinutaGeneration {
   id: string
+  fileId: string
   project_id?: string | null
   project_name?: string | null
   lot_id?: string | null
@@ -358,13 +424,24 @@ export interface MinutaGeneration {
   template_id: string
   snapshot_hash: string
   content_hash: string
-  storage_path: string
   warning_acknowledged_by: string
   warning_acknowledged_at: string
   generated_by: string | null
   generated_by_name?: string | null
   generated_at: string
-  download_url: string | null
+  semantic_status?: SemanticStatus
+  generationStatus?: GenerationStatus
+  deliveryStatus?: DeliveryStatus
+  capabilityStatus?: CapabilityStatus
+  signatureStatus?: SignatureStatus
+  attemptCount?: number
+  nextRetryAt?: string | null
+  lastErrorCode?: string | null
+  availableAt?: string | null
+  firstAccessedAt?: string | null
+  readiness_status?: GenerationReadinessStatus
+  semantic_issue_count?: number
+  generation_fingerprint?: string | null
 }
 
 export interface MinutaGenerationListResponse {
@@ -373,6 +450,8 @@ export interface MinutaGenerationListResponse {
 
 export interface GenerateMinutaRequest {
   warning_acknowledged: boolean
+  operation_key?: string
+  regeneration_reason?: string
 }
 
 // ─── Revisión jurídica del caso (SDD16, FR-007/FR-008) ───────────────────────
@@ -410,21 +489,30 @@ export type DeliveryChannel = 'telegram' | 'web'
 
 export type DeliveryStatus = 'pending' | 'sent' | 'failed' | 'unavailable' | 'expired'
 
-/** Entrega auditada del borrador aceptado. El `link_token` crudo NUNCA viaja
- * al cliente (el contrato server-side lo descarta): solo la URL firmada lista
- * para descargar y la frase de estado del diccionario único (FR-010/FR-014). */
+/** Entrega auditada del borrador aceptado. Ninguna coordenada de Storage ni
+ * capability secreta viaja al cliente: solo identificadores Plotify opacos. */
 export interface EscrituraDeliveryView {
   id: string
   escritura_case_id: string
   generation_id: string
+  fileId: string | null
   recipient_user_id: string | null
   channel: DeliveryChannel
   status: DeliveryStatus
   link_expires_at: string | null
   sent_at: string | null
   created_at: string
-  download_url: string | null
   status_label: string | null
+  semanticStatus?: SemanticStatus
+  generationStatus?: GenerationStatus
+  deliveryStatus?: DeliveryStatus
+  capabilityStatus?: CapabilityStatus
+  signatureStatus?: SignatureStatus
+  attemptCount?: number
+  nextRetryAt?: string | null
+  lastErrorCode?: string | null
+  availableAt?: string | null
+  firstAccessedAt?: string | null
 }
 
 export interface EscrituraDeliveryListResponse {

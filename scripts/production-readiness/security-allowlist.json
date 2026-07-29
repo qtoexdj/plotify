@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "policy": "Only demonstrable false positives may be listed. Real or plausible credentials require rotation evidence.",
+  "entries": []
+}

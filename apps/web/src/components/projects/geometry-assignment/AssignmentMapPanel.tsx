@@ -74,7 +74,6 @@ export function AssignmentMapPanel({
       dragPan
       touchZoomRotate
       doubleClickZoom
-      attributionControl={false}
     >
       <MapAutoFit featureCollection={featureCollection} />
       <MapControls position="top-left" showCompass showZoom={false} />

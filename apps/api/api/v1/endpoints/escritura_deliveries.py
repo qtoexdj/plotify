@@ -9,8 +9,12 @@ vendedor destinatario, así que un vendedor jamás ve documentos de ventas ajena
 from __future__ import annotations
 
 from uuid import UUID
+import asyncio
+import hashlib
+import hmac
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 from api.deps import verify_internal_secret
 from core.database import get_supabase_client
@@ -20,6 +24,7 @@ from schemas.escritura_matrices import (
     EscrituraDeliveryView,
 )
 from services.escritura_delivery import list_vendor_deliveries, renew_delivery_link
+from services.document_capabilities import resolve_document_capability
 
 logger = get_logger(__name__)
 
@@ -27,6 +32,29 @@ router = APIRouter(
     tags=["escritura-deliveries"],
     dependencies=[Depends(verify_internal_secret)],
 )
+
+
+@router.get("/document-capabilities/{token}")
+async def stream_document_capability(token: str) -> StreamingResponse:
+    """Consume a one-time capability and stream bytes without a Storage redirect."""
+    if len(token) < 40 or len(token) > 64:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    client = get_supabase_client()
+    resolved = await resolve_document_capability(client, token=token)
+    if resolved is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    artifact = await asyncio.to_thread(
+        lambda: client.storage.from_(resolved.bucket).download(resolved.object_name)
+    )
+    if not isinstance(artifact, (bytes, bytearray)) or not hmac.compare_digest(
+        hashlib.sha256(artifact).hexdigest(), resolved.content_hash
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    return StreamingResponse(
+        iter([bytes(artifact)]),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+    )
 
 
 def _validate_ids(user_id: str, organization_id: str) -> None:

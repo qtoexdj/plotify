@@ -35,6 +35,10 @@ export interface ViewerFeature {
   geometry: GeoJSONGeometry
   properties: {
     geometry_id: string
+    geometry_import_id?: string | null
+    geometry_feature_key?: string | null
+    geometry_active?: boolean
+    enrichment_status?: 'pending' | 'leased' | 'retry_scheduled' | 'ready' | 'dead_letter'
     lot_id?: string
     geometry_type: ViewerGeometryType
     source_type: SourceType

@@ -1,0 +1,24 @@
+title = "Plotify Gitleaks policy"
+
+[extend]
+useDefault = true
+
+# `gitleaks dir` scans the filesystem rather than the Git index. Exclude only
+# ignored local/runtime material; committed source and product memory remain in
+# scope. Repository false positives are classified by security-scan.mjs instead
+# of being silently suppressed here.
+[allowlist]
+description = "Ignored local and generated material"
+paths = [
+  '''(^|/)\.git/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next(?:-[^/]+)?/''',
+  '''(^|/)\.turbo/''',
+  '''(^|/)dist/''',
+  '''(^|/)build/''',
+  '''(^|/)coverage/''',
+  '''(^|/)artifacts/production-readiness/''',
+  '''(^|/)\.venv/''',
+  '''(^|/)venv/''',
+  '''(^|/)\.env(?:\..*)?$''',
+]

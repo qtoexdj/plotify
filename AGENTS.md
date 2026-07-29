@@ -2,7 +2,7 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/017-aprobacion-por-excepcion/plan.md`
+`specs/019-hardening-produccion/plan.md`
 
 <!-- SPECKIT END -->
 
@@ -18,18 +18,18 @@ shell commands, and other important information, read the current plan:
 
 This repository uses Spec Kit SDD as the implementation authority. The active feature is:
 
-- `specs/017-aprobacion-por-excepcion/spec.md`
-- `specs/017-aprobacion-por-excepcion/plan.md`
-- `specs/017-aprobacion-por-excepcion/research.md`
-- `specs/017-aprobacion-por-excepcion/data-model.md`
-- `specs/017-aprobacion-por-excepcion/quickstart.md`
-- `specs/017-aprobacion-por-excepcion/contracts/`
-- `specs/017-aprobacion-por-excepcion/tasks.md` (created by `/speckit-tasks`)
+- `specs/019-hardening-produccion/spec.md`
+- `specs/019-hardening-produccion/plan.md`
+- `specs/019-hardening-produccion/research.md`
+- `specs/019-hardening-produccion/data-model.md`
+- `specs/019-hardening-produccion/quickstart.md`
+- `specs/019-hardening-produccion/contracts/`
+- `specs/019-hardening-produccion/tasks.md` (created by `/speckit-tasks`)
 - `.specify/memory/constitution.md`
 
 Before implementation:
 
-1. Read `specs/017-aprobacion-por-excepcion/tasks.md` and `plan.md`.
+1. Read `specs/019-hardening-produccion/tasks.md` and `plan.md`.
 2. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
 3. Do not start implementation while critical analyze findings remain unresolved.
 4. Run `git status --short` and `codegraph sync .`.
@@ -49,9 +49,9 @@ Canonical implementation prompt:
 ```text
 $speckit-implement
 
-Implementa solo TXXX de specs/017-aprobacion-por-excepcion/tasks.md.
+Implementa solo TXXX de specs/019-hardening-produccion/tasks.md.
 No avances a otra tarea.
-Lee specs/017-aprobacion-por-excepcion/tasks.md y plan.md.
+Lee specs/019-hardening-produccion/tasks.md y plan.md.
 Usa CodeGraph para impacto.
 Usa Context7 si toca librerías externas.
 Ejecuta el Verify de la tarea.
@@ -59,6 +59,14 @@ Marca la tarea como completada solo si pasa.
 ```
 
 ## Contract And Migration Rules
+
+### Supabase is cloud-only
+
+- Plotify uses the linked cloud project `swkrnjdpnlrgxgotmfxy` as its only Supabase database target.
+- Never start, create, inspect, migrate, test, reset, or generate types from a local Supabase instance. Do not use Docker for Supabase, `supabase start`, `--local`, `db reset`, `migrations:apply:local`, `test:db`, or `types:generate:local`.
+- Inspect database state through the Supabase MCP. Use linked/cloud commands only when a repository workflow explicitly requires a CLI operation.
+- Treat any spec, task, quickstart, script, or Verify command that points to local Supabase as stale and unsafe. Update it to the linked/MCP equivalent before continuing; the stale command is never authority to run a local database.
+- Database tests must be transaction-rolled-back against the linked project, and generated types must come from the linked project.
 
 - OpenAPI is generated from FastAPI/Pydantic source. Do not hand-edit `packages/contracts/openapi/plotify-chat.v1.json` as the source of truth.
 - To change an API contract, edit FastAPI endpoints/schemas under `apps/api`, then run `pnpm contracts:generate` and commit the generated contract/client outputs.

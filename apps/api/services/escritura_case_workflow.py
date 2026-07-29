@@ -55,8 +55,17 @@ from services.matriz_token_resolution import (
     token_label,
 )
 from services.matriz_docx_renderer import (
+    RENDERER_VERSION,
     MatrizDocxError,
+    artifact_sha256,
     render_minuta_docx,
+)
+from services.matriz_semantic_validation import (
+    NORMALIZATION_VERSION,
+    RULESET_VERSION,
+    canonical_json_hash,
+    generation_fingerprint,
+    validate_semantics,
 )
 from services.legal_variable_catalog import (
     NON_BLOCKING_PROJECT_MATRIZ_KEYS,
@@ -89,7 +98,11 @@ GENERATION_COLUMNS = (
     "id, organization_id, project_id, escritura_case_id, matriz_id, "
     "matriz_version, template_id, snapshot_hash, resolution_manifest, "
     "content_hash, storage_path, warning_acknowledged_by, "
-    "warning_acknowledged_at, generated_by, generated_at"
+    "warning_acknowledged_at, generated_by, generated_at, semantic_validation_id, "
+    "generation_fingerprint, generation_mode, operation_id, regeneration_reason, "
+    "template_version, renderer_version, ruleset_version, normalization_version, "
+    "schema_version, artifact_sha256, provenance_manifest_hash, "
+    "review_policy_fingerprint, approval_id, readiness_status"
 )
 MINUTA_STORAGE_BUCKET = "documents"
 PROJECT_MATRIZ_GATE = "project_matriz_approved"
@@ -762,6 +775,52 @@ async def _fetch_latest_cascade_run(
     return rows[0] if rows else None
 
 
+async def _semantic_readiness_axes(
+    client: Any, matrix_row: dict[str, Any]
+) -> dict[str, Any]:
+    validation_result = await asyncio.to_thread(
+        lambda: (
+            client.table("escritura_semantic_validations")
+            .select("status, issues, approval_id, validated_at")
+            .eq("organization_id", str(matrix_row["organization_id"]))
+            .eq("matriz_id", str(matrix_row["id"]))
+            .order("validated_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    validation = _first_row(getattr(validation_result, "data", None))
+    semantic_status = "unverified"
+    if validation:
+        semantic_status = (
+            "passed"
+            if validation.get("status") == "passed" and validation.get("approval_id")
+            else "failed"
+        )
+    grant_result = await asyncio.to_thread(
+        lambda: (
+            client.table("legal_approval_grants")
+            .select("active, expires_at")
+            .eq("organization_id", str(matrix_row["organization_id"]))
+            .eq("active", True)
+            .order("granted_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    grant = _first_row(getattr(grant_result, "data", None))
+    expires_at = grant.get("expires_at") if grant else None
+    active = bool(grant)
+    if expires_at:
+        active = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00")) > datetime.now(UTC)
+    return {
+        "semantic_status": semantic_status,
+        "semantic_issue_count": len(validation.get("issues") or []) if validation else 0,
+        "legal_approval_grant_active": active,
+        "legal_approval_grant_expires_at": expires_at,
+    }
+
+
 async def _case_response(
     client: Any, matrix_row: dict[str, Any], case_row: dict[str, Any]
 ) -> MatrizCaseResponse:
@@ -825,6 +884,7 @@ async def _case_response(
     latest_run = await _fetch_latest_cascade_run(
         client, str(case_row["id"]), organization_id
     )
+    semantic_axes = await _semantic_readiness_axes(client, matrix_row)
     return MatrizCaseResponse.model_validate(
         {
             "matriz": {
@@ -866,6 +926,7 @@ async def _case_response(
                 "cascade_causes": (latest_run or {}).get("causes") or [],
                 "cascade_last_run_at": (latest_run or {}).get("created_at"),
                 "approval_origin": matrix_row.get("approval_origin") or "human",
+                **semantic_axes,
             },
             "insertable_variables": INSERTABLE_VARIABLES,
         }
@@ -1144,6 +1205,7 @@ async def _project_matriz_response(
         clause["resolved_content"] = resolved_content_by_clause.get(
             str(clause.get("clause_key"))
         )
+    semantic_axes = await _semantic_readiness_axes(client, matrix_row)
     return MatrizCaseResponse.model_validate(
         {
             "matriz": {
@@ -1171,6 +1233,7 @@ async def _project_matriz_response(
                     snapshot_stale=snapshot_stale,
                 ),
                 "dismissed_alerts": _dismissed_alerts(variable_snapshot),
+                **semantic_axes,
             },
             "insertable_variables": INSERTABLE_VARIABLES,
         }
@@ -1449,20 +1512,13 @@ def _raise_if_snapshot_stale(
         )
 
 
-async def _signed_minuta_url(client: Any, storage_path: str) -> str:
-    signed = await asyncio.to_thread(
-        lambda: client.storage.from_(MINUTA_STORAGE_BUCKET).create_signed_url(
-            storage_path, expires_in=604800
-        )
-    )
-    if isinstance(signed, dict):
-        return str(signed.get("signedURL") or signed.get("signedUrl") or storage_path)
-    return storage_path
-
-
 async def _generation_response(client: Any, row: dict[str, Any]) -> MinutaGeneration:
     payload = {**row}
-    payload["download_url"] = await _signed_minuta_url(client, str(row["storage_path"]))
+    payload["file_id"] = row["id"]
+    payload["semantic_status"] = (
+        "passed" if row.get("readiness_status") == "ready" else "unverified"
+    )
+    payload["semantic_issue_count"] = 0
     return MinutaGeneration.model_validate(payload)
 
 
@@ -1705,17 +1761,25 @@ async def _build_escritura_trace(
     }
 
 
-async def _generate_minuta_row(
+def _snapshot_comparecientes(variable_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    direct = variable_snapshot.get("vendedor.comparecientes[]")
+    if isinstance(direct, dict):
+        direct = direct.get("value_json")
+    if isinstance(direct, list):
+        return [row for row in direct if isinstance(row, dict)]
+    titulo = variable_snapshot.get("titulo")
+    owners = titulo.get("propietarios") if isinstance(titulo, dict) else None
+    return [row for row in owners if isinstance(row, dict)] if isinstance(owners, list) else []
+
+
+async def _render_semantic_candidate(
     *,
     client: Any,
     matrix_row: dict[str, Any],
     case_row: dict[str, Any],
-    template: dict[str, Any],
     active_clauses: list[dict[str, Any]],
-    generated_by: str | None,
-    warning_acknowledged_by: str,
-    warning_acknowledged_at: str,
-) -> MinutaGeneration:
+    enforce_comparecientes: bool = True,
+) -> tuple[Any, list[dict[str, Any]], bytes, Any]:
     variable_snapshot = _as_dict(case_row.get("variable_snapshot"))
     evidence_snapshot = _as_dict(case_row.get("evidence_snapshot"))
     context = await _fetch_project_context(client, case_row)
@@ -1729,26 +1793,18 @@ async def _generate_minuta_row(
     except UnknownNodeError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={
-                "code": "unknown_matriz_node",
-                "message": "Matriz content contains unknown ProseMirror node types.",
-                "node_types": exc.node_types,
-            },
+            detail={"code": "DOCUMENT_SEMANTIC_INVALID", "issues": [{"code": "SEM_UNRESOLVED_TOKEN", "path": node} for node in exc.node_types]},
         ) from exc
-
     if resolution.missing_count or resolution.blocked_count:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
-                "code": "unresolved_matriz_tokens",
-                "message": "La matriz aprobada contiene tokens pendientes.",
-                "missing_count": resolution.missing_count,
-                "blocked_count": resolution.blocked_count,
+                "code": "DOCUMENT_SEMANTIC_INVALID",
+                "issues": [{"code": "SEM_MISSING_REQUIRED", "path": token.variable_key} for token in resolution.tokens if token.status != "resolved"],
             },
         )
-
     by_key = {str(clause.get("clause_key")): clause for clause in active_clauses}
-    rendered_clauses = []
+    rendered_clauses: list[dict[str, Any]] = []
     for clause_resolution in resolution.clauses:
         if clause_resolution.omitted or not clause_resolution.resolved_content:
             continue
@@ -1760,30 +1816,330 @@ async def _generate_minuta_row(
                 "resolved_content": clause_resolution.resolved_content,
             }
         )
-
     try:
         docx_bytes = render_minuta_docx(
             clauses=rendered_clauses,
-            metadata={
-                "title_lines": _docx_cover_lines(variable_snapshot),
-                # FR-008 / ADR-009: todo entregable lleva la marca de borrador.
-                "draft_notice": ESCRITURA_BORRADOR_NOTICE,
-            },
+            metadata={"title_lines": _docx_cover_lines(variable_snapshot), "draft_notice": ESCRITURA_BORRADOR_NOTICE},
         )
     except MatrizDocxError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={
-                "code": "docx_render_failed",
-                "message": str(exc),
-            },
+            detail={"code": "DOCUMENT_SEMANTIC_INVALID", "issues": [{"code": "SEM_UNRESOLVED_TOKEN"}]},
         ) from exc
+    resolved_ast = {
+        "type": "doc",
+        "content": [node for clause in rendered_clauses for node in (clause["resolved_content"].get("content") or [])],
+    }
+    verdict = validate_semantics(
+        resolved_ast=resolved_ast,
+        artifact_bytes=docx_bytes,
+        clauses=[json.dumps(clause["resolved_content"], sort_keys=True) for clause in rendered_clauses],
+        comparecientes=(
+            _snapshot_comparecientes(variable_snapshot) if enforce_comparecientes else ()
+        ),
+    )
+    return resolution, rendered_clauses, docx_bytes, verdict
+
+
+async def _claim_semantic_operation(
+    client: Any,
+    *,
+    operation_key: str,
+    operation_type: str,
+    organization_id: str,
+    actor_id: str,
+    resource_scope: str,
+    payload: dict[str, Any],
+) -> str:
+    request_hash = canonical_json_hash(payload)
+    result = await asyncio.to_thread(
+        lambda: client.rpc(
+            "claim_idempotency_operation",
+            {
+                "p_organization_id": organization_id,
+                "p_principal_type": "user",
+                "p_principal_subject": actor_id,
+                "p_operation_type": operation_type,
+                "p_resource_scope": resource_scope,
+                "p_idempotency_key": operation_key,
+                "p_request_hash": request_hash,
+                "p_source_kind": "service",
+                "p_provider_event_key": None,
+            },
+        ).execute()
+    )
+    row = _first_row(getattr(result, "data", None))
+    if not row or not row.get("id"):
+        raise HTTPException(status_code=503, detail={"code": "IDEMPOTENCY_OPERATION_UNAVAILABLE"})
+    if row.get("request_hash") != request_hash:
+        raise HTTPException(status_code=409, detail={"code": "IDEMPOTENCY_PAYLOAD_CONFLICT"})
+    return str(row["id"])
+
+
+async def _active_legal_grant(
+    client: Any, *, organization_id: str, project_id: str, actor_id: str, grant_id: str | None
+) -> dict[str, Any]:
+    query = (
+        client.table("legal_approval_grants")
+        .select("id, organization_id, project_id, grantee_user_id, active, expires_at")
+        .eq("organization_id", organization_id)
+        .eq("grantee_user_id", actor_id)
+        .eq("active", True)
+    )
+    if grant_id:
+        query = query.eq("id", grant_id)
+    result = await asyncio.to_thread(lambda: query.order("granted_at", desc=True).limit(1).execute())
+    grant = _first_row(getattr(result, "data", None))
+    if not grant or (grant.get("project_id") is not None and str(grant.get("project_id")) != project_id):
+        raise HTTPException(status_code=403, detail={"code": "LEGAL_APPROVAL_REQUIRED"})
+    expires_at = grant.get("expires_at")
+    if expires_at and datetime.fromisoformat(str(expires_at).replace("Z", "+00:00")) <= datetime.now(UTC):
+        raise HTTPException(status_code=403, detail={"code": "LEGAL_APPROVAL_GRANT_EXPIRED"})
+    return grant
+
+
+async def _approve_semantic_candidate(
+    *,
+    client: Any,
+    matrix_row: dict[str, Any],
+    case_row: dict[str, Any] | None,
+    actor_id: str,
+    operation_key: str,
+    legal_grant_id: str | None,
+    origin: str = "human",
+) -> dict[str, Any]:
+    organization_id = str(matrix_row["organization_id"])
+    project_id = str(matrix_row["project_id"])
+    grant = await _active_legal_grant(
+        client,
+        organization_id=organization_id,
+        project_id=project_id,
+        actor_id=actor_id,
+        grant_id=legal_grant_id,
+    )
+    template = await _fetch_template(client, str(matrix_row["template_id"]), organization_id)
+    clauses = await _fetch_template_clauses(client, str(template["id"]), organization_id)
+    if case_row is None:
+        variable_snapshot, evidence_snapshot = await fetch_project_matriz_snapshot(
+            organization_id=organization_id, project_id=project_id, supabase=client
+        )
+        semantic_case = {
+            "id": None,
+            "organization_id": organization_id,
+            "project_id": project_id,
+            "variable_snapshot": variable_snapshot,
+            "evidence_snapshot": evidence_snapshot,
+        }
+    else:
+        semantic_case = case_row
+        variable_snapshot = _as_dict(case_row.get("variable_snapshot"))
+        evidence_snapshot = _as_dict(case_row.get("evidence_snapshot"))
+    _, active_clauses = _effective_clauses(clauses, matrix_row, variable_snapshot)
+    evidence_hash = canonical_json_hash(evidence_snapshot)
+    provenance_hash = canonical_json_hash(
+        {"snapshot": variable_snapshot, "template": template["id"], "templateVersion": template["version"]}
+    )
+    policy_hash = canonical_json_hash({"policy": "legal-four-eyes-v1", "origin": origin})
+    operation_id = await _claim_semantic_operation(
+        client,
+        operation_key=operation_key,
+        operation_type="matriz_approval_begin",
+        organization_id=organization_id,
+        actor_id=actor_id,
+        resource_scope=f"matriz:{matrix_row['id']}:approval",
+        payload={"matriz_id": str(matrix_row["id"]), "version": int(matrix_row["version"])},
+    )
+    try:
+        attempt_result = await asyncio.to_thread(
+            lambda: client.rpc(
+                "begin_matriz_approval",
+                {
+                    "p_matriz_id": str(matrix_row["id"]),
+                    "p_actor_user_id": actor_id,
+                    "p_origin": origin,
+                    "p_legal_approval_grant_id": str(grant["id"]),
+                    "p_operation_id": operation_id,
+                    "p_expected_matriz_version": int(matrix_row["version"]),
+                    "p_template_version": int(template["version"]),
+                    "p_snapshot_hash": str(matrix_row["snapshot_hash"]),
+                    "p_evidence_manifest_hash": evidence_hash,
+                    "p_provenance_manifest_hash": provenance_hash,
+                    "p_review_policy_fingerprint": policy_hash,
+                },
+            ).execute()
+        )
+        attempt_id = str(getattr(attempt_result, "data", None))
+        if case_row is None:
+            # El molde de proyecto conserva huecos tipados de venta/firma por
+            # diseño y nunca es un entregable. Su aprobación valida identidad
+            # de vendedores + esquema/proveniencia; el caso instanciado vuelve
+            # a renderizar y validar el DOCX completo antes de poder generarse.
+            project_probe = render_minuta_docx(
+                clauses=[],
+                metadata={"draft_notice": ESCRITURA_BORRADOR_NOTICE},
+            )
+            verdict = validate_semantics(
+                resolved_ast={"type": "doc", "content": []},
+                artifact_bytes=project_probe,
+                comparecientes=_snapshot_comparecientes(variable_snapshot),
+            )
+        else:
+            _resolution, _rendered, _bytes, verdict = await _render_semantic_candidate(
+                client=client,
+                matrix_row=matrix_row,
+                case_row=semantic_case,
+                active_clauses=active_clauses,
+            )
+        validation_payload = {
+            "organization_id": organization_id,
+            "project_id": project_id,
+            "escritura_case_id": semantic_case.get("id"),
+            "matriz_id": str(matrix_row["id"]),
+            "matriz_version": int(matrix_row["version"]),
+            "template_id": str(template["id"]),
+            "template_version": int(template["version"]),
+            "snapshot_hash": str(matrix_row["snapshot_hash"]),
+            "resolved_content_hash": verdict.resolved_content_hash,
+            "artifact_sha256": verdict.artifact_sha256,
+            "approval_attempt_id": attempt_id,
+            "evidence_manifest_hash": evidence_hash,
+            "provenance_manifest_hash": provenance_hash,
+            "renderer_version": RENDERER_VERSION,
+            "ruleset_version": RULESET_VERSION,
+            "normalization_version": NORMALIZATION_VERSION,
+            "schema_version": "2",
+            "status": verdict.status,
+            "issues": [issue.to_dict() for issue in verdict.issues],
+            "validation_origin": "approval",
+            "validated_by": actor_id,
+        }
+        validation_result = await asyncio.to_thread(
+            lambda: client.table("escritura_semantic_validations").insert(validation_payload).execute()
+        )
+        validation = _first_row(getattr(validation_result, "data", None)) or validation_payload
+        if not verdict.promotable:
+            await asyncio.to_thread(
+                lambda: client.table("escritura_approval_attempts")
+                .update({"status": "failed", "error_code": "DOCUMENT_SEMANTIC_INVALID"})
+                .eq("id", attempt_id).execute()
+            )
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "DOCUMENT_SEMANTIC_INVALID", "issues": validation_payload["issues"]},
+            )
+        await asyncio.to_thread(
+            lambda: client.rpc(
+                "finalize_matriz_approval",
+                {"p_attempt_id": attempt_id, "p_validation_id": str(validation["id"]), "p_operation_id": operation_id},
+            ).execute()
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        code = "APPROVAL_CANDIDATE_STALE" if "APPROVAL_CANDIDATE_STALE" in str(exc) else "LEGAL_APPROVAL_REQUIRED"
+        raise HTTPException(status_code=409 if code.startswith("APPROVAL") else 403, detail={"code": code}) from exc
+    refreshed = await _fetch_matrix_by_id(client, str(matrix_row["id"]), organization_id)
+    return refreshed
+
+
+def automatic_generation_storage_path(
+    *,
+    organization_id: str,
+    escritura_case_id: str,
+    generation_fingerprint: str,
+) -> str:
+    """Stable automatic artifact location, bound to its complete provenance."""
+    return (
+        f"{organization_id}/escritura-minutas/{escritura_case_id}/"
+        f"{generation_fingerprint}.docx"
+    )
+
+
+async def _generate_minuta_row(
+    *,
+    client: Any,
+    matrix_row: dict[str, Any],
+    case_row: dict[str, Any],
+    template: dict[str, Any],
+    active_clauses: list[dict[str, Any]],
+    generated_by: str | None,
+    warning_acknowledged_by: str,
+    warning_acknowledged_at: str,
+    operation_key: str | None = None,
+    regeneration_reason: str | None = None,
+    generation_mode: str = "manual",
+) -> MinutaGeneration:
+    variable_snapshot = _as_dict(case_row.get("variable_snapshot"))
+    evidence_snapshot = _as_dict(case_row.get("evidence_snapshot"))
+    resolution, _rendered_clauses, docx_bytes, verdict = await _render_semantic_candidate(
+        client=client,
+        matrix_row=matrix_row,
+        case_row=case_row,
+        active_clauses=active_clauses,
+        enforce_comparecientes=hasattr(client, "rpc"),
+    )
+    if not verdict.promotable:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"code": "DOCUMENT_SEMANTIC_INVALID", "issues": [issue.to_dict() for issue in verdict.issues]},
+        )
+
+    production_semantic = hasattr(client, "rpc")
+    validation_row: dict[str, Any] | None = None
+    operation_id: str | None = None
+    fingerprint: str | None = None
+    provenance_hash = canonical_json_hash({"resolution": resolution.manifest_dict(), "evidence": evidence_snapshot})
+    review_policy_hash = canonical_json_hash({"policy": "current", "origin": matrix_row.get("approval_origin") or "human"})
+    if production_semantic:
+        validation_result = await asyncio.to_thread(
+            lambda: (
+                client.table("escritura_semantic_validations")
+                .select("id, approval_id, status, artifact_sha256, provenance_manifest_hash")
+                .eq("matriz_id", str(matrix_row["id"]))
+                .eq("status", "passed")
+                .order("validated_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+        )
+        validation_row = _first_row(getattr(validation_result, "data", None))
+        if not validation_row or not validation_row.get("approval_id"):
+            raise HTTPException(status_code=422, detail={"code": "DOCUMENT_SEMANTIC_INVALID", "issues": [{"code": "SEM_PROVENANCE_INCOMPLETE"}]})
+        if validation_row.get("artifact_sha256") != verdict.artifact_sha256:
+            raise HTTPException(status_code=409, detail={"code": "APPROVAL_CANDIDATE_STALE"})
+        if generation_mode == "manual":
+            if not operation_key or not (regeneration_reason or "").strip():
+                raise HTTPException(status_code=422, detail={"code": "MANUAL_REGENERATION_CONTEXT_REQUIRED"})
+            operation_id = await _claim_semantic_operation(
+                client,
+                operation_key=operation_key,
+                operation_type="matriz_manual_regeneration",
+                organization_id=str(case_row["organization_id"]),
+                actor_id=str(generated_by),
+                resource_scope=f"matriz:{matrix_row['id']}:generation",
+                payload={"matriz_id": str(matrix_row["id"]), "reason": regeneration_reason},
+            )
+        provenance_hash = str(validation_row.get("provenance_manifest_hash") or provenance_hash)
+        fingerprint = generation_fingerprint({
+            "organization_id": str(case_row["organization_id"]), "case_id": str(case_row["id"]),
+            "snapshot_hash": str(matrix_row["snapshot_hash"]), "matriz_id": str(matrix_row["id"]),
+            "matriz_version": int(matrix_row["version"]), "template_id": str(template["id"]),
+            "template_version": int(template["version"]), "renderer_version": RENDERER_VERSION,
+            "ruleset_version": RULESET_VERSION, "schema_version": "2",
+            "normalization_version": NORMALIZATION_VERSION, "approval_id": str(validation_row["approval_id"]),
+            "provenance_manifest_hash": provenance_hash, "review_policy_fingerprint": review_policy_hash,
+        })
 
     content_hash = hashlib.sha256(docx_bytes).hexdigest()
     generation_id = str(uuid.uuid4())
     storage_path = (
-        f"{case_row['organization_id']}/escritura-minutas/"
-        f"{case_row['id']}/{generation_id}.docx"
+        automatic_generation_storage_path(
+            organization_id=str(case_row["organization_id"]),
+            escritura_case_id=str(case_row["id"]),
+            generation_fingerprint=str(fingerprint),
+        )
+        if generation_mode == "automatic" and fingerprint
+        else f"{case_row['organization_id']}/escritura-minutas/{case_row['id']}/{generation_id}.docx"
     )
     await asyncio.to_thread(
         lambda: client.storage.from_(MINUTA_STORAGE_BUCKET).upload(
@@ -1813,6 +2169,17 @@ async def _generate_minuta_row(
         "generated_by": generated_by,
         "generated_at": now,
     }
+    if production_semantic and validation_row:
+        payload.update({
+            "semantic_validation_id": validation_row["id"], "generation_fingerprint": fingerprint,
+            "generation_mode": generation_mode, "operation_id": operation_id,
+            "regeneration_reason": regeneration_reason, "template_version": int(template["version"]),
+            "renderer_version": RENDERER_VERSION, "ruleset_version": RULESET_VERSION,
+            "normalization_version": NORMALIZATION_VERSION, "schema_version": "2",
+            "artifact_sha256": verdict.artifact_sha256, "provenance_manifest_hash": provenance_hash,
+            "review_policy_fingerprint": review_policy_hash, "approval_id": validation_row["approval_id"],
+            "readiness_status": "ready",
+        })
     result = await asyncio.to_thread(
         lambda: client.table("escritura_minuta_generations").insert(payload).execute()
     )
@@ -2137,6 +2504,22 @@ async def approve_case_matriz(
                 "blocking": blockers,
             },
         )
+    if hasattr(client, "rpc"):
+        if not request.operation_key:
+            raise HTTPException(status_code=422, detail={"code": "IDEMPOTENCY_KEY_REQUIRED"})
+        updated = await _approve_semantic_candidate(
+            client=client,
+            matrix_row=matrix_row,
+            case_row=case_row,
+            actor_id=str(request.approved_by),
+            operation_key=request.operation_key,
+            legal_grant_id=(str(request.legal_approval_grant_id) if request.legal_approval_grant_id else None),
+        )
+        approved_project_id = str(case_row["project_id"]) if case_row else str(matrix_row["project_id"])
+        await _recompute_pending_cases_after_matriz_approval(
+            client=client, organization_id=str(organization_id), project_id=approved_project_id
+        )
+        return await _workflow_response(client, updated, case_row)
     now = _utc_now_iso()
     payload = {
         "status": "approved",
@@ -2352,6 +2735,8 @@ async def generate_case_minuta(
         generated_by=str(request.generated_by),
         warning_acknowledged_by=warning_ack_by,
         warning_acknowledged_at=warning_ack_at,
+        operation_key=request.operation_key,
+        regeneration_reason=request.regeneration_reason,
     )
 
 
@@ -2423,7 +2808,6 @@ __all__ = [
     "_raise_if_snapshot_stale",
     "_recompute_pending_cases_after_matriz_approval",
     # generación de minuta
-    "_signed_minuta_url",
     "_generation_response",
     "_resolve_case_vendor_user_id",
     "_resolve_org_admin_user_ids",
@@ -2433,6 +2817,10 @@ __all__ = [
     "_trace_input_keys",
     "_build_escritura_trace",
     "_generate_minuta_row",
+    "_snapshot_comparecientes",
+    "_claim_semantic_operation",
+    "_active_legal_grant",
+    "_approve_semantic_candidate",
     # revisión jurídica (SDD16)
     "_has_review_value",
     "_missing_abogado_redactor_keys",

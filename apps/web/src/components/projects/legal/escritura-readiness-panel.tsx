@@ -37,6 +37,11 @@ const gateStatusLabels = {
   ready: 'Listo',
 } as const satisfies Record<ReadinessGateStatus, string>
 
+const geometryEnrichmentLabels: Record<string, string> = {
+  GEOMETRY_ENRICHMENT_PENDING: 'Cálculo geográfico pendiente',
+  GEOMETRY_ENRICHMENT_FAILED: 'Cálculo geográfico falló; requiere reintento',
+}
+
 const gateStatusClassName = {
   blocked: 'border-destructive/20 bg-destructive/10 text-destructive',
   needs_review: 'border-warning/20 bg-warning/10 text-warning',
@@ -44,6 +49,13 @@ const gateStatusClassName = {
 } as const satisfies Record<ReadinessGateStatus, string>
 
 function GateBlockingItem({ gate, item }: { gate: EscrituraReadinessGate; item: string }) {
+  if (geometryEnrichmentLabels[item]) {
+    return (
+      <Badge variant="outline" className="max-w-full text-[9px] px-1 py-0">
+        {geometryEnrichmentLabels[item]}
+      </Badge>
+    )
+  }
   if (gate.gate === 'title_verified' && isTitleVerifiedBlockingCause(item)) {
     return (
       <a href={`#${TITLE_CASE_PANEL_ANCHOR}`} className="inline-flex">

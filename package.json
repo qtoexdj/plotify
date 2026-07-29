@@ -18,9 +18,21 @@
     "test:api": "cd apps/api && .venv/bin/python -m pytest -q",
     "contracts:generate": "cd apps/api && ./.venv/bin/python scripts/export_openapi_contract.py",
     "verify:migrations": "pnpm --filter @plotify/database verify:migrations",
+    "security:scan": "node scripts/production-readiness/security-scan.mjs",
+    "verify:production-readiness": "node scripts/production-readiness/verify.mjs",
+    "evidence:archive": "node scripts/production-readiness/evidence-archive.mjs",
+    "auth:hardening-guarded": "node scripts/production-readiness/auth-hardening-guarded.mjs",
+    "release:preflight": "node scripts/production-readiness/release-preflight.mjs",
+    "restore:rehearsal": "node scripts/production-readiness/restore-rehearsal.mjs",
+    "verify:generated-clean": "node scripts/production-readiness/verify-generated-clean.mjs",
+    "feature-controls": "node scripts/production-readiness/feature-controls.mjs",
+    "capabilities:cutover": "node scripts/production-readiness/capabilities-cutover.mjs",
+    "migrations:push-guarded": "node scripts/production-readiness/migrations-push-guarded.mjs",
     "update:webhook": "cd apps/api && ./.venv/bin/python scripts/dev-only/update_ngrok_webhook.py"
   },
   "devDependencies": {
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1",
     "prettier": "^3.8.3"
   }
 }

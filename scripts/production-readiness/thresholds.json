@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "attestationMaxAgeSeconds": 120,
+  "leaseSeconds": 60,
+  "heartbeatSeconds": 15,
+  "maximumAttempts": 8,
+  "backoffSeconds": [5, 15, 30, 60, 120, 300, 900, 1800],
+  "writeMinimumIterations": 20,
+  "linkedMinimumObservations": 30,
+  "linkedWindowMinutes": 15,
+  "probeIntervalMinutes": 5,
+  "errorRateRatioMaximum": 1.1,
+  "errorRateAbsoluteFloor": 0.001,
+  "p95RatioMaximum": 1.2,
+  "warningWindowsBeforeStop": 2,
+  "integrityEventsBeforeStop": 1
+}

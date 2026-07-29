@@ -16,6 +16,10 @@ interface MapPanelProps {
   className?: string
 }
 
+const INITIAL_MAP_PITCH = 55
+const INITIAL_MAP_BEARING = 0
+const MAP_FIT_PADDING = 32
+
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
@@ -28,13 +32,46 @@ function computeBoundsFromFC(fc: ViewerFeatureCollection): MapLibreGL.LngLatBoun
   if (fc.features.length === 0) return null
 
   try {
+    const lotFeatures = fc.features.filter((feature) => feature.properties.geometry_type === 'lot')
+    const focusFeatures = lotFeatures.length > 0 ? lotFeatures : fc.features
+
     // bbox returns [minX, minY, maxX, maxY] = [west, south, east, north]
-    const geojson = fc as unknown as GeoJSON.FeatureCollection
+    const geojson = {
+      ...fc,
+      features: focusFeatures,
+    } as unknown as GeoJSON.FeatureCollection
     const b = bbox(geojson)
     return [b[0], b[1], b[2], b[3]] as [number, number, number, number]
   } catch {
     return null
   }
+}
+
+function fitMapToBounds(
+  map: MapLibreGL.Map,
+  bounds: MapLibreGL.LngLatBoundsLike,
+  duration: number
+) {
+  const camera = map.cameraForBounds(bounds, {
+    padding: MAP_FIT_PADDING,
+    maxZoom: 18,
+    bearing: INITIAL_MAP_BEARING,
+  })
+
+  if (!camera) return
+
+  const cameraOptions = {
+    ...camera,
+    zoom: camera.zoom ?? map.getZoom(),
+    pitch: INITIAL_MAP_PITCH,
+  }
+
+  if (duration === 0) {
+    map.jumpTo(cameraOptions)
+    return
+  }
+
+  map.easeTo({ ...cameraOptions, duration })
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -51,7 +88,7 @@ function MapAutoFit({ featureCollection }: { featureCollection: ViewerFeatureCol
     const bounds = computeBoundsFromFC(featureCollection)
     if (!bounds) return
 
-    map.fitBounds(bounds, { padding: 60, maxZoom: 18, duration: 0 })
+    fitMapToBounds(map, bounds, 0)
     hasFitted.current = true
   }, [map, isLoaded, featureCollection])
 
@@ -63,7 +100,7 @@ function MapAutoFit({ featureCollection }: { featureCollection: ViewerFeatureCol
 
     // Only re-fit if it's after initial load and feature count changed
     if (hasFitted.current) {
-      map.fitBounds(bounds, { padding: 60, maxZoom: 18, duration: 500 })
+      fitMapToBounds(map, bounds, 500)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [featureCollection.features.length])
@@ -95,11 +132,12 @@ export function MapPanel({ featureCollection, children, className }: MapPanelPro
       className={className}
       center={initialCenter}
       zoom={14}
+      pitch={INITIAL_MAP_PITCH}
+      bearing={INITIAL_MAP_BEARING}
       scrollZoom
       dragPan
       touchZoomRotate
       doubleClickZoom
-      attributionControl={false}
     >
       <MapAutoFit featureCollection={featureCollection} />
       <MapControls position="top-left" showCompass showZoom={false} />

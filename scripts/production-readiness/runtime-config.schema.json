@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plotify.local/schemas/runtime-config.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "environmentClass",
+    "requiredDeploymentKeys",
+    "secrets",
+    "endpoints"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "environmentClass": { "enum": ["development", "test", "preview", "production"] },
+    "requiredDeploymentKeys": {
+      "const": [
+        "PLOTIFY_HARD_OFF_AUTOMATIC_ESCRITURA",
+        "PLOTIFY_HARD_OFF_CANONICAL_GEOMETRY_IMPORT",
+        "PLOTIFY_HARD_OFF_DOCUMENT_CAPABILITIES",
+        "PLOTIFY_RELEASE_CONFIG_VERSION"
+      ]
+    },
+    "secrets": { "type": "array", "items": { "$ref": "#/$defs/secret" }, "uniqueItems": true },
+    "endpoints": { "type": "array", "items": { "$ref": "#/$defs/endpoint" }, "uniqueItems": true }
+  },
+  "$defs": {
+    "safeValue": {
+      "type": "string",
+      "minLength": 8,
+      "not": {
+        "pattern": "([Dd][Ee][Ff][Aa][Uu][Ll][Tt]|[Pp][Ll][Aa][Cc][Ee][Hh][Oo][Ll][Dd][Ee][Rr]|[Cc][Hh][Aa][Nn][Gg][Ee][Mm][Ee]|[Ee][Xx][Aa][Mm][Pp][Ll][Ee]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Tt][Oo][Kk][Ee][Nn])"
+      }
+    },
+    "secret": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "exposure", "present", "fingerprint"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+        "exposure": { "const": "server" },
+        "present": { "const": true },
+        "fingerprint": { "$ref": "#/$defs/safeValue" }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "scheme", "host", "browserExposed"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "scheme": { "const": "https" },
+        "host": {
+          "type": "string",
+          "pattern": "^[a-z0-9.-]+$",
+          "not": {
+            "pattern": "([Ee][Xx][Aa][Mm][Pp][Ll][Ee]|[Ll][Oo][Cc][Aa][Ll][Hh][Oo][Ss][Tt]|127\\.0\\.0\\.1)"
+          }
+        },
+        "browserExposed": { "const": false }
+      }
+    }
+  }
+}

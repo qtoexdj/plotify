@@ -90,7 +90,12 @@ export async function getEscriturasLabPayload(): Promise<LabPayload> {
   }
 
   return {
-    documents: documents.data ?? [],
+    documents: (documents.data ?? []).map(
+      ({ storage_bucket: _bucket, storage_path: _object, ...document }) => ({
+        ...document,
+        fileId: document.id,
+      })
+    ),
     variables: variables.data ?? [],
     templates: templates.data ?? [],
     sourceMap: sourceMap.data ?? [],

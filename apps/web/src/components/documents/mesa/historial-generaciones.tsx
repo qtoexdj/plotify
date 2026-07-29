@@ -31,6 +31,10 @@ export function generationDescription(generation: MinutaGeneration): string {
   )} desde la versión ${generation.matriz_version}.`
 }
 
+function signatureStatusLabel(generation: MinutaGeneration): string {
+  return generation.signatureStatus === 'recorded' ? 'Firma registrada' : 'Pendiente de firma'
+}
+
 export interface MinutaGenerationProjectGroup {
   projectId: string
   projectName: string
@@ -94,10 +98,37 @@ export function HistorialGeneraciones({ generations }: HistorialGeneracionesProp
               <div className="space-y-1">
                 <p className="text-sm font-medium">{generationDescription(generation)}</p>
                 <p className="text-xs text-muted-foreground">{MESA_TEXT.declaracionAceptada}</p>
+                <dl className="grid gap-x-4 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
+                  <div>
+                    <dt className="sr-only">Estado de firma</dt>
+                    <dd>{signatureStatusLabel(generation)}</dd>
+                  </div>
+                  <div>
+                    <dt className="sr-only">Estado de generación</dt>
+                    <dd>Generación: {generation.generationStatus ?? 'unverified'}</dd>
+                  </div>
+                  <div>
+                    <dt className="sr-only">Estado de entrega</dt>
+                    <dd>Entrega: {generation.deliveryStatus ?? 'pending'}</dd>
+                  </div>
+                  <div>
+                    <dt className="sr-only">Estado de acceso</dt>
+                    <dd>Acceso: {generation.capabilityStatus ?? 'none'}</dd>
+                  </div>
+                </dl>
+                {generation.attemptCount || generation.lastErrorCode || generation.nextRetryAt ? (
+                  <p className="text-xs text-muted-foreground">
+                    Intentos: {generation.attemptCount ?? 0}
+                    {generation.lastErrorCode ? ` · Último error: ${generation.lastErrorCode}` : ''}
+                    {generation.nextRetryAt
+                      ? ` · Próximo reintento: ${formatGenerationDate(generation.nextRetryAt)}`
+                      : ''}
+                  </p>
+                ) : null}
               </div>
-              {generation.download_url ? (
+              {generation.fileId ? (
                 <Button type="button" variant="outline" size="sm" asChild>
-                  <a href={generation.download_url}>
+                  <a href={`/api/files/${encodeURIComponent(generation.fileId)}`}>
                     <HugeiconsIcon icon={Download} />
                     {MESA_TEXT.descargarMinuta}
                   </a>

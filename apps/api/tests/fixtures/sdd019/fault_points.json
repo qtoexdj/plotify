@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "sdd019-fixtures-v1",
+  "faultPoints": [
+    "after_project_insert",
+    "after_lot_insert",
+    "after_outbox_claim",
+    "before_delivery_complete"
+  ]
+}

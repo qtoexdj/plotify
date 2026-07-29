@@ -30,9 +30,11 @@ export function useBreadcrumbLabel() {
 
 /** Registra el nombre de la entidad actual (ej. nombre del proyecto) como último nivel del breadcrumb del header. */
 export function useSetBreadcrumbLabel(label: string | null | undefined) {
-  const { setLabel } = useBreadcrumbContext()
+  const setLabel = useContext(BreadcrumbContext)?.setLabel
 
   useEffect(() => {
+    if (!setLabel) return
+
     setLabel(label ?? null)
     return () => setLabel(null)
   }, [label, setLabel])

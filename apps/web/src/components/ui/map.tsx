@@ -27,11 +27,7 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 
 import { cn } from '@/lib/utils'
-
-const defaultStyles = {
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-}
+import { createResilientMapStyle } from '@/lib/maps/resilient-map-style'
 
 type Theme = 'light' | 'dark'
 
@@ -202,8 +198,8 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
 
   const mapStyles = useMemo(
     () => ({
-      dark: styles?.dark ?? defaultStyles.dark,
-      light: styles?.light ?? defaultStyles.light,
+      dark: styles?.dark ?? createResilientMapStyle('dark'),
+      light: styles?.light ?? createResilientMapStyle('light'),
     }),
     [styles]
   )

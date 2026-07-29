@@ -58,10 +58,10 @@ Recibir webhooks de Meta y Telegram (Multi-tenant), encolar mensajes en Redis y 
 
 - Python 3.13+
 - Redis en contenedor Docker existente (`redis`, puerto `6379`)
-- Supabase Docker existente (`supabase-kong`, URL `http://127.0.0.1:8000`)
+- Acceso configurado al proyecto Supabase cloud linked `swkrnjdpnlrgxgotmfxy`
 
-No levantar un stack Supabase nuevo desde este repo. Las credenciales de
-Supabase y Redis se leen desde `.env`.
+No crear ni usar Supabase local o Docker. Las credenciales cloud de Supabase y
+Redis se leen desde `.env`.
 
 ### 2. Instalación
 

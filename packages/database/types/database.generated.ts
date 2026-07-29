@@ -198,12 +198,16 @@ export type Database = {
       approval_requests: {
         Row: {
           admin_phone: string | null
+          approved_transition_version: number
           created_at: string
           id: string
+          idempotency_key: string | null
           lot_id: string
+          operation_id: string | null
           organization_id: string
           payload: Json
           previous_lot_state: string | null
+          request_hash: string | null
           request_type: string
           resolved_at: string | null
           sale_mode: string | null
@@ -215,12 +219,16 @@ export type Database = {
         }
         Insert: {
           admin_phone?: string | null
+          approved_transition_version?: number
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           lot_id: string
+          operation_id?: string | null
           organization_id: string
           payload?: Json
           previous_lot_state?: string | null
+          request_hash?: string | null
           request_type?: string
           resolved_at?: string | null
           sale_mode?: string | null
@@ -232,12 +240,16 @@ export type Database = {
         }
         Update: {
           admin_phone?: string | null
+          approved_transition_version?: number
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           lot_id?: string
+          operation_id?: string | null
           organization_id?: string
           payload?: Json
           previous_lot_state?: string | null
+          request_hash?: string | null
           request_type?: string
           resolved_at?: string | null
           sale_mode?: string | null
@@ -253,6 +265,13 @@ export type Database = {
             columns: ["lot_id"]
             isOneToOne: false
             referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
             referencedColumns: ["id"]
           },
           {
@@ -275,34 +294,56 @@ export type Database = {
         Row: {
           action: string | null
           actor: string | null
+          actor_user_id: string | null
           created_at: string
           entity: string | null
           entity_id: string | null
+          event_key: string | null
           id: string
+          operation_id: string | null
           organization_id: string | null
           payload: Json | null
+          reason_code: string | null
+          result: string
         }
         Insert: {
           action?: string | null
           actor?: string | null
+          actor_user_id?: string | null
           created_at?: string
           entity?: string | null
           entity_id?: string | null
+          event_key?: string | null
           id?: string
+          operation_id?: string | null
           organization_id?: string | null
           payload?: Json | null
+          reason_code?: string | null
+          result?: string
         }
         Update: {
           action?: string | null
           actor?: string | null
+          actor_user_id?: string | null
           created_at?: string
           entity?: string | null
           entity_id?: string | null
+          event_key?: string | null
           id?: string
+          operation_id?: string | null
           organization_id?: string | null
           payload?: Json | null
+          reason_code?: string | null
+          result?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "audit_logs_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "audit_logs_organization_id_fkey"
             columns: ["organization_id"]
@@ -446,6 +487,60 @@ export type Database = {
           traceback?: string | null
         }
         Relationships: []
+      }
+      denied_operation_attempts: {
+        Row: {
+          attempt_id: string
+          audit_log_id: string | null
+          occurred_at: string
+          operation_type: string
+          organization_id: string | null
+          principal_subject_hash: string
+          principal_type: string
+          reason_code: string
+          reconciled_at: string | null
+          resource_scope_hash: string
+        }
+        Insert: {
+          attempt_id: string
+          audit_log_id?: string | null
+          occurred_at?: string
+          operation_type: string
+          organization_id?: string | null
+          principal_subject_hash: string
+          principal_type: string
+          reason_code: string
+          reconciled_at?: string | null
+          resource_scope_hash: string
+        }
+        Update: {
+          attempt_id?: string
+          audit_log_id?: string | null
+          occurred_at?: string
+          operation_type?: string
+          organization_id?: string | null
+          principal_subject_hash?: string
+          principal_type?: string
+          reason_code?: string
+          reconciled_at?: string | null
+          resource_scope_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "denied_operation_attempts_audit_log_id_fkey"
+            columns: ["audit_log_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "denied_operation_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_blocks: {
         Row: {
@@ -710,6 +805,201 @@ export type Database = {
           },
         ]
       }
+      escritura_approval_attempts: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          error_code: string | null
+          escritura_case_id: string | null
+          evidence_manifest_hash: string
+          finalized_at: string | null
+          id: string
+          legal_approval_grant_id: string
+          matriz_id: string
+          matriz_version: number
+          operation_id: string
+          organization_id: string
+          origin: string
+          project_id: string
+          provenance_manifest_hash: string
+          review_policy_fingerprint: string
+          snapshot_hash: string
+          status: string
+          template_id: string
+          template_version: number
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          escritura_case_id?: string | null
+          evidence_manifest_hash: string
+          finalized_at?: string | null
+          id?: string
+          legal_approval_grant_id: string
+          matriz_id: string
+          matriz_version: number
+          operation_id: string
+          organization_id: string
+          origin: string
+          project_id: string
+          provenance_manifest_hash: string
+          review_policy_fingerprint: string
+          snapshot_hash: string
+          status?: string
+          template_id: string
+          template_version: number
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          escritura_case_id?: string | null
+          evidence_manifest_hash?: string
+          finalized_at?: string | null
+          id?: string
+          legal_approval_grant_id?: string
+          matriz_id?: string
+          matriz_version?: number
+          operation_id?: string
+          organization_id?: string
+          origin?: string
+          project_id?: string
+          provenance_manifest_hash?: string
+          review_policy_fingerprint?: string
+          snapshot_hash?: string
+          status?: string
+          template_id?: string
+          template_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_approval_attempts_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_approval_attempts_legal_approval_grant_id_fkey"
+            columns: ["legal_approval_grant_id"]
+            isOneToOne: false
+            referencedRelation: "legal_approval_grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_approval_attempts_matriz_id_fkey"
+            columns: ["matriz_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_matrices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_approval_attempts_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: true
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_approval_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_approval_attempts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_approval_attempts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritura_cascade_runs: {
+        Row: {
+          attempt_number: number | null
+          causes: Json
+          created_at: string
+          delivery_state: Json
+          escritura_case_id: string
+          finished_at: string | null
+          generation_fingerprint: string | null
+          id: string
+          last_error_code: string | null
+          organization_id: string
+          outcome: string
+          started_at: string | null
+          steps: Json
+          trigger: string
+          workflow_outbox_id: string | null
+        }
+        Insert: {
+          attempt_number?: number | null
+          causes?: Json
+          created_at?: string
+          delivery_state?: Json
+          escritura_case_id: string
+          finished_at?: string | null
+          generation_fingerprint?: string | null
+          id?: string
+          last_error_code?: string | null
+          organization_id: string
+          outcome: string
+          started_at?: string | null
+          steps?: Json
+          trigger: string
+          workflow_outbox_id?: string | null
+        }
+        Update: {
+          attempt_number?: number | null
+          causes?: Json
+          created_at?: string
+          delivery_state?: Json
+          escritura_case_id?: string
+          finished_at?: string | null
+          generation_fingerprint?: string | null
+          id?: string
+          last_error_code?: string | null
+          organization_id?: string
+          outcome?: string
+          started_at?: string | null
+          steps?: Json
+          trigger?: string
+          workflow_outbox_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_cascade_runs_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_cascade_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_cascade_runs_workflow_outbox_id_fkey"
+            columns: ["workflow_outbox_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_outbox"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       escritura_cases: {
         Row: {
           case_status: string
@@ -799,48 +1089,106 @@ export type Database = {
       }
       escritura_deliveries: {
         Row: {
+          active_capability_id: string | null
+          attempt_count: number
+          authenticated_replacement_verified_at: string | null
+          available_at: string | null
+          capability_status: string
           channel: string
           created_at: string
+          delivery_status: string
           escritura_case_id: string
+          first_accessed_at: string | null
           generation_id: string
           id: string
+          last_attempt_at: string | null
+          last_error_class: string | null
+          last_error_code: string | null
+          legacy_cutover_status: string
+          legacy_revoked_at: string | null
           link_expires_at: string | null
           link_token: string | null
+          next_attempt_at: string | null
+          operation_id: string | null
           organization_id: string
           project_id: string
+          recipient_role: string | null
           recipient_user_id: string | null
+          required: boolean
           sent_at: string | null
           status: string
+          updated_at: string
         }
         Insert: {
+          active_capability_id?: string | null
+          attempt_count?: number
+          authenticated_replacement_verified_at?: string | null
+          available_at?: string | null
+          capability_status?: string
           channel: string
           created_at?: string
+          delivery_status?: string
           escritura_case_id: string
+          first_accessed_at?: string | null
           generation_id: string
           id?: string
+          last_attempt_at?: string | null
+          last_error_class?: string | null
+          last_error_code?: string | null
+          legacy_cutover_status?: string
+          legacy_revoked_at?: string | null
           link_expires_at?: string | null
           link_token?: string | null
+          next_attempt_at?: string | null
+          operation_id?: string | null
           organization_id: string
           project_id: string
+          recipient_role?: string | null
           recipient_user_id?: string | null
+          required?: boolean
           sent_at?: string | null
           status?: string
+          updated_at?: string
         }
         Update: {
+          active_capability_id?: string | null
+          attempt_count?: number
+          authenticated_replacement_verified_at?: string | null
+          available_at?: string | null
+          capability_status?: string
           channel?: string
           created_at?: string
+          delivery_status?: string
           escritura_case_id?: string
+          first_accessed_at?: string | null
           generation_id?: string
           id?: string
+          last_attempt_at?: string | null
+          last_error_class?: string | null
+          last_error_code?: string | null
+          legacy_cutover_status?: string
+          legacy_revoked_at?: string | null
           link_expires_at?: string | null
           link_token?: string | null
+          next_attempt_at?: string | null
+          operation_id?: string | null
           organization_id?: string
           project_id?: string
+          recipient_role?: string | null
           recipient_user_id?: string | null
+          required?: boolean
           sent_at?: string | null
           status?: string
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "escritura_deliveries_active_capability_id_fkey"
+            columns: ["active_capability_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_delivery_capabilities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "escritura_deliveries_escritura_case_id_fkey"
             columns: ["escritura_case_id"]
@@ -853,6 +1201,13 @@ export type Database = {
             columns: ["generation_id"]
             isOneToOne: false
             referencedRelation: "escritura_minuta_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_deliveries_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
             referencedColumns: ["id"]
           },
           {
@@ -871,8 +1226,89 @@ export type Database = {
           },
         ]
       }
+      escritura_delivery_capabilities: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          delivery_id: string
+          expires_at: string
+          id: string
+          issued_at: string
+          issued_by: string | null
+          last_audit_id: string | null
+          operation_id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          rotated_to_id: string | null
+          status: string
+          token_hash: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          delivery_id: string
+          expires_at: string
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          last_audit_id?: string | null
+          operation_id: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          rotated_to_id?: string | null
+          status: string
+          token_hash: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          delivery_id?: string
+          expires_at?: string
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          last_audit_id?: string | null
+          operation_id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          rotated_to_id?: string | null
+          status?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_delivery_capabilities_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_delivery_capabilities_last_audit_id_fkey"
+            columns: ["last_audit_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_delivery_capabilities_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: true
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_delivery_capabilities_rotated_to_id_fkey"
+            columns: ["rotated_to_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_delivery_capabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       escritura_matrices: {
         Row: {
+          approval_origin: string
           approved_at: string | null
           approved_by: string | null
           clause_order: Json
@@ -893,6 +1329,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          approval_origin?: string
           approved_at?: string | null
           approved_by?: string | null
           clause_order?: Json
@@ -913,6 +1350,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          approval_origin?: string
           approved_at?: string | null
           approved_by?: string | null
           clause_order?: Json
@@ -972,57 +1410,109 @@ export type Database = {
       }
       escritura_minuta_generations: {
         Row: {
+          approval_id: string | null
+          artifact_sha256: string | null
           content_hash: string
           escritura_case_id: string
           generated_at: string
           generated_by: string | null
+          generation_fingerprint: string | null
+          generation_mode: string
           id: string
           matriz_id: string
           matriz_version: number
+          normalization_version: string | null
+          operation_id: string | null
           organization_id: string
           project_id: string
+          provenance_manifest_hash: string | null
+          readiness_status: string
+          regeneration_reason: string | null
+          renderer_version: string | null
           resolution_manifest: Json
+          review_policy_fingerprint: string | null
+          ruleset_version: string | null
+          schema_version: string | null
+          semantic_validation_id: string | null
           snapshot_hash: string
           storage_path: string
           template_id: string
+          template_version: number | null
           warning_acknowledged_at: string
           warning_acknowledged_by: string
         }
         Insert: {
+          approval_id?: string | null
+          artifact_sha256?: string | null
           content_hash: string
           escritura_case_id: string
           generated_at?: string
           generated_by?: string | null
+          generation_fingerprint?: string | null
+          generation_mode?: string
           id?: string
           matriz_id: string
           matriz_version: number
+          normalization_version?: string | null
+          operation_id?: string | null
           organization_id: string
           project_id: string
+          provenance_manifest_hash?: string | null
+          readiness_status?: string
+          regeneration_reason?: string | null
+          renderer_version?: string | null
           resolution_manifest?: Json
+          review_policy_fingerprint?: string | null
+          ruleset_version?: string | null
+          schema_version?: string | null
+          semantic_validation_id?: string | null
           snapshot_hash: string
           storage_path: string
           template_id: string
+          template_version?: number | null
           warning_acknowledged_at: string
           warning_acknowledged_by: string
         }
         Update: {
+          approval_id?: string | null
+          artifact_sha256?: string | null
           content_hash?: string
           escritura_case_id?: string
           generated_at?: string
           generated_by?: string | null
+          generation_fingerprint?: string | null
+          generation_mode?: string
           id?: string
           matriz_id?: string
           matriz_version?: number
+          normalization_version?: string | null
+          operation_id?: string | null
           organization_id?: string
           project_id?: string
+          provenance_manifest_hash?: string | null
+          readiness_status?: string
+          regeneration_reason?: string | null
+          renderer_version?: string | null
           resolution_manifest?: Json
+          review_policy_fingerprint?: string | null
+          ruleset_version?: string | null
+          schema_version?: string | null
+          semantic_validation_id?: string | null
           snapshot_hash?: string
           storage_path?: string
           template_id?: string
+          template_version?: number | null
           warning_acknowledged_at?: string
           warning_acknowledged_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "escritura_minuta_generations_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "legal_review_decisions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "escritura_minuta_generations_escritura_case_id_fkey"
             columns: ["escritura_case_id"]
@@ -1035,6 +1525,13 @@ export type Database = {
             columns: ["matriz_id"]
             isOneToOne: false
             referencedRelation: "escritura_matrices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_minuta_generations_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
             referencedColumns: ["id"]
           },
           {
@@ -1052,10 +1549,249 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "escritura_minuta_generations_semantic_validation_id_fkey"
+            columns: ["semantic_validation_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_semantic_validations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "escritura_minuta_generations_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "escritura_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritura_semantic_validations: {
+        Row: {
+          approval_attempt_id: string
+          approval_id: string | null
+          artifact_sha256: string
+          escritura_case_id: string | null
+          evidence_manifest_hash: string
+          id: string
+          issues: Json
+          matriz_id: string
+          matriz_version: number
+          normalization_version: string
+          organization_id: string
+          project_id: string
+          provenance_manifest_hash: string
+          renderer_version: string
+          resolved_content_hash: string
+          ruleset_version: string
+          schema_version: string
+          snapshot_hash: string
+          status: string
+          template_id: string
+          template_version: number
+          validated_at: string
+          validated_by: string | null
+          validation_origin: string
+        }
+        Insert: {
+          approval_attempt_id: string
+          approval_id?: string | null
+          artifact_sha256: string
+          escritura_case_id?: string | null
+          evidence_manifest_hash: string
+          id?: string
+          issues?: Json
+          matriz_id: string
+          matriz_version: number
+          normalization_version: string
+          organization_id: string
+          project_id: string
+          provenance_manifest_hash: string
+          renderer_version: string
+          resolved_content_hash: string
+          ruleset_version: string
+          schema_version: string
+          snapshot_hash: string
+          status: string
+          template_id: string
+          template_version: number
+          validated_at?: string
+          validated_by?: string | null
+          validation_origin: string
+        }
+        Update: {
+          approval_attempt_id?: string
+          approval_id?: string | null
+          artifact_sha256?: string
+          escritura_case_id?: string | null
+          evidence_manifest_hash?: string
+          id?: string
+          issues?: Json
+          matriz_id?: string
+          matriz_version?: number
+          normalization_version?: string
+          organization_id?: string
+          project_id?: string
+          provenance_manifest_hash?: string
+          renderer_version?: string
+          resolved_content_hash?: string
+          ruleset_version?: string
+          schema_version?: string
+          snapshot_hash?: string
+          status?: string
+          template_id?: string
+          template_version?: number
+          validated_at?: string
+          validated_by?: string | null
+          validation_origin?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_semantic_validations_approval_attempt_id_fkey"
+            columns: ["approval_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_approval_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_semantic_validations_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "legal_review_decisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_semantic_validations_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_semantic_validations_matriz_id_fkey"
+            columns: ["matriz_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_matrices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_semantic_validations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_semantic_validations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_semantic_validations_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escritura_signature_events: {
+        Row: {
+          created_at: string
+          escritura_case_id: string
+          evidence_file_id: string
+          evidence_sha256: string
+          generation_id: string
+          id: string
+          lot_id: string
+          operation_id: string
+          organization_id: string
+          project_id: string
+          reason: string
+          recorded_by: string
+          request_hash: string
+          signed_at: string
+        }
+        Insert: {
+          created_at?: string
+          escritura_case_id: string
+          evidence_file_id: string
+          evidence_sha256: string
+          generation_id: string
+          id?: string
+          lot_id: string
+          operation_id: string
+          organization_id: string
+          project_id: string
+          reason: string
+          recorded_by: string
+          request_hash: string
+          signed_at: string
+        }
+        Update: {
+          created_at?: string
+          escritura_case_id?: string
+          evidence_file_id?: string
+          evidence_sha256?: string
+          generation_id?: string
+          id?: string
+          lot_id?: string
+          operation_id?: string
+          organization_id?: string
+          project_id?: string
+          reason?: string
+          recorded_by?: string
+          request_hash?: string
+          signed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escritura_signature_events_escritura_case_id_fkey"
+            columns: ["escritura_case_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_signature_events_evidence_file_id_fkey"
+            columns: ["evidence_file_id"]
+            isOneToOne: true
+            referencedRelation: "project_file_objects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_signature_events_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_minuta_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_signature_events_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_signature_events_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: true
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_signature_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escritura_signature_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1170,6 +1906,103 @@ export type Database = {
           },
         ]
       }
+      feature_rollout_controls: {
+        Row: {
+          created_at: string
+          feature_key: string
+          id: string
+          last_audit_id: string
+          mode: string
+          operation_id: string
+          organization_id: string
+          reason: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          feature_key: string
+          id?: string
+          last_audit_id: string
+          mode?: string
+          operation_id: string
+          organization_id: string
+          reason: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          feature_key?: string
+          id?: string
+          last_audit_id?: string
+          mode?: string
+          operation_id?: string
+          organization_id?: string
+          reason?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_rollout_controls_last_audit_id_fkey"
+            columns: ["last_audit_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_rollout_controls_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_rollout_controls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_rollout_projects: {
+        Row: {
+          control_id: string
+          created_at: string
+          project_id: string
+        }
+        Insert: {
+          control_id: string
+          created_at?: string
+          project_id: string
+        }
+        Update: {
+          control_id?: string
+          created_at?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_rollout_projects_control_id_fkey"
+            columns: ["control_id"]
+            isOneToOne: false
+            referencedRelation: "feature_rollout_controls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_rollout_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_documents: {
         Row: {
           created_at: string | null
@@ -1267,45 +2100,67 @@ export type Database = {
       }
       geometries: {
         Row: {
+          active: boolean
+          content_hash: string | null
           created_at: string
+          feature_key: string | null
           geometry: Json
           geometry_type: Database["public"]["Enums"]["geometry_type"]
           id: string
+          import_id: string | null
           is_assigned: boolean
           lot_id: string | null
           name: string | null
           project_id: string
           properties: Json | null
+          source_feature_index: number | null
           source_type: Database["public"]["Enums"]["source_type"]
           updated_at: string
         }
         Insert: {
+          active?: boolean
+          content_hash?: string | null
           created_at?: string
+          feature_key?: string | null
           geometry: Json
           geometry_type?: Database["public"]["Enums"]["geometry_type"]
           id?: string
+          import_id?: string | null
           is_assigned?: boolean
           lot_id?: string | null
           name?: string | null
           project_id: string
           properties?: Json | null
+          source_feature_index?: number | null
           source_type?: Database["public"]["Enums"]["source_type"]
           updated_at?: string
         }
         Update: {
+          active?: boolean
+          content_hash?: string | null
           created_at?: string
+          feature_key?: string | null
           geometry?: Json
           geometry_type?: Database["public"]["Enums"]["geometry_type"]
           id?: string
+          import_id?: string | null
           is_assigned?: boolean
           lot_id?: string | null
           name?: string | null
           project_id?: string
           properties?: Json | null
+          source_feature_index?: number | null
           source_type?: Database["public"]["Enums"]["source_type"]
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "geometries_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "geometry_imports"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "geometries_lot_id_fkey"
             columns: ["lot_id"]
@@ -1318,6 +2173,450 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      geometry_assignment_history: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          geometry_id: string | null
+          id: string
+          lot_id: string
+          operation_id: string
+          organization_id: string
+          previous_geometry_id: string | null
+          project_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          geometry_id?: string | null
+          id?: string
+          lot_id: string
+          operation_id: string
+          organization_id: string
+          previous_geometry_id?: string | null
+          project_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          geometry_id?: string | null
+          id?: string
+          lot_id?: string
+          operation_id?: string
+          organization_id?: string
+          previous_geometry_id?: string | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geometry_assignment_history_geometry_id_fkey"
+            columns: ["geometry_id"]
+            isOneToOne: false
+            referencedRelation: "geometries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_assignment_history_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_assignment_history_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_assignment_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_assignment_history_previous_geometry_id_fkey"
+            columns: ["previous_geometry_id"]
+            isOneToOne: false
+            referencedRelation: "geometries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_assignment_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      geometry_derivations: {
+        Row: {
+          config: Json
+          config_hash: string
+          created_at: string
+          derivation_type: string
+          id: string
+          operation_id: string
+          organization_id: string
+          project_id: string
+          result: Json | null
+          source_geometry_ids: string[]
+          source_hash: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          config_hash: string
+          created_at?: string
+          derivation_type: string
+          id?: string
+          operation_id: string
+          organization_id: string
+          project_id: string
+          result?: Json | null
+          source_geometry_ids: string[]
+          source_hash: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          config_hash?: string
+          created_at?: string
+          derivation_type?: string
+          id?: string
+          operation_id?: string
+          organization_id?: string
+          project_id?: string
+          result?: Json | null
+          source_geometry_ids?: string[]
+          source_hash?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geometry_derivations_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_derivations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_derivations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      geometry_enrichment_jobs: {
+        Row: {
+          attempt_count: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          derivation_id: string | null
+          geometry_id: string | null
+          id: string
+          job_kind: string
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          lot_id: string | null
+          operation_id: string
+          organization_id: string
+          project_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          available_at?: string
+          completed_at?: string | null
+          created_at?: string
+          derivation_id?: string | null
+          geometry_id?: string | null
+          id?: string
+          job_kind: string
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          lot_id?: string | null
+          operation_id: string
+          organization_id: string
+          project_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          available_at?: string
+          completed_at?: string | null
+          created_at?: string
+          derivation_id?: string | null
+          geometry_id?: string | null
+          id?: string
+          job_kind?: string
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          lot_id?: string | null
+          operation_id?: string
+          organization_id?: string
+          project_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geometry_enrichment_jobs_derivation_id_fkey"
+            columns: ["derivation_id"]
+            isOneToOne: false
+            referencedRelation: "geometry_derivations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_enrichment_jobs_geometry_id_fkey"
+            columns: ["geometry_id"]
+            isOneToOne: false
+            referencedRelation: "geometries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_enrichment_jobs_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_enrichment_jobs_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_enrichment_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_enrichment_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      geometry_imports: {
+        Row: {
+          created_at: string
+          created_by: string
+          feature_count: number
+          id: string
+          operation_id: string
+          organization_id: string
+          project_id: string
+          source_file_id: string | null
+          source_sha256: string
+          source_type: Database["public"]["Enums"]["source_type"]
+          status: string
+          superseded_at: string | null
+          supersedes_import_id: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          feature_count: number
+          id?: string
+          operation_id: string
+          organization_id: string
+          project_id: string
+          source_file_id?: string | null
+          source_sha256: string
+          source_type: Database["public"]["Enums"]["source_type"]
+          status?: string
+          superseded_at?: string | null
+          supersedes_import_id?: string | null
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          feature_count?: number
+          id?: string
+          operation_id?: string
+          organization_id?: string
+          project_id?: string
+          source_file_id?: string | null
+          source_sha256?: string
+          source_type?: Database["public"]["Enums"]["source_type"]
+          status?: string
+          superseded_at?: string | null
+          supersedes_import_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geometry_imports_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_imports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_imports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_imports_source_file_id_fkey"
+            columns: ["source_file_id"]
+            isOneToOne: false
+            referencedRelation: "project_file_objects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geometry_imports_supersedes_import_id_fkey"
+            columns: ["supersedes_import_id"]
+            isOneToOne: false
+            referencedRelation: "geometry_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      idempotency_operation_types: {
+        Row: {
+          contract_version: string
+          created_at: string
+          enabled: boolean
+          operation_type: string
+        }
+        Insert: {
+          contract_version?: string
+          created_at?: string
+          enabled?: boolean
+          operation_type: string
+        }
+        Update: {
+          contract_version?: string
+          created_at?: string
+          enabled?: boolean
+          operation_type?: string
+        }
+        Relationships: []
+      }
+      idempotency_operations: {
+        Row: {
+          canonicalization_version: string
+          completed_at: string | null
+          created_at: string
+          error_code: string | null
+          id: string
+          idempotency_key: string
+          operation_type: string
+          organization_id: string
+          principal_subject: string
+          principal_type: string
+          provider_event_key: string | null
+          request_hash: string
+          resource_id: string | null
+          resource_scope: string
+          resource_type: string | null
+          response_summary: Json
+          source_kind: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          canonicalization_version?: string
+          completed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          idempotency_key: string
+          operation_type: string
+          organization_id: string
+          principal_subject: string
+          principal_type: string
+          provider_event_key?: string | null
+          request_hash: string
+          resource_id?: string | null
+          resource_scope: string
+          resource_type?: string | null
+          response_summary?: Json
+          source_kind: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          canonicalization_version?: string
+          completed_at?: string | null
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          idempotency_key?: string
+          operation_type?: string
+          organization_id?: string
+          principal_subject?: string
+          principal_type?: string
+          provider_event_key?: string | null
+          request_hash?: string
+          resource_id?: string | null
+          resource_scope?: string
+          resource_type?: string | null
+          response_summary?: Json
+          source_kind?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idempotency_operations_operation_type_fkey"
+            columns: ["operation_type"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operation_types"
+            referencedColumns: ["operation_type"]
+          },
+          {
+            foreignKeyName: "idempotency_operations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1356,6 +2655,89 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_approval_grants: {
+        Row: {
+          active: boolean
+          evidence_fingerprint: string
+          expires_at: string | null
+          granted_at: string
+          granted_by: string
+          grantee_user_id: string
+          id: string
+          operation_id: string
+          organization_id: string
+          project_id: string | null
+          reason: string
+          revoke_operation_id: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          evidence_fingerprint: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by: string
+          grantee_user_id: string
+          id?: string
+          operation_id: string
+          organization_id: string
+          project_id?: string | null
+          reason: string
+          revoke_operation_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          evidence_fingerprint?: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string
+          grantee_user_id?: string
+          id?: string
+          operation_id?: string
+          organization_id?: string
+          project_id?: string | null
+          reason?: string
+          revoke_operation_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_approval_grants_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: true
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_approval_grants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_approval_grants_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_approval_grants_revoke_operation_id_fkey"
+            columns: ["revoke_operation_id"]
+            isOneToOne: true
+            referencedRelation: "idempotency_operations"
             referencedColumns: ["id"]
           },
         ]
@@ -1445,6 +2827,7 @@ export type Database = {
           mime_type: string
           organization_id: string
           original_filename: string
+          project_file_object_id: string | null
           project_id: string
           sha256_hash: string
           source_field: string | null
@@ -1466,6 +2849,7 @@ export type Database = {
           mime_type: string
           organization_id: string
           original_filename: string
+          project_file_object_id?: string | null
           project_id: string
           sha256_hash: string
           source_field?: string | null
@@ -1487,6 +2871,7 @@ export type Database = {
           mime_type?: string
           organization_id?: string
           original_filename?: string
+          project_file_object_id?: string | null
           project_id?: string
           sha256_hash?: string
           source_field?: string | null
@@ -1514,6 +2899,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "legal_documents_project_file_object_id_fkey"
+            columns: ["project_file_object_id"]
+            isOneToOne: false
+            referencedRelation: "project_file_objects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "legal_documents_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -1532,56 +2924,68 @@ export type Database = {
       legal_review_decisions: {
         Row: {
           decided_at: string
-          decided_by: string
+          decided_by: string | null
           decision_payload: Json | null
           decision_status: string
           decision_type: string
           escritura_case_id: string | null
           id: string
+          inherited_from_matriz_id: string | null
+          inherited_matriz_version: number | null
           lawyer_email: string | null
           lawyer_name: string | null
           lawyer_rut: string | null
           lot_id: string | null
           organization_id: string
+          origin: string
           project_id: string
           reason: string | null
           title_analysis_id: string | null
+          trigger: string | null
           variable_resolution_id: string | null
         }
         Insert: {
           decided_at?: string
-          decided_by: string
+          decided_by?: string | null
           decision_payload?: Json | null
           decision_status: string
           decision_type: string
           escritura_case_id?: string | null
           id?: string
+          inherited_from_matriz_id?: string | null
+          inherited_matriz_version?: number | null
           lawyer_email?: string | null
           lawyer_name?: string | null
           lawyer_rut?: string | null
           lot_id?: string | null
           organization_id: string
+          origin?: string
           project_id: string
           reason?: string | null
           title_analysis_id?: string | null
+          trigger?: string | null
           variable_resolution_id?: string | null
         }
         Update: {
           decided_at?: string
-          decided_by?: string
+          decided_by?: string | null
           decision_payload?: Json | null
           decision_status?: string
           decision_type?: string
           escritura_case_id?: string | null
           id?: string
+          inherited_from_matriz_id?: string | null
+          inherited_matriz_version?: number | null
           lawyer_email?: string | null
           lawyer_name?: string | null
           lawyer_rut?: string | null
           lot_id?: string | null
           organization_id?: string
+          origin?: string
           project_id?: string
           reason?: string | null
           title_analysis_id?: string | null
+          trigger?: string | null
           variable_resolution_id?: string | null
         }
         Relationships: [
@@ -1590,6 +2994,13 @@ export type Database = {
             columns: ["escritura_case_id"]
             isOneToOne: false
             referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_review_decisions_inherited_from_matriz_id_fkey"
+            columns: ["inherited_from_matriz_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_matrices"
             referencedColumns: ["id"]
           },
           {
@@ -2229,6 +3640,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          escritura_review_policy: string
           id: string
           is_personal: boolean
           name: string
@@ -2238,6 +3650,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          escritura_review_policy?: string
           id?: string
           is_personal?: boolean
           name: string
@@ -2247,6 +3660,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          escritura_review_policy?: string
           id?: string
           is_personal?: boolean
           name?: string
@@ -2254,6 +3668,74 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      production_readiness_findings: {
+        Row: {
+          budget: string | null
+          details: Json
+          detected_at: string
+          fingerprint: string
+          id: string
+          impact: string | null
+          kind: string
+          organization_id: string | null
+          owner: string | null
+          resolution: string | null
+          resolved_at: string | null
+          resource_id: string | null
+          resource_type: string | null
+          review_due_at: string | null
+          severity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget?: string | null
+          details?: Json
+          detected_at?: string
+          fingerprint: string
+          id?: string
+          impact?: string | null
+          kind: string
+          organization_id?: string | null
+          owner?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          review_due_at?: string | null
+          severity: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget?: string | null
+          details?: Json
+          detected_at?: string
+          fingerprint?: string
+          id?: string
+          impact?: string | null
+          kind?: string
+          organization_id?: string | null
+          owner?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          review_due_at?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_readiness_findings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -2329,6 +3811,118 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_file_objects: {
+        Row: {
+          bound_escritura_case_id: string | null
+          bound_generation_id: string | null
+          bucket: string
+          category: string
+          content_type: string
+          created_at: string
+          created_by: string
+          id: string
+          object_path: string
+          operation_id: string
+          organization_id: string
+          original_filename: string
+          project_id: string
+          replaces_file_id: string | null
+          retention_class: string
+          size_bytes: number
+          source_sha256: string
+          status: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          bound_escritura_case_id?: string | null
+          bound_generation_id?: string | null
+          bucket: string
+          category: string
+          content_type: string
+          created_at?: string
+          created_by: string
+          id?: string
+          object_path: string
+          operation_id: string
+          organization_id: string
+          original_filename: string
+          project_id: string
+          replaces_file_id?: string | null
+          retention_class: string
+          size_bytes: number
+          source_sha256: string
+          status?: string
+          updated_at?: string
+          visibility: string
+        }
+        Update: {
+          bound_escritura_case_id?: string | null
+          bound_generation_id?: string | null
+          bucket?: string
+          category?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          object_path?: string
+          operation_id?: string
+          organization_id?: string
+          original_filename?: string
+          project_id?: string
+          replaces_file_id?: string | null
+          retention_class?: string
+          size_bytes?: number
+          source_sha256?: string
+          status?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_file_objects_bound_escritura_case_id_fkey"
+            columns: ["bound_escritura_case_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_file_objects_bound_generation_id_fkey"
+            columns: ["bound_generation_id"]
+            isOneToOne: false
+            referencedRelation: "escritura_minuta_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_file_objects_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_file_objects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_file_objects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_file_objects_replaces_file_id_fkey"
+            columns: ["replaces_file_id"]
+            isOneToOne: false
+            referencedRelation: "project_file_objects"
             referencedColumns: ["id"]
           },
         ]
@@ -2528,6 +4122,8 @@ export type Database = {
           estado: string
           id: string
           images: string[] | null
+          minuta_warning_acknowledged_at: string | null
+          minuta_warning_acknowledged_by: string | null
           name: string
           organization_id: string
           region: string | null
@@ -2549,6 +4145,8 @@ export type Database = {
           estado?: string
           id?: string
           images?: string[] | null
+          minuta_warning_acknowledged_at?: string | null
+          minuta_warning_acknowledged_by?: string | null
           name: string
           organization_id: string
           region?: string | null
@@ -2570,6 +4168,8 @@ export type Database = {
           estado?: string
           id?: string
           images?: string[] | null
+          minuta_warning_acknowledged_at?: string | null
+          minuta_warning_acknowledged_by?: string | null
           name?: string
           organization_id?: string
           region?: string | null
@@ -2628,6 +4228,74 @@ export type Database = {
             columns: ["prompt_id"]
             isOneToOne: false
             referencedRelation: "system_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      runtime_release_attestations: {
+        Row: {
+          artifact_digest: string
+          config_version: string
+          deployment_id: string
+          environment_fingerprint: string
+          hard_off_automatic_escritura: boolean
+          hard_off_canonical_geometry_import: boolean
+          hard_off_document_capabilities: boolean
+          hard_off_fingerprint: string
+          heartbeat_at: string
+          instance_id: string
+          lifecycle: string
+          metadata: Json
+          release_sha: string
+          retired_at: string | null
+          retired_by_operation_id: string | null
+          runtime_role: string
+          slot_id: string
+        }
+        Insert: {
+          artifact_digest: string
+          config_version: string
+          deployment_id: string
+          environment_fingerprint: string
+          hard_off_automatic_escritura: boolean
+          hard_off_canonical_geometry_import: boolean
+          hard_off_document_capabilities: boolean
+          hard_off_fingerprint: string
+          heartbeat_at?: string
+          instance_id: string
+          lifecycle?: string
+          metadata?: Json
+          release_sha: string
+          retired_at?: string | null
+          retired_by_operation_id?: string | null
+          runtime_role: string
+          slot_id: string
+        }
+        Update: {
+          artifact_digest?: string
+          config_version?: string
+          deployment_id?: string
+          environment_fingerprint?: string
+          hard_off_automatic_escritura?: boolean
+          hard_off_canonical_geometry_import?: boolean
+          hard_off_document_capabilities?: boolean
+          hard_off_fingerprint?: string
+          heartbeat_at?: string
+          instance_id?: string
+          lifecycle?: string
+          metadata?: Json
+          release_sha?: string
+          retired_at?: string | null
+          retired_by_operation_id?: string | null
+          runtime_role?: string
+          slot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "runtime_release_attestations_retired_by_operation_id_fkey"
+            columns: ["retired_by_operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
             referencedColumns: ["id"]
           },
         ]
@@ -2860,14 +4528,19 @@ export type Database = {
       variable_resolutions: {
         Row: {
           approval_required: boolean
+          attestation_ref: string | null
           confidence: number | null
           correction_reason: string | null
           created_at: string
           escritura_case_id: string | null
+          evidence_hash: string | null
           extractor_name: string | null
+          field_version: number | null
           id: string
+          legal_approval_grant_id: string | null
           lot_id: string | null
           organization_id: string
+          person_id: string | null
           project_id: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -2883,14 +4556,19 @@ export type Database = {
         }
         Insert: {
           approval_required?: boolean
+          attestation_ref?: string | null
           confidence?: number | null
           correction_reason?: string | null
           created_at?: string
           escritura_case_id?: string | null
+          evidence_hash?: string | null
           extractor_name?: string | null
+          field_version?: number | null
           id?: string
+          legal_approval_grant_id?: string | null
           lot_id?: string | null
           organization_id: string
+          person_id?: string | null
           project_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -2906,14 +4584,19 @@ export type Database = {
         }
         Update: {
           approval_required?: boolean
+          attestation_ref?: string | null
           confidence?: number | null
           correction_reason?: string | null
           created_at?: string
           escritura_case_id?: string | null
+          evidence_hash?: string | null
           extractor_name?: string | null
+          field_version?: number | null
           id?: string
+          legal_approval_grant_id?: string | null
           lot_id?: string | null
           organization_id?: string
+          person_id?: string | null
           project_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -2933,6 +4616,13 @@ export type Database = {
             columns: ["escritura_case_id"]
             isOneToOne: false
             referencedRelation: "escritura_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variable_resolutions_legal_approval_grant_id_fkey"
+            columns: ["legal_approval_grant_id"]
+            isOneToOne: false
+            referencedRelation: "legal_approval_grants"
             referencedColumns: ["id"]
           },
           {
@@ -2961,6 +4651,96 @@ export type Database = {
             columns: ["superseded_by"]
             isOneToOne: false
             referencedRelation: "variable_resolutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_membership_operations: {
+        Row: {
+          approval_operation_id: string | null
+          created_at: string
+          error_code: string | null
+          external_subject_hash: string | null
+          finalized_at: string | null
+          id: string
+          idempotency_operation_id: string
+          operation_kind: string
+          organization_id: string
+          requested_by: string
+          status: string
+          target_email_hash: string | null
+          target_project_id: string | null
+          target_user_id: string | null
+          target_vendor_id: string | null
+        }
+        Insert: {
+          approval_operation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          external_subject_hash?: string | null
+          finalized_at?: string | null
+          id?: string
+          idempotency_operation_id: string
+          operation_kind: string
+          organization_id: string
+          requested_by: string
+          status?: string
+          target_email_hash?: string | null
+          target_project_id?: string | null
+          target_user_id?: string | null
+          target_vendor_id?: string | null
+        }
+        Update: {
+          approval_operation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          external_subject_hash?: string | null
+          finalized_at?: string | null
+          id?: string
+          idempotency_operation_id?: string
+          operation_kind?: string
+          organization_id?: string
+          requested_by?: string
+          status?: string
+          target_email_hash?: string | null
+          target_project_id?: string | null
+          target_user_id?: string | null
+          target_vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_membership_operations_approval_operation_id_fkey"
+            columns: ["approval_operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_membership_operations_idempotency_operation_id_fkey"
+            columns: ["idempotency_operation_id"]
+            isOneToOne: true
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_membership_operations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_membership_operations_target_project_id_fkey"
+            columns: ["target_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_membership_operations_target_vendor_id_fkey"
+            columns: ["target_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -3058,6 +4838,185 @@ export type Database = {
           },
         ]
       }
+      worker_job_failures: {
+        Row: {
+          attempt_count: number
+          error_class: string
+          error_code: string
+          first_failed_at: string
+          id: string
+          job_id: string
+          last_audit_id: string | null
+          last_failed_at: string
+          max_attempts: number
+          next_attempt_at: string | null
+          operation_id: string
+          payload_fingerprint: string
+          queue_name: string
+          resolution_operation_id: string | null
+          resolved_at: string | null
+          status: string
+          task_name: string
+        }
+        Insert: {
+          attempt_count: number
+          error_class: string
+          error_code: string
+          first_failed_at?: string
+          id?: string
+          job_id: string
+          last_audit_id?: string | null
+          last_failed_at?: string
+          max_attempts: number
+          next_attempt_at?: string | null
+          operation_id: string
+          payload_fingerprint: string
+          queue_name: string
+          resolution_operation_id?: string | null
+          resolved_at?: string | null
+          status: string
+          task_name: string
+        }
+        Update: {
+          attempt_count?: number
+          error_class?: string
+          error_code?: string
+          first_failed_at?: string
+          id?: string
+          job_id?: string
+          last_audit_id?: string | null
+          last_failed_at?: string
+          max_attempts?: number
+          next_attempt_at?: string | null
+          operation_id?: string
+          payload_fingerprint?: string
+          queue_name?: string
+          resolution_operation_id?: string | null
+          resolved_at?: string | null
+          status?: string
+          task_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_job_failures_last_audit_id_fkey"
+            columns: ["last_audit_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_job_failures_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_job_failures_resolution_operation_id_fkey"
+            columns: ["resolution_operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_outbox: {
+        Row: {
+          aggregate_id: string
+          aggregate_type: string
+          attempt_count: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          deferred_control_fingerprint: string | null
+          deferred_reason: string | null
+          event_fingerprint: string
+          event_type: string
+          heartbeat_at: string | null
+          id: string
+          last_error_class: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          operation_id: string
+          organization_id: string
+          payload: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          aggregate_id: string
+          aggregate_type: string
+          attempt_count?: number
+          available_at?: string
+          completed_at?: string | null
+          created_at?: string
+          deferred_control_fingerprint?: string | null
+          deferred_reason?: string | null
+          event_fingerprint: string
+          event_type: string
+          heartbeat_at?: string | null
+          id?: string
+          last_error_class?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          operation_id: string
+          organization_id: string
+          payload: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          aggregate_id?: string
+          aggregate_type?: string
+          attempt_count?: number
+          available_at?: string
+          completed_at?: string | null
+          created_at?: string
+          deferred_control_fingerprint?: string | null
+          deferred_reason?: string | null
+          event_fingerprint?: string
+          event_type?: string
+          heartbeat_at?: string | null
+          id?: string
+          last_error_class?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          max_attempts?: number
+          operation_id?: string
+          organization_id?: string
+          payload?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_outbox_aggregate_id_fkey"
+            columns: ["aggregate_id"]
+            isOneToOne: false
+            referencedRelation: "approval_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_outbox_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "idempotency_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_outbox_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -3092,6 +5051,79 @@ export type Database = {
         }
         Returns: undefined
       }
+      assign_project_geometry: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_geometry_id: string
+          p_geometry_id: string
+          p_lot_id: string
+          p_operation_id: string
+          p_organization_id: string
+          p_project_id: string
+        }
+        Returns: Json
+      }
+      begin_matriz_approval: {
+        Args: {
+          p_actor_user_id: string
+          p_evidence_manifest_hash: string
+          p_expected_matriz_version: number
+          p_legal_approval_grant_id: string
+          p_matriz_id: string
+          p_operation_id: string
+          p_origin: string
+          p_provenance_manifest_hash: string
+          p_review_policy_fingerprint: string
+          p_snapshot_hash: string
+          p_template_version: number
+        }
+        Returns: string
+      }
+      begin_vendor_membership_operation: {
+        Args: {
+          p_idempotency_operation_id: string
+          p_operation_kind: string
+          p_organization_id: string
+          p_requested_by: string
+          p_target_project_id: string
+          p_target_user_id: string
+          p_target_vendor_id: string
+        }
+        Returns: string
+      }
+      begin_workflow_outbox_attempt: {
+        Args: { p_item_id: string; p_worker_id: string }
+        Returns: {
+          aggregate_id: string
+          aggregate_type: string
+          attempt_count: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          deferred_control_fingerprint: string | null
+          deferred_reason: string | null
+          event_fingerprint: string
+          event_type: string
+          heartbeat_at: string | null
+          id: string
+          last_error_class: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          operation_id: string
+          organization_id: string
+          payload: Json
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workflow_outbox"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_manage_project_files: {
         Args: { project_id_text: string }
         Returns: boolean
@@ -3100,12 +5132,307 @@ export type Database = {
         Args: { project_id_text: string }
         Returns: boolean
       }
+      claim_geometry_enrichment_job: {
+        Args: { p_worker_id: string }
+        Returns: {
+          attempt_count: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          derivation_id: string | null
+          geometry_id: string | null
+          id: string
+          job_kind: string
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          lot_id: string | null
+          operation_id: string
+          organization_id: string
+          project_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "geometry_enrichment_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      claim_idempotency_operation: {
+        Args: {
+          p_idempotency_key: string
+          p_operation_type: string
+          p_organization_id: string
+          p_principal_subject: string
+          p_principal_type: string
+          p_provider_event_key?: string
+          p_request_hash: string
+          p_resource_scope: string
+          p_source_kind: string
+        }
+        Returns: {
+          canonicalization_version: string
+          completed_at: string | null
+          created_at: string
+          error_code: string | null
+          id: string
+          idempotency_key: string
+          operation_type: string
+          organization_id: string
+          principal_subject: string
+          principal_type: string
+          provider_event_key: string | null
+          request_hash: string
+          resource_id: string | null
+          resource_scope: string
+          resource_type: string | null
+          response_summary: Json
+          source_kind: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "idempotency_operations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      claim_workflow_outbox: {
+        Args: { p_hard_off?: boolean; p_worker_id: string }
+        Returns: Json
+      }
+      commit_geometry_import: {
+        Args: {
+          p_actor_user_id: string
+          p_features: Json
+          p_operation_id: string
+          p_organization_id: string
+          p_project_id: string
+          p_source_file_id: string
+          p_source_sha256: string
+          p_source_type: Database["public"]["Enums"]["source_type"]
+        }
+        Returns: Json
+      }
+      commit_project_file_with_reference: {
+        Args: {
+          p_actor_user_id: string
+          p_file_id: string
+          p_legal_document_id: string
+          p_operation_id: string
+        }
+        Returns: string
+      }
+      commit_project_infrastructure: {
+        Args: {
+          p_config: Json
+          p_config_hash: string
+          p_derivation_type: string
+          p_operation_id: string
+          p_organization_id: string
+          p_project_id: string
+          p_source_geometry_ids: string[]
+          p_source_hash: string
+        }
+        Returns: Json
+      }
+      complete_idempotency_operation: {
+        Args: {
+          p_error_code?: string
+          p_operation_id: string
+          p_request_hash: string
+          p_resource_id?: string
+          p_resource_type?: string
+          p_response_summary?: Json
+          p_status: string
+        }
+        Returns: {
+          canonicalization_version: string
+          completed_at: string | null
+          created_at: string
+          error_code: string | null
+          id: string
+          idempotency_key: string
+          operation_type: string
+          organization_id: string
+          principal_subject: string
+          principal_type: string
+          provider_event_key: string | null
+          request_hash: string
+          resource_id: string | null
+          resource_scope: string
+          resource_type: string | null
+          response_summary: Json
+          source_kind: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "idempotency_operations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_project_with_lots: {
+        Args: {
+          p_actor_user_id: string
+          p_comuna: string
+          p_descripcion: string
+          p_lot_prefix: string
+          p_name: string
+          p_operation_id: string
+          p_organization_id: string
+          p_precio: number
+          p_region: string
+          p_total_lotes: number
+          p_valor_reserva: number
+        }
+        Returns: Json
+      }
+      cutover_legacy_delivery_link: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_id: string
+          p_operation_id: string
+        }
+        Returns: {
+          active_capability_id: string | null
+          attempt_count: number
+          authenticated_replacement_verified_at: string | null
+          available_at: string | null
+          capability_status: string
+          channel: string
+          created_at: string
+          delivery_status: string
+          escritura_case_id: string
+          first_accessed_at: string | null
+          generation_id: string
+          id: string
+          last_attempt_at: string | null
+          last_error_class: string | null
+          last_error_code: string | null
+          legacy_cutover_status: string
+          legacy_revoked_at: string | null
+          link_expires_at: string | null
+          link_token: string | null
+          next_attempt_at: string | null
+          operation_id: string | null
+          organization_id: string
+          project_id: string
+          recipient_role: string | null
+          recipient_user_id: string | null
+          required: boolean
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "escritura_deliveries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decrypt_credential: { Args: { p_encrypted: string }; Returns: string }
       encrypt_credential: { Args: { p_plaintext: string }; Returns: string }
+      finalize_matriz_approval: {
+        Args: {
+          p_attempt_id: string
+          p_operation_id: string
+          p_validation_id: string
+        }
+        Returns: Json
+      }
+      finalize_vendor_membership_operation: {
+        Args: {
+          p_error_code?: string
+          p_external_subject_hash: string
+          p_operation_id: string
+          p_succeeded: boolean
+        }
+        Returns: string
+      }
+      finish_workflow_outbox: {
+        Args: {
+          p_error_class?: string
+          p_error_code?: string
+          p_item_id: string
+          p_retry_after_seconds?: number
+          p_status: string
+          p_worker_id: string
+        }
+        Returns: {
+          aggregate_id: string
+          aggregate_type: string
+          attempt_count: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          deferred_control_fingerprint: string | null
+          deferred_reason: string | null
+          event_fingerprint: string
+          event_type: string
+          heartbeat_at: string | null
+          id: string
+          last_error_class: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          operation_id: string
+          organization_id: string
+          payload: Json
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workflow_outbox"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_decrypted_bot_token: { Args: { p_org_id: string }; Returns: string }
       get_mcp_credentials: {
         Args: { p_org_id: string; p_provider: string; p_user_id: string }
         Returns: string
+      }
+      heartbeat_workflow_outbox: {
+        Args: { p_item_id: string; p_worker_id: string }
+        Returns: {
+          aggregate_id: string
+          aggregate_type: string
+          attempt_count: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          deferred_control_fingerprint: string | null
+          deferred_reason: string | null
+          event_fingerprint: string
+          event_type: string
+          heartbeat_at: string | null
+          id: string
+          last_error_class: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          operation_id: string
+          organization_id: string
+          payload: Json
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workflow_outbox"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       is_org_admin: { Args: { org_id: string }; Returns: boolean }
       is_org_user: { Args: { org_id: string }; Returns: boolean }
@@ -3118,6 +5445,27 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
+      issue_delivery_capability: {
+        Args: {
+          p_actor_user_id?: string
+          p_delivery_id: string
+          p_operation_id: string
+          p_ttl_seconds: number
+        }
+        Returns: Json
+      }
+      record_escritura_signature: {
+        Args: {
+          p_escritura_case_id: string
+          p_evidence_file_id: string
+          p_generation_id: string
+          p_operation_key: string
+          p_reason: string
+          p_recorded_by: string
+          p_signed_at: string
+        }
+        Returns: Json
+      }
       register_telegram_bot: {
         Args: {
           p_org_id: string
@@ -3135,6 +5483,98 @@ export type Database = {
         Args: { p_admin_phone?: string; p_approval_id: string }
         Returns: Json
       }
+      release_workflow_outbox_for_feature_off: {
+        Args: {
+          p_control_fingerprint: string
+          p_item_id: string
+          p_reason: string
+          p_worker_id: string
+        }
+        Returns: {
+          aggregate_id: string
+          aggregate_type: string
+          attempt_count: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          deferred_control_fingerprint: string | null
+          deferred_reason: string | null
+          event_fingerprint: string
+          event_type: string
+          heartbeat_at: string | null
+          id: string
+          last_error_class: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          max_attempts: number
+          operation_id: string
+          organization_id: string
+          payload: Json
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workflow_outbox"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      renew_delivery_capability: {
+        Args: {
+          p_actor_user_id?: string
+          p_delivery_id: string
+          p_operation_id: string
+          p_ttl_seconds: number
+        }
+        Returns: Json
+      }
+      resolve_feature_rollout: {
+        Args: {
+          p_feature_key: string
+          p_organization_id: string
+          p_project_id?: string
+        }
+        Returns: boolean
+      }
+      retire_runtime_slot: {
+        Args: {
+          p_actor: string
+          p_deployment_id: string
+          p_expected_heartbeat_at: string
+          p_instance_id: string
+          p_operation_id: string
+          p_reason: string
+          p_runtime_role: string
+          p_slot_id: string
+        }
+        Returns: {
+          artifact_digest: string
+          config_version: string
+          deployment_id: string
+          environment_fingerprint: string
+          hard_off_automatic_escritura: boolean
+          hard_off_canonical_geometry_import: boolean
+          hard_off_document_capabilities: boolean
+          hard_off_fingerprint: string
+          heartbeat_at: string
+          instance_id: string
+          lifecycle: string
+          metadata: Json
+          release_sha: string
+          retired_at: string | null
+          retired_by_operation_id: string | null
+          runtime_role: string
+          slot_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "runtime_release_attestations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       seed_default_document_blocks: {
         Args: { p_org_id: string; p_user_id?: string }
         Returns: number
@@ -3142,6 +5582,104 @@ export type Database = {
       seed_escritura_blocks: {
         Args: { p_org_id: string; p_user_id?: string }
         Returns: number
+      }
+      set_feature_rollout_control: {
+        Args: {
+          p_actor: string
+          p_expected_version: number
+          p_feature_key: string
+          p_mode: string
+          p_operation_id: string
+          p_organization_id: string
+          p_project_ids: string[]
+          p_reason: string
+        }
+        Returns: {
+          created_at: string
+          feature_key: string
+          id: string
+          last_audit_id: string
+          mode: string
+          operation_id: string
+          organization_id: string
+          reason: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "feature_rollout_controls"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      supersede_geometry_import: {
+        Args: {
+          p_actor_user_id: string
+          p_expected_source_sha256: string
+          p_features: Json
+          p_operation_id: string
+          p_organization_id: string
+          p_project_id: string
+          p_source_file_id: string
+          p_source_sha256: string
+          p_source_type: Database["public"]["Enums"]["source_type"]
+        }
+        Returns: Json
+      }
+      verify_legacy_delivery_replacement: {
+        Args: {
+          p_actor_user_id: string
+          p_delivery_id: string
+          p_operation_id: string
+        }
+        Returns: {
+          active_capability_id: string | null
+          attempt_count: number
+          authenticated_replacement_verified_at: string | null
+          available_at: string | null
+          capability_status: string
+          channel: string
+          created_at: string
+          delivery_status: string
+          escritura_case_id: string
+          first_accessed_at: string | null
+          generation_id: string
+          id: string
+          last_attempt_at: string | null
+          last_error_class: string | null
+          last_error_code: string | null
+          legacy_cutover_status: string
+          legacy_revoked_at: string | null
+          link_expires_at: string | null
+          link_token: string | null
+          next_attempt_at: string | null
+          operation_id: string | null
+          organization_id: string
+          project_id: string
+          recipient_role: string | null
+          recipient_user_id: string | null
+          required: boolean
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "escritura_deliveries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      verify_lot_as_admin: {
+        Args: {
+          p_admin_id: string
+          p_area_calc_m2: number
+          p_lot_id: string
+          p_perimeter_calc_m: number
+        }
+        Returns: undefined
       }
     }
     Enums: {

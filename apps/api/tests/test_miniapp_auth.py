@@ -6,6 +6,7 @@ import urllib.parse
 import pytest
 import jwt
 import uuid
+from unittest.mock import AsyncMock
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 
@@ -125,14 +126,15 @@ def test_validate_telegram_init_data_sin_auth_date():
     assert data["error"] == "missing_auth_date"
 
 
-def test_create_y_verify_miniapp_session():
+def test_create_y_verify_miniapp_session(monkeypatch):
     """Prueba la emisión completa y validación del JWT de sesión de la Mini App."""
     user_id = str(uuid.uuid4())
     org_id = str(uuid.uuid4())
     role = "vendor"
     chat_id = 987654321
     
-    token = create_miniapp_session(user_id, org_id, role, chat_id)
+    vendor_id = str(uuid.uuid4())
+    token = create_miniapp_session(user_id, org_id, role, chat_id, vendor_id)
     assert isinstance(token, str)
     
     # Verificar token
@@ -140,6 +142,10 @@ def test_create_y_verify_miniapp_session():
     
     # Correr dependencia de forma síncrona (es async def, pero podemos llamarla en el event loop)
     import asyncio
+    monkeypatch.setattr(
+        "core.miniapp_session._revalidate_workspace_authority",
+        AsyncMock(return_value=None),
+    )
     context = asyncio.run(verify_miniapp_session(auth_credentials))
     
     assert isinstance(context, MiniappUserContext)
@@ -147,6 +153,7 @@ def test_create_y_verify_miniapp_session():
     assert str(context.org_id) == org_id
     assert context.role == role
     assert context.chat_id == chat_id
+    assert str(context.vendor_id) == vendor_id
 
 
 def test_verify_miniapp_session_expirada():
@@ -511,5 +518,4 @@ async def test_resolve_miniapp_user_not_member():
 
     assert error == "not_member"
     assert detail is None
-
 

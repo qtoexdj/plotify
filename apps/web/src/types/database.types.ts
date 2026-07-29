@@ -278,6 +278,11 @@ export interface Geometry {
   properties: Record<string, any> | null
   name: string | null
   is_assigned: boolean
+  import_id: string | null
+  feature_key: string | null
+  source_feature_index: number | null
+  content_hash: string | null
+  active: boolean
   created_at: string
   updated_at: string
 }
@@ -390,6 +395,11 @@ export type DocumentEvidenceUpdate = Database['public']['Tables']['document_evid
 export type LotLegalData = Database['public']['Tables']['lot_legal_data']['Row']
 export type LotLegalDataInsert = Database['public']['Tables']['lot_legal_data']['Insert']
 export type LotLegalDataUpdate = Database['public']['Tables']['lot_legal_data']['Update']
+export type GeometryImport = Database['public']['Tables']['geometry_imports']['Row']
+export type GeometryDerivation = Database['public']['Tables']['geometry_derivations']['Row']
+export type GeometryEnrichmentJob = Database['public']['Tables']['geometry_enrichment_jobs']['Row']
+export type GeometryAssignmentHistory =
+  Database['public']['Tables']['geometry_assignment_history']['Row']
 
 export type EscrituraCase = Database['public']['Tables']['escritura_cases']['Row']
 export type EscrituraCaseInsert = Database['public']['Tables']['escritura_cases']['Insert']

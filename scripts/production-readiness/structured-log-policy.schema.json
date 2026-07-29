@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plotify.local/schemas/structured-log-policy.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "policies"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "policies": { "type": "array", "items": { "$ref": "#/$defs/policy" } }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logger",
+        "sink",
+        "symbol",
+        "allowedFields",
+        "prohibitedFields",
+        "redactionRule",
+        "minimumSeverity",
+        "retentionDays",
+        "captureTestIds"
+      ],
+      "properties": {
+        "logger": { "type": "string", "minLength": 1 },
+        "sink": { "type": "string", "minLength": 1 },
+        "symbol": { "type": "string", "minLength": 1 },
+        "allowedFields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "prohibitedFields": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "enum": [
+              "pii",
+              "secret",
+              "request_body",
+              "response_body",
+              "stack",
+              "document_text",
+              "signed_url"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "redactionRule": { "type": "string", "minLength": 1 },
+        "minimumSeverity": { "enum": ["debug", "info", "warn", "error", "fatal"] },
+        "retentionDays": { "type": "integer", "minimum": 1 },
+        "captureTestIds": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    }
+  }
+}

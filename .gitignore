@@ -21,6 +21,7 @@ node_modules/
 
 # Next.js / frontend outputs
 .next/
+.next-e2e/
 out/
 dist/
 build/
@@ -75,6 +76,7 @@ playwright-report/
 blob-report/
 cypress/videos/
 cypress/screenshots/
+/artifacts/production-readiness/
 
 # Supabase local artifacts
 **/supabase/.branches/

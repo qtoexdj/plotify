@@ -13,6 +13,7 @@ styling lands in T024.
 from __future__ import annotations
 
 import re
+import hashlib
 from io import BytesIO
 from typing import Any
 
@@ -21,7 +22,7 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 KNOWN_BLOCK_NODE_TYPES = frozenset(
-    ("paragraph", "block_token", "repeat_section", "conditional_section")
+    ("paragraph", "block_token", "repeat_section", "conditional_section", "optional_phrase")
 )
 KNOWN_INLINE_NODE_TYPES = frozenset(("text", "variable_token"))
 KNOWN_NODE_TYPES = KNOWN_BLOCK_NODE_TYPES | KNOWN_INLINE_NODE_TYPES | {"doc"}
@@ -79,6 +80,13 @@ class UnresolvedTokenError(MatrizDocxError):
             "Resolved matriz content still contains unresolved tokens: "
             + ", ".join(self.variable_keys)
         )
+
+
+RENDERER_VERSION = "matriz-docx/2"
+
+
+def artifact_sha256(artifact_bytes: bytes) -> str:
+    return hashlib.sha256(artifact_bytes).hexdigest()
 
 
 def collect_unknown_node_types(node: dict[str, Any]) -> list[str]:
@@ -233,6 +241,10 @@ def _content_paragraph_texts(content: dict[str, Any]) -> list[str]:
                 texts.append(text)
         elif node.get("type") in {"repeat_section", "conditional_section"}:
             texts.extend(_content_paragraph_texts({"content": node.get("content") or []}))
+        elif node.get("type") == "optional_phrase":
+            inline = _inline_text(node.get("content") or [])
+            if inline:
+                texts.append(inline)
     return texts
 
 

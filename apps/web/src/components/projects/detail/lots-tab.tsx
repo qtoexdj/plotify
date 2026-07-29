@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select'
 import {
   Sheet,
+  SheetBody,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -879,14 +880,14 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
         )}
 
         <Sheet open={isEditorOpen} onOpenChange={(open) => (!open ? closeLotEditor() : null)}>
-          <SheetContent className="sm:max-w-2xl">
+          <SheetContent data-testid="sheet-lots" className="sm:max-w-2xl">
             <SheetHeader>
               <SheetTitle>Ficha del Lote {lotForm.numero_lote || '—'}</SheetTitle>
               <SheetDescription>
                 Actualiza la información del lote y su ficha contractual.
               </SheetDescription>
             </SheetHeader>
-            <div className="flex-1 overflow-y-auto px-6 pb-6 pt-2 space-y-6">
+            <SheetBody className="space-y-6 px-6 pb-6 pt-2">
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Datos del lote</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -1017,7 +1018,7 @@ export function LotsTab({ projectId, lots, isLoading, error, onRefresh, isAdmin 
 
               {/* Se omiten algunos campos secundarios por brevedad del ejemplo, 
                     pero la estructura está lista para recibirlos todos */}
-            </div>
+            </SheetBody>
             <SheetFooter>
               {saveLotError ? <p className="text-sm text-destructive">{saveLotError}</p> : null}
               {saveLotSuccess ? <p className="text-sm text-success">Cambios guardados</p> : null}

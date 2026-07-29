@@ -106,8 +106,7 @@ class LegalDocumentRegistrationInput:
     def from_schema(
         cls, payload: LegalDocumentRegisterRequest
     ) -> "LegalDocumentRegistrationInput":
-        data = payload.model_dump()
-        return cls(**data)
+        raise LegalDocumentValidationError("file_id must be resolved from persisted metadata")
 
 
 @dataclass(frozen=True, slots=True)
@@ -463,8 +462,42 @@ async def register_legal_document(
     *,
     supabase: Any | None = None,
 ) -> LegalDocumentRegistrationResult:
-    registration = validate_registration_input(normalize_registration_input(payload))
     client = supabase or _get_supabase_client()
+    if isinstance(payload, LegalDocumentRegisterRequest):
+        file_result = await _run_supabase(
+            lambda: client.table("project_file_objects")
+            .select(
+                "id, organization_id, project_id, bucket, object_path, original_filename, content_type, size_bytes, source_sha256, status"
+            )
+            .eq("id", payload.file_id)
+            .eq("organization_id", payload.organization_id)
+            .eq("project_id", payload.project_id)
+            .eq("category", "legal_document")
+            .single()
+            .execute()
+        )
+        persisted_file = _first_row(file_result)
+        if not persisted_file or persisted_file.get("status") not in {"pending", "ready"}:
+            raise LegalDocumentNotFoundError("File not found in the requested project scope.")
+        registration = LegalDocumentRegistrationInput(
+            organization_id=payload.organization_id,
+            project_id=payload.project_id,
+            lot_id=payload.lot_id,
+            document_type=payload.document_type,
+            source_field=payload.source_field,
+            storage_bucket=str(persisted_file["bucket"]),
+            storage_path=str(persisted_file["object_path"]),
+            original_filename=str(persisted_file["original_filename"]),
+            mime_type=str(persisted_file["content_type"]),
+            file_size_bytes=int(persisted_file["size_bytes"]),
+            sha256_hash=str(persisted_file["source_sha256"]),
+            upload_source=payload.upload_source,
+            uploaded_by=payload.uploaded_by,
+            replaces_legal_document_id=payload.replaces_legal_document_id,
+        )
+    else:
+        registration = normalize_registration_input(payload)
+    registration = validate_registration_input(registration)
 
     await ensure_project_scope(
         supabase=client,
@@ -493,6 +526,7 @@ async def register_legal_document(
         "lot_id": registration.lot_id,
         "document_type": registration.document_type,
         "source_field": registration.source_field,
+        "project_file_object_id": payload.file_id if isinstance(payload, LegalDocumentRegisterRequest) else None,
         "storage_bucket": registration.storage_bucket,
         "storage_path": registration.storage_path,
         "original_filename": registration.original_filename,

@@ -2,7 +2,7 @@ import time
 import pytest
 import uuid
 import jwt
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import status
 
@@ -15,6 +15,15 @@ ORG_ID = str(uuid.uuid4())
 ADMIN_ID = str(uuid.uuid4())
 VENDOR_ID = str(uuid.uuid4())
 CHAT_ID = 123456789
+
+
+@pytest.fixture(autouse=True)
+def _isolate_workspace_guard(monkeypatch):
+    """Workspace authority has its own contract suite; endpoint tests isolate domain IO."""
+    monkeypatch.setattr(
+        "core.miniapp_session._revalidate_workspace_authority",
+        AsyncMock(return_value=None),
+    )
 
 
 def _obtener_headers_admin() -> dict:
@@ -266,7 +275,7 @@ def test_get_bandeja_detail_excepcion(mock_supabase_client):
     assert res_data["conflictos"][0]["nombre"] == "cliente_nombre"
     assert res_data["conflictos"][0]["valor_vendedor"] == "Juan Gomez"
     assert res_data["conflictos"][0]["valor_certificado"] == "Juan Gomez Perez"
-    assert "storage.supabase.com" in res_data["evidencia_url"]
+    assert res_data["evidence_file_id"] is None
 
 
 @patch("api.v1.endpoints.miniapp.get_supabase_client")
@@ -341,6 +350,7 @@ def test_get_ventas_vendedor(mock_supabase_client):
     # Mock de respuesta para casos de escritura asignados a este vendedor
     mock_select = MagicMock()
     mock_select.eq.return_value = mock_select
+    mock_select.in_.return_value = mock_select
     mock_select.order.return_value = mock_select
     mock_select.limit.return_value = mock_select
     mock_select.execute.return_value = MagicMock(
@@ -359,7 +369,17 @@ def test_get_ventas_vendedor(mock_supabase_client):
             }
         ]
     )
-    mock_supabase.table.return_value.select.return_value = mock_select
+    assignment_select = MagicMock()
+    assignment_select.eq.return_value.execute.return_value = MagicMock(
+        data=[{"project_id": mock_select.execute.return_value.data[0]["project_id"]}]
+    )
+
+    def table_for_ventas(table_name):
+        table = MagicMock()
+        table.select.return_value = assignment_select if table_name == "vendor_projects" else mock_select
+        return table
+
+    mock_supabase.table.side_effect = table_for_ventas
 
     client = TestClient(app)
     response = client.get(
@@ -388,6 +408,7 @@ def test_get_venta_detalle_vendedor(mock_supabase_client):
 
     mock_select = MagicMock()
     mock_select.eq.return_value = mock_select
+    mock_select.in_.return_value = mock_select
     mock_select.limit.return_value = mock_select
     mock_select.execute.return_value = MagicMock(
         data=[
@@ -405,7 +426,17 @@ def test_get_venta_detalle_vendedor(mock_supabase_client):
             }
         ]
     )
-    mock_supabase.table.return_value.select.return_value = mock_select
+    assignment_select = MagicMock()
+    assignment_select.eq.return_value.execute.return_value = MagicMock(
+        data=[{"project_id": mock_select.execute.return_value.data[0]["project_id"]}]
+    )
+
+    def table_for_venta_detail(table_name):
+        table = MagicMock()
+        table.select.return_value = assignment_select if table_name == "vendor_projects" else mock_select
+        return table
+
+    mock_supabase.table.side_effect = table_for_venta_detail
 
     client = TestClient(app)
     response = client.get(
@@ -474,7 +505,7 @@ def test_get_documentos_vendedor(mock_supabase_client):
     data = response.json()
     assert len(data) == 1
     assert data[0]["id"] == delivery_uuid
-    assert data[0]["download_url"] == "https://supabase.co/signed-url/minuta_104"
+    assert data[0]["file_id"] == generation_uuid
     assert data[0]["status"] == "sent"
 
 
@@ -646,6 +677,23 @@ def test_mapa_no_expone_un_proyecto_fuera_de_la_organizacion(mock_supabase_clien
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_sdd019_miniapp_evidence_never_projects_storage_urls_or_paths():
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1] / "api/v1/endpoints/miniapp.py"
+    ).read_text()
+    for forbidden in (
+        "create_signed_url",
+        "evidencia_url",
+        "storage_path",
+        "storage_bucket",
+        "signedURL",
+        "signedUrl",
+    ):
+        assert forbidden not in source, f"STORAGE_URL_EXPOSED: Mini App contains {forbidden}"
 
 
 @patch("api.v1.endpoints.miniapp.get_supabase_client")

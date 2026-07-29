@@ -27,6 +27,7 @@ MATRIX_COLUMNS = (
     "approved_by, approved_at, created_at, updated_at"
 )
 PROJECT_MATRIZ_GATE = "project_matriz_approved"
+OUTBOX_WAKEUP_TASK = "process_escritura_workflow_outbox"
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,18 @@ class SaleEscrituraHookResult:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+async def wakeup_sale_workflow_outbox(
+    *,
+    redis: Any | None,
+    workflow_outbox_id: str | None,
+) -> bool:
+    """Wake the durable consumer; Postgres remains the source of obligation."""
+    if redis is None or not workflow_outbox_id:
+        return False
+    await redis.enqueue_job(OUTBOX_WAKEUP_TASK, workflow_outbox_id)
+    return True
 
 
 def _first_row(data: Any) -> dict[str, Any] | None:

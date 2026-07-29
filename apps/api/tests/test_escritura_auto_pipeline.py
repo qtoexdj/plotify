@@ -11,16 +11,21 @@ en modo exceptions_only → exception.
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import json
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 
+from core.release_flags import EffectiveRollout
 from services import escritura_auto_pipeline as pipeline
 from services import escritura_case_workflow
+from services.matriz_semantic_validation import generation_fingerprint
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "matriz"
 
@@ -932,7 +937,9 @@ class TestLegalReviewRejected:
         assert not store.tables.get("escritura_minuta_generations")
 
     @pytest.mark.asyncio
-    async def test_rejected_review_is_exception_even_in_exceptions_only(self, monkeypatch):
+    async def test_rejected_review_is_exception_even_in_exceptions_only(
+        self, monkeypatch
+    ):
         """El rechazo bloquea la cascada sin importar la política — no es un
         checkpoint que 'exceptions_only' pueda saltarse, es una decisión ya
         tomada por un humano."""
@@ -943,7 +950,9 @@ class TestLegalReviewRejected:
         _seed_project(store)
         _seed_abogado_redactor(store)
         case_row = _seed_case(store, legal_review_pending=True)
-        case_row["variable_snapshot"]["revision_juridica.estado"]["value_text"] = "rechazada"
+        case_row["variable_snapshot"]["revision_juridica.estado"][
+            "value_text"
+        ] = "rechazada"
         template = _seed_template(store)
         _seed_matrix(
             store, case_row=case_row, template=template, status="legal_review_pending"
@@ -958,3 +967,260 @@ class TestLegalReviewRejected:
 
         assert result.outcome == "exception"
         assert result.causes[0]["kind"] == "legal_review_rejected"
+
+
+# ─── SDD019 T074: carrera, fingerprint completo y rollout fail-closed ────────
+
+
+AUTOMATIC_ESCRITURA_NOT_IMPLEMENTED = "automatic_escritura_NOT_IMPLEMENTED"
+
+
+def _full_generation_envelope() -> dict[str, Any]:
+    return {
+        "organization_id": ORG_ID,
+        "case_id": CASE_ID,
+        "snapshot_hash": "sha256:snapshot",
+        "matriz_id": "00000000-0000-4000-8000-000000000010",
+        "matriz_version": 7,
+        "template_id": "00000000-0000-4000-8000-000000000011",
+        "template_version": 3,
+        "renderer_version": "matriz-docx/2",
+        "ruleset_version": "semantic/1",
+        "schema_version": "2",
+        "normalization_version": "semantic-normalization/1",
+        "approval_id": "00000000-0000-4000-8000-000000000012",
+        "provenance_manifest_hash": "sha256:provenance",
+        "review_policy_fingerprint": "sha256:policy",
+    }
+
+
+@pytest.mark.parametrize(
+    ("field", "changed_value"),
+    [
+        ("snapshot_hash", "sha256:changed-snapshot"),
+        ("matriz_id", "00000000-0000-4000-8000-000000000014"),
+        ("matriz_version", 8),
+        ("template_id", "00000000-0000-4000-8000-000000000015"),
+        ("template_version", 4),
+        ("renderer_version", "matriz-docx/3"),
+        ("ruleset_version", "semantic/2"),
+        ("schema_version", "3"),
+        ("normalization_version", "semantic-normalization/2"),
+        ("approval_id", "00000000-0000-4000-8000-000000000013"),
+        ("provenance_manifest_hash", "sha256:changed-provenance"),
+        ("review_policy_fingerprint", "sha256:changed-policy"),
+    ],
+)
+def test_full_fingerprint_changes_for_every_bound_version(
+    field: str,
+    changed_value: object,
+):
+    original = _full_generation_envelope()
+    changed = {**original, field: changed_value}
+
+    assert generation_fingerprint(original) != generation_fingerprint(changed)
+
+
+def test_identical_full_fingerprint_maps_to_one_deterministic_storage_path():
+    path_builder = getattr(
+        escritura_case_workflow,
+        "automatic_generation_storage_path",
+        None,
+    )
+    assert callable(path_builder), (
+        f"{AUTOMATIC_ESCRITURA_NOT_IMPLEMENTED}: "
+        "falta la ruta determinista ligada al fingerprint completo"
+    )
+
+    envelope = _full_generation_envelope()
+    fingerprint = generation_fingerprint(envelope)
+    first = path_builder(  # type: ignore[misc]
+        organization_id=ORG_ID,
+        escritura_case_id=CASE_ID,
+        generation_fingerprint=fingerprint,
+    )
+    second = path_builder(  # type: ignore[misc]
+        organization_id=ORG_ID,
+        escritura_case_id=CASE_ID,
+        generation_fingerprint=fingerprint,
+    )
+
+    assert first == second
+    assert fingerprint in first
+
+
+@pytest.mark.parametrize(
+    "fault_point",
+    ["after_render", "after_upload", "before_generation_insert"],
+)
+def test_retry_after_fault_reuses_exact_fingerprint_path(fault_point: str):
+    path_builder = getattr(
+        escritura_case_workflow,
+        "automatic_generation_storage_path",
+        None,
+    )
+    assert callable(path_builder), (
+        f"{AUTOMATIC_ESCRITURA_NOT_IMPLEMENTED}: "
+        f"{fault_point} no puede reanudar sobre una ruta determinista"
+    )
+
+    fingerprint = generation_fingerprint(_full_generation_envelope())
+    attempted_paths = [
+        path_builder(  # type: ignore[misc]
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            generation_fingerprint=fingerprint,
+        )
+        for _attempt in range(2)
+    ]
+
+    assert len(set(attempted_paths)) == 1
+
+
+@pytest.mark.asyncio
+async def test_twenty_way_race_produces_one_generation_and_one_path(monkeypatch):
+    store = FakeStore()
+    _patch_telegram(monkeypatch, FakeTelegramClient())
+    _seed_happy_case(store, policy="exceptions_only", status="approved")
+    generated_paths: list[str] = []
+
+    async def racing_generate(**kwargs):
+        await asyncio.sleep(0)
+        generation_id = str(uuid.uuid4())
+        path = f"{ORG_ID}/escritura-minutas/{CASE_ID}/{generation_id}.docx"
+        generated_paths.append(path)
+        store.tables.setdefault("escritura_minuta_generations", []).append(
+            {
+                "id": generation_id,
+                "organization_id": ORG_ID,
+                "escritura_case_id": CASE_ID,
+                "snapshot_hash": kwargs["matrix_row"]["snapshot_hash"],
+                "storage_path": path,
+            }
+        )
+        return SimpleNamespace(id=generation_id)
+
+    monkeypatch.setattr(pipeline, "_generate_minuta_row", racing_generate)
+
+    results = await asyncio.gather(
+        *[
+            pipeline.run_case_cascade(
+                organization_id=ORG_ID,
+                escritura_case_id=CASE_ID,
+                trigger="sale_validated",
+                supabase=store,
+            )
+            for _ in range(20)
+        ]
+    )
+
+    generations = store.tables.get("escritura_minuta_generations", [])
+    assert len(generations) == 1, (
+        f"{AUTOMATIC_ESCRITURA_NOT_IMPLEMENTED}: "
+        "20 carreras crearon más de una generación"
+    )
+    assert len({result.generation_id for result in results}) == 1
+    assert len(set(generated_paths)) == 1
+
+
+def _outbox_row() -> dict[str, Any]:
+    return {
+        "id": "00000000-0000-4000-8000-000000000020",
+        "organization_id": ORG_ID,
+        "aggregate_id": "00000000-0000-4000-8000-000000000021",
+        "event_type": "sale_approved",
+        "payload": {"caseId": CASE_ID, "projectId": PROJECT_ID},
+        "status": "pending",
+        "attempt_count": 0,
+        "lease_owner": None,
+        "lease_expires_at": None,
+        "heartbeat_at": None,
+    }
+
+
+@pytest.mark.parametrize(
+    ("reason", "hard_off"),
+    [
+        ("missing", False),
+        ("read_error", False),
+        ("off", False),
+        ("hard_off", True),
+    ],
+)
+@pytest.mark.asyncio
+async def test_automatic_escritura_off_defers_without_attempt_or_legacy_path(
+    monkeypatch,
+    reason: str,
+    hard_off: bool,
+):
+    parameters = inspect.signature(pipeline.run_case_cascade).parameters
+    assert "workflow_outbox_id" in parameters, (
+        f"{AUTOMATIC_ESCRITURA_NOT_IMPLEMENTED}: "
+        "la cascada no está ligada a la obligación durable"
+    )
+
+    store = FakeStore()
+    _patch_telegram(monkeypatch, FakeTelegramClient())
+    _seed_happy_case(store, policy="exceptions_only", status="approved")
+    outbox = _outbox_row()
+    store.tables["workflow_outbox"] = [outbox]
+    legacy_generator = AsyncMock(return_value=SimpleNamespace(id="legacy-generation"))
+    monkeypatch.setattr(pipeline, "_generate_minuta_row", legacy_generator)
+    monkeypatch.setattr(
+        pipeline,
+        "resolve_feature_rollout",
+        lambda **_kwargs: EffectiveRollout(False, "off", None, reason),
+        raising=False,
+    )
+
+    await pipeline.run_case_cascade(
+        organization_id=ORG_ID,
+        escritura_case_id=CASE_ID,
+        trigger="sale_validated",
+        supabase=store,
+        workflow_outbox_id=outbox["id"],
+        automatic_escritura_hard_off=hard_off,
+    )
+
+    assert outbox["status"] == "deferred_feature_off"
+    assert outbox["attempt_count"] == 0
+    assert outbox["lease_owner"] is None
+    assert outbox["lease_expires_at"] is None
+    legacy_generator.assert_not_awaited()
+
+
+@pytest.mark.parametrize("mode", ["projects", "on"])
+@pytest.mark.asyncio
+async def test_automatic_escritura_project_or_on_permits_outbox(
+    monkeypatch,
+    mode: str,
+):
+    parameters = inspect.signature(pipeline.run_case_cascade).parameters
+    assert "workflow_outbox_id" in parameters, (
+        f"{AUTOMATIC_ESCRITURA_NOT_IMPLEMENTED}: "
+        "project/ON no llegan al límite real de la cascada"
+    )
+
+    store = FakeStore()
+    _patch_telegram(monkeypatch, FakeTelegramClient())
+    _seed_happy_case(store, policy="exceptions_only", status="approved")
+    outbox = _outbox_row()
+    store.tables["workflow_outbox"] = [outbox]
+    monkeypatch.setattr(
+        pipeline,
+        "resolve_feature_rollout",
+        lambda **_kwargs: EffectiveRollout(True, mode, 1, mode),
+        raising=False,
+    )
+
+    result = await pipeline.run_case_cascade(
+        organization_id=ORG_ID,
+        escritura_case_id=CASE_ID,
+        trigger="sale_validated",
+        supabase=store,
+        workflow_outbox_id=outbox["id"],
+        automatic_escritura_hard_off=False,
+    )
+
+    assert result.outcome == "completed"
+    assert outbox["attempt_count"] == 1

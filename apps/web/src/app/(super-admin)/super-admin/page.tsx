@@ -16,6 +16,7 @@ function formatCount(value: number | null) {
 }
 
 export default async function SuperAdminDashboard() {
+  // Telegram administration is available only through the same-origin gateway.
   const supabase = await createClient()
 
   const [organizations, profiles, projects, audits] = await Promise.all([

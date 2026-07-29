@@ -15,50 +15,52 @@ import {
   FileAttachmentIcon,
 } from '@hugeicons/core-free-icons'
 import { Spinner } from '@/components/ui/spinner'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import type { ProjectLegalDocumentUploadMetadata } from '@/lib/services/projects.service'
 
 interface ProjectMediaStepProps {
   projectId: string
-  onMediaChange: (media: {
-    images: string[]
-    doc_dominio_vigente?: string
-    doc_hipoteca_gravamen?: string
-    doc_roles?: string
-    doc_subdivision?: string
-    doc_plano_oficial?: string
-    doc_otros?: string
-    legal_documents?: ProjectLegalDocumentUploadMetadata[]
-  }) => void
+  onMediaChange: (media: { fileIds: string[] }) => void
 }
 
 const DOCUMENT_TYPES = [
-  { id: 'doc_dominio_vigente', label: 'Dominio Vigente', accept: '.pdf' },
-  { id: 'doc_hipoteca_gravamen', label: 'Certificado Hipoteca y Gravamen', accept: '.pdf' },
-  { id: 'doc_roles', label: 'Certificado de Roles', accept: '.pdf' },
-  { id: 'doc_subdivision', label: 'Certificado de Subdivisión', accept: '.pdf' },
-  { id: 'doc_plano_oficial', label: 'Plano Oficial', accept: '.pdf' },
-  { id: 'doc_otros', label: 'Otros Documentos', accept: '.pdf' },
+  {
+    id: 'doc_dominio_vigente',
+    documentType: 'dominio_vigente',
+    label: 'Dominio Vigente',
+    accept: '.pdf',
+  },
+  {
+    id: 'doc_hipoteca_gravamen',
+    documentType: 'hipoteca_gravamen',
+    label: 'Certificado Hipoteca y Gravamen',
+    accept: '.pdf',
+  },
+  {
+    id: 'doc_roles',
+    documentType: 'certificado_roles_sii',
+    label: 'Certificado de Roles',
+    accept: '.pdf',
+  },
+  {
+    id: 'doc_subdivision',
+    documentType: 'certificado_sag',
+    label: 'Certificado de Subdivisión',
+    accept: '.pdf',
+  },
+  {
+    id: 'doc_plano_oficial',
+    documentType: 'plano_oficial',
+    label: 'Plano Oficial',
+    accept: '.pdf',
+  },
+  { id: 'doc_otros', documentType: 'otro', label: 'Otros Documentos', accept: '.pdf' },
 ]
 
-async function sha256Hex(file: File) {
-  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-}
-
 export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepProps) {
-  const [images, setImages] = useState<{ file: File; preview: string; path?: string }[]>([])
-  const [docs, setDocs] = useState<Record<string, { file: File; path?: string }>>({})
+  const [images, setImages] = useState<{ file: File; preview: string }[]>([])
+  const [docs, setDocs] = useState<Record<string, { file: File }>>({})
   const [isUploading, setIsUploading] = useState(false)
-  const [uploadedPaths, setUploadedPaths] = useState<{
-    images: string[]
-    docs: Record<string, string>
-  }>({ images: [], docs: {} })
-
-  const supabase = createClient()
+  const [uploadedFileIds, setUploadedFileIds] = useState<string[]>([])
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -93,59 +95,48 @@ export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepP
 
   const uploadFiles = async () => {
     setIsUploading(true)
-    const newUploadedImages: string[] = []
-    const newUploadedDocs: Record<string, string> = {}
-    const legalDocuments: ProjectLegalDocumentUploadMetadata[] = []
+    const fileIds: string[] = []
+
+    const upload = async (
+      file: File,
+      category: 'project_image' | 'legal_document',
+      document?: { sourceField: string; documentType: string }
+    ) => {
+      const body = new FormData()
+      body.append('file', file)
+      if (document) {
+        body.append('sourceField', document.sourceField)
+        body.append('documentType', document.documentType)
+      }
+      const response = await fetch(`/api/projects/${projectId}/files`, {
+        method: 'POST',
+        headers: {
+          'x-plotify-file-category': category,
+          'idempotency-key': crypto.randomUUID(),
+        },
+        body,
+      })
+      const result = (await response.json()) as { fileId?: string; code?: string }
+      if (!response.ok || !result.fileId) throw new Error(result.code ?? 'FILE_UPLOAD_FAILED')
+      fileIds.push(result.fileId)
+    }
 
     try {
-      // Upload Images
       for (const img of images) {
-        const fileExt = img.file.name.split('.').pop()
-        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `${projectId}/images/${fileName}`
-
-        const { data, error } = await supabase.storage
-          .from('project-files')
-          .upload(filePath, img.file)
-
-        if (error) throw error
-        newUploadedImages.push(data.path)
+        await upload(img.file, 'project_image')
       }
 
-      // Upload Docs
       for (const [id, doc] of Object.entries(docs)) {
-        const fileExt = doc.file.name.split('.').pop()
-        const fileName = `${id}-${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `${projectId}/docs/${fileName}`
-
-        const { data, error } = await supabase.storage
-          .from('project-files')
-          .upload(filePath, doc.file)
-
-        if (error) throw error
-        newUploadedDocs[id] = data.path
-        legalDocuments.push({
-          source_field: id as ProjectLegalDocumentUploadMetadata['source_field'],
-          storage_path: data.path,
-          original_filename: doc.file.name,
-          mime_type: doc.file.type || 'application/pdf',
-          file_size_bytes: doc.file.size,
-          sha256_hash: await sha256Hex(doc.file),
+        const definition = DOCUMENT_TYPES.find((item) => item.id === id)
+        if (!definition) throw new Error('FILE_CATEGORY_NOT_ALLOWED')
+        await upload(doc.file, 'legal_document', {
+          sourceField: definition.id,
+          documentType: definition.documentType,
         })
       }
 
-      setUploadedPaths({ images: newUploadedImages, docs: newUploadedDocs })
-
-      onMediaChange({
-        images: newUploadedImages,
-        doc_dominio_vigente: newUploadedDocs['doc_dominio_vigente'],
-        doc_hipoteca_gravamen: newUploadedDocs['doc_hipoteca_gravamen'],
-        doc_roles: newUploadedDocs['doc_roles'],
-        doc_subdivision: newUploadedDocs['doc_subdivision'],
-        doc_plano_oficial: newUploadedDocs['doc_plano_oficial'],
-        doc_otros: newUploadedDocs['doc_otros'] || undefined,
-        legal_documents: legalDocuments,
-      })
+      setUploadedFileIds(fileIds)
+      onMediaChange({ fileIds })
 
       toast.success('Archivos preparados con éxito')
     } catch (error) {
@@ -271,7 +262,7 @@ export function ProjectMediaStep({ projectId, onMediaChange }: ProjectMediaStepP
               <Spinner className="w-4 h-4 mr-2" />
               Subiendo...
             </>
-          ) : uploadedPaths.images.length > 0 || Object.keys(uploadedPaths.docs).length > 0 ? (
+          ) : uploadedFileIds.length > 0 ? (
             <>
               <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4 mr-2" />
               Archivos Listos

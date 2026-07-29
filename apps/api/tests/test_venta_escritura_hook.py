@@ -19,6 +19,7 @@ CASE_ID = "00000000-0000-4000-8000-000000000004"
 PROJECT_MATRIZ_ID = "00000000-0000-4000-8000-000000000005"
 TEMPLATE_ID = "00000000-0000-4000-8000-000000000006"
 ADMIN_ID = "00000000-0000-4000-8000-000000000007"
+OUTBOX_ID = "00000000-0000-4000-8000-000000000009"
 
 
 class FakeQuery:
@@ -112,10 +113,34 @@ class FakeRpc:
 
     def execute(self):
         self.store.rpc_calls.append((self.name, self.args))
+        if self.name == "approve_sale" and self.store.atomic_outbox_on_sale:
+            approval_id = self.args["p_approval_id"]
+            outbox_rows = self.store.tables.setdefault("workflow_outbox", [])
+            if not any(
+                row.get("aggregate_id") == approval_id for row in outbox_rows
+            ):
+                outbox_rows.append(
+                    {
+                        "id": OUTBOX_ID,
+                        "organization_id": ORG_ID,
+                        "aggregate_type": "sale_approval",
+                        "aggregate_id": approval_id,
+                        "event_type": "sale_approved",
+                        "status": "pending",
+                        "attempt_count": 0,
+                        "max_attempts": 8,
+                        "available_at": "2000-01-01T00:00:00Z",
+                        "lease_owner": None,
+                        "lease_expires_at": None,
+                    }
+                )
         return SimpleNamespace(
             data={
                 "success": True,
                 "lot_id": LOT_ID,
+                "workflow_outbox_id": (
+                    OUTBOX_ID if self.store.atomic_outbox_on_sale else None
+                ),
                 "vendor_phone": "+56912345678",
                 "vendor_platform": "telegram",
                 "vendor_name": "Vendedor A",
@@ -124,9 +149,10 @@ class FakeRpc:
 
 
 class FakeSupabase:
-    def __init__(self):
+    def __init__(self, *, atomic_outbox_on_sale: bool = False):
         self.tables: dict[str, list[dict[str, Any]]] = {}
         self.rpc_calls: list[tuple[str, dict[str, Any]]] = []
+        self.atomic_outbox_on_sale = atomic_outbox_on_sale
 
     def table(self, name: str) -> FakeQuery:
         return FakeQuery(self, name)
@@ -181,6 +207,44 @@ def _case_row() -> dict[str, Any]:
         "variable_snapshot": {"comprador.nombre": {"value_text": "Ana Perez"}},
         "evidence_snapshot": {},
     }
+
+
+def _seed_sale_approval_store(*, atomic_outbox_on_sale: bool = False) -> FakeSupabase:
+    store = FakeSupabase(atomic_outbox_on_sale=atomic_outbox_on_sale)
+    store.tables["approval_requests"] = [
+        {
+            "id": "approval-sale-uuid",
+            "organization_id": ORG_ID,
+            "request_type": "sale",
+            "sale_mode": "direct",
+            "previous_lot_state": "disponible",
+        }
+    ]
+    return store
+
+
+def _due_outbox_rows(store: FakeSupabase) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in store.tables.get("workflow_outbox", [])
+        if row.get("status") in {"pending", "retry_scheduled"}
+        and row.get("available_at") == "2000-01-01T00:00:00Z"
+        and row.get("lease_owner") is None
+        and row.get("lease_expires_at") is None
+    ]
+
+
+def _ready_hook_result() -> escritura_sale_hook.SaleEscrituraHookResult:
+    return escritura_sale_hook.SaleEscrituraHookResult(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=LOT_ID,
+        escritura_case_id=CASE_ID,
+        project_matriz_id=PROJECT_MATRIZ_ID,
+        borrador_matriz_id="00000000-0000-4000-8000-000000000008",
+        created_borrador=True,
+        ready_for_borrador=True,
+    )
 
 
 @pytest.mark.asyncio
@@ -487,6 +551,125 @@ async def test_sale_approval_survives_cascade_failure(monkeypatch):
 
     assert result["escritura_hook_error"] is None
     assert result["escritura_hook"]["ready_for_borrador"] is True
+
+
+@pytest.mark.asyncio
+async def test_sale_approval_handoff_is_durable_outbox_not_inline_best_effort(
+    monkeypatch,
+):
+    """El commit de venta crea la obligación durable; la cascada no se
+    ejecuta inline como un efecto best-effort que pueda perderse."""
+    store = _seed_sale_approval_store(atomic_outbox_on_sale=True)
+    hook = AsyncMock(return_value=_ready_hook_result())
+    inline_cascade = AsyncMock()
+
+    monkeypatch.setattr(approval_processor, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(
+        escritura_sale_hook, "handle_sale_validated_for_escritura", hook
+    )
+    monkeypatch.setattr(
+        escritura_auto_pipeline, "run_case_cascade", inline_cascade
+    )
+    monkeypatch.setattr(approval_processor, "log_agent_action", AsyncMock())
+
+    result = await approval_processor.execute_admin_decision_db(
+        org_id=ORG_ID,
+        approval_id="approval-sale-uuid",
+        action="approve",
+        admin_id=ADMIN_ID,
+    )
+
+    assert result["rpc_data"]["workflow_outbox_id"] == OUTBOX_ID
+    assert len(_due_outbox_rows(store)) == 1
+    assert inline_cascade.await_count == 0, (
+        "outbox: la venta no debe depender de una cascada inline best-effort"
+    )
+
+
+class SimulatedProcessCrash(BaseException):
+    """Simula una caída abrupta que no puede convertirse en error de negocio."""
+
+
+@pytest.mark.asyncio
+async def test_process_crash_after_sale_commit_keeps_due_outbox(monkeypatch):
+    """Una caída después del commit puede impedir el wakeup, pero no borrar la
+    obligación que approve_sale ya dejó exigible en Postgres."""
+    store = _seed_sale_approval_store(atomic_outbox_on_sale=True)
+    redis = SimpleNamespace(
+        enqueue_job=AsyncMock(side_effect=SimulatedProcessCrash("after commit"))
+    )
+
+    monkeypatch.setattr(approval_processor, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(
+        escritura_sale_hook,
+        "handle_sale_validated_for_escritura",
+        AsyncMock(return_value=_ready_hook_result()),
+    )
+    monkeypatch.setattr(
+        escritura_auto_pipeline, "run_case_cascade", AsyncMock()
+    )
+    monkeypatch.setattr(approval_processor, "log_agent_action", AsyncMock())
+    monkeypatch.setattr(
+        approval_processor, "send_decision_notifications", AsyncMock()
+    )
+
+    try:
+        await approval_processor.process_admin_decision(
+            {"redis": redis},
+            ORG_ID,
+            "approval-sale-uuid",
+            "approve",
+            ADMIN_ID,
+        )
+    except SimulatedProcessCrash:
+        pass
+    else:
+        pytest.fail("outbox: el wakeup ARQ post-commit no fue ejecutado")
+
+    due_rows = _due_outbox_rows(store)
+    assert [row["id"] for row in due_rows] == [OUTBOX_ID]
+    assert due_rows[0]["attempt_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_arq_enqueue_failure_keeps_sale_success_and_due_outbox(monkeypatch):
+    """Redis solo despierta al consumidor: si enqueue falla, la venta sigue
+    confirmada y la fila durable permanece disponible para recuperación."""
+    store = _seed_sale_approval_store(atomic_outbox_on_sale=True)
+    redis = SimpleNamespace(
+        enqueue_job=AsyncMock(side_effect=RuntimeError("redis unavailable"))
+    )
+
+    monkeypatch.setattr(approval_processor, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(
+        escritura_sale_hook,
+        "handle_sale_validated_for_escritura",
+        AsyncMock(return_value=_ready_hook_result()),
+    )
+    monkeypatch.setattr(
+        escritura_auto_pipeline, "run_case_cascade", AsyncMock()
+    )
+    monkeypatch.setattr(approval_processor, "log_agent_action", AsyncMock())
+    monkeypatch.setattr(
+        approval_processor, "send_decision_notifications", AsyncMock()
+    )
+
+    result = await approval_processor.process_admin_decision(
+        {"redis": redis},
+        ORG_ID,
+        "approval-sale-uuid",
+        "approve",
+        ADMIN_ID,
+    )
+
+    assert result == "SUCCESS"
+    assert redis.enqueue_job.await_count == 1, (
+        "outbox: el consumidor ARQ debe recibir un wakeup post-commit"
+    )
+    due_rows = _due_outbox_rows(store)
+    assert [row["id"] for row in due_rows] == [OUTBOX_ID]
+    assert due_rows[0]["status"] == "pending"
+    assert due_rows[0]["attempt_count"] == 0
 
 
 @pytest.mark.asyncio

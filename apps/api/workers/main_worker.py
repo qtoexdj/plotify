@@ -1,7 +1,6 @@
 from arq.connections import RedisSettings
 from core.config import get_settings
 from core.logger import setup_logging, get_logger
-from core.database import get_supabase_client
 from workers.tasks.message_processor import (
     process_incoming_message,
     link_telegram_account,
@@ -15,10 +14,11 @@ from workers.tasks.notification_worker import (
 )
 from workers.tasks.legal_document_ingestion import process_legal_document_ingestion
 from workers.tasks.legal_title_analysis import analyze_project_title
+from workers.tasks.geometry_enrichment import process_geometry_enrichment
+from workers.tasks.escritura_workflow_outbox import process_escritura_workflow_outbox
+from services.worker_job_failures import require_explicit_job_outcome
 
 from core.checkpointer import setup_checkpointer, close_checkpointer
-
-import traceback as tb
 
 settings = get_settings()
 
@@ -53,57 +53,17 @@ async def on_job_end(ctx: dict) -> None:
     """
     logger = get_logger(__name__)
 
-    # Extraer variables del contexto (depende de la versión de ARQ puede estar en kwargs o ctx)
-    success = ctx.get("success", True)
-    if success:
-        return
-
-    attempts = ctx.get("job_try", 0)
-    max_tries = settings.__class__.__dict__.get("max_tries", 3)
-
-    # Si aún le quedan reintentos, ARQ lo volverá a intentar. No es DLQ.
-    if attempts < max_tries:
-        return
-
-    job_id = ctx.get("job_id", "unknown")
-    function = ctx.get("job_name", ctx.get("function", "unknown"))
-    job_return = ctx.get("job_return")
-
-    exc = (
-        job_return if isinstance(job_return, Exception) else Exception(str(job_return))
-    )
-
-    logger.error(
-        "job_dead_lettered",
-        job_function=function,
-        job_id=job_id,
-        attempts=attempts,
-        error=str(exc),
-    )
-
     try:
-        supabase = get_supabase_client()
-
-        # Recuperar args/kwargs del contexto si están presentes, de lo contrario vacío
-        job_kwargs = ctx.get("kwargs", {})
-
-        supabase.table("dead_letter_queue").insert(
-            {
-                "job_function": function,
-                "payload": job_kwargs if isinstance(job_kwargs, dict) else {},
-                "error_message": str(exc),
-                "traceback": tb.format_exc(),
-                "attempts": attempts,
-            }
-        ).execute()
-        logger.info("Job movido a dead_letter_queue", job_id=job_id)
-    except Exception as db_err:
-        # Si la BD también falla, al menos lo registramos en logs
+        success = require_explicit_job_outcome(ctx)
+    except RuntimeError:
         logger.error(
-            "No se pudo persistir en dead_letter_queue",
-            job_id=job_id,
-            db_error=str(db_err),
+            "job_outcome_missing",
+            job_id=ctx.get("job_id"),
+            job_name=ctx.get("job_name"),
         )
+        return
+    if not success:
+        logger.error("job_failed_with_explicit_outcome", job_id=ctx.get("job_id"))
 
 
 # Clase de configuración requerida por CLI de arq
@@ -128,6 +88,8 @@ class WorkerSettings:
         retry_generated_document_delivery,
         process_legal_document_ingestion,
         analyze_project_title,
+        process_geometry_enrichment,
+        process_escritura_workflow_outbox,
     ]
 
     # Eventos de ciclo de vida

@@ -32,12 +32,6 @@ export default function ProjectsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
 
-  const getFullUrl = useCallback((path: string | null | undefined) => {
-    if (!path || path === '[]') return ''
-    const cleanPath = path.replace(/^project-files\//, '')
-    return `/api/files/project-files/${cleanPath}`
-  }, [])
-
   const loadProjects = useCallback(async () => {
     try {
       const response = await fetch('/api/projects')
@@ -182,7 +176,6 @@ export default function ProjectsPage() {
                   deletingId={deletingId}
                   onDelete={handleDelete}
                   projectHref={`/projects/${project.id}`}
-                  getFullUrl={getFullUrl}
                   statusLabel={status.label}
                   statusVariant={status.variant}
                   layout="grid"

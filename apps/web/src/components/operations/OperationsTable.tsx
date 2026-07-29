@@ -22,7 +22,14 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { ESTADO_CONFIG, estadoToStatusVariant } from '@/lib/models/lot.model'
 import { StatusBadge } from '@/components/ui/status-badge'
 import type { OperationLot } from '@/lib/services/operations.service'
@@ -240,26 +247,31 @@ export function OperationsTable({ data }: OperationsTableProps) {
       </div>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent side="right" className="sm:max-w-xl overflow-y-auto">
-          <SheetHeader className="mb-6">
+        <SheetContent data-testid="sheet-operations" side="right" className="sm:max-w-xl">
+          <SheetHeader>
             <SheetTitle>Detalles del Lote</SheetTitle>
+            <SheetDescription>
+              Revisa la operación del lote y edita sus antecedentes disponibles.
+            </SheetDescription>
           </SheetHeader>
-          {selectedLot && (
-            <LotDetailWrapper
-              lot={selectedLot}
-              onUpdate={async (id, data) => {
-                const { updateLotDetails } = await import('@/actions/lot-process.action')
-                const res = await updateLotDetails(selectedLot.project_id, id, data)
-                if (res.success) {
-                  window.location.reload()
-                }
-                if (!res.success) {
-                  console.error('Update failed:', res.error)
-                }
-                return res.success
-              }}
-            />
-          )}
+          <SheetBody className="px-6 pb-6">
+            {selectedLot && (
+              <LotDetailWrapper
+                lot={selectedLot}
+                onUpdate={async (id, data) => {
+                  const { updateLotDetails } = await import('@/actions/lot-process.action')
+                  const res = await updateLotDetails(selectedLot.project_id, id, data)
+                  if (res.success) {
+                    window.location.reload()
+                  }
+                  if (!res.success) {
+                    console.error('Update failed:', res.error)
+                  }
+                  return res.success
+                }}
+              />
+            )}
+          </SheetBody>
         </SheetContent>
       </Sheet>
     </div>

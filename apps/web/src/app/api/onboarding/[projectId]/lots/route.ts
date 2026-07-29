@@ -1,15 +1,18 @@
 import { getLotsByProject } from '@/lib/services/onboarding.service'
 import { NextRequest } from 'next/server'
+import { authorizeGeometryOperation } from '@/lib/services/geometry-operation.service'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
     const { projectId } = await params
-    const lots = await getLotsByProject(projectId)
+    const context = await authorizeGeometryOperation(request, projectId)
+    if (!context) return Response.json({ error: 'RESOURCE_NOT_FOUND' }, { status: 404 })
+    const lots = await getLotsByProject(projectId, context.service)
 
     return Response.json({
       lots,

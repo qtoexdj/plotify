@@ -65,7 +65,12 @@ export function puedeRevisar(matriz: MatrizView): boolean {
 
 /** Migrado de SDD 008: solo escritura aprobada con expediente vigente. */
 export function puedeGenerarMinuta(matriz: MatrizView): boolean {
-  return matriz.scope === 'lot' && matriz.status === 'approved' && !matriz.snapshot_stale
+  return (
+    matriz.scope === 'lot' &&
+    matriz.status === 'approved' &&
+    !matriz.snapshot_stale &&
+    matriz.semantic_status === 'passed'
+  )
 }
 
 type ReadinessGateBlocker = Extract<ApprovalBlocker, { kind: 'readiness_gate' }>
@@ -276,9 +281,9 @@ export function WorkflowAcciones({ matriz, onWorkflowUpdate, onGenerada }: Workf
 
       {matriz.status === 'approved' && matriz.scope === 'lot' && cascadeStatus !== 'completed' ? (
         <>
-          {generacion?.download_url ? (
+          {generacion?.fileId ? (
             <Button type="button" variant="outline" size="sm" asChild>
-              <a href={generacion.download_url}>
+              <a href={`/api/files/${encodeURIComponent(generacion.fileId)}`}>
                 <HugeiconsIcon icon={Download} />
                 {MESA_TEXT.descargarMinuta}
               </a>

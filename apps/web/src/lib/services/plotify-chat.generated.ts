@@ -58,7 +58,7 @@ export interface components {
       "conflictos"?: Array<components["schemas"]["DiscrepanciaVariable"]> | null
       "detalles_lote"?: Record<string, unknown> | null
       "estado": string
-      "evidencia_url"?: string | null
+      "evidence_file_id"?: string | null
       "id": string
       "tipo": string
       "titulo": string
@@ -106,6 +106,21 @@ export interface components {
       "fixed_position"?: boolean
       "position": number
       "title": string
+    }
+    "ComparecienteFieldResolutionRequest": {
+      "attestation_ref": string
+      "expected_version": number
+      "legal_approval_grant_id": string
+      "operation_key": string
+      "reason": string
+      "reviewed_by": string
+      "value": string
+    }
+    "ComparecienteFieldResolutionResponse": {
+      "fact": Record<string, unknown>
+      "field": "tratamiento" | "nombre" | "rut" | "nacionalidad" | "estadoCivil" | "profesionGiro" | "domicilio"
+      "operation_id": string
+      "person_id": string
     }
     "ConnectRequest": {
       "credentials": string
@@ -242,8 +257,8 @@ export interface components {
     "EscrituraDeliveryView": {
       "channel": "telegram" | "web"
       "created_at": string
-      "download_url"?: string | null
       "escritura_case_id": string
+      "file_id"?: string | null
       "generation_id": string
       "id": string
       "link_expires_at"?: string | null
@@ -313,6 +328,8 @@ export interface components {
     }
     "GenerateMinutaRequest": {
       "generated_by": string
+      "operation_key"?: string | null
+      "regeneration_reason"?: string | null
       "warning_acknowledged": boolean
     }
     "GenerateRequest": {
@@ -328,7 +345,7 @@ export interface components {
     "GenerateResponse": {
       "document_id": string
       "document_type": string
-      "file_url": string
+      "file_id": string
       "format": "pdf" | "docx"
       "lot_id": string
       "missing_variables_accepted": boolean
@@ -370,6 +387,34 @@ export interface components {
       "organization_id": string
     }
     "JsonValue": unknown
+    "LegalApprovalGrantListResponse": {
+      "grants"?: Array<components["schemas"]["LegalApprovalGrantResponse"]>
+    }
+    "LegalApprovalGrantRequest": {
+      "evidence_fingerprint": string
+      "expires_at"?: string | null
+      "granted_by": string
+      "grantee_user_id": string
+      "operation_key": string
+      "project_id"?: string | null
+      "reason": string
+    }
+    "LegalApprovalGrantResponse": {
+      "active": boolean
+      "expires_at"?: string | null
+      "granted_at"?: string | null
+      "granted_by": string
+      "grantee_user_id": string
+      "id": string
+      "organization_id": string
+      "project_id"?: string | null
+      "revoked_at"?: string | null
+    }
+    "LegalApprovalRevokeRequest": {
+      "operation_key": string
+      "reason": string
+      "revoked_by": string
+    }
     "LegalDocumentArchiveResponse": {
       "extraction_status": string
       "legal_document_id": string
@@ -383,17 +428,12 @@ export interface components {
     }
     "LegalDocumentRegisterRequest": {
       "document_type": string
-      "file_size_bytes": number
+      "file_id": string
       "lot_id"?: string | null
-      "mime_type": string
       "organization_id": string
-      "original_filename": string
       "project_id": string
       "replaces_legal_document_id"?: string | null
-      "sha256_hash": string
       "source_field"?: string | null
-      "storage_bucket"?: string
-      "storage_path": string
       "upload_source"?: string
       "uploaded_by"?: string | null
     }
@@ -407,6 +447,7 @@ export interface components {
       "created_at"?: string | null
       "document_type": string
       "extraction_status": string
+      "file_id"?: string | null
       "file_size_bytes": number
       "id": string
       "lot_id"?: string | null
@@ -416,8 +457,6 @@ export interface components {
       "project_id": string
       "sha256_hash"?: string | null
       "source_field"?: string | null
-      "storage_bucket": string
-      "storage_path": string
       "superseded_by"?: string | null
       "updated_at"?: string | null
       "upload_source": string
@@ -466,6 +505,8 @@ export interface components {
     }
     "MatrizApproveRequest": {
       "approved_by": string
+      "legal_approval_grant_id"?: string | null
+      "operation_key"?: string | null
     }
     "MatrizCaseResponse": {
       "insertable_variables"?: Array<components["schemas"]["InsertableVariable"]>
@@ -528,47 +569,18 @@ export interface components {
       "dismissed_alerts"?: Array<components["schemas"]["DismissedAlert"]>
       "escritura_case_id"?: string | null
       "id": string
+      "legal_approval_grant_active"?: boolean
+      "legal_approval_grant_expires_at"?: string | null
       "project_id": string
       "resolution"?: components["schemas"]["ResolutionManifest"]
       "scope"?: "project" | "lot"
+      "semantic_issue_count"?: number
+      "semantic_status"?: "unverified" | "failed" | "passed"
       "snapshot_stale"?: boolean
       "source_project_matriz_id"?: string | null
       "status": "draft" | "legal_review_pending" | "approved" | "superseded"
       "template": components["schemas"]["MatrizTemplateRef"]
       "version": number
-    }
-    "MetaChange": {
-      "field": string
-      "value": components["schemas"]["MetaValue"]
-    }
-    "MetaContact": {
-      "profile": Record<string, unknown>
-      "wa_id": string
-    }
-    "MetaEntry": {
-      "changes": Array<components["schemas"]["MetaChange"]>
-      "id": string
-    }
-    "MetaMessage": {
-      "from": string
-      "id": string
-      "text"?: components["schemas"]["MetaText"] | null
-      "timestamp": string
-      "type"?: "text" | "image" | "audio" | "document" | "interactive" | "button" | "unknown"
-    }
-    "MetaText": {
-      "body": string
-    }
-    "MetaValue": {
-      "contacts"?: Array<components["schemas"]["MetaContact"]> | null
-      "messages"?: Array<components["schemas"]["MetaMessage"]> | null
-      "messaging_product": string
-      "metadata": Record<string, unknown>
-      "statuses"?: Array<Record<string, unknown>> | null
-    }
-    "MetaWebhookPayload": {
-      "entry": Array<components["schemas"]["MetaEntry"]>
-      "object": string
     }
     "MiniappReservationRequest": {
       "buyer_email": string
@@ -609,15 +621,18 @@ export interface components {
     }
     "MinutaGeneration": {
       "content_hash": string
-      "download_url"?: string | null
       "escritura_case_id": string
+      "file_id": string
       "generated_at": string
       "generated_by"?: string | null
+      "generation_fingerprint"?: string | null
       "id": string
       "matriz_id": string
       "matriz_version": number
+      "readiness_status"?: "unverified" | "ready"
+      "semantic_issue_count"?: number
+      "semantic_status"?: "unverified" | "failed" | "passed"
       "snapshot_hash": string
-      "storage_path": string
       "template_id": string
       "warning_acknowledged_at": string
       "warning_acknowledged_by": string
@@ -695,10 +710,12 @@ export interface components {
       "estado_civil"?: components["schemas"]["EvidencedValue"] | null
       "nacionalidad"?: components["schemas"]["EvidencedValue"] | null
       "nombre"?: components["schemas"]["EvidencedValue"] | null
+      "person_id"?: string | null
       "profesion"?: components["schemas"]["EvidencedValue"] | null
       "requiere_personeria"?: boolean | null
       "rut"?: components["schemas"]["EvidencedValue"] | null
       "tratamiento"?: components["schemas"]["EvidencedValue"] | null
+      "upstream_subject_id"?: string | null
     }
     "ReadinessGateResponse": {
       "blocking_variables"?: Array<string>
@@ -1124,6 +1141,12 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["BotResponse"] | null
   }
+  "stream_document_capability_api_v1_document_capabilities__token__get": {
+    method: "GET"
+    path: "/api/v1/document-capabilities/{token}"
+    requestBody: never
+    response: void
+  }
   "list_blocks_api_v1_documents_blocks_get": {
     method: "GET"
     path: "/api/v1/documents/blocks"
@@ -1207,6 +1230,12 @@ export interface operations {
     path: "/api/v1/escritura-cases/lots/{lot_id}/readiness"
     requestBody: never
     response: components["schemas"]["EscrituraReadinessResponse"]
+  }
+  "resolve_seller_compareciente_field_api_v1_escritura_cases__escritura_case_id__comparecientes__person_id___field__resolve_post": {
+    method: "POST"
+    path: "/api/v1/escritura-cases/{escritura_case_id}/comparecientes/{person_id}/{field}/resolve"
+    requestBody: components["schemas"]["ComparecienteFieldResolutionRequest"]
+    response: components["schemas"]["ComparecienteFieldResolutionResponse"]
   }
   "retry_cascade_api_v1_escritura_cases__escritura_case_id__retry_cascade_post": {
     method: "POST"
@@ -1556,6 +1585,24 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["MarkReadResponse"]
   }
+  "list_legal_approval_grants_api_v1_organizations__organization_id__legal_approval_grants_get": {
+    method: "GET"
+    path: "/api/v1/organizations/{organization_id}/legal-approval-grants"
+    requestBody: never
+    response: components["schemas"]["LegalApprovalGrantListResponse"]
+  }
+  "create_legal_approval_grant_api_v1_organizations__organization_id__legal_approval_grants_post": {
+    method: "POST"
+    path: "/api/v1/organizations/{organization_id}/legal-approval-grants"
+    requestBody: components["schemas"]["LegalApprovalGrantRequest"]
+    response: components["schemas"]["LegalApprovalGrantResponse"]
+  }
+  "revoke_legal_approval_grant_api_v1_organizations__organization_id__legal_approval_grants__grant_id__revoke_post": {
+    method: "POST"
+    path: "/api/v1/organizations/{organization_id}/legal-approval-grants/{grant_id}/revoke"
+    requestBody: components["schemas"]["LegalApprovalRevokeRequest"]
+    response: components["schemas"]["LegalApprovalGrantResponse"]
+  }
   "bulk_verify_lots_api_v1_projects__project_id__lots_bulk_verify_post": {
     method: "POST"
     path: "/api/v1/projects/{project_id}/lots/bulk-verify"
@@ -1631,7 +1678,7 @@ export interface operations {
   "receive_meta_webhook_api_v1_webhook_meta_post": {
     method: "POST"
     path: "/api/v1/webhook/meta"
-    requestBody: components["schemas"]["MetaWebhookPayload"]
+    requestBody: never
     response: void
   }
   "receive_telegram_webhook_api_v1_webhook_telegram__org_id__post": {

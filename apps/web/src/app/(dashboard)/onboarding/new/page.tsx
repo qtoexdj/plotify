@@ -15,7 +15,6 @@ import { Switch } from '@/components/ui/switch'
 import { GeometryUploadPanel } from '@/components/projects/GeometryUploadPanel'
 import { ProjectMediaStep } from '@/components/projects/onboarding/ProjectMediaStep'
 import { GeometryAssignmentPanel } from '@/components/projects/geometry-assignment'
-import type { ProjectLegalDocumentUploadMetadata } from '@/lib/services/projects.service'
 import type { ParsedFeature } from '@/types/onboarding.types'
 import type { Project } from '@/types/database.types'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -89,10 +88,18 @@ export default function OnboardingWizardPage() {
     setProjectError(null)
     try {
       const payload = {
-        ...data,
-        lotPrefix: data.usar_prefijo_lotes ? data.prefijo_lotes : '',
-        precio: data.precio_tipo === 'fijo' ? data.precio_valor : null,
-        valor_reserva: data.reserva_tipo === 'fijo' ? data.reserva_valor : null,
+        name: data.name,
+        region: data.region,
+        comuna: data.comuna,
+        descripcion: data.descripcion,
+        ...(!project ? { total_lotes: data.total_lotes } : {}),
+        ...(!project
+          ? {
+              lotPrefix: data.usar_prefijo_lotes ? data.prefijo_lotes : '',
+              precio: data.precio_tipo === 'fijo' ? data.precio_valor : null,
+              valor_reserva: data.reserva_tipo === 'fijo' ? data.reserva_valor : null,
+            }
+          : {}),
       }
 
       const url = project ? `/api/projects/${project.id}` : '/api/projects'
@@ -100,7 +107,10 @@ export default function OnboardingWizardPage() {
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(project ? {} : { 'Idempotency-Key': crypto.randomUUID() }),
+        },
         body: JSON.stringify(payload),
       })
 
@@ -122,25 +132,12 @@ export default function OnboardingWizardPage() {
     }
   }
 
-  const handleUpdateMedia = async (
-    media: Record<string, string | string[] | ProjectLegalDocumentUploadMetadata[] | null>
-  ) => {
+  const handleUpdateMedia = async (media: { fileIds: string[] }) => {
     if (!project) return
     setIsSavingProject(true)
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(media),
-      })
-
-      if (!response.ok) {
-        throw new Error('Error al actualizar documentos del proyecto')
-      }
-
-      const result = await response.json()
-      setProject(result.project)
-      toast.success('Archivos guardados en el proyecto')
+      if (media.fileIds.length === 0) throw new Error('No se recibieron archivos')
+      toast.success('Archivos guardados de forma segura')
     } catch {
       toast.error('Error al guardar archivos')
     } finally {

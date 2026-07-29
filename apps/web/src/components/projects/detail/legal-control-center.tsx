@@ -6,6 +6,7 @@ import { LinkSquare02Icon as ExternalLink } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { TitleCasePanel } from '@/components/projects/legal/title-case-panel'
 import { VariableMatrix } from '@/components/projects/legal/variable-matrix/variable-matrix'
+import { LegalApprovalGrants } from '@/components/projects/legal/legal-approval-grants'
 
 /**
  * SDD 013 US4 — Centro de Control Legal unificado. La matriz de variables por
@@ -46,6 +47,7 @@ export function LegalControlCenter({ projectId, projectName }: LegalControlCente
       </div>
 
       <TitleCasePanel projectId={projectId} />
+      <LegalApprovalGrants projectId={projectId} />
       <VariableMatrix projectId={projectId} projectName={projectName} />
     </section>
   )

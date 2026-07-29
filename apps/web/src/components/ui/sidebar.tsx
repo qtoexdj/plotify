@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
+  SheetBody,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -176,6 +177,7 @@ function Sidebar({
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetContent
           dir={dir}
+          data-testid="sheet-sidebar"
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
@@ -188,10 +190,12 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>Navegación principal</SheetTitle>
+            <SheetDescription>
+              Enlaces de navegación de Plotify para dispositivos móviles.
+            </SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <SheetBody className="flex w-full flex-col overflow-y-auto">{children}</SheetBody>
         </SheetContent>
       </Sheet>
     )

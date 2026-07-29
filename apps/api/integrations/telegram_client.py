@@ -7,12 +7,13 @@ from core.config import get_settings
 from core.database import get_supabase_client
 from core.logger import get_logger
 from utils.audit import log_agent_action
+from integrations.egress_policy import total_timeout_seconds
 
 logger = get_logger(__name__)
 
 TELEGRAM_API_HOST = "api.telegram.org"
-TELEGRAM_SEND_TIMEOUT_SECONDS = 10.0
-TELEGRAM_CALLBACK_TIMEOUT_SECONDS = 5.0
+TELEGRAM_SEND_TIMEOUT_SECONDS = total_timeout_seconds
+TELEGRAM_CALLBACK_TIMEOUT_SECONDS = min(5.0, total_timeout_seconds)
 _ALLOWED_BOT_METHODS = {"sendMessage", "sendDocument", "answerCallbackQuery", "editMessageText", "setChatMenuButton", "setMyCommands"}
 
 

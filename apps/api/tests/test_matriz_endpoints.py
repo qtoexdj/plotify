@@ -1646,7 +1646,7 @@ class TestGenerateMinuta:
         assert body["matriz_id"] == matrix["id"]
         assert body["matriz_version"] == matrix["version"]
         assert body["content_hash"]
-        assert body["download_url"].startswith("https://storage.test/")
+        assert body["file_id"] == body["id"]
         assert len(store.storage.uploads) == 1
         assert store.storage.uploads[0]["bytes"].startswith(b"PK")
         inserted = store.tables["escritura_minuta_generations"][0]
@@ -1746,8 +1746,8 @@ class TestGenerateMinuta:
 
         assert response.status_code == 200
         generation = response.json()["generations"][0]
-        assert generation["download_url"].startswith("https://storage.test/")
-        assert store.storage.signed_urls[0]["expires_in"] == 604800
+        assert generation["file_id"] == generation["id"]
+        assert store.storage.signed_urls == []
 
 
 class TestRetryCascade:
@@ -1914,3 +1914,19 @@ class TestRetryCascade:
         assert body["outcome"] == "exception"
         assert body["causes"][0]["gate"] == "title_verified"
         assert body["generation_id"] is None
+
+
+def test_sdd019_matriz_responses_project_ids_not_storage_coordinates() -> None:
+    from pathlib import Path
+
+    app_root = Path(__file__).resolve().parents[1]
+    source = "\n".join(
+        (app_root / path).read_text()
+        for path in (
+            "api/v1/endpoints/escritura_matrices.py",
+            "schemas/escritura_matrices.py",
+            "services/escritura_case_workflow.py",
+        )
+    )
+    for forbidden in ("create_signed_url", "download_url", "signedURL", "signedUrl"):
+        assert forbidden not in source, f"STORAGE_URL_EXPOSED: matriz contains {forbidden}"

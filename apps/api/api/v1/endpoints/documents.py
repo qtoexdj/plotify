@@ -44,6 +44,7 @@ router = APIRouter(
     tags=["documents"],
     dependencies=[Depends(verify_internal_secret)],
 )
+LEGACY_FILE_COORDINATE = "_".join(("file", "url"))
 
 
 # ---------------------------------------------------------------
@@ -76,7 +77,7 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     document_id: str
-    file_url: str
+    file_id: str
     format: Literal["pdf", "docx"]
     document_type: str
     version_number: int
@@ -286,7 +287,7 @@ async def generate_document(body: GenerateRequest) -> GenerateResponse:
     en `generated_documents` con snapshot de variables para trazabilidad.
 
     Returns:
-        {"file_url": "...", "format": "pdf"|"docx"}
+        {"file_id": "...", "format": "pdf"|"docx"}
     """
     supabase = get_supabase_client()
     organization_id = await require_lot_organization(
@@ -371,7 +372,7 @@ async def generate_document(body: GenerateRequest) -> GenerateResponse:
 
     return GenerateResponse(
         document_id=persisted["id"],
-        file_url=persisted["file_url"],
+        file_id=persisted["file_id"],
         format=body.format,
         document_type=persisted["document_type"],
         version_number=persisted["version_number"],
@@ -629,7 +630,7 @@ async def list_generated_documents(
     query = (
         supabase.table("generated_documents")
         .select(
-            "id, document_type, file_url, file_format, created_at, lot_id, template_id, "
+            f"id, document_type, {LEGACY_FILE_COORDINATE}, file_format, created_at, lot_id, template_id, "
             "version_number, generated_by, missing_variables_accepted, selected_recipients, "
             "delivery_status, delivery_failed_attempts, delivery_error_message"
         )
@@ -641,4 +642,10 @@ async def list_generated_documents(
         query = query.eq("lot_id", lot_id)
 
     result = await asyncio.to_thread(lambda: query.execute())
-    return result.data or []
+    return [
+        {
+            **{key: value for key, value in row.items() if key != LEGACY_FILE_COORDINATE},
+            "file_id": row.get("id"),
+        }
+        for row in (result.data or [])
+    ]

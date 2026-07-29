@@ -3,7 +3,7 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { getUserWithSuperAdmin } from '@/lib/auth/super-admin'
-import { getActiveWorkspace } from '@/lib/services/workspace.service'
+import { getActiveWorkspace, getWorkspaceOptions } from '@/lib/services/workspace.service'
 import { createClient } from '@/lib/supabase/server'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { HeaderTitle } from '@/components/dashboard/header-title'
@@ -11,6 +11,7 @@ import { HeaderBreadcrumb } from '@/components/dashboard/header-breadcrumb'
 import { BreadcrumbProvider } from '@/components/dashboard/breadcrumb-context'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { CommandPaletteProvider } from '@/components/command-palette'
+import { WorkspaceSwitcher } from '@/components/dashboard/workspace-switcher'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isSuperAdmin } = await getUserWithSuperAdmin()
@@ -25,7 +26,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const email = user.email ?? ''
   const name = email.split('@')[0] ?? 'Usuario'
-  const workspace = await getActiveWorkspace(user.id)
+  const [workspace, workspaceOptions] = await Promise.all([
+    getActiveWorkspace(user.id),
+    getWorkspaceOptions(user.id),
+  ])
 
   const organizationId = workspace?.organization?.id ?? ''
   const userRole = (workspace?.role === 'admin' ? 'admin' : 'vendor') as 'admin' | 'vendor'
@@ -97,6 +101,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 <HeaderBreadcrumb />
               </div>
               <div className="ml-auto px-4 flex items-center gap-3">
+                <WorkspaceSwitcher
+                  options={workspaceOptions}
+                  activeOrganizationId={workspace?.organization.id}
+                />
                 {organizationId && (
                   <NotificationBell
                     userId={user.id}

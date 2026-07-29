@@ -257,6 +257,10 @@ class MatrizView(MatrizResponseModel):
     # SDD 017 (T005/D2): quién aprobó esta versión de la matriz — humano
     # (default, incluye todo lo histórico) o el sistema, vía la cascada.
     approval_origin: Literal["human", "system"] = "human"
+    semantic_status: Literal["unverified", "failed", "passed"] = "unverified"
+    semantic_issue_count: int = 0
+    legal_approval_grant_active: bool = False
+    legal_approval_grant_expires_at: datetime | None = None
 
 
 class MatrizCaseResponse(MatrizResponseModel):
@@ -293,6 +297,8 @@ class MatrizSubmitRequest(MatrizBaseModel):
 
 class MatrizApproveRequest(MatrizBaseModel):
     approved_by: UUID
+    operation_key: str | None = Field(default=None, min_length=8, max_length=200)
+    legal_approval_grant_id: UUID | None = None
 
 
 class MatrizRejectRequest(MatrizBaseModel):
@@ -317,26 +323,87 @@ class LegalReviewDecisionRequest(MatrizBaseModel):
 class GenerateMinutaRequest(MatrizBaseModel):
     warning_acknowledged: bool
     generated_by: UUID
+    operation_key: str | None = Field(default=None, min_length=8, max_length=200)
+    regeneration_reason: str | None = Field(default=None, min_length=1, max_length=2000)
 
 
 class MinutaGeneration(MatrizResponseModel):
     id: UUID
+    file_id: UUID
     escritura_case_id: UUID
     matriz_id: UUID
     matriz_version: int
     template_id: UUID
     snapshot_hash: str
     content_hash: str
-    storage_path: str
     warning_acknowledged_by: UUID
     warning_acknowledged_at: datetime
     generated_by: UUID | None = None
     generated_at: datetime
-    download_url: str | None = None
+    semantic_status: Literal["unverified", "failed", "passed"] = "unverified"
+    readiness_status: Literal["unverified", "ready"] = "unverified"
+    semantic_issue_count: int = 0
+    generation_fingerprint: str | None = None
 
 
 class MinutaGenerationListResponse(MatrizResponseModel):
     generations: list[MinutaGeneration] = Field(default_factory=list)
+
+
+# ─── SDD019: autoridad y comparecientes estructurados ───────────────────────
+
+SellerFactField = Literal[
+    "tratamiento", "nombre", "rut", "nacionalidad", "estadoCivil", "profesionGiro", "domicilio"
+]
+
+
+class ComparecienteFieldResolutionRequest(MatrizBaseModel):
+    operation_key: str = Field(min_length=8, max_length=200)
+    reviewed_by: UUID
+    legal_approval_grant_id: UUID
+    value: str = Field(min_length=1, max_length=1000)
+    reason: str = Field(min_length=1, max_length=2000)
+    attestation_ref: str = Field(min_length=1, max_length=500)
+    expected_version: int = Field(ge=0)
+
+
+class ComparecienteFieldResolutionResponse(MatrizResponseModel):
+    operation_id: UUID
+    person_id: UUID
+    field: SellerFactField
+    fact: dict[str, Any]
+
+
+class LegalApprovalGrantRequest(MatrizBaseModel):
+    operation_key: str = Field(min_length=8, max_length=200)
+    granted_by: UUID
+    grantee_user_id: UUID
+    project_id: UUID | None = None
+    reason: str = Field(min_length=1, max_length=2000)
+    evidence_fingerprint: str = Field(pattern=r"^[a-f0-9]{64}$")
+    expires_at: datetime | None = None
+
+
+class LegalApprovalRevokeRequest(MatrizBaseModel):
+    operation_key: str = Field(min_length=8, max_length=200)
+    revoked_by: UUID
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class LegalApprovalGrantResponse(MatrizResponseModel):
+    id: UUID
+    organization_id: UUID
+    project_id: UUID | None = None
+    grantee_user_id: UUID
+    granted_by: UUID
+    active: bool
+    granted_at: datetime | None = None
+    expires_at: datetime | None = None
+    revoked_at: datetime | None = None
+
+
+class LegalApprovalGrantListResponse(MatrizResponseModel):
+    grants: list[LegalApprovalGrantResponse] = Field(default_factory=list)
 
 
 # ─── Puente operacional (US6) ────────────────────────────────────────────────
@@ -359,16 +426,14 @@ class EscrituraDeliveryView(MatrizResponseModel):
     id: UUID
     escritura_case_id: UUID
     generation_id: UUID
+    file_id: UUID | None = None
     recipient_user_id: UUID | None = None
     channel: DeliveryChannel
     status: DeliveryStatus
     link_expires_at: datetime | None = None
     sent_at: datetime | None = None
     created_at: datetime
-    # Campos humanos/resueltos: URL firmada lista para descargar y la frase de
-    # estado del diccionario unico (FR-014). El `link_token` crudo NUNCA viaja
-    # en el contrato (secreto): `extra="ignore"` lo descarta si llega.
-    download_url: str | None = None
+    # El contrato proyecta solo IDs Plotify y la frase humana del estado.
     status_label: str | None = None
 
 

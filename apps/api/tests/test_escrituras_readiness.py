@@ -281,6 +281,7 @@ class FakeSupabase:
             "projects": {"organization_id": ORG_ID},
         }
         self.title_analyses: list[dict[str, object]] = [_approved_title_analysis()]
+        self.geometry_enrichment_jobs: list[dict[str, object]] = []
         self.existing_case: dict[str, object] | None = None
         self.inserted_cases: list[dict[str, object]] = []
         self.updated_cases: list[dict[str, object]] = []
@@ -303,6 +304,8 @@ class FakeSupabase:
             return SimpleNamespace(data=self.evidence_rows)
         if table.name == "title_analyses":
             return SimpleNamespace(data=self.title_analyses)
+        if table.name == "geometry_enrichment_jobs":
+            return SimpleNamespace(data=self.geometry_enrichment_jobs)
         if table.name == "escritura_cases":
             if table.insert_payload is not None:
                 row = {
@@ -322,6 +325,27 @@ class FakeSupabase:
                 return SimpleNamespace(data=[row])
             return SimpleNamespace(data=self.existing_case)
         raise AssertionError(f"Unexpected table {table.name}")
+
+
+async def test_readiness_blocks_pending_geometry_enrichment():
+    supabase = FakeSupabase()
+    supabase.geometry_enrichment_jobs = [
+        {"status": "retry_scheduled", "last_error_code": "ENRICHMENT_RETRYABLE"}
+    ]
+
+    readiness = await get_escritura_readiness(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=LOT_ID,
+        warning_acknowledged=True,
+        supabase=supabase,
+    )
+
+    gates = {gate.gate: gate for gate in readiness.gates}
+    assert readiness.readiness_status == "blocked"
+    assert gates["geometry_enrichment"].blocking_variables == (
+        "GEOMETRY_ENRICHMENT_PENDING",
+    )
 
 
 async def test_case_creation_persists_readiness_and_variable_evidence_snapshots():

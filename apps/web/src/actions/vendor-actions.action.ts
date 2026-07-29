@@ -85,9 +85,7 @@ export async function resendVendorInvite(
   }
 }
 
-/**
- * Elimina un vendedor de la organización y borra su cuenta de auth.
- */
+/** Remove only this organization membership; global Auth identity is retained. */
 export async function removeVendor(
   vendorId: string,
   organizationId: string
@@ -137,8 +135,43 @@ export async function removeVendor(
     }
 
     const serviceClient = createServiceClient()
+    const idempotencyKey = crypto.randomUUID()
+    const requestHash = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(`${organizationId}:${vendorId}:remove-membership`)
+    )
+    const { data: claim } = await serviceClient.rpc('claim_idempotency_operation', {
+      p_organization_id: organizationId,
+      p_principal_type: 'user',
+      p_principal_subject: user.id,
+      p_operation_type: 'recipient.reassign',
+      p_resource_scope: `organization:${organizationId}:member:${vendorId}`,
+      p_idempotency_key: idempotencyKey,
+      p_request_hash: Array.from(new Uint8Array(requestHash), (byte) =>
+        byte.toString(16).padStart(2, '0')
+      ).join(''),
+      p_source_kind: 'web',
+      p_provider_event_key: null,
+    })
+    if (!claim?.id) return { success: false, error: 'No se pudo iniciar la operación' }
 
-    // 1. Eliminar de organization_members
+    // Persist intent before mutation; finalize owns audit/compensation state.
+    const { data: intentId, error: intentError } = await serviceClient.rpc(
+      'begin_vendor_membership_operation',
+      {
+        p_organization_id: organizationId,
+        p_target_user_id: vendorId,
+        p_target_vendor_id: null,
+        p_target_project_id: null,
+        p_operation_kind: 'remove_membership',
+        p_idempotency_operation_id: claim.id,
+        p_requested_by: user.id,
+      }
+    )
+    if (intentError || !intentId) {
+      return { success: false, error: 'No se pudo iniciar la eliminación' }
+    }
+
     const { error: deleteOrgError } = await serviceClient
       .from('organization_members')
       .delete()
@@ -150,17 +183,12 @@ export async function removeVendor(
       return { success: false, error: 'Error al eliminar de la organización' }
     }
 
-    // 2. Eliminar el usuario de auth
-    const { error: deleteAuthError } = await serviceClient.auth.admin.deleteUser(vendorId)
-
-    if (deleteAuthError) {
-      logger.error({ vendorId, error: deleteAuthError }, 'remove_vendor_auth_failed')
-      // No es crítico, ya se eliminó de la org
-      return {
-        success: true,
-        message: 'Vendedor eliminado de la organización (la cuenta de auth no pudo eliminarse)',
-      }
-    }
+    await serviceClient.rpc('finalize_vendor_membership_operation', {
+      p_operation_id: intentId,
+      p_external_subject_hash: null,
+      p_succeeded: true,
+      p_error_code: null,
+    })
 
     // Auditar eliminación
     await logAudit({

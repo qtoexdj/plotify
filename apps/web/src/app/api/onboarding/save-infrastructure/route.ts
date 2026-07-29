@@ -1,68 +1,64 @@
 import { saveInfrastructure } from '@/lib/services/onboarding.service'
 import { NextRequest } from 'next/server'
+import { infrastructureGeometrySchema } from '@/lib/validations/geometry-operation.schema'
+import {
+  authorizeGeometryOperation,
+  claimGeometryOperation,
+  completeGeometryOperation,
+} from '@/lib/services/geometry-operation.service'
+import { canonicalRequestHash } from '@/lib/idempotency/operations'
 
 export const dynamic = 'force-dynamic'
 
-const ROAD_INPUT_MODES = new Set(['centerline', 'footprint', 'edge'])
-const ROAD_EDGE_SIDES = new Set(['left', 'right', 'both'])
-
 export async function POST(request: NextRequest) {
   try {
-    const payload = await request.json().catch(() => null)
-    if (!payload?.projectId || !payload?.geometry || !payload?.geometryType) {
-      return Response.json(
-        { error: 'projectId, geometry y geometryType son requeridos' },
-        { status: 400 }
-      )
-    }
-
-    const validationError = validateInfrastructurePayload(payload)
-    if (validationError) {
-      return Response.json({ error: validationError }, { status: 400 })
-    }
-
-    const geometry = await saveInfrastructure(payload)
-
-    return Response.json({
-      message: 'Infraestructura guardada correctamente',
-      geometry,
-    })
+    const parsed = infrastructureGeometrySchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success)
+      return Response.json({ error: 'INVALID_GEOMETRY_OPERATION' }, { status: 400 })
+    const context = await authorizeGeometryOperation(request, parsed.data.projectId)
+    if (!context) return Response.json({ error: 'RESOURCE_NOT_FOUND' }, { status: 404 })
+    const { operation, requestHash } = await claimGeometryOperation(
+      context,
+      'geometry.derive',
+      parsed.data.idempotencyKey,
+      parsed.data
+    )
+    if (operation.status === 'succeeded') return Response.json(operation.response_summary)
+    const sourceHash = (
+      await canonicalRequestHash([...parsed.data.sourceGeometryIds].sort())
+    ).replace('sha256:', '')
+    const configHash = (await canonicalRequestHash(parsed.data.config)).replace('sha256:', '')
+    const geometry = await saveInfrastructure(
+      {
+        ...parsed.data,
+        name: typeof parsed.data.config.name === 'string' ? parsed.data.config.name : undefined,
+        inputMode: parsed.data.config.inputMode as 'centerline' | 'footprint' | 'edge' | undefined,
+        widthM:
+          typeof parsed.data.config.widthM === 'number' ? parsed.data.config.widthM : undefined,
+        edgeSide: parsed.data.config.edgeSide as 'left' | 'right' | 'both' | undefined,
+      },
+      context.service,
+      {
+        organizationId: context.project.organization_id,
+        operationId: operation.id,
+        sourceHash,
+        configHash,
+      }
+    )
+    const response = { message: 'Infraestructura guardada correctamente', geometry }
+    await completeGeometryOperation(
+      context,
+      operation.id,
+      requestHash,
+      'geometry_derivations',
+      null,
+      response
+    )
+    return Response.json(response)
   } catch (error) {
-    console.error('Error in POST /api/onboarding/save-infrastructure:', error)
     return Response.json(
-      { error: error instanceof Error ? error.message : 'Error al guardar infraestructura' },
+      { error: error instanceof Error ? error.message : 'INFRASTRUCTURE_COMMIT_FAILED' },
       { status: 500 }
     )
   }
-}
-
-function validateInfrastructurePayload(payload: Record<string, unknown>): string | null {
-  if (payload.geometryType !== 'road') {
-    return null
-  }
-
-  if (payload.inputMode !== undefined && !ROAD_INPUT_MODES.has(String(payload.inputMode))) {
-    return 'inputMode debe ser centerline, footprint o edge'
-  }
-
-  if (payload.widthM !== undefined && !isPositiveNumber(payload.widthM)) {
-    return 'widthM debe ser un número positivo para caminos centerline o edge'
-  }
-
-  if (
-    (payload.inputMode === 'centerline' || payload.inputMode === 'edge') &&
-    !isPositiveNumber(payload.widthM)
-  ) {
-    return 'widthM debe ser un número positivo para caminos centerline o edge'
-  }
-
-  if (payload.inputMode === 'edge' && !ROAD_EDGE_SIDES.has(String(payload.edgeSide))) {
-    return 'edgeSide debe ser left, right o both para caminos edge'
-  }
-
-  return null
-}
-
-function isPositiveNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
 }

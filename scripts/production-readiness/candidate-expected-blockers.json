@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "expected-blockers",
+  "criterionIds": ["SC-014", "SC-015", "SC-016", "SC-017", "SC-018"],
+  "reviewer": "release-engineering",
+  "generatedAt": "2026-07-28T00:00:00.000Z",
+  "sourceSha": "0000000000000000000000000000000000000000",
+  "verdict": "NO-GO",
+  "blockers": [
+    "phase9:T115_runbooks",
+    "phase9:T116_readmes",
+    "phase9:T117_security_a11y",
+    "phase9:T118_final_quality_restore",
+    "phase9:T119_final_analyze",
+    "final_deploy:T120_release_handoff",
+    "rollout:T121_live_rollout"
+  ],
+  "evidence": [
+    {
+      "id": "phase9-and-final-deploy-task-contract",
+      "digest": "sha256:5be2c352729cc19d276e94da81181d9a17e4f7bc59319a2082a169b924a87754",
+      "redacted": true
+    }
+  ]
+}

@@ -47,13 +47,13 @@ describe('SDD 011 T019 — estados del flujo unificados (FR-014)', () => {
       id: 'd',
       escritura_case_id: 'c',
       generation_id: 'g',
+      fileId: 'g',
       recipient_user_id: 'v',
       channel: 'web',
       status: 'sent',
       link_expires_at: null,
       sent_at: null,
       created_at: '2026-06-16T00:00:00Z',
-      download_url: 'https://signed.example/doc.docx',
       status_label: FLOW_STATE_LABELS.delivered,
     }
     expect(etiquetaEntrega(entregada)).toBe(FLOW_STATE_LABELS.delivered)

@@ -26,6 +26,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         body: {
           warning_acknowledged: body.warning_acknowledged,
           generated_by: scope.userId,
+          operation_key:
+            body.operation_key ?? request.headers.get('idempotency-key') ?? crypto.randomUUID(),
+          regeneration_reason:
+            body.regeneration_reason ?? 'Generación manual confirmada en la mesa jurídica',
         },
       }
     )

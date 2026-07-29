@@ -126,7 +126,7 @@ def insertable_variables_catalog() -> list[dict[str, str]]:
         )
     return catalogo
 
-MATRIZ_SCHEMA_VERSION = 1
+MATRIZ_SCHEMA_VERSION = 2
 
 # Snapshot states the resolver treats as usable values (SDD 007 reviewed set).
 RESOLVED_SNAPSHOT_STATES = frozenset(
@@ -519,6 +519,26 @@ class _ClauseResolver:
             node_type = node.get("type")
             if node_type == "text":
                 resolved.append(node)
+                continue
+            if node_type == "optional_phrase":
+                attrs = node.get("attrs") or {}
+                condition_key = str(attrs.get("conditionKey") or "")
+                mode = str(attrs.get("mode") or "omit")
+                condition = self._condition_truthiness(condition_key)
+                if condition is None:
+                    self._record(TokenResolutionEntry(variable_key=condition_key, status="missing"))
+                    resolved.append(node)
+                elif condition:
+                    resolved.extend(
+                        self._resolve_inline(
+                            node.get("content") or [],
+                            repeat_item=repeat_item,
+                            repeat_context=repeat_context,
+                        )
+                    )
+                elif mode == "block":
+                    self._record(TokenResolutionEntry(variable_key=condition_key, status="blocked", state="approved"))
+                    resolved.append(node)
                 continue
             if node_type != "variable_token":
                 self.unknown_nodes.append(str(node_type))

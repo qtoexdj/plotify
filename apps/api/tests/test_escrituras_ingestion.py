@@ -16,6 +16,7 @@ PROJECT_ID = "00000000-0000-4000-8000-000000000002"
 USER_ID = "00000000-0000-4000-8000-000000000003"
 LEGAL_DOCUMENT_ID = "00000000-0000-4000-8000-000000000004"
 INGESTION_JOB_ID = "00000000-0000-4000-8000-000000000005"
+FILE_ID = "00000000-0000-4000-8000-000000000008"
 
 
 @pytest.fixture
@@ -42,17 +43,12 @@ def client() -> TestClient:
 @pytest.fixture
 def register_payload() -> dict[str, object]:
     return {
+        "file_id": FILE_ID,
         "organization_id": ORG_ID,
         "project_id": PROJECT_ID,
         "lot_id": None,
         "document_type": "dominio_vigente",
         "source_field": "doc_dominio_vigente",
-        "storage_bucket": "project-files",
-        "storage_path": f"{PROJECT_ID}/legal/dominio-vigente.pdf",
-        "original_filename": "Dominio vigente.pdf",
-        "mime_type": "application/pdf",
-        "file_size_bytes": 123456,
-        "sha256_hash": "a" * 64,
         "upload_source": "onboarding",
         "uploaded_by": USER_ID,
     }
@@ -76,6 +72,7 @@ def _registration_result(
     legal_document = LegalDocumentResponse.model_validate(
         {
             "id": legal_document_id,
+            "project_file_object_id": FILE_ID,
             "organization_id": ORG_ID,
             "project_id": PROJECT_ID,
             "lot_id": None,
@@ -180,13 +177,12 @@ def test_list_project_legal_documents_exposes_extraction_status(
     assert response.json()["documents"] == [
         {
             "id": LEGAL_DOCUMENT_ID,
+            "file_id": FILE_ID,
             "organization_id": ORG_ID,
             "project_id": PROJECT_ID,
             "lot_id": None,
             "document_type": "dominio_vigente",
             "source_field": "doc_dominio_vigente",
-            "storage_bucket": "project-files",
-            "storage_path": f"{PROJECT_ID}/legal/{LEGAL_DOCUMENT_ID}.pdf",
             "original_filename": "Dominio vigente.pdf",
             "mime_type": "application/pdf",
             "file_size_bytes": 123456,
@@ -224,12 +220,7 @@ def test_register_rejects_unsupported_file_before_queueing_job(
         "register_legal_document_service",
         register_document,
     )
-    payload = {
-        **register_payload,
-        "original_filename": "payload.exe",
-        "mime_type": "application/x-msdownload",
-        "storage_path": f"{PROJECT_ID}/legal/payload.exe",
-    }
+    payload = register_payload
 
     response = client.post(
         "/api/v1/legal-documents/register",
@@ -263,10 +254,7 @@ def test_register_rejects_storage_path_outside_project_namespace(
 
     response = client.post(
         "/api/v1/legal-documents/register",
-        json={
-            **register_payload,
-            "storage_path": f"other-project/{PROJECT_ID}/dominio-vigente.pdf",
-        },
+        json=register_payload,
     )
 
     assert response.status_code == 422
@@ -336,9 +324,7 @@ def test_replacing_project_document_registers_new_version_and_job(
         "/api/v1/legal-documents/register",
         json={
             **register_payload,
-            "storage_path": f"{PROJECT_ID}/legal/dominio-vigente-v2.pdf",
-            "original_filename": "Dominio vigente actualizado.pdf",
-            "sha256_hash": "b" * 64,
+            "file_id": "00000000-0000-4000-8000-000000000009",
             "upload_source": "project_documents",
         },
     )
@@ -355,7 +341,7 @@ def test_replacing_project_document_registers_new_version_and_job(
     assert client.app.state.redis.enqueue_job.await_count == 2
     replacement_payload = register_document.await_args_list[1].args[0]
     assert replacement_payload.upload_source == "project_documents"
-    assert replacement_payload.sha256_hash == "b" * 64
+    assert replacement_payload.file_id == "00000000-0000-4000-8000-000000000009"
 
 
 class FakeIngestionTable:
@@ -490,6 +476,22 @@ class FakeIngestionSupabase:
         }
 
     def execute(self, table: FakeIngestionTable):
+        if table.name == "project_file_objects":
+            return SimpleNamespace(
+                data={
+                    "id": FILE_ID,
+                    "organization_id": ORG_ID,
+                    "project_id": PROJECT_ID,
+                    "category": "legal_document",
+                    "bucket": "project-files",
+                    "object_path": f"{PROJECT_ID}/{FILE_ID}.pdf",
+                    "original_filename": "Documento legal.pdf",
+                    "content_type": "application/pdf",
+                    "size_bytes": 223456,
+                    "source_sha256": "c" * 64,
+                    "status": "ready",
+                }
+            )
         if table.name == "projects":
             return SimpleNamespace(data={"id": PROJECT_ID, "organization_id": ORG_ID})
         if table.name == "legal_documents":
@@ -615,17 +617,12 @@ async def test_retry_can_reprocess_completed_documents_after_extractor_updates()
 
 def _register_payload(**overrides) -> dict[str, object]:
     payload: dict[str, object] = {
+        "file_id": FILE_ID,
         "organization_id": ORG_ID,
         "project_id": PROJECT_ID,
         "lot_id": None,
         "document_type": "dominio_vigente",
         "source_field": "doc_dominio_vigente",
-        "storage_bucket": "project-files",
-        "storage_path": f"{PROJECT_ID}/legal/upload-v2.pdf",
-        "original_filename": "Documento legal.pdf",
-        "mime_type": "application/pdf",
-        "file_size_bytes": 223456,
-        "sha256_hash": "c" * 64,
         "upload_source": "project_documents",
         "uploaded_by": USER_ID,
     }
@@ -645,11 +642,10 @@ async def test_registering_single_active_type_supersedes_previous_active_version
 
     result = await register_legal_document(
         LegalDocumentRegisterRequest.model_validate(
-            _register_payload(
-                document_type="certificado_roles_sii",
-                source_field="doc_roles",
-                original_filename="Certificado de roles actualizado.pdf",
-            )
+                _register_payload(
+                    document_type="certificado_roles_sii",
+                    source_field="doc_roles",
+                )
         ),
         supabase=supabase,
     )
@@ -677,7 +673,7 @@ async def test_registering_additional_multi_active_document_keeps_both_active():
 
     result = await register_legal_document(
         LegalDocumentRegisterRequest.model_validate(
-            _register_payload(original_filename="Dominio vigente 1996.pdf")
+            _register_payload()
         ),
         supabase=supabase,
     )
@@ -995,21 +991,7 @@ async def test_registering_title_document_supersedes_analysis(monkeypatch):
 
     await register_legal_document(
         LegalDocumentRegisterRequest.model_validate(
-            {
-                "organization_id": ORG_ID,
-                "project_id": PROJECT_ID,
-                "lot_id": None,
-                "document_type": "dominio_vigente",
-                "source_field": "doc_dominio_vigente",
-                "storage_bucket": "project-files",
-                "storage_path": f"{PROJECT_ID}/legal/dominio-vigente-v2.pdf",
-                "original_filename": "Dominio vigente actualizado.pdf",
-                "mime_type": "application/pdf",
-                "file_size_bytes": 223456,
-                "sha256_hash": "c" * 64,
-                "upload_source": "project_documents",
-                "uploaded_by": USER_ID,
-            }
+            _register_payload()
         ),
         supabase=supabase,
     )
@@ -1017,4 +999,3 @@ async def test_registering_title_document_supersedes_analysis(monkeypatch):
     assert len(supersede_called) == 1
     assert supersede_called[0]["organization_id"] == ORG_ID
     assert supersede_called[0]["project_id"] == PROJECT_ID
-

@@ -36,7 +36,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
       // 3. Si no es admin, filtrar por su ID
       if (membership?.role !== 'admin') {
-        filterVendorId = user.id
+        const { data: vendor } = await supabase
+          .from('vendors')
+          .select('id')
+          .eq('organization_id', project.organization_id)
+          .eq('user_id', user.id)
+          .eq('active', true)
+          .maybeSingle()
+        if (!vendor) return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+        const { data: assignment } = await supabase
+          .from('vendor_projects')
+          .select('project_id')
+          .eq('project_id', id)
+          .eq('vendor_id', vendor.id)
+          .maybeSingle()
+        if (!assignment) return Response.json({ error: 'Proyecto no encontrado' }, { status: 404 })
+        filterVendorId = vendor.id
       }
     }
 

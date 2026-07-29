@@ -272,13 +272,13 @@ export function OverviewTab({ project, lots, onNavigateTab }: OverviewTabProps) 
   useEffect(() => {
     let isMounted = true
 
-    fetch('https://mindicador.cl/api')
+    fetch('/api/indicators/uf')
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        const nextValue = Number(data?.uf?.valor)
+        const nextValue = Number(data?.value)
         if (!isMounted || !Number.isFinite(nextValue) || nextValue <= 0) return
         setUfValue(nextValue)
-        setUfDate(typeof data?.uf?.fecha === 'string' ? data.uf.fecha : null)
+        setUfDate(typeof data?.date === 'string' ? data.date : null)
       })
       .catch(() => {
         if (!isMounted) return

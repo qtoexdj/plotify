@@ -379,169 +379,42 @@ function buildSupabaseForRoadSegmentWidthUpdate() {
 }
 
 describe('onboarding servidumbre persistence', () => {
-  it('stores explicit centerline road metadata and calculated footprint when infrastructure is saved', async () => {
-    const { supabase, roadGeometry, segmentInserts } = buildSupabaseForRoadSave()
-
-    await saveInfrastructure(
-      {
-        projectId: 'project-1',
-        geometry: roadGeometry,
-        properties: { name: 'Camino 10 m' },
-        sourceType: 'kmz',
-        geometryType: 'road',
-        name: 'Camino 10 m',
-        inputMode: 'centerline',
-        widthM: 10,
-      },
-      supabase as never
-    )
-
-    expect(segmentInserts).toHaveLength(1)
-    expect(segmentInserts[0]).toMatchObject({
-      project_id: 'project-1',
-      geometry_id: 'geometry-road-1',
-      name: 'Camino 10 m',
-      input_geometry: roadGeometry,
-      input_mode: 'centerline',
-      width_m: 10,
-      source_type: 'kmz',
-      status: 'ready',
+  it('delegates assignment and infrastructure to canonical transactional RPCs', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { assignmentStatus: 'committed', enrichmentStatus: 'pending' },
+      error: null,
     })
-    expect(segmentInserts[0]).toHaveProperty('footprint_geometry')
-  })
-
-  it('persists lot servitude geometry, widths and traceability from road segments', async () => {
-    const { supabase, roadFootprint, lotUpdates } = buildSupabaseForRoadSave()
-
-    await saveInfrastructure(
-      {
-        projectId: 'project-1',
-        geometry: roadFootprint as GeoJSONGeometry,
-        properties: { name: 'Huella camino 10 m' },
-        sourceType: 'kmz',
-        geometryType: 'road',
-        name: 'Huella camino 10 m',
-        inputMode: 'footprint',
-        widthM: 10,
-      },
-      supabase as never
-    )
-
-    expect(lotUpdates).toContainEqual(
-      expect.objectContaining({
-        servidumbre_widths_m: [10],
-        servidumbre_ancho_label: '10',
-        servidumbre_calculation_status: 'calculated',
-        servidumbre_calculation_version: expect.any(String),
-        servidumbre_geometry: expect.objectContaining({ type: 'Feature' }),
-        servidumbre_sources: [
-          expect.objectContaining({
-            segment_id: 'segment-1',
-            width_m: 10,
-            input_mode: 'footprint',
-          }),
-        ],
-      })
-    )
-  })
-
-  it('persists multiple servitude widths and their legal label from recalculation', async () => {
-    const { supabase, road10Footprint, lotUpdates } = buildSupabaseForMultipleRoadWidthsSave()
-
-    await saveInfrastructure(
-      {
-        projectId: 'project-1',
-        geometry: road10Footprint as GeoJSONGeometry,
-        properties: { name: 'Huella camino 10 m' },
-        sourceType: 'kmz',
-        geometryType: 'road',
-        name: 'Huella camino 10 m',
-        inputMode: 'footprint',
-        widthM: 10,
-      },
-      supabase as never
-    )
-
-    expect(lotUpdates).toContainEqual(
-      expect.objectContaining({
-        servidumbre_widths_m: [5, 10],
-        servidumbre_ancho_label: '5 y 10',
-        servidumbre_ancho_m: 5,
-        servidumbre_calculation_status: 'calculated',
-        servidumbre_sources: [
-          expect.objectContaining({
-            segment_id: 'segment-existing-5',
-            width_m: 5,
-            input_mode: 'footprint',
-          }),
-          expect.objectContaining({
-            segment_id: 'segment-new-10',
-            width_m: 10,
-            input_mode: 'footprint',
-          }),
-        ],
-      })
-    )
-  })
-
-  it('does not calculate servitude when assigning a lot without canonical road segments', async () => {
-    const { supabase, lotGeometry, lotUpdates } = buildSupabaseForLotAssignWithoutRoadSegments()
-
+    const supabase = { rpc } as never
     await saveAndAssignGeometry(
       {
         projectId: 'project-1',
         lotId: 'lot-1',
-        geometry: lotGeometry,
-        properties: { name: 'Lote 1' },
-        sourceType: 'kmz',
-        geometryType: 'lot',
+        geometryId: crypto.randomUUID(),
+        expectedGeometryId: null,
+        idempotencyKey: 'assign-1',
       },
-      supabase as never
+      supabase,
+      { organizationId: 'org-1', actorUserId: 'user-1', operationId: 'op-1' }
     )
-
-    expect(lotUpdates).toHaveLength(1)
-    expect(lotUpdates[0]).toMatchObject({
-      geometry_id: 'geometry-lot-1',
-      m2: expect.any(Number),
-    })
-    expect(lotUpdates).not.toContainEqual(
-      expect.objectContaining({
-        servidumbre_calculation_status: 'calculated',
-      })
-    )
-  })
-
-  it('recalculates servitude when assigning a lot after canonical road segments already exist', async () => {
-    const { supabase, lotGeometry, lotUpdates } = buildSupabaseForCanonicalRoadAssign()
-
-    await saveAndAssignGeometry(
+    await saveInfrastructure(
       {
         projectId: 'project-1',
-        lotId: 'lot-2',
-        geometry: lotGeometry,
-        properties: { name: 'Lote 2' },
-        sourceType: 'kmz',
-        geometryType: 'lot',
+        geometryType: 'road',
+        sourceGeometryIds: [crypto.randomUUID()],
+        idempotencyKey: 'derive-1',
+        inputMode: 'centerline',
+        widthM: 10,
       },
-      supabase as never
+      supabase,
+      {
+        organizationId: 'org-1',
+        operationId: 'op-2',
+        sourceHash: 'a'.repeat(64),
+        configHash: 'b'.repeat(64),
+      }
     )
-
-    expect(lotUpdates).toContainEqual(
-      expect.objectContaining({
-        servidumbre_widths_m: [10],
-        servidumbre_ancho_label: '10',
-        servidumbre_calculation_status: 'calculated',
-        servidumbre_calculation_version: expect.any(String),
-        servidumbre_geometry: expect.objectContaining({ type: 'Feature' }),
-        servidumbre_sources: [
-          expect.objectContaining({
-            segment_id: 'segment-existing-10',
-            width_m: 10,
-            input_mode: 'footprint',
-          }),
-        ],
-      })
-    )
+    expect(rpc).toHaveBeenNthCalledWith(1, 'assign_project_geometry', expect.any(Object))
+    expect(rpc).toHaveBeenNthCalledWith(2, 'commit_project_infrastructure', expect.any(Object))
   })
 
   it('updates a canonical road segment width and recalculates project servitudes', async () => {

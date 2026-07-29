@@ -1,13 +1,9 @@
 import { createRouteHandlerClient } from '@/lib/supabase/server'
-import {
-  getProjectById,
-  deleteProject,
-  updateProject,
-  registerProjectLegalDocuments,
-} from '@/lib/services/projects.service'
+import { getProjectById, deleteProject, updateProject } from '@/lib/services/projects.service'
 import { getProjectVendors } from '@/lib/services/vendors.service'
 import { NextRequest } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { projectPatchSchema } from '@/lib/validations/project.schema'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,16 +75,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { legal_documents, ...updates } = body
-    const project = await updateProject(id, user.id, updates)
-
-    await registerProjectLegalDocuments({
-      project,
-      documents: legal_documents,
-      uploadSource: 'onboarding',
-      uploadedBy: user.id,
-    })
+    const parsed = projectPatchSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) return Response.json({ error: 'PROTECTED_PROJECT_FIELD' }, { status: 400 })
+    const project = await updateProject(id, user.id, parsed.data)
 
     revalidatePath(`/projects/${id}`)
     return Response.json({ project })

@@ -21,9 +21,9 @@ export const MIS_DOCUMENTOS_TEXT = {
   sinDescarga: 'El documento aún no está disponible.',
 } as const
 
-/** Descargable solo si fue entregada y conserva una URL vigente. */
+/** Descargable solo si fue entregada y proyecta un identificador opaco. */
 export function puedeDescargar(entrega: EscrituraDeliveryView): boolean {
-  return entrega.status === 'sent' && Boolean(entrega.download_url)
+  return entrega.status === 'sent' && Boolean(entrega.fileId)
 }
 
 /** Renovable solo cuando el enlace venció (FR-010, sin pedirle nada al admin). */
@@ -34,4 +34,18 @@ export function puedeRenovar(entrega: EscrituraDeliveryView): boolean {
 /** Frase humana del estado, redactada por el servidor (diccionario único). */
 export function etiquetaEntrega(entrega: EscrituraDeliveryView): string {
   return entrega.status_label ?? 'Entrega'
+}
+
+export function detalleEstadoEntrega(entrega: EscrituraDeliveryView): string[] {
+  return [
+    `Generación: ${entrega.generationStatus ?? 'unverified'}`,
+    `Entrega: ${entrega.deliveryStatus ?? entrega.status}`,
+    `Acceso: ${entrega.capabilityStatus ?? 'none'}`,
+    entrega.signatureStatus === 'recorded' ? 'Firma registrada' : 'Pendiente de firma',
+    entrega.availableAt ? `Disponible desde: ${entrega.availableAt}` : null,
+    entrega.firstAccessedAt ? `Primer acceso: ${entrega.firstAccessedAt}` : null,
+    entrega.attemptCount ? `Intentos: ${entrega.attemptCount}` : null,
+    entrega.lastErrorCode ? `Último error: ${entrega.lastErrorCode}` : null,
+    entrega.nextRetryAt ? `Próximo reintento: ${entrega.nextRetryAt}` : null,
+  ].filter((value): value is string => Boolean(value))
 }

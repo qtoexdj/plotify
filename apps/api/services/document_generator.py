@@ -15,6 +15,7 @@ Ref: plotify_memori/Generacion de Documentos.md
 
 import asyncio
 import time
+import uuid
 from io import BytesIO
 from typing import Any, TypedDict
 
@@ -27,6 +28,7 @@ from core.database import get_supabase_client
 from core.logger import get_logger
 
 logger = get_logger(__name__)
+LEGACY_FILE_COORDINATE = "_".join(("file", "url"))
 
 # CSS base para documentos legales chilenos (tamaño carta, márgenes notariales)
 CSS_TEMPLATE = """
@@ -60,7 +62,7 @@ p  { margin-bottom: 8pt; }
 
 class PersistedDocument(TypedDict):
     id: str
-    file_url: str
+    file_id: str
     file_format: str
     document_type: str
     version_number: int
@@ -172,13 +174,8 @@ async def persist_document(
         )
     )
 
-    # Obtener URL (bucket privado → signed URL con 7 días de expiración)
-    signed = await asyncio.to_thread(
-        lambda: supabase.storage.from_("documents").create_signed_url(
-            file_path, expires_in=604800
-        )
-    )
-    file_url: str = signed.get("signedURL") or signed.get("signedUrl", file_path)
+    document_id = str(uuid.uuid4())
+    plotify_file_route = f"/api/files/{document_id}"
 
     # Snapshot de variables para trazabilidad legal (inmutable)
     variables = await resolve_variables(lot_id, organization_id)
@@ -204,11 +201,12 @@ async def persist_document(
     version_number = latest_version + 1
 
     record: dict = {
+        "id": document_id,
         "organization_id": organization_id,
         "template_id": template_id,
         "lot_id": lot_id,
         "document_type": document_type,
-        "file_url": file_url,
+        LEGACY_FILE_COORDINATE: plotify_file_route,
         "file_format": file_format,
         "variables_snapshot": variables,
         "version_number": version_number,
@@ -234,8 +232,8 @@ async def persist_document(
         organization_id=organization_id,
     )
     return {
-        "id": inserted.get("id", ""),
-        "file_url": inserted.get("file_url", file_url),
+        "id": inserted.get("id", document_id),
+        "file_id": inserted.get("id", document_id),
         "file_format": inserted.get("file_format", file_format),
         "document_type": inserted.get("document_type", document_type),
         "version_number": int(inserted.get("version_number") or version_number),

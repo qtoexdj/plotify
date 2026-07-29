@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getLotsByProject } from '@/lib/services/onboarding.service'
+import { authorizeGeometryOperation } from '@/lib/services/geometry-operation.service'
 import type { NextRequest } from 'next/server'
 import { GET } from '../src/app/api/onboarding/[projectId]/lots/route'
 
@@ -7,11 +8,20 @@ vi.mock('@/lib/services/onboarding.service', () => ({
   getLotsByProject: vi.fn(),
 }))
 
+vi.mock('@/lib/services/geometry-operation.service', () => ({
+  authorizeGeometryOperation: vi.fn(),
+}))
+
 describe('GET /api/onboarding/[projectId]/lots', () => {
   const getLotsByProjectMock = vi.mocked(getLotsByProject)
+  const authorizeGeometryOperationMock = vi.mocked(authorizeGeometryOperation)
+  const service = { from: vi.fn() }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    authorizeGeometryOperationMock.mockResolvedValue({
+      service,
+    } as unknown as NonNullable<Awaited<ReturnType<typeof authorizeGeometryOperation>>>)
   })
 
   it('returns lots for geometry assignment', async () => {
@@ -35,7 +45,7 @@ describe('GET /api/onboarding/[projectId]/lots', () => {
       ],
       count: 2,
     })
-    expect(getLotsByProjectMock).toHaveBeenCalledWith('project-1')
+    expect(getLotsByProjectMock).toHaveBeenCalledWith('project-1', service)
   })
 
   it('returns a JSON error when loading lots fails', async () => {

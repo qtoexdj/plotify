@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plotify.local/schemas/deployment-manifest.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "deploymentId",
+    "environmentFingerprint",
+    "sourceSha",
+    "expectedRoster",
+    "roleArtifactDigests",
+    "buildOperationId",
+    "deployOperationId",
+    "issuedAt",
+    "provenance"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "deploymentId": { "type": "string", "minLength": 1 },
+    "environmentFingerprint": { "$ref": "#/$defs/digest" },
+    "sourceSha": { "$ref": "#/$defs/sha" },
+    "expectedRoster": { "type": "array", "minItems": 3, "items": { "$ref": "#/$defs/instance" } },
+    "roleArtifactDigests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["web", "api", "worker"],
+      "properties": {
+        "web": { "$ref": "#/$defs/digest" },
+        "api": { "$ref": "#/$defs/digest" },
+        "worker": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "buildOperationId": { "type": "string", "format": "uuid" },
+    "deployOperationId": { "type": "string", "format": "uuid" },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtimeRole", "slotId", "instanceId", "lifecycle", "artifactDigest"],
+      "properties": {
+        "runtimeRole": { "enum": ["web", "api", "worker"] },
+        "slotId": { "type": "string", "minLength": 1 },
+        "instanceId": { "type": "string", "minLength": 1 },
+        "lifecycle": { "enum": ["active", "retired"] },
+        "artifactDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issuer", "identity", "statementDigest", "signature", "trustPolicyVersion"],
+      "properties": {
+        "issuer": { "type": "string", "minLength": 1 },
+        "identity": { "type": "string", "minLength": 1 },
+        "statementDigest": { "$ref": "#/$defs/digest" },
+        "signature": { "type": "string", "minLength": 16 },
+        "trustPolicyVersion": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

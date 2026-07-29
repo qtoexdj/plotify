@@ -869,7 +869,11 @@ describe('workflow de revisión y generación (T016, US4)', () => {
   it('habilita cada acción solo en su estado humano del flujo', () => {
     const borrador = matrizWith([])
     const enRevision = { ...borrador, status: 'legal_review_pending' } satisfies MatrizView
-    const aprobada = { ...borrador, status: 'approved' } satisfies MatrizView
+    const aprobada = {
+      ...borrador,
+      status: 'approved',
+      semantic_status: 'passed',
+    } satisfies MatrizView
     const matrizProyectoAprobada = {
       ...aprobada,
       escritura_case_id: null,
@@ -879,6 +883,7 @@ describe('workflow de revisión y generación (T016, US4)', () => {
     expect(puedeEnviar(borrador)).toBe(true)
     expect(puedeRevisar(enRevision)).toBe(true)
     expect(puedeGenerarMinuta(aprobada)).toBe(true)
+    expect(puedeGenerarMinuta({ ...aprobada, semantic_status: 'failed' })).toBe(false)
     expect(puedeGenerarMinuta(matrizProyectoAprobada)).toBe(false)
     expect(puedeEnviar({ ...borrador, snapshot_stale: true })).toBe(false)
     expect(puedeGenerarMinuta(borrador)).toBe(false)
@@ -896,19 +901,18 @@ describe('workflow de revisión y generación (T016, US4)', () => {
 describe('historial de generaciones (T017, US4)', () => {
   const GENERACION: MinutaGeneration = {
     id: 'g1',
+    fileId: 'g1',
     escritura_case_id: 'c1',
     matriz_id: 'm1',
     matriz_version: 3,
     template_id: 't1',
     snapshot_hash: 'abc',
     content_hash: 'def',
-    storage_path: 'org/c1/minuta.docx',
     warning_acknowledged_by: 'u1',
     warning_acknowledged_at: '2026-06-11T10:00:00Z',
     generated_by: 'u1',
     generated_by_name: 'Usuario registrado',
     generated_at: '2026-06-11T10:01:00Z',
-    download_url: '/download/minuta.docx',
   }
 
   it('describe quién, cuándo y desde qué versión sin claves técnicas visibles', () => {

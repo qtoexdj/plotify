@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "adapters": [
+    {
+      "path": "apps/web/src/app/api/files/[fileId]/route.ts",
+      "reason": "Authenticated same-origin opaque file gateway."
+    },
+    {
+      "path": "apps/web/src/app/api/projects/[id]/files/route.ts",
+      "reason": "Server-only project file commit adapter."
+    },
+    {
+      "path": "apps/web/src/app/api/projects/[id]/geometry-imports/route.ts",
+      "reason": "Server-only canonical geometry import writer."
+    },
+    {
+      "path": "apps/web/src/app/api/labs/escrituras/upload/route.ts",
+      "reason": "Server-only isolated laboratory upload adapter."
+    },
+    {
+      "path": "apps/web/src/lib/labs/escrituras.server.ts",
+      "reason": "Server-only laboratory projection strips Storage coordinates."
+    },
+    {
+      "path": "apps/api/api/v1/endpoints/escritura_deliveries.py",
+      "reason": "Authenticated API stream gateway."
+    },
+    {
+      "path": "apps/api/services/document_capabilities.py",
+      "reason": "Internal hash-only capability resolver."
+    },
+    {
+      "path": "apps/api/services/document_generator.py",
+      "reason": "Internal document writer."
+    },
+    {
+      "path": "apps/api/services/escritura_auto_pipeline.py",
+      "reason": "Internal generation writer."
+    },
+    {
+      "path": "apps/api/services/escritura_case_workflow.py",
+      "reason": "Internal deterministic generation writer."
+    },
+    {
+      "path": "apps/api/services/escritura_delivery.py",
+      "reason": "Internal artifact downloader; never projects Storage authority."
+    },
+    {
+      "path": "apps/api/services/legal_document_ingestion.py",
+      "reason": "Internal validated project-file adapter."
+    },
+    {
+      "path": "apps/api/services/legal_text_extraction.py",
+      "reason": "Internal extraction worker."
+    }
+  ]
+}

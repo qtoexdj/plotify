@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  distDir: process.env.PLOTIFY_E2E_DIST_DIR || '.next',
   // La Mini App de desarrollo se abre desde Telegram mediante un túnel
   // ngrok. Next.js bloquea por defecto sus recursos internos cuando el
   // hostname del navegador no coincide con el dev server.
@@ -22,6 +23,19 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
+      {
         // La mini app (/mini) es 100% Client Components sin fetch de datos
         // en el servidor, así que `force-dynamic` / next/dynamic({ssr:false})
         // no cambian la clasificación estática de Next y el HTML se sigue
@@ -40,22 +54,6 @@ const nextConfig: NextConfig = {
         ],
       },
     ]
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-        port: '8000',
-        pathname: '/storage/v1/object/public/**',
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '8000',
-        pathname: '/storage/v1/object/public/**',
-      },
-    ],
   },
 }
 

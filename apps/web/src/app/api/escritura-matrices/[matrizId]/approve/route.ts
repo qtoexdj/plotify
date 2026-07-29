@@ -24,7 +24,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       `/api/v1/escritura-matrices/${encodeURIComponent(matrizId)}/approve?${upstreamParams.toString()}`,
       {
         method: 'POST',
-        body: { approved_by: scope.userId },
+        body: {
+          approved_by: scope.userId,
+          operation_key: request.headers.get('idempotency-key') ?? crypto.randomUUID(),
+        },
       }
     )
 

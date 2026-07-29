@@ -22,6 +22,12 @@ from schemas.escritura_matrices import (
     CascadeRunResponse,
     EscrituraTraceResponse,
     GenerateMinutaRequest,
+    ComparecienteFieldResolutionRequest,
+    ComparecienteFieldResolutionResponse,
+    LegalApprovalGrantRequest,
+    LegalApprovalGrantResponse,
+    LegalApprovalGrantListResponse,
+    LegalApprovalRevokeRequest,
     LegalReviewDecisionRequest,
     MatrizApproveRequest,
     MatrizCaseResponse,
@@ -46,6 +52,179 @@ _NOT_IMPLEMENTED = HTTPException(
     status_code=status.HTTP_501_NOT_IMPLEMENTED,
     detail="escritura-matrices endpoint not implemented yet (SDD 008).",
 )
+
+
+@router.get(
+    "/organizations/{organization_id}/legal-approval-grants",
+    response_model=LegalApprovalGrantListResponse,
+)
+async def list_legal_approval_grants(
+    organization_id: UUID, project_id: UUID | None = Query(default=None)
+) -> LegalApprovalGrantListResponse:
+    from core.database import get_supabase_client
+
+    client = get_supabase_client()
+    query = (
+        client.table("legal_approval_grants")
+        .select("id, organization_id, project_id, grantee_user_id, granted_by, active, granted_at, expires_at, revoked_at")
+        .eq("organization_id", str(organization_id))
+    )
+    if project_id:
+        query = query.in_("project_id", [str(project_id), None])
+    result = await asyncio.to_thread(lambda: query.order("granted_at", desc=True).execute())
+    return LegalApprovalGrantListResponse(grants=result.data or [])
+
+
+@router.post(
+    "/organizations/{organization_id}/legal-approval-grants",
+    response_model=LegalApprovalGrantResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_legal_approval_grant(
+    organization_id: UUID, request: LegalApprovalGrantRequest
+) -> LegalApprovalGrantResponse:
+    from api.deps import require_admin_role
+    from core.database import get_supabase_client
+
+    client = get_supabase_client()
+    actor = str(request.granted_by)
+    grantee = str(request.grantee_user_id)
+    await require_admin_role(actor, str(organization_id), supabase=client)
+    if actor == grantee:
+        raise HTTPException(status_code=422, detail={"code": "LEGAL_APPROVAL_SELF_GRANT_FORBIDDEN"})
+    if request.project_id:
+        await _fetch_project(client, str(request.project_id), str(organization_id))
+    operation_id = await _claim_semantic_operation(
+        client,
+        operation_key=request.operation_key,
+        operation_type="legal_approval_grant",
+        organization_id=str(organization_id),
+        actor_id=actor,
+        resource_scope=f"legal-grant:{request.project_id or 'organization'}:{grantee}",
+        payload=request.model_dump(mode="json"),
+    )
+    payload = {
+        "organization_id": str(organization_id),
+        "project_id": str(request.project_id) if request.project_id else None,
+        "grantee_user_id": grantee,
+        "granted_by": actor,
+        "operation_id": operation_id,
+        "reason": request.reason,
+        "evidence_fingerprint": request.evidence_fingerprint,
+        "expires_at": request.expires_at.isoformat() if request.expires_at else None,
+    }
+    result = await asyncio.to_thread(
+        lambda: client.table("legal_approval_grants").insert(payload).execute()
+    )
+    return LegalApprovalGrantResponse.model_validate(_first_row(result.data) or payload)
+
+
+@router.post(
+    "/organizations/{organization_id}/legal-approval-grants/{grant_id}/revoke",
+    response_model=LegalApprovalGrantResponse,
+)
+async def revoke_legal_approval_grant(
+    organization_id: UUID, grant_id: UUID, request: LegalApprovalRevokeRequest
+) -> LegalApprovalGrantResponse:
+    from api.deps import require_admin_role
+    from core.database import get_supabase_client
+
+    client = get_supabase_client()
+    actor = str(request.revoked_by)
+    await require_admin_role(actor, str(organization_id), supabase=client)
+    operation_id = await _claim_semantic_operation(
+        client,
+        operation_key=request.operation_key,
+        operation_type="legal_approval_revoke",
+        organization_id=str(organization_id),
+        actor_id=actor,
+        resource_scope=f"legal-grant:{grant_id}:revoke",
+        payload=request.model_dump(mode="json"),
+    )
+    payload = {
+        "active": False,
+        "revoked_at": _utc_now_iso(),
+        "revoked_by": actor,
+        "revoke_operation_id": operation_id,
+        "revoke_reason": request.reason,
+    }
+    result = await asyncio.to_thread(
+        lambda: client.table("legal_approval_grants").update(payload)
+        .eq("id", str(grant_id)).eq("organization_id", str(organization_id)).eq("active", True).execute()
+    )
+    row = _first_row(result.data)
+    if not row:
+        raise HTTPException(status_code=409, detail={"code": "LEGAL_APPROVAL_GRANT_INACTIVE"})
+    return LegalApprovalGrantResponse.model_validate(row)
+
+
+@router.post(
+    "/escritura-cases/{escritura_case_id}/comparecientes/{person_id}/{field}/resolve",
+    response_model=ComparecienteFieldResolutionResponse,
+)
+async def resolve_seller_compareciente_field(
+    escritura_case_id: UUID,
+    person_id: UUID,
+    field: str,
+    request: ComparecienteFieldResolutionRequest,
+    organization_id: UUID = Query(...),
+) -> ComparecienteFieldResolutionResponse:
+    from core.database import get_supabase_client
+    from services.matriz_semantic_validation import (
+        LegalApprovalRequiredError,
+        SellerFactResolutionError,
+        canonical_json_hash,
+        resolve_compareciente_field,
+    )
+
+    client = get_supabase_client()
+    case_row = await _fetch_case(client, str(escritura_case_id), str(organization_id))
+    comparecientes = _snapshot_comparecientes(_as_dict(case_row.get("variable_snapshot")))
+    person = next((row for row in comparecientes if str(row.get("personId")) == str(person_id)), None)
+    if person is None:
+        raise HTTPException(status_code=404, detail={"code": "SELLER_PERSON_NOT_FOUND"})
+    grant = await _active_legal_grant(
+        client,
+        organization_id=str(organization_id),
+        project_id=str(case_row["project_id"]),
+        actor_id=str(request.reviewed_by),
+        grant_id=str(request.legal_approval_grant_id),
+    )
+    operation_id = await _claim_semantic_operation(
+        client,
+        operation_key=request.operation_key,
+        operation_type="seller_fact_resolve",
+        organization_id=str(organization_id),
+        actor_id=str(request.reviewed_by),
+        resource_scope=f"seller:{person_id}:{field}",
+        payload=request.model_dump(mode="json"),
+    )
+    try:
+        fact = resolve_compareciente_field(
+            person=person, field=field, value=request.value,
+            expected_version=request.expected_version, grant={**grant, "active": True},
+            reason=request.reason, attestation_ref=request.attestation_ref,
+            reviewed_by=str(request.reviewed_by),
+        )
+    except LegalApprovalRequiredError as exc:
+        raise HTTPException(status_code=403, detail={"code": exc.code}) from exc
+    except SellerFactResolutionError as exc:
+        raise HTTPException(status_code=409 if exc.code == "APPROVAL_CANDIDATE_STALE" else 422, detail={"code": exc.code}) from exc
+    payload = {
+        "organization_id": str(organization_id), "project_id": str(case_row["project_id"]),
+        "lot_id": str(case_row["lot_id"]) if case_row.get("lot_id") else None,
+        "escritura_case_id": str(escritura_case_id), "variable_key": "vendedor.comparecientes[]",
+        "variable_group": "vendedor", "value_json": {"personId": str(person_id), "field": field, "fact": fact},
+        "state": "approved", "source_type": "manual", "person_id": str(person_id),
+        "field_version": fact["version"], "legal_approval_grant_id": str(grant["id"]),
+        "attestation_ref": request.attestation_ref, "evidence_hash": canonical_json_hash({"attestation": request.attestation_ref}),
+        "correction_reason": request.reason, "reviewed_by": str(request.reviewed_by), "reviewed_at": _utc_now_iso(),
+        "approval_required": True,
+    }
+    await asyncio.to_thread(lambda: client.table("variable_resolutions").insert(payload).execute())
+    return ComparecienteFieldResolutionResponse(
+        operation_id=UUID(operation_id), person_id=person_id, field=field, fact=fact
+    )
 
 @router.get(
     "/escritura-matrices/project/{project_id}",
@@ -795,4 +974,3 @@ async def bulk_verify_lots(
         deviated=deviated,
         skipped_no_geometry=skipped_no_geometry,
     )
-

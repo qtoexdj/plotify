@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plotify.local/schemas/runtime-egress-surfaces.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "sourceManifestHash", "surfaces"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "sourceManifestHash": { "$ref": "#/$defs/digest" },
+    "surfaces": { "type": "array", "items": { "$ref": "#/$defs/surface" } }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime",
+        "symbol",
+        "callsiteHash",
+        "schemes",
+        "hosts",
+        "paths",
+        "redirectPolicy",
+        "dataClass",
+        "secretClass",
+        "timeoutMs",
+        "transactionBoundary",
+        "retry",
+        "idempotency",
+        "redaction",
+        "testIds"
+      ],
+      "properties": {
+        "runtime": { "enum": ["browser", "web", "api", "worker"] },
+        "symbol": { "type": "string", "minLength": 1 },
+        "callsiteHash": { "$ref": "#/$defs/digest" },
+        "schemes": { "const": ["https"] },
+        "hosts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[a-z0-9.-]+$" }
+        },
+        "paths": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^/" } },
+        "redirectPolicy": { "enum": ["deny", "revalidate_each_hop"] },
+        "dataClass": { "type": "string", "minLength": 1 },
+        "secretClass": { "type": "string", "minLength": 1 },
+        "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "transactionBoundary": { "const": "outside_database_transaction" },
+        "retry": { "type": "string", "minLength": 1 },
+        "idempotency": { "type": "string", "minLength": 1 },
+        "redaction": { "type": "string", "minLength": 1 },
+        "testIds": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    }
+  }
+}

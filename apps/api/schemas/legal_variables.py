@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, field_validator, model_validator
 
 from services import legal_variable_catalog as catalog
 
@@ -19,17 +19,12 @@ class LegalVariableResponseModel(BaseModel):
 
 
 class LegalDocumentRegisterRequest(LegalVariableBaseModel):
+    file_id: str
     organization_id: str
     project_id: str
     lot_id: str | None = None
     document_type: str
     source_field: str | None = None
-    storage_bucket: str = "project-files"
-    storage_path: str
-    original_filename: str
-    mime_type: str
-    file_size_bytes: int = Field(ge=1)
-    sha256_hash: str = Field(min_length=64, max_length=64)
     upload_source: str = "api"
     uploaded_by: str | None = None
     # FR-032: multi-active document types distinguish add (None) from replace
@@ -50,24 +45,14 @@ class LegalDocumentRegisterRequest(LegalVariableBaseModel):
             raise ValueError(f"Unsupported legal document upload source: {value}")
         return value
 
-    @field_validator("sha256_hash")
-    @classmethod
-    def validate_sha256_hash(cls, value: str) -> str:
-        normalized = value.lower()
-        if any(char not in "0123456789abcdef" for char in normalized):
-            raise ValueError("sha256_hash must be a lowercase or uppercase hex digest")
-        return normalized
-
-
 class LegalDocumentResponse(LegalVariableResponseModel):
     id: str
+    file_id: str | None = None
     organization_id: str
     project_id: str
     lot_id: str | None = None
     document_type: str
     source_field: str | None = None
-    storage_bucket: str
-    storage_path: str
     original_filename: str
     mime_type: str
     file_size_bytes: int
@@ -79,6 +64,13 @@ class LegalDocumentResponse(LegalVariableResponseModel):
     superseded_by: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def project_opaque_file_id(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "file_id" not in value:
+            value = {**value, "file_id": value.get("project_file_object_id")}
+        return value
 
 
 class LegalDocumentRegistrationQueuedResponse(LegalVariableResponseModel):

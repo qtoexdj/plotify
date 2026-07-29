@@ -34,6 +34,7 @@ export type LabDocumentType = (typeof LAB_DOCUMENT_TYPES)[number]['value']
 
 export interface LabSourceDocument {
   id: string
+  fileId: string
   run_id: string | null
   original_filename: string
   document_type: LabDocumentType
@@ -41,8 +42,6 @@ export interface LabSourceDocument {
   content_type: string
   size_bytes: number
   sha256: string
-  storage_bucket: string
-  storage_path: string
   processing_status: string
   detected_pdf_type: string | null
   detection_confidence: number | null

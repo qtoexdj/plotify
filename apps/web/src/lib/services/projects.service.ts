@@ -1,12 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
-import type {
-  LegalDocumentType,
-  LegalUploadSource,
-  RegisterLegalDocumentPayload,
-} from '@/lib/legal/variable-resolution-types'
-import { microserviceFetch } from '@/lib/services/microservice.client'
-import { logger } from '@/lib/logger'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { Project, ProjectWithMetrics, Lot } from '@/types/database.types'
+import type { CreateProjectInput } from '@/lib/validations/project.schema'
+import { canonicalRequestHash } from '@/lib/idempotency/operations'
+import { groupProjectImageIds } from '@/lib/projects/project-media'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -15,35 +11,17 @@ type OrganizationMembership = {
   role: 'admin' | 'user'
 }
 
-/**
- * Los vendedores de un proyecto pueden venir de dos fuentes: asignados directamente
- * al proyecto (tabla vendor_projects, vía "Asignar Vendedor") o inferidos desde el
- * vendedor_id de sus lotes. Hay que unir ambas o un proyecto sin lotes vendidos/reservados
- * aparenta no tener vendedores aunque sí los tenga asignados.
- */
 async function resolveProjectVendedores(
   supabase: SupabaseClient,
-  projectId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lots: any[] | null
+  projectId: string
 ): Promise<{ id: string; nombre: string; avatar_url: string | null }[]> {
   const uniqueVendorsMap = new Map<string, { id: string; nombre: string; user_id: string | null }>()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lots?.forEach((lot: any) => {
-    if (lot.vendors && lot.vendors.id && lot.vendors.nombre) {
-      uniqueVendorsMap.set(lot.vendors.id, {
-        id: lot.vendors.id,
-        nombre: lot.vendors.nombre,
-        user_id: lot.vendors.user_id ?? null,
-      })
-    }
-  })
-
   const { data: projectVendors } = await supabase
     .from('vendor_projects')
-    .select('vendor:vendor_id (id, nombre, user_id)')
+    .select('vendor:vendor_id!inner (id, nombre, user_id, active)')
     .eq('project_id', projectId)
+    .eq('vendor.active', true)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   projectVendors?.forEach((row: any) => {
@@ -76,94 +54,24 @@ async function resolveProjectVendedores(
   }))
 }
 
-export const PROJECT_LEGAL_DOCUMENT_FIELDS = {
-  doc_dominio_vigente: 'dominio_vigente',
-  doc_hipoteca_gravamen: 'hipoteca_gravamen',
-  doc_roles: 'certificado_roles_sii',
-  doc_subdivision: 'certificado_sag',
-  doc_plano_oficial: 'plano_oficial',
-  // Sin columna en projects: vive solo en legal_documents (FR-033).
-  doc_personeria: 'personeria',
-  doc_otros: 'otro',
-} as const satisfies Record<string, LegalDocumentType>
-
-export type ProjectLegalDocumentField = keyof typeof PROJECT_LEGAL_DOCUMENT_FIELDS
-
-export interface ProjectLegalDocumentUploadMetadata {
-  source_field: ProjectLegalDocumentField
-  storage_path: string
-  original_filename: string
-  mime_type: string
-  file_size_bytes: number
-  sha256_hash: string
-  replaces_legal_document_id?: string | null
-}
-
-export async function registerProjectLegalDocuments({
-  project,
-  documents,
-  uploadSource,
-  uploadedBy,
-}: {
-  project: Pick<Project, 'id' | 'organization_id'>
-  documents?: ProjectLegalDocumentUploadMetadata[]
-  uploadSource: LegalUploadSource
-  uploadedBy: string
-}): Promise<void> {
-  if (!documents || documents.length === 0) return
-  if (!project.organization_id) {
-    logger.warn({ projectId: project.id }, 'legal_document_registration_missing_organization')
-    return
-  }
-  const organizationId = project.organization_id
-
-  const results = await Promise.allSettled(
-    documents.map((document) => {
-      const payload: RegisterLegalDocumentPayload = {
-        organization_id: organizationId,
-        project_id: project.id,
-        lot_id: null,
-        document_type: PROJECT_LEGAL_DOCUMENT_FIELDS[document.source_field],
-        source_field: document.source_field,
-        storage_bucket: 'project-files',
-        storage_path: document.storage_path,
-        original_filename: document.original_filename,
-        mime_type: document.mime_type,
-        file_size_bytes: document.file_size_bytes,
-        sha256_hash: document.sha256_hash,
-        upload_source: uploadSource,
-        uploaded_by: uploadedBy,
-        replaces_legal_document_id: document.replaces_legal_document_id ?? null,
-      }
-
-      return microserviceFetch('/api/v1/legal-documents/register', {
-        method: 'POST',
-        body: payload,
-      })
-    })
-  )
-
-  results.forEach((result, index) => {
-    const sourceField = documents[index]?.source_field
-    if (result.status === 'rejected') {
-      logger.error(
-        { projectId: project.id, sourceField, error: result.reason },
-        'legal_document_registration_failed'
-      )
-      return
-    }
-    if (result.value.error) {
-      logger.error(
-        {
-          projectId: project.id,
-          sourceField,
-          status: result.value.status,
-          error: result.value.error,
-        },
-        'legal_document_registration_rejected'
-      )
-    }
-  })
+async function assignedProjectIds(
+  supabase: SupabaseClient,
+  organizationId: string,
+  userId: string
+): Promise<string[]> {
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('id')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .eq('active', true)
+    .maybeSingle()
+  if (!vendor) return []
+  const { data: assignments } = await supabase
+    .from('vendor_projects')
+    .select('project_id')
+    .eq('vendor_id', vendor.id)
+  return assignments?.map((assignment) => assignment.project_id) ?? []
 }
 
 async function getOrganizationMembership(
@@ -185,6 +93,23 @@ async function getOrganizationMembership(
   return data ?? null
 }
 
+async function getReadyProjectImageIds(projectIds: string[]): Promise<Map<string, string[]>> {
+  if (projectIds.length === 0) return new Map()
+  const service = createServiceClient()
+  const { data, error } = await service
+    .from('project_file_objects')
+    .select('id, project_id, created_at')
+    .in('project_id', projectIds)
+    .eq('category', 'project_image')
+    .eq('status', 'ready')
+    .order('created_at', { ascending: true })
+  if (error) {
+    console.error('Error fetching project image metadata:', error)
+    throw new Error('Error al obtener imágenes de proyectos')
+  }
+  return groupProjectImageIds(data ?? [])
+}
+
 export async function getProjectsWithMetrics(
   userId: string,
   supabaseClient?: SupabaseClient
@@ -197,6 +122,11 @@ export async function getProjectsWithMetrics(
 
   if (membership) {
     projectsQuery = projectsQuery.eq('organization_id', membership.organization_id)
+    if (membership.role !== 'admin') {
+      const projectIds = await assignedProjectIds(supabase, membership.organization_id, userId)
+      if (projectIds.length === 0) return []
+      projectsQuery = projectsQuery.in('id', projectIds)
+    }
   }
 
   const { data: projects, error } = await projectsQuery.order('created_at', {
@@ -211,6 +141,8 @@ export async function getProjectsWithMetrics(
   if (!projects || projects.length === 0) {
     return []
   }
+
+  const imageIdsByProject = await getReadyProjectImageIds(projects.map(({ id }) => id))
 
   // Obtener métricas de lotes para cada proyecto
   const projectsWithMetrics: ProjectWithMetrics[] = await Promise.all(
@@ -235,10 +167,11 @@ export async function getProjectsWithMetrics(
       const lotes_reservados = lots?.filter((l) => l.estado === 'reservado').length || 0
       const lotes_vendidos = lots?.filter((l) => l.estado === 'vendido').length || 0
 
-      const vendedores = await resolveProjectVendedores(supabase, project.id, lots)
+      const vendedores = await resolveProjectVendedores(supabase, project.id)
 
       return {
         ...project,
+        images: imageIdsByProject.get(project.id) ?? [],
         lotes_libres,
         lotes_reservados,
         lotes_vendidos,
@@ -262,6 +195,10 @@ export async function getProjectById(
 
   if (membership) {
     projectQuery = projectQuery.eq('organization_id', membership.organization_id)
+    if (membership.role !== 'admin') {
+      const projectIds = await assignedProjectIds(supabase, membership.organization_id, userId)
+      if (!projectIds.includes(projectId)) return null
+    }
   }
 
   const { data: project, error } = await projectQuery.single()
@@ -291,10 +228,12 @@ export async function getProjectById(
   const lotes_reservados = lots?.filter((l) => l.estado === 'reservado').length || 0
   const lotes_vendidos = lots?.filter((l) => l.estado === 'vendido').length || 0
 
-  const vendedores = await resolveProjectVendedores(supabase, project.id, lots)
+  const vendedores = await resolveProjectVendedores(supabase, project.id)
+  const imageIdsByProject = await getReadyProjectImageIds([project.id])
 
   return {
     ...project,
+    images: imageIdsByProject.get(project.id) ?? [],
     lotes_libres,
     lotes_reservados,
     lotes_vendidos,
@@ -302,87 +241,54 @@ export async function getProjectById(
   }
 }
 
-interface CreateProjectPayload {
-  name: string
-  region: string
-  comuna: string
-  descripcion?: string
-  total_lotes: number
-  lotPrefix?: string
-  precio?: number | null
-  valor_reserva?: number | null
-  // Nuevos campos
-  images?: string[]
-  doc_dominio_vigente?: string
-  doc_hipoteca_gravamen?: string
-  doc_roles?: string
-  doc_subdivision?: string
-  doc_plano_oficial?: string
-  doc_otros?: string | null
-  legal_documents?: ProjectLegalDocumentUploadMetadata[]
-}
-
 export async function createProject(
-  payload: CreateProjectPayload,
-  userId: string
+  payload: CreateProjectInput,
+  userId: string,
+  organizationId: string,
+  idempotencyKey: string
 ): Promise<{ project: Project; lots: Lot[] }> {
-  const supabase = await createClient()
-  const membership = await getOrganizationMembership(supabase, userId)
-
-  if (membership && membership.role !== 'admin') {
-    throw new Error('No tienes permisos para crear proyectos en la organización')
+  const service = createServiceClient()
+  const requestHash = (await canonicalRequestHash(payload)).replace('sha256:', '')
+  const { data: operation, error: claimError } = await service.rpc('claim_idempotency_operation', {
+    p_organization_id: organizationId,
+    p_principal_type: 'user',
+    p_principal_subject: userId,
+    p_operation_type: 'project.create',
+    p_resource_scope: `organization:${organizationId}`,
+    p_idempotency_key: idempotencyKey,
+    p_request_hash: requestHash,
+    p_source_kind: 'web',
+    p_provider_event_key: null,
+  })
+  if (claimError || !operation) throw new Error('IDEMPOTENCY_CONFLICT')
+  if (operation.status === 'succeeded' && operation.response_summary) {
+    return operation.response_summary as unknown as { project: Project; lots: Lot[] }
   }
-
-  // Crear proyecto
-  const projectInsert = {
-    name: payload.name,
-    region: payload.region,
-    comuna: payload.comuna,
-    descripcion: payload.descripcion || null,
-    total_lotes: payload.total_lotes,
-    organization_id: membership ? membership.organization_id : undefined,
-    estado: 'draft' as const,
-    // Nuevos campos
-    images: payload.images || [],
-    doc_dominio_vigente: payload.doc_dominio_vigente || null,
-    doc_hipoteca_gravamen: payload.doc_hipoteca_gravamen || null,
-    doc_roles: payload.doc_roles || null,
-    doc_subdivision: payload.doc_subdivision || null,
-    doc_plano_oficial: payload.doc_plano_oficial || null,
-    doc_otros: payload.doc_otros || null,
-  }
-
-  const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .insert(projectInsert)
-    .select()
-    .single()
-
-  if (projectError) {
-    console.error('Error creating project:', projectError)
-    throw new Error('Error al crear proyecto')
-  }
-
-  // Crear lotes automáticamente
-  const prefix = payload.lotPrefix !== undefined ? payload.lotPrefix : 'Lote '
-  const lotsToCreate = Array.from({ length: payload.total_lotes }, (_, i) => ({
-    project_id: project.id,
-    numero_lote: `${prefix}${i + 1}`,
-    estado: 'disponible' as const,
-    precio: payload.precio ?? null,
-    valor_reserva: payload.valor_reserva ?? null,
-  }))
-
-  const { data: lots, error: lotsError } = await supabase.from('lots').insert(lotsToCreate).select()
-
-  if (lotsError) {
-    console.error('Error creating lots:', lotsError)
-    // Eliminar proyecto si falla la creación de lotes
-    await supabase.from('projects').delete().eq('id', project.id)
-    throw new Error('Error al crear lotes del proyecto')
-  }
-
-  return { project, lots: lots || [] }
+  const { data, error } = await service.rpc('create_project_with_lots', {
+    p_organization_id: organizationId,
+    p_actor_user_id: userId,
+    p_operation_id: operation.id,
+    p_name: payload.name,
+    p_region: payload.region,
+    p_comuna: payload.comuna,
+    p_descripcion: payload.descripcion ?? '',
+    p_total_lotes: payload.total_lotes,
+    p_lot_prefix: payload.lotPrefix ?? 'Lote ',
+    p_precio: payload.precio ?? null,
+    p_valor_reserva: payload.valor_reserva ?? null,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'PROJECT_CREATE_FAILED')
+  const result = data as unknown as { project: Project; lots: Lot[] }
+  await service.rpc('complete_idempotency_operation', {
+    p_operation_id: operation.id,
+    p_request_hash: requestHash,
+    p_status: 'succeeded',
+    p_resource_type: 'projects',
+    p_resource_id: result.project.id,
+    p_response_summary: result,
+    p_error_code: null,
+  })
+  return result
 }
 
 export async function deleteProject(projectId: string, userId: string): Promise<void> {

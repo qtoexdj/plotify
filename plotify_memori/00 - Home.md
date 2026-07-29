@@ -3,6 +3,11 @@
 > **B2B SaaS para inmobiliarias y loteadoras** — Gestión completa de proyectos de loteamiento.
 > **Versión actual:** V2.1 (CAD Freeze)
 
+> [!warning] Autoridad Supabase cloud-only
+> La única base operativa es el proyecto cloud linked `swkrnjdpnlrgxgotmfxy`.
+> Docker/Supabase local está prohibido. Las notas antiguas sobre infraestructura
+> local se conservan solo como historia y no son instrucciones ejecutables.
+
 > [!info] 📊 Dashboard Central
 > Accede al **[[Plotify.base|Dashboard de Proyectos, ADRs e Implementaciones]]** para visualizar métricas, estados y el progreso de los loteamientos en tiempo real.
 
@@ -166,7 +171,7 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 ## Implementaciones cerradas
 
 - [[Implementacion Punto 1 - Congelar DB Supabase]] - DB Supabase congelada en packages/database/supabase/migrations, baseline validado y migraciones antiguas removidas.
-- [[Implementacion Infra Local Docker Compartida]] - Plotify usa el stack Supabase Docker compartido de 14 contenedores y Redis Docker existente; se eliminaron contenedores `supabase_*_plotify`, se normalizaron `.env`/`.env.example` y se verificaron Redis, LangGraph checkpointer y tests backend.
+- [[Implementacion Infra Local Docker Compartida]] - Registro histórico de una infraestructura retirada; no es una guía vigente. Supabase es cloud-only.
 - [[Implementacion Punto 3 - Monorepo pnpm]] - Workspace pnpm con `apps/web`, `apps/api`, `packages/database` y `packages/contracts`.
 - [[Implementacion Punto 4 - Consolidacion Operativa Monorepo]] - Documentacion centralizada, `.gitignore` monorepo, scripts de arranque y endpoint del visor restaurado.
 - [[Implementacion SDD 001 Fase 1 - Setup MVP]] - Setup de `001-stabilize-plotify-mvp` cerrado: scope, plan, contratos API y contratos DB revisados antes de foundation.

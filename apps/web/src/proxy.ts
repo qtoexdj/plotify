@@ -1,8 +1,29 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import { buildContentSecurityPolicy } from '@/lib/security/content-security-policy'
+import { NextResponse } from 'next/server'
 
 export async function proxy(request: NextRequest) {
-  return await updateSession(request)
+  if (
+    (process.env.NODE_ENV === 'development' || process.env.PLOTIFY_E2E_FIXTURES === '1') &&
+    request.nextUrl.pathname.startsWith('/e2e/')
+  ) {
+    return NextResponse.next()
+  }
+
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+  const contentSecurityPolicy = buildContentSecurityPolicy({
+    nonce,
+    isDevelopment: process.env.NODE_ENV === 'development',
+  })
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
+  requestHeaders.set('Content-Security-Policy', contentSecurityPolicy)
+
+  const response = await updateSession(request, requestHeaders)
+  response.headers.set('Content-Security-Policy', contentSecurityPolicy)
+
+  return response
 }
 
 export const config = {

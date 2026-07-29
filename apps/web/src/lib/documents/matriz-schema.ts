@@ -1,7 +1,7 @@
 /**
  * SDD 008 — schema ProseMirror compartido del creador de matriz (research D2).
  *
- * Cuatro nodos custom sobre la base doc/paragraph/text:
+ * Cinco nodos custom sobre la base doc/paragraph/text:
  * - `variable_token` (inline, atómico): variableKey/label/format. El estado y
  *   la evidencia NUNCA se persisten en el JSON — se resuelven contra el
  *   snapshot al renderizar.
@@ -25,7 +25,7 @@ import { defineParagraph } from '@prosekit/extensions/paragraph'
 
 import type { ClauseContentJson, TokenFormat } from './matriz-types'
 
-export const MATRIZ_SCHEMA_VERSION = 1 as const
+export const MATRIZ_SCHEMA_VERSION = 2 as const
 
 export const MATRIZ_BLOCK_KEYS = [
   'titulo.comparecencia_vendedor_texto',
@@ -155,6 +155,37 @@ export function defineConditionalSection() {
   })
 }
 
+export function defineOptionalPhrase() {
+  return defineNodeSpec({
+    name: 'optional_phrase',
+    group: 'inline',
+    inline: true,
+    content: 'inline+',
+    attrs: {
+      conditionKey: { default: '' },
+      mode: { default: 'omit' as 'omit' | 'block' },
+    },
+    parseDOM: [
+      {
+        tag: 'span[data-optional-condition-key]',
+        getAttrs: (dom: HTMLElement) => ({
+          conditionKey: dom.getAttribute('data-optional-condition-key') ?? '',
+          mode: dom.getAttribute('data-optional-mode') === 'block' ? 'block' : 'omit',
+        }),
+      },
+    ],
+    toDOM: (node) => [
+      'span',
+      {
+        'data-optional-condition-key': String(node.attrs.conditionKey),
+        'data-optional-mode': String(node.attrs.mode),
+        class: 'matriz-optional-phrase',
+      },
+      0,
+    ],
+  })
+}
+
 /** Extensión completa del editor de cláusulas (base + 4 nodos custom). */
 export function defineMatrizClauseExtension() {
   return union([
@@ -165,6 +196,7 @@ export function defineMatrizClauseExtension() {
     defineBlockToken(),
     defineRepeatSection(),
     defineConditionalSection(),
+    defineOptionalPhrase(),
     defineHistory(),
   ])
 }

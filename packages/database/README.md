@@ -2,17 +2,15 @@
 
 This package is the canonical home for Plotify Supabase database artifacts.
 
-## Local infrastructure
+## Cloud database authority
 
-Use the existing shared Docker containers. Do not run `supabase start` from this
-repo unless a task explicitly asks to create a separate stack.
+Plotify uses only the linked Supabase cloud project `swkrnjdpnlrgxgotmfxy`.
+Docker and a local Supabase stack are not part of this repository's workflow.
+Never run `supabase start`, `supabase db reset --local`, or any command that
+targets a local database.
 
-Expected existing services:
-
-- Supabase gateway: `supabase-kong` at `http://127.0.0.1:8000`.
-- Supabase database/pooler: `supabase-db` and `supabase-pooler`.
-- Redis for the Python microservice: container `redis` at
-  `redis://localhost:6379/0`.
+Database inspection uses the Supabase MCP. Migrations, pgTAP tests, schema
+fingerprints, inventories, and generated types use the linked cloud target.
 
 Runtime credentials are owned by the app `.env` files:
 
@@ -41,8 +39,8 @@ baseline from a clean reset. Their history remains available in git.
 
 ## Current implementation status
 
-The canonical baseline was generated from the validated local database on
-2026-04-14 and validated with Supabase CLI from this package.
+The canonical baseline is historical; the current schema authority is the
+linked cloud project plus the canonical migration history in this package.
 
 Implemented in this package:
 
@@ -52,8 +50,8 @@ Implemented in this package:
   SECURITY DEFINER functions.
 - `20260414000300_add_missing_fk_indexes.sql`: covering indexes for FK advisor
   warnings.
-- `types/database.generated.ts`: TypeScript types generated from the canonical
-  local Supabase database.
+- `types/database.generated.ts`: TypeScript types generated from the linked
+  Supabase cloud project.
 
 The baseline must not include business/demo data, generated documents, MCP
 credentials, leads, lots, projects, geometries, or audit logs.
@@ -66,24 +64,21 @@ First verify that this package is still the only migration source:
 npm --prefix packages/database run verify:migrations
 ```
 
-These commands target the existing database. `db reset` is destructive and must
-only be run after explicit confirmation:
+Run database tests only against the linked cloud project; pgTAP suites wrap
+their assertions in transactions and roll back their fixtures:
 
-- `supabase db reset --no-seed`
-- `supabase db reset`
-- `supabase migration list --local`
-- `supabase db dump --local -f /tmp/plotify_post_reset.sql`
-- `supabase db lint --local`
+```bash
+pnpm --filter @plotify/database test:db:linked
+```
 
 Generate TypeScript types from the existing configured database:
 
 ```bash
-supabase gen types typescript --db-url "$SUPABASE_DB_URL" --schema public > types/database.generated.ts
+pnpm --filter @plotify/database types:generate:linked
 ```
 
-When running the command manually, source `SUPABASE_DB_URL` from
-`apps/api/.env` or export the same value in the shell. Do not generate types
-into `apps/web/src/types/supabase.ts`; that file is only a wrapper.
+Do not generate types into `apps/web/src/types/supabase.ts`; that file is only a
+wrapper.
 
 Validation completed on 2026-04-14. The only remaining lint warning is
 non-blocking PL/pgSQL dead code in `public.approve_reservation`

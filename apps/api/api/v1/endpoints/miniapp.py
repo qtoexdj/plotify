@@ -484,7 +484,7 @@ async def get_bandeja_detail(
             detalles_lote=detalles_lote,
             comprador=comprador,
             conflictos=[],
-            evidencia_url=None
+            evidence_file_id=None
         )
         
     elif tipo == "excepcion":
@@ -592,49 +592,36 @@ async def get_bandeja_detail(
                     )
                 )
 
-        # Extraer evidencia_url (enlace firmado del Storage a partir de la minuta generada)
-        evidencia_url = None
+        # La evidencia se proyecta solo como ID Plotify opaco.
+        evidence_file_id = None
         deliveries = row.get("escritura_deliveries") or []
         generation_id = None
         if isinstance(deliveries, list) and deliveries:
-            generation_id = deliveries[0].get("generation_id")
+            candidate = deliveries[0].get("generation_id")
+            try:
+                generation_id = str(uuid.UUID(str(candidate))) if candidate else None
+            except (ValueError, TypeError, AttributeError):
+                generation_id = None
             
-        # Intentar obtener la ruta de la minuta desde la tabla de generaciones
-        storage_path = None
         if generation_id:
-            gen_res = (
-                supabase.table("escritura_minuta_generations")
-                .select("storage_path")
-                .eq("id", str(generation_id))
-                .maybe_single()
-                .execute()
-            )
-            if gen_res.data:
-                storage_path = gen_res.data.get("storage_path")
+            evidence_file_id = generation_id
                 
-        if not storage_path:
+        if not evidence_file_id:
             # Fallback a buscar la última generación de este caso
             gen_res = (
                 supabase.table("escritura_minuta_generations")
-                .select("storage_path")
+                .select("id")
                 .eq("escritura_case_id", str(item_id))
                 .order("generated_at", desc=True)
                 .limit(1)
                 .execute()
             )
             if gen_res.data:
-                storage_path = gen_res.data[0].get("storage_path")
-                
-        # Si de todos modos hay un fallback de mock (file_path en deliveries de los tests mockeados)
-        if not storage_path and isinstance(deliveries, list) and deliveries:
-            storage_path = deliveries[0].get("file_path")
-
-        if storage_path:
-            try:
-                signed_res = supabase.storage.from_("minutas").create_signed_url(storage_path, 3600)
-                evidencia_url = signed_res.get("signedURL") or signed_res.get("signedUrl")
-            except Exception as e:
-                logger.error(f"Error al generar url firmada de evidencia para caso {item_id}: {str(e)}")
+                candidate = gen_res.data[0].get("id")
+                try:
+                    evidence_file_id = str(uuid.UUID(str(candidate))) if candidate else None
+                except (ValueError, TypeError, AttributeError):
+                    evidence_file_id = None
 
         return BandejaDetail(
             id=item_id,
@@ -646,7 +633,7 @@ async def get_bandeja_detail(
             detalles_lote=detalles_lote,
             comprador=None,
             conflictos=conflictos,
-            evidencia_url=evidencia_url
+            evidence_file_id=evidence_file_id
         )
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tipo de bandeja inválido")
@@ -807,12 +794,20 @@ async def get_ventas(
     role_lower = context.role.lower()
     if role_lower in ["vendor", "vendedor"]:
         vendor_id_val = context.vendor_id or context.user_id
-        # Filtrar por vendedor_id en la relación lots (lots!inner fuerza el INNER JOIN en PostgREST)
+        assignments = (
+            supabase.table("vendor_projects")
+            .select("project_id")
+            .eq("vendor_id", str(vendor_id_val))
+            .execute()
+        )
+        project_ids = [row["project_id"] for row in (assignments.data or [])]
+        if not project_ids:
+            return []
         query = (
             supabase.table("escritura_cases")
-            .select("id, project_id, lot_id, case_status, readiness_status, readiness_gates, created_at, projects(name), lots!inner(numero_lote, vendedor_id)")
+            .select("id, project_id, lot_id, case_status, readiness_status, readiness_gates, created_at, projects(name), lots(numero_lote, vendedor_id)")
             .eq("organization_id", str(context.org_id))
-            .eq("lots.vendedor_id", str(vendor_id_val))
+            .in_("project_id", project_ids)
         )
     else:
         query = (
@@ -825,8 +820,6 @@ async def get_ventas(
     
     ventas = []
     for row in res.data:
-        # Si por alguna razón el mock o fila tiene vendedor_id directo y no lots.vendedor_id
-        # lo procesamos igual en normalizar_caso.
         ventas.append(normalizar_caso(row))
         
     return ventas
@@ -846,12 +839,21 @@ async def get_venta_detalle(
     role_lower = context.role.lower()
     if role_lower in ["vendor", "vendedor"]:
         vendor_id_val = context.vendor_id or context.user_id
+        assignments = (
+            supabase.table("vendor_projects")
+            .select("project_id")
+            .eq("vendor_id", str(vendor_id_val))
+            .execute()
+        )
+        project_ids = [row["project_id"] for row in (assignments.data or [])]
+        if not project_ids:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Venta no encontrada")
         query = (
             supabase.table("escritura_cases")
-            .select("id, project_id, lot_id, case_status, readiness_status, readiness_gates, created_at, projects(name), lots!inner(numero_lote, vendedor_id)")
+            .select("id, project_id, lot_id, case_status, readiness_status, readiness_gates, created_at, projects(name), lots(numero_lote, vendedor_id)")
             .eq("id", str(case_id))
             .eq("organization_id", str(context.org_id))
-            .eq("lots.vendedor_id", str(vendor_id_val))
+            .in_("project_id", project_ids)
         )
     else:
         query = (
@@ -1158,5 +1160,3 @@ async def crear_reserva_miniapp(
     )
 
     return response_data
-
-

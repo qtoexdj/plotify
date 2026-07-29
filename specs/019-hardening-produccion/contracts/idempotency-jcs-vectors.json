@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "idempotency-jcs-vectors.v1",
+  "canonicalization": [
+    {
+      "name": "object-key-order",
+      "input": { "z": 1, "a": 2 },
+      "canonical": "{\"a\":2,\"z\":1}"
+    },
+    {
+      "name": "unicode-and-list",
+      "input": { "texto": "áé漢字", "items": [3, null, "x"] },
+      "canonical": "{\"items\":[3,null,\"x\"],\"texto\":\"áé漢字\"}"
+    },
+    {
+      "name": "numbers",
+      "input": { "negative": -7, "zero": 0, "fraction": 1.5, "large": 1000000 },
+      "canonical": "{\"fraction\":1.5,\"large\":1000000,\"negative\":-7,\"zero\":0}"
+    },
+    {
+      "name": "date-is-an-iso-string",
+      "input": { "at": "2026-07-20T12:34:56.000Z" },
+      "canonical": "{\"at\":\"2026-07-20T12:34:56.000Z\"}"
+    }
+  ],
+  "nullAndOmission": {
+    "withNull": { "a": null, "b": 1 },
+    "withoutOptional": { "b": 1 },
+    "canonicalWithNull": "{\"a\":null,\"b\":1}",
+    "canonicalWithoutOptional": "{\"b\":1}"
+  },
+  "upload": {
+    "utf8": "hello",
+    "filename": "hello.txt",
+    "contentType": "text/plain",
+    "size": 5,
+    "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+  }
+}

@@ -1,11 +1,8 @@
 import { createRouteHandlerClient } from '@/lib/supabase/server'
-import {
-  getProjectsWithMetrics,
-  createProject,
-  registerProjectLegalDocuments,
-} from '@/lib/services/projects.service'
-import { isLegalDocumentsFeatureEnabled } from '@/lib/features/legal-documents'
+import { getProjectsWithMetrics, createProject } from '@/lib/services/projects.service'
 import { NextRequest } from 'next/server'
+import { createProjectSchema } from '@/lib/validations/project.schema'
+import { getActiveWorkspace } from '@/lib/services/workspace.service'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,69 +48,24 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const {
-      name,
-      region,
-      comuna,
-      descripcion,
-      total_lotes,
-      lotPrefix,
-      precio,
-      valor_reserva,
-      images,
-      doc_dominio_vigente,
-      doc_hipoteca_gravamen,
-      doc_roles,
-      doc_subdivision,
-      doc_plano_oficial,
-      doc_otros,
-      legal_documents,
-    } = body
-
-    if (!name || !region || !comuna || !total_lotes) {
-      return Response.json({ error: 'Faltan campos requeridos' }, { status: 400 })
-    }
-
-    if (total_lotes < 1) {
-      return Response.json({ error: 'total_lotes debe ser mayor a 0' }, { status: 400 })
-    }
-
+    const parsed = createProjectSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success)
+      return Response.json(
+        { error: parsed.error.issues[0]?.message ?? 'INVALID_PROJECT' },
+        { status: 400 }
+      )
+    const idempotencyKey = request.headers.get('idempotency-key')?.trim()
+    if (!idempotencyKey)
+      return Response.json({ error: 'IDEMPOTENCY_KEY_REQUIRED' }, { status: 400 })
+    const workspace = await getActiveWorkspace(user.id)
+    if (!workspace || workspace.role !== 'admin')
+      return Response.json({ error: 'WORKSPACE_FORBIDDEN' }, { status: 403 })
     const result = await createProject(
-      {
-        name,
-        region,
-        comuna,
-        descripcion,
-        total_lotes: Number(total_lotes),
-        lotPrefix,
-        precio,
-        valor_reserva,
-        images,
-        doc_dominio_vigente,
-        doc_hipoteca_gravamen,
-        doc_roles,
-        doc_subdivision,
-        doc_plano_oficial,
-        doc_otros,
-        legal_documents,
-      },
-      user.id
+      parsed.data,
+      user.id,
+      workspace.organization.id,
+      idempotencyKey
     )
-
-    if (
-      isLegalDocumentsFeatureEnabled({
-        organizationId: result.project.organization_id,
-        projectId: result.project.id,
-      })
-    ) {
-      await registerProjectLegalDocuments({
-        project: result.project,
-        documents: legal_documents,
-        uploadSource: 'onboarding',
-        uploadedBy: user.id,
-      })
-    }
 
     return Response.json({
       project: result.project,
@@ -122,6 +74,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error in POST /api/projects:', error)
-    return Response.json({ error: 'Error al crear proyecto' }, { status: 500 })
+    const code = error instanceof Error ? error.message : 'PROJECT_CREATE_FAILED'
+    return Response.json({ error: code }, { status: code === 'IDEMPOTENCY_CONFLICT' ? 409 : 500 })
   }
 }

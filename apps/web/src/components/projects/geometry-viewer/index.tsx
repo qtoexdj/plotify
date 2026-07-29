@@ -5,7 +5,14 @@ import { useSearchParams } from 'next/navigation'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Layers01Icon,
@@ -42,6 +49,7 @@ export function GeometryViewer({
 }: GeometryViewerProps) {
   const isMobile = useIsMobile()
   const viewerRef = useRef<HTMLDivElement | null>(null)
+  const mobileSheetTriggerRef = useRef<HTMLButtonElement | null>(null)
   const searchParams = useSearchParams()
   const appliedLotIdParamRef = useRef<string | null>(null)
 
@@ -376,10 +384,15 @@ export function GeometryViewer({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100dvh-160px)] md:h-[calc(100vh-220px)] min-h-96 bg-muted/50 rounded-xl border border-border">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        className="flex items-center justify-center h-[calc(100dvh-160px)] md:h-[calc(100vh-220px)] min-h-96 bg-muted/50 rounded-xl border border-border"
+      >
         <div className="flex flex-col items-center gap-3">
           <Spinner className="w-8 h-8" />
-          <div className="h-3 w-32 rounded bg-muted animate-pulse" />
+          <p className="text-sm font-medium text-muted-foreground">Cargando...</p>
         </div>
       </div>
     )
@@ -387,7 +400,10 @@ export function GeometryViewer({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100dvh-160px)] md:h-[calc(100vh-220px)] min-h-96 bg-destructive/10 rounded-xl border border-destructive/30">
+      <div
+        role="alert"
+        className="flex flex-col items-center justify-center h-[calc(100dvh-160px)] md:h-[calc(100vh-220px)] min-h-96 bg-destructive/10 rounded-xl border border-destructive/30"
+      >
         <HugeiconsIcon icon={Alert01Icon} className="w-12 h-12 text-destructive mb-3" />
         <h3 className="text-lg font-semibold text-destructive mb-1">Error al cargar</h3>
         <p className="text-destructive/80 text-sm">{error}</p>
@@ -552,6 +568,7 @@ export function GeometryViewer({
       {/* Mobile FAB — visible only on mobile when lots are selected */}
       {isMobile && selectedIds.size > 0 && (
         <button
+          ref={mobileSheetTriggerRef}
           onClick={() => setIsMobileSheetOpen(true)}
           className={cn(
             'absolute bottom-4 left-1/2 -translate-x-1/2 z-20',
@@ -603,8 +620,14 @@ export function GeometryViewer({
           }}
         >
           <SheetContent
+            data-testid="sheet-geometry-viewer"
             side="bottom"
             className="h-[80dvh] rounded-t-2xl p-0 flex flex-col overflow-hidden"
+            onCloseAutoFocus={(event) => {
+              if (!mobileSheetTriggerRef.current) return
+              event.preventDefault()
+              mobileSheetTriggerRef.current.focus()
+            }}
           >
             <SheetHeader className="flex-row items-center justify-between px-4 py-3 border-b border-border/50 shrink-0">
               <div className="flex items-center gap-3">
@@ -619,16 +642,16 @@ export function GeometryViewer({
                   <SheetTitle className="text-sm font-semibold leading-tight">
                     {selectedIds.size > 1 ? 'Acciones Masivas' : 'Detalles del Lote'}
                   </SheetTitle>
-                  <span className="text-[10px] text-muted-foreground">
+                  <SheetDescription className="text-[10px] text-muted-foreground">
                     {selectedIds.size > 1 ? 'Panel de edición grupal' : 'Información del lote'}
-                  </span>
+                  </SheetDescription>
                 </div>
               </div>
             </SheetHeader>
 
-            <ScrollArea className="flex-1 min-h-0">
+            <SheetBody aria-live="polite">
               <div className="p-4 space-y-4">{renderSidebarContent()}</div>
-            </ScrollArea>
+            </SheetBody>
           </SheetContent>
         </Sheet>
       </TooltipProvider>

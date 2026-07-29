@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import MapLibreGL from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { createResilientMapStyle } from '@/lib/maps/resilient-map-style'
 import { useMiniApp } from '@/lib/miniapp/mini-app-shell'
 import { LotSheet } from './lot-sheet'
 
@@ -92,10 +93,10 @@ function MapaContent() {
 
     const map = new MapLibreGL.Map({
       container: mapContainerRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+      style: createResilientMapStyle('dark'),
       center: [-71.3, -41.3], // Coordenadas chilenas por defecto (zona sur)
       zoom: 12,
-      attributionControl: false,
+      attributionControl: { compact: true },
     })
 
     mapRef.current = map

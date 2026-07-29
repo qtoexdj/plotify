@@ -551,7 +551,7 @@ class TestPersistDocument:
                 organization_id=ORG_ID,
             )
 
-        assert document["file_url"] == "https://storage.example.com/test.pdf"
+        assert document["file_id"] == "gen-doc-1"
         assert document["id"] == "gen-doc-1"
         supabase_mock.storage.from_.assert_called_with("documents")
         supabase_mock.storage.from_().upload.assert_called_once()
@@ -822,7 +822,6 @@ class TestDocumentsAPI:
             )
 
         assert response.status_code == 403
-
     def test_generate_pdf_retorna_file_url(self, client):
         """POST /api/v1/documents/generate con format=pdf debe retornar file_url."""
         supabase_mock = _make_supabase_mock()
@@ -857,7 +856,7 @@ class TestDocumentsAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert "file_url" in data
+        assert data["file_id"] == data["document_id"]
         assert data["format"] == "pdf"
         assert data["document_id"] == "gen-doc-1"
         assert data["version_number"] == 1
@@ -900,3 +899,19 @@ class TestDocumentsAPI:
                 },
             )
         assert response.status_code == 403
+
+
+def test_sdd019_legacy_document_endpoint_returns_opaque_id_only() -> None:
+    from pathlib import Path
+
+    app_root = Path(__file__).resolve().parents[1]
+    source = "\n".join(
+        (app_root / path).read_text()
+        for path in (
+            "api/v1/endpoints/documents.py",
+            "services/document_generator.py",
+        )
+    )
+    assert "document_id" in source, "STORAGE_URL_EXPOSED: opaque document ID missing"
+    for forbidden in ("file_url", "create_signed_url", "signedURL", "signedUrl"):
+        assert forbidden not in source, f"STORAGE_URL_EXPOSED: documents contains {forbidden}"

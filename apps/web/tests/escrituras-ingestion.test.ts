@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   createRouteHandlerClientMock,
   createClientMock,
+  createServiceClientMock,
   createProjectMock,
+  getActiveWorkspaceMock,
   registerProjectLegalDocumentsMock,
   fileTypeFromBufferMock,
   microserviceFetchMock,
@@ -12,7 +14,9 @@ const {
 } = vi.hoisted(() => ({
   createRouteHandlerClientMock: vi.fn(),
   createClientMock: vi.fn(),
+  createServiceClientMock: vi.fn(),
   createProjectMock: vi.fn(),
+  getActiveWorkspaceMock: vi.fn(),
   registerProjectLegalDocumentsMock: vi.fn(
     async ({
       project,
@@ -76,6 +80,11 @@ const {
 vi.mock('@/lib/supabase/server', () => ({
   createRouteHandlerClient: createRouteHandlerClientMock,
   createClient: createClientMock,
+  createServiceClient: createServiceClientMock,
+}))
+
+vi.mock('@/lib/services/workspace.service', () => ({
+  getActiveWorkspace: getActiveWorkspaceMock,
 }))
 
 vi.mock('@/lib/services/projects.service', () => ({
@@ -106,9 +115,7 @@ vi.mock('@/lib/logger', () => ({
 
 import { microserviceFetch } from '@/lib/services/microservice.client'
 import { POST as createProjectPost } from '../src/app/api/projects/route'
-import { POST as uploadProjectFilePost } from '../src/app/api/uploads/project-files/route'
-
-const LEGAL_DOCUMENT_REGISTER_PATH = '/api/v1/legal-documents/register'
+import { POST as projectFilesPost } from '../src/app/api/projects/[id]/files/route'
 
 function authenticatedRouteClient(userId = 'user-1') {
   return {
@@ -142,39 +149,29 @@ function buildSupabaseChain(result: unknown) {
 
 function buildUploadSupabaseMock(
   project: Record<string, unknown>,
-  uploadedPath: string,
-  membership: Record<string, unknown> | null = { organization_id: 'org-1', role: 'admin' }
+  membership: Record<string, unknown> | null = { role: 'admin' }
 ) {
-  const membershipChain = buildSupabaseChain({ data: membership, error: null })
   const fetchProjectChain = buildSupabaseChain({ data: project, error: null })
-  const updateProjectChain = buildSupabaseChain({
-    data: { ...project, doc_roles: uploadedPath },
-    error: null,
-  })
-  const fromMock = vi
-    .fn()
-    .mockReturnValueOnce(membershipChain)
-    .mockReturnValueOnce(fetchProjectChain)
-    .mockReturnValueOnce(updateProjectChain)
+  const membershipChain = buildSupabaseChain({ data: membership, error: null })
+  const fromMock = vi.fn((table: string) =>
+    table === 'projects' ? fetchProjectChain : membershipChain
+  )
 
   return {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }),
     },
     from: fromMock,
-    storage: {
-      from: vi.fn().mockReturnValue({
-        upload: vi.fn().mockResolvedValue({ data: { path: uploadedPath }, error: null }),
-        remove: vi.fn().mockResolvedValue({ error: null }),
-      }),
-    },
   }
 }
 
 function buildProjectCreateRequest(payload: Record<string, unknown>) {
   return new Request('http://localhost/api/projects', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'idempotency-key': 'test-project-create',
+    },
     body: JSON.stringify(payload),
   })
 }
@@ -184,17 +181,53 @@ function buildProjectFileUploadRequest(file: File, type = 'doc_roles') {
   formData.append('file', file)
   formData.append('projectId', 'project-1')
   formData.append('type', type)
+  formData.append('legalDocumentId', 'legal-doc-1')
+  formData.append('sourceField', type)
+  formData.append('documentType', 'certificado_roles_sii')
 
-  return new Request('http://localhost/api/uploads/project-files', {
+  return new Request('http://localhost/api/projects/project-1/files', {
     method: 'POST',
+    headers: {
+      'x-plotify-file-category': type === 'images' ? 'project_image' : 'legal_document',
+      'idempotency-key': 'test-project-file-upload',
+    },
     body: formData,
   })
+}
+
+function uploadProjectFilePost(request: Request) {
+  return projectFilesPost(request as any, { params: Promise.resolve({ id: 'project-1' }) })
 }
 
 describe('T016 - Escrituras legal document ingestion from web uploads', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     createRouteHandlerClientMock.mockReturnValue(authenticatedRouteClient())
+    getActiveWorkspaceMock.mockResolvedValue({
+      role: 'admin',
+      organization: { id: 'org-1' },
+    })
+    createServiceClientMock.mockReturnValue({
+      rpc: vi
+        .fn()
+        .mockResolvedValueOnce({
+          data: { id: 'operation-1', status: 'claimed', resource_id: null },
+          error: null,
+        })
+        .mockResolvedValue({ data: null, error: null }),
+      storage: {
+        from: vi.fn().mockReturnValue({
+          upload: vi.fn().mockResolvedValue({ error: null }),
+          remove: vi.fn().mockResolvedValue({ error: null }),
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        }),
+      }),
+    })
     microserviceFetchMock.mockResolvedValue({
       data: {
         legal_document_id: 'legal-doc-1',
@@ -225,26 +258,6 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
         region: 'Valparaiso',
         comuna: 'Quillota',
         total_lotes: 2,
-        doc_dominio_vigente: 'project-1/docs/dominio-vigente.pdf',
-        doc_roles: 'project-1/docs/certificado-roles.pdf',
-        legal_documents: [
-          {
-            source_field: 'doc_dominio_vigente',
-            storage_path: 'project-1/docs/dominio-vigente.pdf',
-            original_filename: 'dominio-vigente.pdf',
-            mime_type: 'application/pdf',
-            file_size_bytes: 123,
-            sha256_hash: 'a'.repeat(64),
-          },
-          {
-            source_field: 'doc_roles',
-            storage_path: 'project-1/docs/certificado-roles.pdf',
-            original_filename: 'certificado-roles.pdf',
-            mime_type: 'application/pdf',
-            file_size_bytes: 456,
-            sha256_hash: 'b'.repeat(64),
-          },
-        ],
       }) as any
     )
 
@@ -255,50 +268,21 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
         message: 'Proyecto creado con 2 lotes',
       })
     )
-    expect(microserviceFetch).toHaveBeenCalledTimes(2)
-    expect(microserviceFetch).toHaveBeenCalledWith(
-      LEGAL_DOCUMENT_REGISTER_PATH,
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.objectContaining({
-          organization_id: 'org-1',
-          project_id: 'project-1',
-          document_type: 'dominio_vigente',
-          source_field: 'doc_dominio_vigente',
-          storage_bucket: 'project-files',
-          storage_path: 'project-1/docs/dominio-vigente.pdf',
-          upload_source: 'onboarding',
-          uploaded_by: 'user-1',
-        }),
-      })
+    expect(createProjectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Parcelas Los Aromos', total_lotes: 2 }),
+      'user-1',
+      'org-1',
+      'test-project-create'
     )
-    expect(microserviceFetch).toHaveBeenCalledWith(
-      LEGAL_DOCUMENT_REGISTER_PATH,
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.objectContaining({
-          organization_id: 'org-1',
-          project_id: 'project-1',
-          document_type: 'certificado_roles_sii',
-          source_field: 'doc_roles',
-          storage_bucket: 'project-files',
-          storage_path: 'project-1/docs/certificado-roles.pdf',
-          upload_source: 'onboarding',
-          uploaded_by: 'user-1',
-        }),
-      })
-    )
+    expect(microserviceFetch).not.toHaveBeenCalled()
   })
 
-  it('registers a replacement project legal document and queues extraction', async () => {
-    const uploadedPath = 'project-1/docs/doc_roles-new-version.pdf'
+  it('stores a replacement project legal document through the hardened gateway', async () => {
     const project = {
       id: 'project-1',
       organization_id: 'org-1',
-      images: [],
-      doc_roles: 'project-1/docs/old-roles.pdf',
     }
-    createClientMock.mockResolvedValue(buildUploadSupabaseMock(project, uploadedPath))
+    createClientMock.mockResolvedValue(buildUploadSupabaseMock(project))
     fileTypeFromBufferMock.mockResolvedValue({ ext: 'pdf', mime: 'application/pdf' })
 
     const file = new File(['%PDF-1.4 certificado roles'], 'certificado-roles.pdf', {
@@ -306,37 +290,17 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
     })
     const response = await uploadProjectFilePost(buildProjectFileUploadRequest(file) as any)
 
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual(
-      expect.objectContaining({
-        path: uploadedPath,
-        message: 'Archivo subido y validado exitosamente',
-      })
-    )
-    expect(microserviceFetch).toHaveBeenCalledTimes(1)
-    expect(microserviceFetch).toHaveBeenCalledWith(
-      LEGAL_DOCUMENT_REGISTER_PATH,
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.objectContaining({
-          organization_id: 'org-1',
-          project_id: 'project-1',
-          document_type: 'certificado_roles_sii',
-          source_field: 'doc_roles',
-          storage_bucket: 'project-files',
-          storage_path: uploadedPath,
-          original_filename: 'certificado-roles.pdf',
-          mime_type: 'application/pdf',
-          file_size_bytes: file.size,
-          upload_source: 'project_documents',
-          uploaded_by: 'user-1',
-        }),
-      })
-    )
+    expect(response.status).toBe(201)
+    expect(await response.json()).toEqual({
+      fileId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    })
+    expect(microserviceFetch).not.toHaveBeenCalled()
   })
 
   it('rejects invalid project document uploads before legal document registration', async () => {
-    createClientMock.mockResolvedValue(buildUploadSupabaseMock({ id: 'project-1' }, 'unused.pdf'))
+    createClientMock.mockResolvedValue(
+      buildUploadSupabaseMock({ id: 'project-1', organization_id: 'org-1' })
+    )
     fileTypeFromBufferMock.mockResolvedValue({ ext: 'png', mime: 'image/png' })
 
     const response = await uploadProjectFilePost(
@@ -346,7 +310,7 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual(
       expect.objectContaining({
-        error: 'Formato de documento inválido. Solo se permiten PDFs.',
+        error: 'FILE_TYPE_NOT_ALLOWED',
       })
     )
     expect(microserviceFetch).not.toHaveBeenCalled()
@@ -358,18 +322,15 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }),
       },
-      from: vi.fn().mockReturnValueOnce(
-        buildSupabaseChain({
-          data: { organization_id: 'org-1', role: 'user' },
-          error: null,
-        })
-      ),
-      storage: {
-        from: vi.fn().mockReturnValue({
-          upload: storageUpload,
-          remove: vi.fn(),
-        }),
-      },
+      from: vi
+        .fn()
+        .mockReturnValueOnce(
+          buildSupabaseChain({
+            data: { id: 'project-1', organization_id: 'org-1' },
+            error: null,
+          })
+        )
+        .mockReturnValueOnce(buildSupabaseChain({ data: { role: 'user' }, error: null })),
     })
     fileTypeFromBufferMock.mockResolvedValue({ ext: 'pdf', mime: 'application/pdf' })
 
@@ -379,10 +340,10 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
       ) as any
     )
 
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(404)
     expect(await response.json()).toEqual(
       expect.objectContaining({
-        error: 'No tienes permisos para subir documentos del proyecto',
+        error: 'RESOURCE_NOT_FOUND',
       })
     )
     expect(storageUpload).not.toHaveBeenCalled()

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "checkpoint": "additive",
+  "scheduledEnforcementTask": "T112",
+  "findings": [
+    {
+      "code": "FINAL_REVOKE_LEGACY_APPROVE_SALE",
+      "object": "public.approve_sale(uuid,text)",
+      "changeClass": "grant_revoke",
+      "fingerprint": "sha256:ea7855057e97194270c7fcc2a1213d80a7752e1a05d5060096d5f0e539e202ae",
+      "owner": "release-engineering",
+      "reason": "Legacy anon/authenticated EXECUTE remains only until the compatible gateway is proven.",
+      "reviewDate": "2026-08-15"
+    },
+    {
+      "code": "FINAL_REVOKE_LEGACY_REJECT_SALE",
+      "object": "public.reject_sale(uuid,text)",
+      "changeClass": "grant_revoke",
+      "fingerprint": "sha256:bbfe7a1d52ce08090a56706214a652ff6da1d2b9423499b48296448c8a3ee9a8",
+      "owner": "release-engineering",
+      "reason": "Legacy anon/authenticated EXECUTE remains only until the compatible gateway is proven.",
+      "reviewDate": "2026-08-15"
+    }
+  ],
+  "avatarPolicyOutcome": {
+    "knownObjectRead": true,
+    "globalListDenied": true,
+    "crossUserMutationDenied": true,
+    "evidenceDigest": "sha256:6679d336f623964a7786b23ec92449986427274b0173846a106471606f66538c"
+  },
+  "performanceWarnings": []
+}

@@ -23,6 +23,15 @@ def _override_reservation_redis():
     yield redis
     app.dependency_overrides.pop(get_arq_pool, None)
 
+
+@pytest.fixture(autouse=True)
+def _isolate_workspace_guard(monkeypatch):
+    """Workspace authority has its own contract suite; reservation tests isolate domain IO."""
+    monkeypatch.setattr(
+        "core.miniapp_session._revalidate_workspace_authority",
+        AsyncMock(return_value=None),
+    )
+
 def _obtener_headers_vendedor() -> dict:
     """Genera headers de autorización con un token JWT de vendedor válido."""
     token = create_miniapp_session(

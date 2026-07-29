@@ -58,6 +58,23 @@ export async function getGlobalKPIs(userId: string): Promise<GlobalKPIs> {
 
   if (membership) {
     projectsQuery = projectsQuery.eq('organization_id', membership.organization_id)
+    if (membership.role !== 'admin') {
+      const { data: vendor } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('organization_id', membership.organization_id)
+        .eq('user_id', userId)
+        .eq('active', true)
+        .maybeSingle()
+      if (!vendor) return kpis
+      const { data: assignments } = await supabase
+        .from('vendor_projects')
+        .select('project_id')
+        .eq('vendor_id', vendor.id)
+      const projectIds = assignments?.map((assignment) => assignment.project_id) ?? []
+      if (projectIds.length === 0) return kpis
+      projectsQuery = projectsQuery.in('id', projectIds)
+    }
   }
 
   const { data: projects, error: projectsError } = await projectsQuery

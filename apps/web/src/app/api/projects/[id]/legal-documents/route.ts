@@ -7,9 +7,13 @@ import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+interface InternalLegalDocument extends LegalDocument {
+  project_file_object_id?: string | null
+}
+
 interface LegalDocumentListResponse {
   project_id: string
-  documents: LegalDocument[]
+  documents: InternalLegalDocument[]
 }
 
 interface LegalDocumentRetryResponse {
@@ -68,7 +72,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return Response.json({ error: error || 'Error al obtener documentos legales' }, { status })
     }
 
-    return Response.json(data)
+    return Response.json({
+      project_id: data.project_id,
+      documents: data.documents.map((document) => ({
+        id: document.id,
+        fileId: document.project_file_object_id ?? null,
+        document_type: document.document_type,
+        source_field: document.source_field,
+        original_filename: document.original_filename,
+        version_number: document.version_number,
+        extraction_status: document.extraction_status,
+      })),
+    })
   } catch (error) {
     console.error('Error in GET /api/projects/[id]/legal-documents:', error)
     return Response.json({ error: 'Error al obtener documentos legales' }, { status: 500 })

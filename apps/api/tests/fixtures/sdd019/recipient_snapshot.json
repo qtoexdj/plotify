@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "sdd019-fixtures-v1",
+  "recipients": [
+    {
+      "id": "recipient-admin-a",
+      "organization": "org-a",
+      "role": "admin",
+      "deliveryRequired": true
+    },
+    {
+      "id": "recipient-seller-assigned",
+      "organization": "org-a",
+      "role": "seller",
+      "deliveryRequired": true
+    }
+  ]
+}

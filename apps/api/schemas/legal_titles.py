@@ -113,6 +113,10 @@ class TitleInscription(LegalTitleBaseModel):
 
 
 class PropietarioActual(LegalTitleBaseModel):
+    # Stable subject identity is reconciled server-side and never derived from
+    # array position or display name.
+    person_id: UUID | None = None
+    upstream_subject_id: str | None = None
     nombre: EvidencedValue | None = None
     rut: EvidencedValue | None = None
     estado_civil: EvidencedValue | None = None

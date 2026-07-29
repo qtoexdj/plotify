@@ -34,22 +34,18 @@ export interface UploadResponse {
 export interface SaveAndAssignGeometryPayload {
   projectId: string
   lotId: string
-  geometry: GeoJSONGeometry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  properties: Record<string, any>
-  sourceType: SourceType
-  geometryType: GeometryType
+  geometryId: string | null
+  expectedGeometryId: string | null
+  idempotencyKey: string
 }
 
 // Request payload for saving infrastructure
 export interface SaveInfrastructurePayload {
   projectId: string
-  geometry: GeoJSONGeometry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  properties: Record<string, any>
-  sourceType: SourceType
   geometryType: 'road' | 'common_area'
-  name: string
+  sourceGeometryIds: string[]
+  idempotencyKey: string
+  name?: string
   inputMode?: RoadInputMode
   widthM?: number
   edgeSide?: RoadEdgeSide

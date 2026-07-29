@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "semantic/1",
+  "rendererVersion": "matriz-docx/2",
+  "normalizationVersion": "semantic-normalization/1",
+  "cases": [
+    {
+      "id": "complete-golden",
+      "expectedSemanticStatus": "passed",
+      "resolvedText": "Doña Vendedora comparece con hechos documentados y aprobados.",
+      "comparecientes": [
+        {
+          "personId": "11111111-1111-5111-8111-111111111111",
+          "upstreamSubjectId": "owner-a",
+          "tratamiento": { "value": "Doña", "state": "approved", "evidenceRef": "evidence:1" },
+          "nombre": { "value": "Vendedora", "state": "approved", "evidenceRef": "evidence:1" },
+          "rut": { "value": "11.111.111-1", "state": "approved", "evidenceRef": "evidence:1" },
+          "nacionalidad": { "value": "chilena", "state": "approved", "evidenceRef": "evidence:1" },
+          "estadoCivil": { "value": "soltera", "state": "approved", "evidenceRef": "evidence:1" }
+        }
+      ]
+    },
+    {
+      "id": "literal-placeholder",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_PLACEHOLDER_LITERAL",
+      "resolvedText": "Doña Vendedora, de nacionalidad [NACIONALIDAD], comparece."
+    },
+    {
+      "id": "unresolved-token",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_UNRESOLVED_TOKEN",
+      "ast": { "type": "variable_token", "attrs": { "variableKey": "comprador.oficio" } }
+    },
+    {
+      "id": "missing-required-seller-fact",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_MISSING_REQUIRED",
+      "comparecientes": [
+        {
+          "personId": "22222222-2222-5222-8222-222222222222",
+          "tratamiento": { "value": "Don", "state": "approved", "evidenceRef": "evidence:2" },
+          "nombre": { "value": "Vendedor", "state": "approved", "evidenceRef": "evidence:2" },
+          "rut": { "value": "22.222.222-2", "state": "approved", "evidenceRef": "evidence:2" },
+          "nacionalidad": { "value": null, "state": "missing", "evidenceRef": null },
+          "estadoCivil": { "value": "casado", "state": "approved", "evidenceRef": "evidence:2" }
+        }
+      ]
+    },
+    {
+      "id": "filler-line",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_FILLER_LINE",
+      "resolvedText": "____________"
+    },
+    {
+      "id": "empty-grammar-unit",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_EMPTY_GRAMMAR_UNIT",
+      "resolvedText": "de nacionalidad , domiciliado"
+    },
+    {
+      "id": "orphan-connector",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_ORPHAN_CONNECTOR",
+      "resolvedText": "La venta será ."
+    },
+    {
+      "id": "orphan-punctuation",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_ORPHAN_PUNCTUATION",
+      "resolvedText": "Texto legal,, siguiente."
+    },
+    {
+      "id": "duplicate-clause",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_DUPLICATE_CLAUSE",
+      "clauses": [
+        "La propiedad se vende libre de gravámenes.",
+        "La propiedad se vende libre de gravámenes."
+      ]
+    },
+    {
+      "id": "fact-mismatch",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_FACT_MISMATCH",
+      "renderedFacts": { "nacionalidad": "argentina" },
+      "approvedFacts": { "nacionalidad": "chilena" }
+    },
+    {
+      "id": "missing-evidence",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_MISSING_EVIDENCE",
+      "comparecientes": [
+        {
+          "personId": "33333333-3333-5333-8333-333333333333",
+          "tratamiento": { "value": "Doña", "state": "approved", "evidenceRef": null },
+          "nombre": { "value": "Persona", "state": "approved", "evidenceRef": "evidence:3" },
+          "rut": { "value": "33.333.333-3", "state": "approved", "evidenceRef": "evidence:3" },
+          "nacionalidad": { "value": "chilena", "state": "approved", "evidenceRef": "evidence:3" },
+          "estadoCivil": { "value": "soltera", "state": "approved", "evidenceRef": "evidence:3" }
+        }
+      ]
+    },
+    {
+      "id": "provenance-incomplete",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_PROVENANCE_INCOMPLETE",
+      "historical": true,
+      "provenanceComplete": false
+    },
+    {
+      "id": "artifact-hash-mismatch",
+      "expectedSemanticStatus": "failed",
+      "expectedIssueCode": "SEM_ARTIFACT_HASH_MISMATCH",
+      "expectedArtifactSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "artifactBytes": "different"
+    }
+  ],
+  "identityCases": [
+    {
+      "id": "stable-reorder",
+      "upstreamSubjectIds": ["owner-a", "owner-b"],
+      "reordered": ["owner-b", "owner-a"],
+      "expected": "stable"
+    },
+    {
+      "id": "ambiguous-no-subject",
+      "normalizedRut": null,
+      "matchingCandidates": 2,
+      "expected": "SELLER_PERSON_MATCH_AMBIGUOUS"
+    }
+  ],
+  "manualResolutionCases": [
+    {
+      "id": "approved-nationality",
+      "field": "nacionalidad",
+      "grantActive": true,
+      "reason": "Certificado revisado",
+      "attestationRef": "legal_document:fixture#page=2",
+      "expected": "approved"
+    },
+    {
+      "id": "missing-grant",
+      "field": "nacionalidad",
+      "grantActive": false,
+      "reason": "Certificado revisado",
+      "attestationRef": "legal_document:fixture#page=2",
+      "expected": "LEGAL_APPROVAL_REQUIRED"
+    },
+    {
+      "id": "missing-attestation",
+      "field": "estadoCivil",
+      "grantActive": true,
+      "reason": "Corrección",
+      "attestationRef": null,
+      "expected": "SELLER_FACT_ATTESTATION_REQUIRED"
+    }
+  ]
+}

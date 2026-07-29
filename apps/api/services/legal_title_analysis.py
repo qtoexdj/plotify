@@ -737,6 +737,12 @@ async def stage_title_analysis_proposals(
         )
 
     # C. Owners (repeatable)
+    from services.matriz_semantic_validation import (
+        SellerPersonMatchAmbiguousError,
+        stable_person_id,
+    )
+
+    owner_structured_failure = False
     for idx, prop_act in enumerate(analysis.propietarios_actuales):
         prop_evidences = []
         prop_prefix = f"propietarios_actuales[{idx}]"
@@ -747,14 +753,44 @@ async def stage_title_analysis_proposals(
         for _, ev_val in ev_vals_in_prop:
             prop_evidences.extend(get_evidence_inputs(ev_val))
 
+        owner_payload = prop_act.model_dump(mode="json")
+        rut_value = prop_act.rut.value if prop_act.rut and prop_act.rut.value else None
+        upstream_subject_id = prop_act.upstream_subject_id
+        try:
+            person_id = str(prop_act.person_id) if prop_act.person_id else stable_person_id(
+                upstream_subject_id=upstream_subject_id,
+                normalized_rut=str(rut_value).replace(".", "").replace("-", "").strip() if rut_value else None,
+            )
+        except SellerPersonMatchAmbiguousError:
+            person_id = None
+            has_failure = True
+        owner_payload["personId"] = person_id
+        owner_payload.pop("person_id", None)
+        owner_payload["upstreamSubjectId"] = upstream_subject_id
+        owner_payload.pop("upstream_subject_id", None)
+        required_owner_facts = (
+            prop_act.tratamiento,
+            prop_act.nombre,
+            prop_act.rut,
+            prop_act.nacionalidad,
+            prop_act.estado_civil,
+        )
+        if person_id is None or any(fact is None or fact.value in (None, "") or fact.evidence is None for fact in required_owner_facts):
+            has_failure = True
+            owner_structured_failure = True
+
         proposals.append(
             VariableProposalInput(
                 organization_id=organization_id,
                 project_id=project_id,
                 variable_key="titulo.propietarios[]",
-                value_json=prop_act.model_dump(mode="json"),
+                value_json=owner_payload,
                 state="manual_review" if has_failure else "proposed",
-                source_ref={"owner_index": idx + 1},
+                source_ref={
+                    "person_id": person_id,
+                    "owner_index": idx + 1,
+                    "source_path": prop_prefix,
+                },
                 confidence=1.0,
                 extractor_name=EXTRACTOR_NAME,
                 evidence=tuple(prop_evidences),
@@ -764,7 +800,9 @@ async def stage_title_analysis_proposals(
     # D. Narrative Comparecencia (agent-drafted, fact-checked)
     checks = block_checks or {}
     comparecencia_check = checks.get("comparecencia") or {}
-    has_owner_failure = any(p.startswith("propietarios_actuales") for p in failures_by_path)
+    has_owner_failure = owner_structured_failure or any(
+        p.startswith("propietarios_actuales") for p in failures_by_path
+    )
     comp_state = (
         "proposed"
         if narrative_comparecencia

@@ -144,6 +144,7 @@ def test_generate_endpoint_returns_persisted_document_metadata():
 
     persisted = {
         "id": "generated-doc-1",
+        "file_id": "00000000-0000-4000-8000-000000000101",
         "file_url": "https://storage.example.com/reserva.pdf",
         "file_format": "pdf",
         "document_type": "reserva",
@@ -235,6 +236,7 @@ def test_generate_endpoint_metadata_verification():
 
     persisted = {
         "id": "generated-doc-2",
+        "file_id": "00000000-0000-4000-8000-000000000102",
         "file_url": "https://storage.example.com/reserva_2.pdf",
         "file_format": "pdf",
         "document_type": "reserva",
@@ -279,7 +281,7 @@ def test_generate_endpoint_metadata_verification():
         "template_id",
         "lot_id",
         "format",
-        "file_url",
+        "file_id",
         "missing_variables_accepted",
         "selected_recipients",
     ]
@@ -291,7 +293,8 @@ def test_generate_endpoint_metadata_verification():
     assert body["template_id"] == TEMPLATE_ID
     assert body["lot_id"] == LOT_ID
     assert body["format"] == "pdf"
-    assert body["file_url"] == "https://storage.example.com/reserva_2.pdf"
+    assert body["file_id"] == "00000000-0000-4000-8000-000000000102"
+    assert "file_url" not in body
     assert body["missing_variables_accepted"] is False
     assert body["selected_recipients"] == ["comprador"]
 
@@ -690,4 +693,3 @@ async def test_resolve_variables_consumes_project_legal_data_for_matriz_and_lot_
     # Lot-specific values are resolved from lot_legal_data
     assert variables["sii"]["pre_rol_lote"] == "08179-00024"
     assert variables["lote"]["rol_tramite"] == "08179-00024"
-

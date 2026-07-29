@@ -13,6 +13,7 @@ import type {
 } from '@/lib/documents/matriz-types'
 import {
   MIS_DOCUMENTOS_TEXT as T,
+  detalleEstadoEntrega,
   etiquetaEntrega,
   puedeDescargar,
   puedeRenovar,
@@ -79,6 +80,12 @@ export default function MisDocumentosPage() {
     await navigator.clipboard?.writeText(url)
   }, [])
 
+  const hrefFor = useCallback(
+    (entrega: EscrituraDeliveryView) =>
+      entrega.fileId ? `/api/files/${encodeURIComponent(entrega.fileId)}` : '',
+    []
+  )
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-6">
       <header className="space-y-1">
@@ -109,17 +116,22 @@ export default function MisDocumentosPage() {
                 <Badge variant="secondary">{etiquetaEntrega(entrega)}</Badge>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center gap-2">
+                <ul className="w-full space-y-1 text-xs text-muted-foreground">
+                  {detalleEstadoEntrega(entrega).map((detalle) => (
+                    <li key={detalle}>{detalle}</li>
+                  ))}
+                </ul>
                 {puedeDescargar(entrega) ? (
                   <>
                     <Button asChild size="sm">
-                      <a href={entrega.download_url ?? '#'} download>
+                      <a href={hrefFor(entrega)} download>
                         {T.descargar}
                       </a>
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => void compartir(entrega.download_url ?? '')}
+                      onClick={() => void compartir(hrefFor(entrega))}
                     >
                       {T.compartir}
                     </Button>

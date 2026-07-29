@@ -3,6 +3,23 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 from types import SimpleNamespace
 
+import pytest
+
+
+def test_client_authority_headers_are_never_a_trusted_principal():
+    """T011 contract: shared secret/user/org headers cannot invent authority."""
+    from api.deps import resolve_trusted_principal
+
+    with pytest.raises(PermissionError):
+        resolve_trusted_principal(
+            authorization=None,
+            internal_secret="shared-secret",
+            claimed_user_id="attacker",
+            claimed_organization_id="org-attacker",
+            verified_user=None,
+            service_assertion=None,
+        )
+
 
 def _build_approvals_app():
     from fastapi import FastAPI
@@ -436,4 +453,3 @@ def test_legal_variable_endpoint_respects_project_allowlist():
     assert response.status_code == 403
     assert "project" in response.json()["detail"]
     list_documents.assert_not_awaited()
-

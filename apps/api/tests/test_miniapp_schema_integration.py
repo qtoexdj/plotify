@@ -28,7 +28,7 @@ from core.miniapp_session import create_miniapp_session
 pytestmark = pytest.mark.integration
 
 # IDs reales del proyecto Supabase de desarrollo (swkrnjdpnlrgxgotmfxy),
-# verificados por consulta SQL directa el 2026-07-09 — no inventados.
+# verificados por Supabase MCP el 2026-07-20 — no inventados.
 ORG_ID = "7a0203ce-8b31-4661-a7b7-933613d49069"
 ADMIN_PROFILE_ID = "4778854b-6dfd-4aad-8c9a-bd9f92bbb460"
 VENDOR_PROFILE_ID = "6198888a-357f-40be-bcf8-49f329debaa0"
@@ -110,7 +110,7 @@ async def test_resolve_miniapp_user_vendedor_real_resuelve_vendors_id():
     _skip_sin_supabase_real()
     from core.miniapp_session import resolve_miniapp_user
 
-    error, detail = await resolve_miniapp_user(ORG_ID, "8373491722")
+    error, detail = await resolve_miniapp_user(ORG_ID, "5844273174")
 
     assert error is None, error
     assert detail["role"] == "vendor"

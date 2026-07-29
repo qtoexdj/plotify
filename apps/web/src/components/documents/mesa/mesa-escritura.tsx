@@ -1,14 +1,21 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon, ListViewIcon, Task01Icon } from '@hugeicons/core-free-icons'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Sheet,
+  SheetBody,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { useIsMobile } from '@/hooks/use-mobile'
 import {
   getMatrizCase,
@@ -166,6 +173,8 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
   const isCompact = useIsCompactMesa()
   const [indiceSheetOpen, setIndiceSheetOpen] = useState(false)
   const [datosSheetOpen, setDatosSheetOpen] = useState(false)
+  const indiceTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const datosTriggerRef = useRef<HTMLButtonElement | null>(null)
   const [generations, setGenerations] = useState<MinutaGeneration[]>([])
 
   useEffect(() => {
@@ -317,6 +326,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
     return (
       <div
         data-testid="mesa-escritura"
+        role="alert"
         className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive"
       >
         {error ?? MESA_TEXT.noSePudoCargar}
@@ -451,8 +461,14 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
     <>
       <Sheet open={indiceSheetOpen} onOpenChange={setIndiceSheetOpen}>
         <SheetContent
+          data-testid="sheet-mesa"
           side="bottom"
           className="flex h-[80dvh] flex-col overflow-hidden rounded-t-2xl p-0"
+          onCloseAutoFocus={(event) => {
+            if (!indiceTriggerRef.current) return
+            event.preventDefault()
+            indiceTriggerRef.current.focus()
+          }}
           onClickCapture={(event) => {
             if ((event.target as HTMLElement).closest('a[href^="#clausula-"]')) {
               setIndiceSheetOpen(false)
@@ -461,21 +477,31 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
         >
           <SheetHeader className="border-b border-border px-4 py-3 text-left">
             <SheetTitle>{MESA_TEXT.indiceTitle}</SheetTitle>
+            <SheetDescription>Navega las cláusulas y pendientes de la escritura.</SheetDescription>
           </SheetHeader>
-          <ScrollArea className="min-h-0 flex-1">
+          <SheetBody>
             <div className="p-4">{indiceContent}</div>
-          </ScrollArea>
+          </SheetBody>
         </SheetContent>
       </Sheet>
 
       <Sheet open={datosSheetOpen} onOpenChange={setDatosSheetOpen}>
         <SheetContent
+          data-testid="sheet-mesa"
           side="bottom"
           showCloseButton={false}
           className="flex h-[80dvh] flex-col overflow-hidden rounded-t-2xl p-0"
+          onCloseAutoFocus={(event) => {
+            if (!datosTriggerRef.current) return
+            event.preventDefault()
+            datosTriggerRef.current.focus()
+          }}
         >
           <SheetHeader className="border-b border-border px-4 py-3 pr-14 text-left">
             <SheetTitle>Datos y acciones</SheetTitle>
+            <SheetDescription>
+              Revisa estados, errores, pendientes y acciones de la escritura.
+            </SheetDescription>
             <SheetClose asChild>
               <Button
                 type="button"
@@ -488,9 +514,9 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
               </Button>
             </SheetClose>
           </SheetHeader>
-          <ScrollArea className="min-h-0 flex-1">
+          <SheetBody aria-live="polite">
             <div className="p-4">{datosContent}</div>
-          </ScrollArea>
+          </SheetBody>
         </SheetContent>
       </Sheet>
     </>
@@ -501,6 +527,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
       ? createPortal(
           <div className="fixed inset-x-0 bottom-0 z-50 flex gap-2 border-t border-border bg-card/95 py-3 pl-20 pr-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:p-3 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] xl:hidden">
             <Button
+              ref={indiceTriggerRef}
               type="button"
               variant="outline"
               className="min-h-11 flex-1"
@@ -510,6 +537,7 @@ export function MesaEscritura({ caseId, projectId, initialData = null }: MesaEsc
               {MESA_TEXT.indiceTitle}
             </Button>
             <Button
+              ref={datosTriggerRef}
               type="button"
               variant="outline"
               className="min-h-11 flex-1"

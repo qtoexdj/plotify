@@ -61,7 +61,6 @@ describe('ProjectCard', () => {
         deletingId={null}
         onDelete={vi.fn()}
         projectHref="/projects/project-1"
-        getFullUrl={() => ''}
         statusLabel="Borrador"
         statusVariant="neutral"
         layout="grid"
@@ -82,7 +81,6 @@ describe('ProjectCard', () => {
         deletingId={null}
         onDelete={onDelete}
         projectHref="/projects/project-1"
-        getFullUrl={() => ''}
         statusLabel="Borrador"
         statusVariant="neutral"
         layout="grid"
@@ -95,5 +93,27 @@ describe('ProjectCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }))
     expect(onDelete).toHaveBeenCalledWith('project-1')
+  })
+
+  it('loads a private project image through its opaque file route', () => {
+    render(
+      <ProjectCard
+        project={{
+          ...project,
+          images: ['8fd741a8-3f28-42e0-927d-fd68116a7ec1'],
+        }}
+        isAdmin={false}
+        deletingId={null}
+        onDelete={vi.fn()}
+        projectHref="/projects/project-1"
+        statusLabel="Borrador"
+        statusVariant="neutral"
+        layout="grid"
+      />
+    )
+
+    expect(screen.getByRole('img', { name: 'Teno' }).getAttribute('src')).toBe(
+      '/api/files/8fd741a8-3f28-42e0-927d-fd68116a7ec1'
+    )
   })
 })

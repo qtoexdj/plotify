@@ -14,7 +14,8 @@ from typing import Any
 
 from services import legal_variable_catalog as catalog
 
-MATRIZ_SCHEMA_VERSION = 1
+MATRIZ_SCHEMA_VERSION = 2
+READABLE_SCHEMA_VERSIONS = frozenset((1, 2))
 
 # Research D11: prose renderings of already-approved snapshot values; the
 # resolver composes them at render time, they are never stored as variables.
@@ -42,7 +43,7 @@ REMOVED_KEY_MIGRATIONS = (
 )
 
 KNOWN_BLOCK_NODE_TYPES = frozenset(
-    ("paragraph", "block_token", "repeat_section", "conditional_section")
+    ("paragraph", "block_token", "repeat_section", "conditional_section", "optional_phrase")
 )
 KNOWN_INLINE_NODE_TYPES = frozenset(("text", "variable_token"))
 TOKEN_FORMATS = frozenset(("words", "date_words", "rut_words"))
@@ -165,7 +166,7 @@ def _walk(node: dict[str, Any], *, inside_repeat: bool, issues: list[InvalidKey]
         if issue:
             issues.append(issue)
         inside_repeat = True
-    elif node_type == "conditional_section":
+    elif node_type in ("conditional_section", "optional_phrase"):
         issue = _validate_condition_key(str(attrs.get("conditionKey") or ""))
         if issue:
             issues.append(issue)
@@ -174,7 +175,7 @@ def _walk(node: dict[str, Any], *, inside_repeat: bool, issues: list[InvalidKey]
                 InvalidKey(
                     key=str(attrs.get("conditionKey") or ""),
                     reason="invalid_node",
-                    suggested_migration="conditional_section mode must be omit or block",
+                    suggested_migration=f"{node_type} mode must be omit or block",
                 )
             )
     elif node_type == "text":
@@ -191,7 +192,7 @@ def _walk(node: dict[str, Any], *, inside_repeat: bool, issues: list[InvalidKey]
 def validate_clause_content(content_json: dict[str, Any]) -> list[InvalidKey]:
     """Validate one clause `content_json` against catalog + schema rules."""
     issues: list[InvalidKey] = []
-    if content_json.get("schema_version") != MATRIZ_SCHEMA_VERSION:
+    if content_json.get("schema_version") not in READABLE_SCHEMA_VERSIONS:
         issues.append(
             InvalidKey(
                 key="schema_version",

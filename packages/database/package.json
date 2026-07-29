@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "privileged:inventory": "node scripts/privileged-operations-inventory.mjs",
+    "schema:fingerprint": "node scripts/schema-fingerprint.mjs",
+    "test:db:linked": "node scripts/test-db.mjs --linked",
+    "types:generate:linked": "node scripts/generate-types.mjs --target linked",
+    "assert:linked": "node scripts/assert-linked.mjs",
     "verify:migrations": "node scripts/assert-canonical-migrations.mjs"
   }
 }

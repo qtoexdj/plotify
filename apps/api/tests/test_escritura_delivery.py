@@ -222,10 +222,10 @@ async def test_delivery_audits_token_and_expires_in_seven_days(monkeypatch: Any)
     )
 
     web = next(d for d in supabase.deliveries if d["channel"] == "web")
-    # Auditoria completa (FR-012): a quién, generación, enlace, vencimiento.
+    # Auditoria completa (FR-012): a quién, generación y vencimiento.
     assert web["recipient_user_id"] == "vendor-1"
     assert web["generation_id"] == "gen-1"
-    assert web["link_token"]
+    assert "link_token" not in web
     delta = datetime.fromisoformat(web["link_expires_at"]) - datetime.now(timezone.utc)
     assert timedelta(days=6, hours=23) < delta <= timedelta(days=7)
 
@@ -307,8 +307,8 @@ async def test_list_vendor_deliveries_isolates_by_vendor() -> None:
     assert all(v["escritura_case_id"] != "case-b" for v in a_views)
     # El link_token crudo nunca viaja en el contrato.
     assert all("link_token" not in v for v in a_views)
-    # Descarga firmada resuelta + estado humano.
-    assert a_views[0]["download_url"]
+    # Identificador opaco resuelto + estado humano.
+    assert a_views[0]["file_id"] == "gen-a"
     assert a_views[0]["status_label"] == "Entregada"
 
 
@@ -321,7 +321,7 @@ async def test_list_vendor_deliveries_marks_expired_link() -> None:
     )
     assert views[0]["status"] == "expired"
     assert views[0]["status_label"] == "Enlace vencido"
-    assert views[0]["download_url"] is None  # vencido: sin descarga hasta renovar
+    assert views[0]["file_id"] is None
 
 
 async def test_renew_link_rejects_other_vendor_but_allows_owner() -> None:
@@ -335,13 +335,13 @@ async def test_renew_link_rejects_other_vendor_but_allows_owner() -> None:
         )
         is None
     )
-    # Vendor B renueva la suya: enlace nuevo, estado "sent", descarga disponible.
+    # Vendor B renueva la suya: capacidad rotada y archivo opaco disponible.
     renewed = await renew_delivery_link(
         supabase, delivery_id="d-b", recipient_user_id="vendor-b", organization_id="org-1"
     )
     assert renewed is not None
     assert renewed["status"] == "sent"
-    assert renewed["download_url"]
+    assert renewed["file_id"] == "gen-b"
     assert "link_token" not in renewed
 
 
@@ -425,3 +425,17 @@ def test_delivery_sent_label_derives_from_flow_dictionary() -> None:
     from services.legal_microcopy import flow_state_label
 
     assert delivery_status_label("sent") == flow_state_label("delivered") == "Entregada"
+
+
+def test_sdd019_delivery_uses_hash_only_capabilities_without_storage_projection() -> None:
+    from pathlib import Path
+
+    source = "\n".join(
+        (Path(__file__).resolve().parents[1] / path).read_text()
+        for path in ("services/escritura_delivery.py", "services/document_capabilities.py")
+    )
+    assert "token_bytes(32)" in source, "STORAGE_URL_EXPOSED: capability entropy/encoding"
+    assert "capability_hash" in source, "STORAGE_URL_EXPOSED: plaintext capability persists"
+    assert "create_signed_url" not in source, "STORAGE_URL_EXPOSED: signed Storage URL"
+    assert '"download_url"' not in source, "STORAGE_URL_EXPOSED: delivery DTO leaks URL"
+    assert '"link_token"' not in source, "STORAGE_URL_EXPOSED: plaintext token persists"

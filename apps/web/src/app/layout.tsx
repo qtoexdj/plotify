@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Bricolage_Grotesque, Geist_Mono, Onest, Source_Serif_4 } from 'next/font/google'
-import Script from 'next/script'
+import { connection } from 'next/server'
 import './globals.css'
 
 const onest = Onest({
@@ -36,17 +36,20 @@ export const metadata: Metadata = {
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // A request-bound render is required for Next.js to propagate the CSP nonce
+  // from proxy.ts to every framework script and style tag.
+  await connection()
+
   return (
     <html lang="es" className={onest.variable} suppressHydrationWarning>
       <body
         className={`${bricolageGrotesque.variable} ${sourceSerif4.variable} ${geistMono.variable} antialiased`}
       >
-        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

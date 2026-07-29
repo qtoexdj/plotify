@@ -323,14 +323,6 @@ function isGeoJSONGeometry(geometry: unknown): geometry is GeoJSONGeometry {
   return true
 }
 
-function inferRoadInputMode(payload: SaveInfrastructurePayload): RoadSegmentInput['mode'] {
-  if (payload.inputMode) return payload.inputMode
-
-  return payload.geometry.type === 'Polygon' || payload.geometry.type === 'MultiPolygon'
-    ? 'footprint'
-    : 'centerline'
-}
-
 async function loadProjectRoadSegmentsForCalculation(
   supabase: SupabaseClient,
   projectId: string
@@ -534,158 +526,45 @@ export async function getGeometriesByProject(
 
 export async function saveAndAssignGeometry(
   payload: SaveAndAssignGeometryPayload,
-  supabaseClient?: SupabaseClient
+  supabaseClient: SupabaseClient,
+  context: { organizationId: string; actorUserId: string; operationId: string }
 ): Promise<Geometry> {
-  const supabase = supabaseClient || (await createClient())
-
-  // Verificar que el lote no tenga geometría asignada
-  const { data: existingLot, error: lotError } = await supabase
-    .from('lots')
-    .select('geometry_id')
-    .eq('id', payload.lotId)
-    .single()
-
-  if (lotError) {
-    throw new Error('Lote no encontrado')
-  }
-
-  if (existingLot.geometry_id) {
-    throw new Error('El lote ya tiene una geometría asignada')
-  }
-
-  // Crear geometría
-  const { data: geometry, error: geomError } = await supabase
-    .from('geometries')
-    .insert({
-      project_id: payload.projectId,
-      lot_id: payload.lotId,
-      geometry_type: payload.geometryType,
-      source_type: payload.sourceType,
-      geometry: payload.geometry,
-      properties: payload.properties,
-      is_assigned: true, // <-- Flag para nueva arquitectura
-    })
-    .select()
-    .single()
-
-  if (geomError) {
-    console.error('Error creating geometry:', geomError)
-    throw new Error('Error al crear geometría')
-  }
-
-  // Calcular m2 desde la geometría asignada
-  const m2 = computeM2FromGeoJSON(payload.geometry)
-
-  // Actualizar lote con geometry_id y m2 calculado
-  const { error: updateError } = await supabase
-    .from('lots')
-    .update({ geometry_id: geometry.id, ...(m2 !== null && { m2 }) })
-    .eq('id', payload.lotId)
-
-  if (updateError) {
-    console.error('Error updating lot:', updateError)
-    // Rollback: eliminar geometría
-    await supabase.from('geometries').delete().eq('id', geometry.id)
-    throw new Error('Error al asignar geometría al lote')
-  }
-
-  await recalculateLotServidumbreOnAssign(supabase, {
-    projectId: payload.projectId,
-    lotId: payload.lotId,
-    lotGeometry: payload.geometry,
-    lotM2: m2,
+  const { data, error } = await supabaseClient.rpc('assign_project_geometry', {
+    p_organization_id: context.organizationId,
+    p_project_id: payload.projectId,
+    p_lot_id: payload.lotId,
+    p_geometry_id: payload.geometryId,
+    p_expected_geometry_id: payload.expectedGeometryId,
+    p_operation_id: context.operationId,
+    p_actor_user_id: context.actorUserId,
   })
-
-  return geometry
+  if (error || !data) throw new Error(error?.message ?? 'LOT_GEOMETRY_CONFLICT')
+  return data as unknown as Geometry
 }
 
 export async function saveInfrastructure(
   payload: SaveInfrastructurePayload,
-  supabaseClient?: SupabaseClient
+  supabaseClient: SupabaseClient,
+  context: { organizationId: string; operationId: string; sourceHash: string; configHash: string }
 ): Promise<Geometry> {
-  const supabase = supabaseClient || (await createClient())
-
-  const { data, error } = await supabase
-    .from('geometries')
-    .insert({
-      project_id: payload.projectId,
-      lot_id: null, // Infraestructura no tiene lote
-      geometry_type: payload.geometryType,
-      source_type: payload.sourceType,
-      geometry: payload.geometry,
-      properties: payload.properties,
-      name: payload.name,
-      is_assigned: true, // <-- Flag para nueva arquitectura
-    })
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Error saving infrastructure:', error)
-    throw new Error('Error al guardar infraestructura')
+  const config = {
+    name: payload.name ?? null,
+    inputMode: payload.inputMode ?? null,
+    widthM: payload.widthM ?? null,
+    edgeSide: payload.edgeSide ?? null,
   }
-
-  // Si es un camino (road), persistir su tramo canónico y recalcular servidumbres.
-  if (payload.geometryType === 'road') {
-    try {
-      const inputMode = inferRoadInputMode(payload)
-      const widthM = payload.widthM ?? 6
-      const normalized = normalizeRoadSegmentToFootprint({
-        id: data.id,
-        geometry: payload.geometry,
-        mode: inputMode,
-        widthM,
-        edgeSide: payload.edgeSide,
-      })
-      const segmentPayload = {
-        project_id: payload.projectId,
-        geometry_id: data.id,
-        name: payload.name,
-        input_geometry: payload.geometry,
-        input_mode: inputMode,
-        width_m: widthM,
-        edge_side: payload.edgeSide ?? null,
-        footprint_geometry: normalized.geometry?.geometry ?? null,
-        source_type: payload.sourceType,
-        status: normalized.status,
-      }
-
-      const { data: roadSegment, error: roadSegmentError } = await supabase
-        .from('project_road_segments')
-        .insert(segmentPayload)
-        .select()
-        .single()
-
-      if (roadSegmentError) {
-        console.error('[Servidumbre] ERROR al guardar project_road_segments:', roadSegmentError)
-      }
-
-      if (roadSegment) {
-        const segmentForCalculation: PersistedRoadSegment = {
-          id: roadSegment.id,
-          name: roadSegment.name,
-          input_geometry:
-            (roadSegment.footprint_geometry as GeoJSONGeometry | null) ??
-            (roadSegment.input_geometry as GeoJSONGeometry),
-          input_mode: roadSegment.footprint_geometry ? 'footprint' : roadSegment.input_mode,
-          width_m: roadSegment.width_m,
-          edge_side: roadSegment.edge_side,
-          status: roadSegment.status,
-        }
-        const readyRoadSegments = await loadReadyProjectRoadSegments(supabase, payload.projectId)
-
-        await recalculateLotsFromRoadSegments(supabase, {
-          projectId: payload.projectId,
-          roadSegments: readyRoadSegments.length > 0 ? readyRoadSegments : [segmentForCalculation],
-        })
-      }
-    } catch (infraError) {
-      console.error('Error procesando servidumbres en saveInfrastructure:', infraError)
-      // No lanzamos error para no romper la inserción inicial, pero logueamos
-    }
-  }
-
-  return data
+  const { data, error } = await supabaseClient.rpc('commit_project_infrastructure', {
+    p_organization_id: context.organizationId,
+    p_project_id: payload.projectId,
+    p_derivation_type: payload.geometryType,
+    p_source_geometry_ids: payload.sourceGeometryIds,
+    p_config: config,
+    p_source_hash: context.sourceHash,
+    p_config_hash: context.configHash,
+    p_operation_id: context.operationId,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'INFRASTRUCTURE_COMMIT_FAILED')
+  return data as unknown as Geometry
 }
 
 export async function assignGeometry(
@@ -760,43 +639,23 @@ export async function assignGeometry(
  */
 export async function deleteGeometryByLotId(
   lotId: string,
-  supabaseClient?: SupabaseClient
+  supabaseClient: SupabaseClient,
+  context: {
+    projectId: string
+    organizationId: string
+    actorUserId: string
+    operationId: string
+    expectedGeometryId: string
+  }
 ): Promise<void> {
-  const supabase = supabaseClient || (await createClient())
-
-  // Obtener geometry_id del lote
-  const { data: lot, error: lotError } = await supabase
-    .from('lots')
-    .select('geometry_id')
-    .eq('id', lotId)
-    .single()
-
-  if (lotError || !lot) {
-    throw new Error('Lote no encontrado')
-  }
-
-  if (!lot.geometry_id) {
-    throw new Error('El lote no tiene geometría asignada')
-  }
-
-  const geometryId = lot.geometry_id
-
-  // Desvincular el lote primero (quitar geometry_id y limpiar m2)
-  const { error: unlinkError } = await supabase
-    .from('lots')
-    .update({ geometry_id: null, m2: null })
-    .eq('id', lotId)
-
-  if (unlinkError) {
-    throw new Error('Error al desvincular geometría del lote')
-  }
-
-  // Eliminar la geometría de la base de datos
-  const { error: deleteError } = await supabase.from('geometries').delete().eq('id', geometryId)
-
-  if (deleteError) {
-    // Rollback: restaurar geometry_id en el lote
-    await supabase.from('lots').update({ geometry_id: geometryId }).eq('id', lotId)
-    throw new Error('Error al eliminar geometría')
-  }
+  const { error } = await supabaseClient.rpc('assign_project_geometry', {
+    p_organization_id: context.organizationId,
+    p_project_id: context.projectId,
+    p_lot_id: lotId,
+    p_geometry_id: null,
+    p_expected_geometry_id: context.expectedGeometryId,
+    p_operation_id: context.operationId,
+    p_actor_user_id: context.actorUserId,
+  })
+  if (error) throw new Error(error.message)
 }

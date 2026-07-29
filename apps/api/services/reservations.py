@@ -20,6 +20,7 @@ async def create_reservation_request_service(
     redis: ArqRedis,
     supabase: Any = None,
     idempotency_key: str | None = None,
+    operation_id: str | None = None,
 ) -> Dict[str, Any]:
     """
     Servicio centralizado de creación de solicitudes de reserva.

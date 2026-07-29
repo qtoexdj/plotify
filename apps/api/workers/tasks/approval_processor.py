@@ -29,6 +29,7 @@ async def execute_admin_decision_db(
     action: str,
     admin_id: str,
     channel: str | None = None,
+    operation_id: str | None = None,
 ) -> dict:
     """
     Realiza las operaciones de base de datos de manera atómica (validar tenant, RPC, y registrar auditoría).
@@ -64,14 +65,18 @@ async def execute_admin_decision_db(
     else:
         raise HTTPException(status_code=400, detail="Acción desconocida en decisión de admin.")
 
+    rpc_params = {
+        "p_approval_id": approval_id,
+        "p_admin_phone": admin_id,
+    }
+    if operation_id:
+        rpc_params["p_operation_id"] = operation_id
+
     result = await asyncio.to_thread(
         lambda: (
             supabase.rpc(
                 rpc_name,
-                {
-                    "p_approval_id": approval_id,
-                    "p_admin_phone": admin_id,
-                },
+                rpc_params,
             ).execute()
         )
     )
@@ -81,11 +86,19 @@ async def execute_admin_decision_db(
         error_msg = rpc_data.get("error", "already_processed") if rpc_data else "already_processed"
         raise HTTPException(status_code=409, detail=error_msg)
 
-    # 3. Tras validar una venta, enganchar el flujo legal SDD 011.
+    # 3. Compatibilidad con targets anteriores a SDD019. En el esquema nuevo,
+    # approve_sale devuelve workflow_outbox_id y el consumidor durable crea el
+    # caso/borrador; nunca se ejecuta la cascada inline.
     lot_id = rpc_data.get("lot_id")
+    workflow_outbox_id = rpc_data.get("workflow_outbox_id")
     escritura_hook_result = None
     escritura_hook_error = None
-    if request_type == "sale" and action == "approve" and lot_id:
+    if (
+        request_type == "sale"
+        and action == "approve"
+        and lot_id
+        and not workflow_outbox_id
+    ):
         from services.escritura_sale_hook import handle_sale_validated_for_escritura
 
         try:
@@ -166,6 +179,7 @@ async def execute_admin_decision_db(
         "previous_lot_state": request_info.get("previous_lot_state"),
         "escritura_hook": escritura_hook_result,
         "escritura_hook_error": escritura_hook_error,
+        "workflow_outbox_id": workflow_outbox_id,
     }
 
 
@@ -459,6 +473,23 @@ async def process_admin_decision(
             admin_id=admin_id,
             channel=channel,
         )
+        workflow_outbox_id = db_result.get("workflow_outbox_id")
+        if workflow_outbox_id:
+            from services.escritura_sale_hook import wakeup_sale_workflow_outbox
+
+            try:
+                await wakeup_sale_workflow_outbox(
+                    redis=ctx.get("redis"),
+                    workflow_outbox_id=str(workflow_outbox_id),
+                )
+            except Exception:
+                # Redis is only a latency optimization. The due Postgres row
+                # remains recoverable by the periodic outbox consumer.
+                logger.warning(
+                    "escritura_workflow_outbox_wakeup_failed",
+                    approval_id=approval_id,
+                    workflow_outbox_id=str(workflow_outbox_id),
+                )
         await send_decision_notifications(
             ctx=ctx,
             org_id=org_id,

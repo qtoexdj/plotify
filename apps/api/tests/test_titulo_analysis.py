@@ -715,7 +715,9 @@ async def test_agent_blocks_stage_proposed_when_fact_check_passes(
         if p.variable_key
         in {"titulo.comparecencia_vendedor_texto", "titulo.clausula_primero_texto"}
     }
-    assert states["titulo.comparecencia_vendedor_texto"] == "proposed"
+    # SDD019: una comparecencia sin todos los hechos estructurados/evidenciados
+    # del vendedor nunca se promueve aunque el fact-check narrativo aislado pase.
+    assert states["titulo.comparecencia_vendedor_texto"] == "manual_review"
     assert states["titulo.clausula_primero_texto"] == "proposed"
     assert result.narrative is not None
     assert result.narrative.comparecencia is not None

@@ -9,7 +9,6 @@
 
 - Node.js 22.13+
 - pnpm 11+
-- Docker con los contenedores compartidos ya levantados
 - Python 3.13+ (para microservicio)
 - Redis en contenedor Docker existente
 
@@ -24,25 +23,14 @@ pnpm dev:web
 
 Abre `http://localhost:3000`
 
-## Supabase local
+## Supabase cloud linked
 
-Plotify usa el stack Supabase Docker existente. No levantar un stack nuevo con
-`supabase start` desde este repo salvo que se pida explicitamente.
-
-Contenedores esperados del stack compartido:
-
-- `supabase-kong`: API gateway en `http://127.0.0.1:8000`.
-- `supabase-db`: PostgreSQL interno del stack.
-- `supabase-pooler`: puertos publicados `5432` y `6543`.
-- `supabase-rest`, `supabase-auth`, `supabase-storage`, `supabase-realtime`,
-  `supabase-meta`, `supabase-studio`, `supabase-analytics`,
-  `supabase-vector`, `supabase-mail`, `supabase-imgproxy`,
-  `supabase-edge-functions`.
-
-Supabase corre para la app en `http://127.0.0.1:8000`.
+Plotify usa exclusivamente el proyecto cloud linked `swkrnjdpnlrgxgotmfxy`.
+No se crea, inicia, inspecciona, migra ni prueba una instancia Supabase local.
+Docker no forma parte del flujo de Supabase.
 
 Las variables en `.env` del frontend:
-- `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:8000`
+- `NEXT_PUBLIC_SUPABASE_URL=https://swkrnjdpnlrgxgotmfxy.supabase.co`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: usar la clave existente en `apps/web/.env`.
 - `SUPABASE_SERVICE_ROLE_KEY`: usar la clave existente en `apps/web/.env`.
 
@@ -118,9 +106,9 @@ pnpm verify:migrations
 
 ## Troubleshooting
 
-- Si Supabase no responde: verificar que `supabase-kong` este corriendo y que
-  `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_URL` apunten a `http://127.0.0.1:8000`
-  o `http://localhost:8000`.
+- Si Supabase no responde: verificar conectividad cloud, link al proyecto
+  `swkrnjdpnlrgxgotmfxy` y que `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_URL`
+  apunten a `https://swkrnjdpnlrgxgotmfxy.supabase.co`.
 - Si Redis no responde: verificar que el contenedor `redis` este corriendo en
   `localhost:6379`.
 - Si el microservicio no conecta: verificar que INTERNAL_API_SECRET coincida.

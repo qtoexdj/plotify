@@ -220,7 +220,8 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      documents.push(document)
+      const { storage_bucket: _bucket, storage_path: _object, ...publicDocument } = document
+      documents.push({ ...publicDocument, fileId: document.id })
     }
 
     if (documents.length === 0) {

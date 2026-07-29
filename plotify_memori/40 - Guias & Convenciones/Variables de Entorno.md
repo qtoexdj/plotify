@@ -11,7 +11,7 @@
 
 | Variable | Ejemplo | Descripcion |
 |----------|---------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | `http://127.0.0.1:8000` | URL del gateway Supabase Docker existente (`supabase-kong`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://swkrnjdpnlrgxgotmfxy.supabase.co` | URL del proyecto Supabase cloud linked |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJ...` | Clave anonima para browser; fuente real: `plotify/.env` |
 | `SUPABASE_SERVICE_ROLE_KEY` | `eyJ...` | Clave service-role para server; fuente real: `plotify/.env` |
 
@@ -41,9 +41,9 @@
 
 | Variable | Descripcion |
 |----------|-------------|
-| `SUPABASE_URL` | Mismo gateway Supabase que el frontend: `http://127.0.0.1:8000` o `http://localhost:8000` |
+| `SUPABASE_URL` | Mismo proyecto Supabase cloud linked que usa el frontend |
 | `SUPABASE_SERVICE_ROLE_KEY` | Misma key service-role; fuente real: `plotify_chat/.env` |
-| `SUPABASE_DB_URL` | Conexion PostgreSQL/pooler al stack Docker existente; fuente real: `plotify_chat/.env`; validada contra `supabase-pooler` en `localhost:6543` |
+| `SUPABASE_DB_URL` | Conexión PostgreSQL al pooler cloud del proyecto linked; fuente real: `apps/api/.env` |
 | `OPENAI_API_KEY` | Clave de OpenAI (si se usa GPT) |
 | `ANTHROPIC_API_KEY` | Clave de Anthropic (si se usa Claude) |
 | `INTERNAL_API_SECRET` | Mismo secret que el frontend |

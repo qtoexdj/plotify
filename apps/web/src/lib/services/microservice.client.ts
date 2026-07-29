@@ -1,7 +1,11 @@
+import 'server-only'
 import { logger } from '@/lib/logger'
 
+// Browser callers always use a same-origin Next.js gateway; only this server-only
+// adapter may resolve the private API origin.
 const BASE_URL = process.env.PLOTIFY_CHAT_BASE_URL || 'http://127.0.0.1:8005'
 const SECRET = process.env.INTERNAL_API_SECRET
+const TOTAL_TIMEOUT_MS = 10_000
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
@@ -28,6 +32,9 @@ export async function microserviceFetch<T = unknown>(
     logger.error({ path }, '[microservice.client] INTERNAL_API_SECRET no configurado')
     return { data: null, error: 'Error de configuración del servidor', status: 500 }
   }
+  if (!path.startsWith('/api/v1/') || path.includes('..')) {
+    return { data: null, error: 'Ruta interna no permitida', status: 400 }
+  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -46,6 +53,8 @@ export async function microserviceFetch<T = unknown>(
       method,
       headers,
       ...(body !== undefined && { body: JSON.stringify(body) }),
+      redirect: 'error',
+      signal: AbortSignal.timeout(TOTAL_TIMEOUT_MS),
     })
 
     if (!response.ok) {
@@ -65,22 +74,14 @@ export async function microserviceFetch<T = unknown>(
 
     const data = (await response.json()) as T
     return { data, error: null, status: response.status }
-  } catch (err) {
-    const errorDetails =
-      err instanceof Error
-        ? {
-            message: err.message,
-            code: (err as unknown as Record<string, unknown>).code,
-            stack: err.stack,
-          }
-        : String(err)
+  } catch {
     logger.error(
-      { path, url, err: errorDetails },
+      { path, code: 'UPSTREAM_UNAVAILABLE' },
       '[microservice.client] Excepción de conexión al microservicio'
     )
     return {
       data: null,
-      error: `No se pudo conectar con el microservicio en ${url}. Detalle: ${err instanceof Error ? err.message : String(err)}`,
+      error: 'No se pudo conectar con el servicio interno',
       status: 503,
     }
   }

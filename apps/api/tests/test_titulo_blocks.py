@@ -216,14 +216,15 @@ class TestBlockFactCheck:
         assert not result.ok
         assert any("Minghel" in issue.hecho for issue in result.issues)
 
-    def test_bracketed_hueco_is_not_flagged_as_fact(self):
-        # Borrador: un dato faltante (p. ej. nacionalidad) va como hueco entre
-        # corchetes en MAYÚSCULAS y NO debe marcarse como hecho sin respaldo.
+    def test_bracketed_hueco_is_rejected_as_semantic_placeholder(self):
+        # SDD019: los faltantes permanecen estructurados; nunca se materializan
+        # como placeholders literales dentro del texto legal.
         analysis = _verified_golden_analysis()
         comparecencia, _ = _golden_blocks()
         with_hueco = comparecencia + " de nacionalidad [NACIONALIDAD],"
         result = check_block_facts(with_hueco, analysis)
-        assert result.ok, [issue.as_dict() for issue in result.issues]
+        assert not result.ok
+        assert result.issues[0].motivo == "SEM_PLACEHOLDER_LITERAL"
         # Control: el mismo término SIN corchetes sí se marca como sin respaldo.
         without_brackets = comparecencia + " de nacionalidad ARGENTINA,"
         control = check_block_facts(without_brackets, analysis)

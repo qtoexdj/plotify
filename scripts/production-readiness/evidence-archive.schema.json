@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plotify.local/schemas/evidence-archive.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "releaseSha",
+    "evidenceManifestDigest",
+    "immutableLocator",
+    "archiveDigest",
+    "sourceManifestDigest",
+    "reportDigest",
+    "deploymentManifestDigest",
+    "provenance",
+    "readbackAt",
+    "retentionUntil",
+    "redactionPolicyVersion"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runId": { "type": "string", "format": "uuid" },
+    "releaseSha": { "$ref": "#/$defs/sha" },
+    "evidenceManifestDigest": { "$ref": "#/$defs/digest" },
+    "immutableLocator": { "type": "string", "minLength": 1 },
+    "archiveDigest": { "$ref": "#/$defs/digest" },
+    "sourceManifestDigest": { "$ref": "#/$defs/digest" },
+    "reportDigest": { "$ref": "#/$defs/digest" },
+    "deploymentManifestDigest": { "$ref": "#/$defs/digest" },
+    "provenance": { "type": "string", "minLength": 1 },
+    "readbackAt": { "type": "string", "format": "date-time" },
+    "retentionUntil": { "type": "string", "format": "date-time" },
+    "redactionPolicyVersion": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

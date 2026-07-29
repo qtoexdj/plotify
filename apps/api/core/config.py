@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Plotify Messaging Engine"
     API_V1_STR: str = "/api/v1"
     API_PORT: int = 8005
+    ENVIRONMENT: str = "development"
 
     # Security
     INTERNAL_API_SECRET: str = ""  # Populated from .env
@@ -77,6 +78,7 @@ class Settings(BaseSettings):
     # Meta / WhatsApp API
     META_VERIFY_TOKEN: str = ""  # Populated from .env
     META_ACCESS_TOKEN: str = ""
+    META_APP_SECRET: str = ""
     META_PHONE_NUMBER_ID: str = ""
 
     # Telegram API

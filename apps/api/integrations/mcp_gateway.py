@@ -15,6 +15,7 @@ import httpx
 
 from core.database import get_supabase_client
 from core.logger import get_logger
+from integrations.egress_policy import guarded_client_options
 
 logger = get_logger(__name__)
 
@@ -119,7 +120,7 @@ async def execute_mcp_tool(connection_id: str, tool_name: str, params: dict) -> 
 
     try:
         tool_path = quote(tool_name, safe="")
-        async with httpx.AsyncClient(timeout=MCP_REQUEST_TIMEOUT) as client:
+        async with httpx.AsyncClient(**guarded_client_options()) as client:
             response = await client.post(
                 f"{server_url}/tools/{tool_path}",
                 json={"credentials": credentials, "params": params},

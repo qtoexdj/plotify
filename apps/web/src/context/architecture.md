@@ -123,7 +123,7 @@ plotify/
 
 - **Responsabilidad**: Wizard de creación de proyecto con KMZ
 - **Endpoints**:
-  - `POST /api/uploads/geometry` (Soporta KMZ/KML y CAD DXF/DWG)
+  - `POST /api/projects/{projectId}/geometry-imports` (importación canónica KMZ/KML URL-scoped)
   - `GET /api/onboarding/[projectId]/lots`
   - `GET /api/onboarding/[projectId]/geometries`
   - `POST /api/onboarding/assign`

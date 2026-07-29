@@ -30,6 +30,10 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
   const [_fileType, setFileType] = useState<'kmz' | 'kml' | 'dxf' | 'dwg' | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [featuresCount, setFeaturesCount] = useState<number>(0)
+  const [currentSourceSha256, setCurrentSourceSha256] = useState<string | null>(null)
+  const [importHistory, setImportHistory] = useState<
+    Array<{ importId: string; version: number; sourceSha256: string }>
+  >([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,9 +69,21 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
     try {
       const formData = new FormData()
       formData.append('file', selectedFile)
-      formData.append('project_id', projectId)
+      formData.append('idempotencyKey', crypto.randomUUID())
+      if (currentSourceSha256) {
+        if (
+          !window.confirm(
+            'Esta acción conservará la importación anterior y reemplazará la versión activa.'
+          )
+        ) {
+          setStatus('idle')
+          return
+        }
+        formData.append('expectedSourceSha256', currentSourceSha256)
+        formData.append('confirmReplacement', 'true')
+      }
 
-      const response = await fetch('/api/uploads/geometry', {
+      const response = await fetch(`/api/projects/${projectId}/geometry-imports`, {
         method: 'POST',
         body: formData,
         signal: controller.signal,
@@ -90,6 +106,11 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
 
       setStatus('success')
       setFeaturesCount(data.totalFeatures)
+      setCurrentSourceSha256(data.sourceSha256)
+      setImportHistory((history) => [
+        ...history,
+        { importId: data.importId, version: data.version, sourceSha256: data.sourceSha256 },
+      ])
       setSelectedFile(null)
       setFileType(null)
       if (fileInputRef.current) {
@@ -171,6 +192,24 @@ export function GeometryUploadPanel({ projectId, onUploadSuccess }: GeometryUplo
             <span className="text-sm font-medium">
               Archivo parseado correctamente. {featuresCount} geometrías detectadas.
             </span>
+          </div>
+        )}
+
+        {importHistory.length > 0 && (
+          <div
+            className="space-y-2 rounded border border-border p-3"
+            aria-label="Historial de importaciones"
+          >
+            <p className="text-sm font-medium">Historial de importaciones</p>
+            {importHistory.map((item) => (
+              <div
+                key={item.importId}
+                className="flex items-center justify-between text-xs text-muted-foreground"
+              >
+                <span>Versión {item.version}</span>
+                <code>{item.sourceSha256.slice(0, 12)}…</code>
+              </div>
+            ))}
           </div>
         )}
 

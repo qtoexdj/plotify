@@ -6,6 +6,7 @@ from core.logger import get_logger
 from core.redis import get_arq_pool
 from core.rate_limiter import limiter
 from arq.connections import ArqRedis
+from core.webhook_security import redact_webhook_log, verify_meta_signature
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -61,7 +62,7 @@ async def verify_meta_webhook(
 @limiter.limit("50/second")
 async def receive_meta_webhook(
     request: Request,
-    payload: MetaWebhookPayload,
+    x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256"),
     redis: ArqRedis = Depends(get_arq_pool),
 ):
     """
@@ -69,6 +70,21 @@ async def receive_meta_webhook(
     Regla de Oro: Siempre retornar 200 OK de inmediato a Meta.
     Todo el procesamiento pesado va asíncrono vía la cola Redis (arq).
     """
+    raw_body = await request.body()
+    if not verify_meta_signature(raw_body, x_hub_signature_256, settings.META_APP_SECRET):
+        logger.warning("Webhook Meta rechazado por firma inválida")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Webhook Meta no autorizado.",
+        )
+    try:
+        payload = MetaWebhookPayload.model_validate_json(raw_body)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payload Meta inválido.",
+        )
+
     # Siempre respondemos 200 OK inmediatamente para evitar reintentos masivos de Meta.
     logger.debug("Payload de webhook recibido", entry_count=len(payload.entry))
 
@@ -139,7 +155,9 @@ async def receive_telegram_webhook(
     token_state = _telegram_secret_token_state(
         settings.TELEGRAM_WEBHOOK_SECRET, x_telegram_token
     )
-    if token_state in {"missing", "invalid"}:
+    if token_state in {"missing", "invalid"} or (
+        token_state == "disabled" and settings.ENVIRONMENT == "production"
+    ):
         logger.warning(
             "Webhook Telegram rechazado por autenticacion",
             org_id=org_id,
@@ -166,7 +184,10 @@ async def receive_telegram_webhook(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Payload Telegram invalido.",
         )
-    logger.info("Raw Telegram Payload recibido", payload=body, org_id=org_id)
+    logger.info(
+        "Webhook Telegram recibido",
+        **redact_webhook_log({"org_id": org_id, "event_id": body.get("update_id")}),
+    )
 
     # --- CASO 1: Callback Query (Admin presionó un botón de aprobación) ---
     callback_query = body.get("callback_query")
@@ -294,11 +315,7 @@ async def receive_telegram_webhook(
 
             if link_token:
                 # CASO A: /start TOKEN → deep link desde el CRM, iniciar vinculación
-                logger.info(
-                    "Token de vinculación detectado en /start",
-                    token=link_token,
-                    chat_id=chat_id,
-                )
+                logger.info("Token de vinculación detectado en /start", org_id=org_id)
                 await redis.enqueue_job(
                     "link_telegram_account", org_id, link_token, chat_id
                 )

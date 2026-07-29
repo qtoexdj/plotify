@@ -287,11 +287,17 @@ def check_block_facts(block_text: str, analysis: TitleAnalysis) -> BlockCheckRes
     """Validate an agent-drafted block against the verified analysis."""
     issues: list[BlockFactIssue] = []
 
-    # Los huecos del borrador van entre corchetes (ej. "[NACIONALIDAD]"): son
-    # marcadores de un dato faltante que la notaría/abogado completan después,
-    # no hechos afirmados por el agente. Se excluyen de la verificación de
-    # números, fechas y nombres para no marcarlos como "sin respaldo".
-    block_text = re.sub(r"\[[^\]]*\]", " ", block_text)
+    # SDD019: placeholders are never a valid legal fact, even in an internal
+    # draft. Missing values remain structured gaps outside prose.
+    placeholders = re.findall(r"\[[^\]]*\]|_{5,}", block_text)
+    for placeholder in placeholders:
+        issues.append(
+            BlockFactIssue(
+                hecho="marcador_redactado",
+                motivo="SEM_PLACEHOLDER_LITERAL",
+            )
+        )
+    block_text = re.sub(r"\[[^\]]*\]|_{5,}", " ", block_text)
 
     # 1. Numbers: words or digits, every parsed number must be allowed.
     allowed_numbers = allowed_block_numbers(analysis)

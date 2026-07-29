@@ -16,6 +16,31 @@ from core.config import get_settings
 
 _api_key_header = APIKeyHeader(name="X-Internal-Secret", auto_error=False)
 
+API_SECURITY_FOUNDATION_NOT_IMPLEMENTED = "API_SECURITY_FOUNDATION_NOT_IMPLEMENTED"
+
+
+def resolve_trusted_principal(
+    *,
+    authorization: str | None,
+    internal_secret: str | None,
+    claimed_user_id: str | None,
+    claimed_organization_id: str | None,
+    verified_user: dict[str, Any] | None,
+    service_assertion: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Resolve the trusted principal only from verified credentials (T017)."""
+    del authorization, internal_secret
+    principal = verified_user or service_assertion
+    if not principal:
+        raise PermissionError("VERIFIED_PRINCIPAL_REQUIRED")
+    subject = principal.get("subject") or principal.get("user_id")
+    organization_id = principal.get("organization_id")
+    if claimed_user_id and claimed_user_id != subject:
+        raise PermissionError("PRINCIPAL_SUBJECT_MISMATCH")
+    if claimed_organization_id and claimed_organization_id != organization_id:
+        raise PermissionError("PRINCIPAL_TENANT_MISMATCH")
+    return principal
+
 
 async def verify_internal_secret(
     api_key: str | None = Security(_api_key_header),
@@ -188,4 +213,3 @@ async def require_admin_role(
             status_code=403,
             detail=f"Acceso denegado: Error validando permisos de administrador ({str(e)}).",
         )
-

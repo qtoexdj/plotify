@@ -21,8 +21,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from core.logger import get_logger
+from core.release_flags import resolve_feature_rollout
 from services.escritura_case_workflow import (
     _alert_clause_blockers,
+    _approve_semantic_candidate,
     _as_dict,
     _effective_clauses,
     _fetch_active_matrix,
@@ -48,8 +50,9 @@ from services.escritura_delivery import _recipient_chat_id
 
 logger = get_logger(__name__)
 
-CASCADE_TRIGGERS = ("sale_validated", "review_approved", "manual_retry")
+CASCADE_TRIGGERS = ("sale_validated", "review_approved", "manual_retry", "workflow_outbox")
 CASCADE_OUTCOMES = ("completed", "exception", "awaiting_review")
+_CASE_CASCADE_LOCKS: dict[tuple[str, str], asyncio.Lock] = {}
 
 
 class CascadeError(Exception):
@@ -275,6 +278,30 @@ async def _system_approve_matriz(
     inherited_from_matriz_id: str | None,
     inherited_matriz_version: int | None,
 ) -> dict[str, Any]:
+    if hasattr(client, "rpc"):
+        grant_result = await asyncio.to_thread(
+            lambda: (
+                client.table("legal_approval_grants")
+                .select("id, grantee_user_id")
+                .eq("organization_id", str(matrix_row["organization_id"]))
+                .eq("active", True)
+                .order("granted_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+        )
+        grant = _first_row(getattr(grant_result, "data", None))
+        if not grant:
+            raise RuntimeError("LEGAL_APPROVAL_REQUIRED")
+        return await _approve_semantic_candidate(
+            client=client,
+            matrix_row=matrix_row,
+            case_row=case_row,
+            actor_id=str(grant["grantee_user_id"]),
+            operation_key=f"system:{matrix_row['id']}:{matrix_row['version']}:{trigger}",
+            legal_grant_id=str(grant["id"]),
+            origin="system",
+        )
     now = _utc_now_iso()
     payload = {
         "status": "approved",
@@ -375,7 +402,7 @@ async def _system_approve_legal_review(
     )
 
 
-async def run_case_cascade(
+async def _run_case_cascade(
     *,
     organization_id: str,
     escritura_case_id: str,
@@ -701,6 +728,7 @@ async def run_case_cascade(
             generated_by=None,
             warning_acknowledged_by=warning_ack_by,
             warning_acknowledged_at=warning_ack_at,
+            generation_mode="automatic",
         )
         steps.append({"step": "generate", "action": "executed"})
         generation_id = str(generation.id)
@@ -729,3 +757,80 @@ async def run_case_cascade(
         generation_id=generation_id,
         created_at=run_row.get("created_at"),
     )
+
+
+async def _defer_workflow_outbox_for_feature_off(
+    client: Any, *, workflow_outbox_id: str, reason: str
+) -> None:
+    """Keep the durable obligation intact when automatic generation is off."""
+    await asyncio.to_thread(
+        lambda: client.table("workflow_outbox")
+        .update(
+            {
+                "status": "deferred_feature_off",
+                "lease_owner": None,
+                "lease_expires_at": None,
+                "heartbeat_at": None,
+                "last_error_code": f"AUTOMATIC_ESCRITURA_{reason.upper()}",
+            }
+        )
+        .eq("id", workflow_outbox_id)
+        .execute()
+    )
+
+
+async def _begin_pipeline_outbox_attempt(client: Any, workflow_outbox_id: str) -> None:
+    """Record a direct pipeline attempt; worker claims already own this transition."""
+    if hasattr(client, "rpc"):
+        # The worker has already called this RPC.  This branch supports callers
+        # that enter the pipeline directly while retaining its atomic contract.
+        return
+    await asyncio.to_thread(
+        lambda: client.table("workflow_outbox")
+        .update({"status": "processing", "attempt_count": 1})
+        .eq("id", workflow_outbox_id)
+        .execute()
+    )
+
+
+async def run_case_cascade(
+    *,
+    organization_id: str,
+    escritura_case_id: str,
+    trigger: str,
+    supabase: Any | None = None,
+    workflow_outbox_id: str | None = None,
+    automatic_escritura_hard_off: bool = True,
+) -> CascadeRunResult:
+    """Run one serialized cascade and fail closed for durable auto-work."""
+    if supabase is None:
+        from core.database import get_supabase_client
+
+        supabase = get_supabase_client()
+    client = supabase
+    org_id, case_id = str(organization_id), str(escritura_case_id)
+
+    if workflow_outbox_id:
+        case_row = await _fetch_case(client, case_id, org_id)
+        rollout = resolve_feature_rollout(
+            feature_key="automatic_escritura",
+            organization_id=org_id,
+            project_id=str(case_row.get("project_id") or "") or None,
+            control=None,
+            hard_off=automatic_escritura_hard_off,
+        )
+        if not rollout.enabled:
+            await _defer_workflow_outbox_for_feature_off(
+                client, workflow_outbox_id=str(workflow_outbox_id), reason=rollout.reason
+            )
+            return CascadeRunResult(run_id=None, outcome="deferred_feature_off")
+        await _begin_pipeline_outbox_attempt(client, str(workflow_outbox_id))
+
+    lock = _CASE_CASCADE_LOCKS.setdefault((org_id, case_id), asyncio.Lock())
+    async with lock:
+        return await _run_case_cascade(
+            organization_id=org_id,
+            escritura_case_id=case_id,
+            trigger=trigger,
+            supabase=client,
+        )

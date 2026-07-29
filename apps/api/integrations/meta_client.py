@@ -2,6 +2,7 @@ import httpx
 import logging
 from typing import Optional
 from core.config import get_settings
+from integrations.egress_policy import guarded_client_options, validate_destination
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +40,15 @@ class MetaClient:
             "text": {"body": text},
         }
 
-        async with httpx.AsyncClient() as client:
+        destination = validate_destination(
+            f"{self.base_url}/messages",
+            allowed_hosts=frozenset({"graph.facebook.com"}),
+            allowed_path_prefixes=(f"/{self.api_version}/",),
+        )
+        async with httpx.AsyncClient(**guarded_client_options()) as client:
             try:
                 response = await client.post(
-                    f"{self.base_url}/messages",
+                    destination,
                     json=payload,
                     headers=headers,
                     timeout=10.0,

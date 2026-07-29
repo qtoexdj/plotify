@@ -12,7 +12,6 @@ import {
   Location01Icon,
 } from '@hugeicons/core-free-icons'
 import { Spinner } from '@/components/ui/spinner'
-import { combineLineStrings, combinePolygons } from '@/lib/geometry/utils'
 
 import { AssignmentMapPanel } from './AssignmentMapPanel'
 import { AssignmentMapLayers } from './AssignmentMapLayers'
@@ -89,14 +88,6 @@ function buildFullFeatureCollection(
   }
 }
 
-function isLineGeometry(geometry: ParsedFeature['geometry']): boolean {
-  return geometry.type === 'LineString' || geometry.type === 'MultiLineString'
-}
-
-function isPolygonGeometry(geometry: ParsedFeature['geometry']): boolean {
-  return geometry.type === 'Polygon' || geometry.type === 'MultiPolygon'
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────
@@ -104,7 +95,6 @@ function isPolygonGeometry(geometry: ParsedFeature['geometry']): boolean {
 export function GeometryAssignmentPanel({
   projectId,
   parsedFeatures,
-  sourceType,
   onFeatureAssigned,
   onAssignmentComplete,
 }: GeometryAssignmentProps) {
@@ -252,10 +242,9 @@ export function GeometryAssignmentPanel({
         body: JSON.stringify({
           projectId,
           lotId: selectedLotId,
-          geometry: selectedFeature.geometry,
-          properties: selectedFeature.properties,
-          sourceType,
-          geometryType: 'lot',
+          geometryId: selectedFeature.tempId,
+          expectedGeometryId: null,
+          idempotencyKey: crypto.randomUUID(),
         }),
       })
 
@@ -283,7 +272,6 @@ export function GeometryAssignmentPanel({
     selectedShapeIds,
     parsedFeatures,
     projectId,
-    sourceType,
     onFeatureAssigned,
     onAssignmentComplete,
   ])
@@ -302,25 +290,7 @@ export function GeometryAssignmentPanel({
     setSuccessMessage(null)
 
     try {
-      let combinedGeometry: ParsedFeature['geometry']
-      if (selectedFeatures.length === 1) {
-        combinedGeometry = selectedFeatures[0].geometry
-      } else {
-        combinedGeometry =
-          geometryType === 'road' && roadInputMode === 'centerline'
-            ? combineLineStrings(selectedFeatures.map((s) => s.geometry))
-            : combinePolygons(selectedFeatures.map((s) => s.geometry))
-      }
-
       if (geometryType === 'road') {
-        if (roadInputMode === 'centerline' && !isLineGeometry(combinedGeometry)) {
-          throw new Error('El modo eje requiere una línea o multilínea')
-        }
-
-        if (roadInputMode === 'footprint' && !isPolygonGeometry(combinedGeometry)) {
-          throw new Error('El modo huella requiere un polígono o multipolígono')
-        }
-
         if (!Number.isFinite(roadWidthM) || roadWidthM <= 0) {
           throw new Error('El ancho del camino debe ser mayor que 0')
         }
@@ -331,17 +301,13 @@ export function GeometryAssignmentPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId,
-          geometry: combinedGeometry,
-          properties: selectedFeatures[0].properties,
-          sourceType,
           geometryType,
-          name: infraName || `${geometryType}-${Date.now()}`,
-          ...(geometryType === 'road'
-            ? {
-                inputMode: roadInputMode,
-                widthM: roadWidthM,
-              }
-            : {}),
+          sourceGeometryIds: selectedFeatures.map((feature) => feature.tempId),
+          idempotencyKey: crypto.randomUUID(),
+          config: {
+            name: infraName || `${geometryType}-${Date.now()}`,
+            ...(geometryType === 'road' ? { inputMode: roadInputMode, widthM: roadWidthM } : {}),
+          },
         }),
       })
 
@@ -375,7 +341,6 @@ export function GeometryAssignmentPanel({
     parsedFeatures,
     assignAsType,
     projectId,
-    sourceType,
     infraName,
     roadInputMode,
     roadWidthM,
@@ -392,8 +357,8 @@ export function GeometryAssignmentPanel({
 
       try {
         const response = await fetch(
-          `/api/onboarding/unassign-geometry?projectId=${projectId}&lotId=${lotId}`,
-          { method: 'DELETE' }
+          `/api/onboarding/unassign-geometry?projectId=${projectId}&lotId=${lotId}&expectedGeometryId=${assignmentMap[lotId]?.[0] ?? ''}`,
+          { method: 'DELETE', headers: { 'Idempotency-Key': crypto.randomUUID() } }
         )
         const data = await response.json()
         if (!response.ok) throw new Error(data.error || 'Error al revertir asignación')

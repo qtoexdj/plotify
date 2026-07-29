@@ -3,6 +3,7 @@ import hashlib
 import json
 import time
 import urllib.parse
+import asyncio
 from typing import Optional, Tuple, Dict, Any
 import jwt
 from fastapi import HTTPException, Security, status, Depends
@@ -10,6 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from core.config import get_settings
 from core.logger import get_logger
+from core.database import get_supabase_client
 
 logger = get_logger(__name__)
 security = HTTPBearer()
@@ -165,13 +167,15 @@ async def verify_miniapp_session(
                 detail="Invalid token payload"
             )
 
-        return MiniappUserContext(
+        context = MiniappUserContext(
             user_id=uuid.UUID(user_id),
             org_id=uuid.UUID(org_id),
             role=role,
             chat_id=int(chat_id),
             vendor_id=uuid.UUID(vendor_id) if vendor_id else None
         )
+        await _revalidate_workspace_authority(context)
+        return context
         
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -183,6 +187,62 @@ async def verify_miniapp_session(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid session token"
+        )
+
+
+async def _revalidate_workspace_authority(context: MiniappUserContext) -> None:
+    """Confirm that JWT selection claims still have durable database authority."""
+    supabase = get_supabase_client()
+
+    def _read_membership() -> dict[str, Any] | None:
+        result = (
+            supabase.table("organization_members")
+            .select("organization_id, user_id, role")
+            .eq("organization_id", str(context.org_id))
+            .eq("user_id", str(context.user_id))
+            .limit(1)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+
+    membership = await asyncio.to_thread(_read_membership)
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mini App workspace membership is no longer active",
+        )
+
+    if context.role == "admin":
+        if membership.get("role") != "admin" or context.vendor_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Mini App workspace role changed",
+            )
+        return
+
+    if context.role != "vendor" or membership.get("role") != "user" or not context.vendor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mini App workspace role is invalid",
+        )
+
+    def _read_vendor() -> dict[str, Any] | None:
+        result = (
+            supabase.table("vendors")
+            .select("id, organization_id, user_id, active")
+            .eq("id", str(context.vendor_id))
+            .eq("organization_id", str(context.org_id))
+            .eq("user_id", str(context.user_id))
+            .eq("active", True)
+            .limit(1)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+
+    if not await asyncio.to_thread(_read_vendor):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mini App vendor assignment is no longer active",
         )
 
 
@@ -273,5 +333,4 @@ async def resolve_miniapp_user(org_id: str, chat_id: str) -> Tuple[Optional[str]
         "vendor_id": vendor_id,
     }
     return None, user_detail
-
 

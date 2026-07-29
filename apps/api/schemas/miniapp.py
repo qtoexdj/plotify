@@ -74,7 +74,7 @@ class BandejaDetail(BaseModel):
     detalles_lote: Optional[Dict[str, Any]] = None
     comprador: Optional[Dict[str, Any]] = None
     conflictos: Optional[List[DiscrepanciaVariable]] = None
-    evidencia_url: Optional[str] = None
+    evidence_file_id: Optional[uuid.UUID] = None
 
 
 class AdminDecisionRequest(BaseModel):

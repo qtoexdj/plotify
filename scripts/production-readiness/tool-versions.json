@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "digestScope": "utf8(name@version)",
+  "tools": {
+    "gitleaks": {
+      "version": "8.28.0",
+      "sha256": "sha256:b61b26d2aa4bedd5a5f200b291769a86c841dbafae557f61a5056e24b38ba2c7",
+      "distributionChecksums": {
+        "darwin-x64": "sha256:edf5a507008b0d2ef4959575772772770586409c1f6f74dabf19cbe7ec341ced"
+      },
+      "platformChecksums": {
+        "darwin-x64": "sha256:cf09ad7a85683d90221db8324f036f23c8c29107145e1fc4a0dffbfa9e89c09a"
+      }
+    },
+    "pip-audit": {
+      "version": "2.9.0",
+      "sha256": "sha256:f5e6708582b774f762e87dcdbbb5716b18ad38d3f5a15ddf8b02dafd0ec22bb4",
+      "distributionChecksums": {
+        "wheel": "sha256:348b16e60895749a0839875d7cc27ebd692e1584ebe5d5cb145941c8e25a80bd"
+      },
+      "platformChecksums": {
+        "darwin-x64": "sha256:6bbffbab4ff9ed203300b6a20e19303b3f070426eacb0478752c8ac71f577b3b"
+      }
+    },
+    "playwright": {
+      "version": "1.61.1",
+      "sha256": "sha256:328b7419d52fad0b757605c60d54cb89d7b8598c6d888a8cb5abafba5f00f0a1"
+    },
+    "supabase": {
+      "version": "2.109.1",
+      "sha256": "sha256:fd34fca9cdfb383d5dae39bd826caebc04cb4ebb08162225ac5e7bcce681b87c"
+    }
+  }
+}

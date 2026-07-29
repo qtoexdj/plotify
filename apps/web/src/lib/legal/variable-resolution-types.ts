@@ -335,8 +335,6 @@ export interface LegalDocument {
   lot_id: UUID | null
   document_type: LegalDocumentType
   source_field: string | null
-  storage_bucket: string
-  storage_path: string
   original_filename: string
   mime_type: string
   file_size_bytes: number
@@ -363,24 +361,6 @@ export interface LegalDocumentsResponse {
   project_id: UUID
   documents: LegalDocumentListItem[]
   summary?: LegalStatusCounts<LegalExtractionStatus>
-}
-
-export interface RegisterLegalDocumentPayload {
-  organization_id: UUID
-  project_id: UUID
-  lot_id?: UUID | null
-  document_type: LegalDocumentType
-  source_field?: string | null
-  storage_bucket: string
-  storage_path: string
-  original_filename: string
-  mime_type: string
-  file_size_bytes: number
-  sha256_hash: string
-  upload_source: LegalUploadSource
-  uploaded_by?: UUID | null
-  // FR-032: en tipos multi-documento, reemplaza solo al documento referenciado.
-  replaces_legal_document_id?: UUID | null
 }
 
 export interface RegisterLegalDocumentResponse {

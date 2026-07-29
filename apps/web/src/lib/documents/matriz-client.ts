@@ -113,7 +113,7 @@ export async function submitMatriz(
 
 export async function approveMatriz(
   matrizId: string,
-  payload: MatrizApproveRequest = {}
+  payload: MatrizApproveRequest = { operation_key: crypto.randomUUID() }
 ): Promise<MatrizCaseResponse> {
   return requestJson<MatrizCaseResponse>(
     `/api/escritura-matrices/${encodeURIComponent(matrizId)}/approve`,

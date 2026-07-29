@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plotify.local/schemas/feature-controls.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "controls", "safeOffSemantics"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "controls": {
+      "type": "object",
+      "required": ["automatic_escritura", "canonical_geometry_import", "document_capabilities"],
+      "propertyNames": {
+        "enum": ["automatic_escritura", "canonical_geometry_import", "document_capabilities"]
+      },
+      "properties": {
+        "automatic_escritura": { "$ref": "#/$defs/control" },
+        "canonical_geometry_import": { "$ref": "#/$defs/control" },
+        "document_capabilities": { "$ref": "#/$defs/control" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/control" }
+    },
+    "safeOffSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["automatic_escritura", "canonical_geometry_import", "document_capabilities"],
+      "properties": {
+        "automatic_escritura": { "const": "defer_without_attempt_consumption" },
+        "canonical_geometry_import": { "const": "reject_before_body_without_legacy_writer" },
+        "document_capabilities": { "const": "deny_capabilities_keep_authenticated_same_origin" }
+      }
+    }
+  },
+  "$defs": {
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "version", "scopeHash", "hardOff"],
+      "properties": {
+        "mode": { "enum": ["off", "projects", "on"] },
+        "version": { "type": "integer", "minimum": 0 },
+        "scopeHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "hardOff": { "type": "boolean" }
+      }
+    }
+  }
+}

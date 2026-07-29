@@ -15,13 +15,13 @@ function entrega(overrides: Partial<EscrituraDeliveryView> = {}): EscrituraDeliv
     id: 'delivery-1',
     escritura_case_id: 'case-1',
     generation_id: 'generation-1',
+    fileId: 'generation-1',
     recipient_user_id: 'vendor-1',
     channel: 'web',
     status: 'sent',
     link_expires_at: '2026-06-23T00:00:00Z',
     sent_at: '2026-06-16T00:00:00Z',
     created_at: '2026-06-16T00:00:00Z',
-    download_url: 'https://signed.example/minuta.docx',
     status_label: 'Entregada',
     ...overrides,
   }
@@ -45,7 +45,7 @@ describe('MisDocumentosPage (render)', () => {
                 entrega({
                   id: 'delivery-expired',
                   status: 'expired',
-                  download_url: null,
+                  fileId: null,
                   status_label: 'Aceptada',
                 }),
               ],
@@ -71,7 +71,7 @@ describe('MisDocumentosPage (render)', () => {
       cache: 'no-store',
     })
     expect(screen.getByRole('link', { name: 'Descargar' }).getAttribute('href')).toBe(
-      'https://signed.example/minuta.docx'
+      '/api/files/generation-1'
     )
     expect(screen.getByRole('button', { name: 'Compartir' })).toBeTruthy()
     expect(screen.getByText('El enlace venció. Renuévalo para descargar.')).toBeTruthy()
@@ -90,7 +90,7 @@ describe('MisDocumentosPage (render)', () => {
                 entrega({
                   id: 'delivery-expired',
                   status: 'expired',
-                  download_url: null,
+                  fileId: null,
                   status_label: 'Aceptada',
                 }),
               ],
@@ -106,7 +106,7 @@ describe('MisDocumentosPage (render)', () => {
               entrega({
                 id: 'delivery-expired',
                 status: 'sent',
-                download_url: 'https://signed.example/renovada.docx',
+                fileId: 'generation-renewed',
                 status_label: 'Entregada',
               })
             ),
@@ -126,7 +126,7 @@ describe('MisDocumentosPage (render)', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('link', { name: 'Descargar' }).getAttribute('href')).toBe(
-        'https://signed.example/renovada.docx'
+        '/api/files/generation-renewed'
       )
     })
     expect(fetchMock).toHaveBeenCalledWith('/api/escritura-deliveries/delivery-expired/renew', {
