@@ -426,9 +426,14 @@ export function GeometryViewer({
   const renderSidebarContent = () => {
     if (isLoadingLot && selectedIds.size === 1) {
       return (
-        <div className="flex flex-col items-center justify-center py-12">
+        <div
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          className="flex flex-col items-center justify-center py-12"
+        >
           <Spinner className="w-8 h-8 mb-3" />
-          <div className="h-3 w-24 rounded bg-sidebar-accent animate-pulse" />
+          <p className="text-sm font-medium text-muted-foreground">Cargando...</p>
         </div>
       )
     }
