@@ -6,6 +6,8 @@ import {
   FileUploadIcon,
   Download01Icon,
   Delete02Icon,
+  Calendar01Icon,
+  ViewOffIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { toast } from 'sonner'
@@ -36,6 +38,7 @@ interface ProjectLegalFile {
   original_filename: string
   version_number: number
   extraction_status: keyof typeof LEGAL_EXTRACTION_STATUS_LABELS
+  uploaded_at: string | null
 }
 
 const DOCUMENT_TYPES: { id: string; label: string; documentType: LegalDocumentType }[] = [
@@ -54,6 +57,19 @@ const DOCUMENT_TYPES: { id: string; label: string; documentType: LegalDocumentTy
 
 function fileHref(fileId: string) {
   return `/api/files/${encodeURIComponent(fileId)}`
+}
+
+function formatUploadDate(value: string | null) {
+  if (!value) return 'Fecha no disponible'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Fecha no disponible'
+
+  return date.toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 async function loadProjectDocuments(projectId: string): Promise<ProjectLegalFile[]> {
@@ -111,21 +127,6 @@ export function DocumentsTab({ project, isAdmin, lots = [] }: DocumentsTabProps)
     return result
   }, [documents])
 
-  const summary = useMemo(() => {
-    const loadedTypes = DOCUMENT_TYPES.filter(
-      (type) => (activeByType.get(type.documentType) ?? []).length > 0
-    ).length
-    const activeDocuments = [...activeByType.values()].flat()
-    return {
-      loadedTypes,
-      pendingTypes: DOCUMENT_TYPES.length - loadedTypes,
-      activeCount: activeDocuments.length,
-      needsReview: activeDocuments.filter((document) =>
-        ['needs_review', 'failed'].includes(document.extraction_status)
-      ).length,
-    }
-  }, [activeByType])
-
   const upload = async (
     definition: (typeof DOCUMENT_TYPES)[number],
     event: React.ChangeEvent<HTMLInputElement>
@@ -148,9 +149,22 @@ export function DocumentsTab({ project, isAdmin, lots = [] }: DocumentsTabProps)
         },
         body,
       })
-      const result = (await response.json().catch(() => ({}))) as { error?: string }
+      const result = (await response.json().catch(() => ({}))) as {
+        error?: string
+        document?: ProjectLegalFile
+      }
       if (!response.ok) throw new Error(result.error || 'Error al subir el archivo')
-      await refresh()
+      if (result.document) {
+        const uploadedDocument = result.document
+        setDocuments((current) => [
+          uploadedDocument,
+          ...current.filter((document) => document.id !== uploadedDocument.id),
+        ])
+      } else {
+        // Recuperación excepcional para respuestas idempotentes antiguas que
+        // todavía no incluyen la proyección completa del documento.
+        await refresh()
+      }
       toast.success('Documento cargado correctamente')
     } catch (error) {
       console.error('Error uploading legal document:', error)
@@ -170,7 +184,7 @@ export function DocumentsTab({ project, isAdmin, lots = [] }: DocumentsTabProps)
       )
       const result = (await response.json().catch(() => ({}))) as { error?: string }
       if (!response.ok) throw new Error(result.error || 'Error al archivar el documento')
-      await refresh()
+      setDocuments((current) => current.filter((item) => item.id !== document.id))
       toast.success('Documento archivado')
     } catch (error) {
       console.error('Error archiving legal document:', error)
@@ -184,24 +198,7 @@ export function DocumentsTab({ project, isAdmin, lots = [] }: DocumentsTabProps)
 
   return (
     <section className="rounded-2xl border border-border/70 bg-muted/40 p-3 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.65)] dark:border-white/10 dark:bg-background/70 sm:p-4">
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          ['Tipos', DOCUMENT_TYPES.length],
-          ['Cargados', summary.loadedTypes],
-          ['Pendientes', summary.pendingTypes],
-          ['Revisión', summary.needsReview],
-        ].map(([label, value]) => (
-          <div
-            key={label}
-            className="rounded-2xl bg-card px-4 py-3 shadow-sm ring-1 ring-border/50 dark:ring-white/10"
-          >
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="mt-1 font-display text-2xl font-semibold">{value}</p>
-          </div>
-        ))}
-      </div>
-
-      <Card className="mt-4 overflow-hidden border-border/70 bg-card shadow-sm dark:border-white/10">
+      <Card className="overflow-hidden border-border/70 bg-card shadow-sm dark:border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <HugeiconsIcon icon={FileAttachmentIcon} className="h-5 w-5 text-info" />
@@ -214,8 +211,9 @@ export function DocumentsTab({ project, isAdmin, lots = [] }: DocumentsTabProps)
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
-            <div className="flex min-h-24 items-center justify-center">
-              <Spinner />
+            <div className="flex min-h-24 flex-col items-center justify-center gap-2 text-muted-foreground">
+              <Spinner className="h-8 w-8 text-primary" />
+              <p className="text-sm">Cargando documentos...</p>
             </div>
           ) : (
             DOCUMENT_TYPES.map((definition) => {
@@ -276,14 +274,22 @@ export function DocumentsTab({ project, isAdmin, lots = [] }: DocumentsTabProps)
                             <p className="truncate text-sm font-medium">
                               {document.original_filename}
                             </p>
-                            <div className="mt-1 flex gap-2">
-                              <Badge variant="outline">v{document.version_number}</Badge>
+                            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <Badge variant="outline">Versión {document.version_number}</Badge>
                               <Badge variant="outline">
-                                {LEGAL_EXTRACTION_STATUS_LABELS[document.extraction_status]}
+                                Estado: {LEGAL_EXTRACTION_STATUS_LABELS[document.extraction_status]}
                               </Badge>
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <HugeiconsIcon
+                                  icon={Calendar01Icon}
+                                  className="h-3.5 w-3.5"
+                                  aria-hidden="true"
+                                />
+                                Subido el {formatUploadDate(document.uploaded_at)}
+                              </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             {document.fileId ? (
                               <>
                                 <DocumentViewer
@@ -301,12 +307,22 @@ export function DocumentsTab({ project, isAdmin, lots = [] }: DocumentsTabProps)
                                 </Button>
                               </>
                             ) : (
-                              <Badge
-                                variant="outline"
-                                className="border-warning/20 bg-warning/10 text-warning"
+                              <div
+                                className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-muted-foreground"
+                                role="status"
                               >
-                                Migración pendiente
-                              </Badge>
+                                <HugeiconsIcon
+                                  icon={ViewOffIcon}
+                                  className="h-4 w-4 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                <span className="flex flex-col text-xs leading-tight">
+                                  <span className="font-medium text-foreground">
+                                    Vista previa no disponible
+                                  </span>
+                                  <span>Archivo histórico pendiente de vinculación segura.</span>
+                                </span>
+                              </div>
                             )}
                             {isAdmin && (
                               <Button

@@ -1,12 +1,5 @@
 'use client'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ViewIcon } from '@hugeicons/core-free-icons'
@@ -19,22 +12,19 @@ interface DocumentViewerProps {
 export function DocumentViewer({ url, title }: DocumentViewerProps) {
   if (!url) return null
 
+  const previewUrl = `${url}${url.includes('?') ? '&' : '?'}preview=1#view=FitH`
+
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="min-h-11">
-          <HugeiconsIcon icon={ViewIcon} className="w-4 h-4 mr-2" />
-          Ver
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-5xl w-[90vw] h-[85vh] flex flex-col p-0 overflow-hidden gap-0">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="flex-1 w-full bg-muted/50">
-          <iframe src={`${url}#view=FitH`} className="w-full h-full border-0 block" title={title} />
-        </div>
-      </DialogContent>
-    </Dialog>
+    <Button variant="outline" size="sm" className="min-h-11" asChild>
+      <a
+        href={previewUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Vista previa de ${title} (abre en una pestaña nueva)`}
+      >
+        <HugeiconsIcon icon={ViewIcon} className="w-4 h-4 mr-2" />
+        Vista previa
+      </a>
+    </Button>
   )
 }

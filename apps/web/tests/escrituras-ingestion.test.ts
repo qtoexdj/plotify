@@ -181,7 +181,6 @@ function buildProjectFileUploadRequest(file: File, type = 'doc_roles') {
   formData.append('file', file)
   formData.append('projectId', 'project-1')
   formData.append('type', type)
-  formData.append('legalDocumentId', 'legal-doc-1')
   formData.append('sourceField', type)
   formData.append('documentType', 'certificado_roles_sii')
 
@@ -207,6 +206,20 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
       role: 'admin',
       organization: { id: 'org-1' },
     })
+    const legalDocumentChain = buildSupabaseChain({
+      data: {
+        id: 'legal-doc-1',
+        document_type: 'certificado_roles_sii',
+        source_field: 'doc_roles',
+        original_filename: 'certificado-roles.pdf',
+        version_number: 1,
+        extraction_status: 'pending',
+        created_at: '2026-07-29T15:30:00.000Z',
+      },
+      error: null,
+    })
+    legalDocumentChain.insert = vi.fn().mockReturnValue(legalDocumentChain)
+
     createServiceClientMock.mockReturnValue({
       rpc: vi
         .fn()
@@ -221,12 +234,16 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
           remove: vi.fn().mockResolvedValue({ error: null }),
         }),
       },
-      from: vi.fn().mockReturnValue({
-        insert: vi.fn().mockResolvedValue({ error: null }),
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ error: null }),
-        }),
-      }),
+      from: vi.fn((table: string) =>
+        table === 'legal_documents'
+          ? legalDocumentChain
+          : {
+              insert: vi.fn().mockResolvedValue({ error: null }),
+              update: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ error: null }),
+              }),
+            }
+      ),
     })
     microserviceFetchMock.mockResolvedValue({
       data: {
@@ -277,7 +294,7 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
     expect(microserviceFetch).not.toHaveBeenCalled()
   })
 
-  it('stores a replacement project legal document through the hardened gateway', async () => {
+  it('returns the stored legal document projection from the hardened gateway', async () => {
     const project = {
       id: 'project-1',
       organization_id: 'org-1',
@@ -291,8 +308,19 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
     const response = await uploadProjectFilePost(buildProjectFileUploadRequest(file) as any)
 
     expect(response.status).toBe(201)
-    expect(await response.json()).toEqual({
+    const body = await response.json()
+    expect(body).toEqual({
       fileId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      document: {
+        id: 'legal-doc-1',
+        fileId: body.fileId,
+        document_type: 'certificado_roles_sii',
+        source_field: 'doc_roles',
+        original_filename: 'certificado-roles.pdf',
+        version_number: 1,
+        extraction_status: 'pending',
+        uploaded_at: '2026-07-29T15:30:00.000Z',
+      },
     })
     expect(microserviceFetch).not.toHaveBeenCalled()
   })

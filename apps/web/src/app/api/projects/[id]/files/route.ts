@@ -17,6 +17,18 @@ const FILE_CATEGORIES = new Set([
 ])
 const CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
 const LEGAL_OBJECT_FIELD = ['storage', 'path'].join('_')
+const LEGAL_DOCUMENT_PROJECTION =
+  'id, document_type, source_field, original_filename, version_number, extraction_status, created_at'
+
+type LegalDocumentProjection = {
+  id: string
+  document_type: string
+  source_field: string | null
+  original_filename: string
+  version_number: number
+  extraction_status: string
+  created_at: string | null
+}
 
 function error(status: number, code: string) {
   return NextResponse.json({ error: code, code }, { status })
@@ -167,8 +179,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   // The commit RPC binds metadata + legal reference + atomic audit. A failed
   // reference remains an explicit repair_required finding/state, never success.
+  let legalDocumentResponse: Record<string, unknown> | null = null
   if (category === 'legal_document') {
     let referenceId = legalDocumentId
+    let legalDocumentProjection: LegalDocumentProjection | null = null
     if (!referenceId) {
       const { data: legalDocument, error: legalDocumentError } = await service
         .from('legal_documents')
@@ -186,7 +200,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           upload_source: 'onboarding',
           uploaded_by: user.id,
         })
-        .select('id')
+        .select(LEGAL_DOCUMENT_PROJECTION)
         .single()
       if (legalDocumentError || !legalDocument) {
         await service
@@ -196,6 +210,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return error(500, STORAGE_REPAIR_REQUIRED)
       }
       referenceId = legalDocument.id
+      legalDocumentProjection = legalDocument
     }
     const { error: referenceError } = await service.rpc('commit_project_file_with_reference', {
       p_file_id: fileId,
@@ -214,6 +229,30 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       )
       return error(500, STORAGE_REPAIR_REQUIRED)
     }
+
+    if (!legalDocumentProjection) {
+      const { data: existingDocument } = await service
+        .from('legal_documents')
+        .select(LEGAL_DOCUMENT_PROJECTION)
+        .eq('id', referenceId)
+        .eq('organization_id', project.organization_id)
+        .eq('project_id', projectId)
+        .maybeSingle()
+      legalDocumentProjection = existingDocument
+    }
+
+    if (legalDocumentProjection) {
+      legalDocumentResponse = {
+        id: legalDocumentProjection.id,
+        fileId,
+        document_type: legalDocumentProjection.document_type,
+        source_field: legalDocumentProjection.source_field,
+        original_filename: legalDocumentProjection.original_filename,
+        version_number: legalDocumentProjection.version_number,
+        extraction_status: legalDocumentProjection.extraction_status,
+        uploaded_at: legalDocumentProjection.created_at,
+      }
+    }
   }
 
   await service.rpc('complete_idempotency_operation', {
@@ -222,9 +261,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     p_status: 'succeeded',
     p_resource_type: 'project_file_objects',
     p_resource_id: fileId,
-    p_response_summary: { fileId },
+    p_response_summary: {
+      fileId,
+      legalDocumentId:
+        typeof legalDocumentResponse?.id === 'string' ? legalDocumentResponse.id : null,
+    },
     p_error_code: null,
   })
 
-  return NextResponse.json({ fileId }, { status: 201 })
+  return NextResponse.json(
+    {
+      fileId,
+      ...(legalDocumentResponse ? { document: legalDocumentResponse } : {}),
+    },
+    { status: 201 }
+  )
 }

@@ -122,10 +122,15 @@ export async function GET(
     const { data, error } = await service.storage.from(file.bucket).download(file.objectName)
     if (error || !data) return notFound()
 
+    const disposition =
+      request.nextUrl.searchParams.get('preview') === '1' && file.contentType === 'application/pdf'
+        ? 'inline'
+        : 'attachment'
+
     return new Response(data.stream(), {
       headers: {
         'Cache-Control': 'private, no-store',
-        'Content-Disposition': `attachment; filename="${safeDownloadName(file.filename)}"`,
+        'Content-Disposition': `${disposition}; filename="${safeDownloadName(file.filename)}"`,
         'Content-Type': file.contentType,
         'X-Content-Type-Options': 'nosniff',
       },

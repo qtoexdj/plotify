@@ -82,6 +82,48 @@ describe('/api/projects/[id]/legal-documents', () => {
     )
   })
 
+  it('projects the upload date and opaque file id required by the document list', async () => {
+    microserviceFetchMock.mockResolvedValue({
+      data: {
+        project_id: 'project-1',
+        documents: [
+          {
+            id: 'document-1',
+            file_id: 'file-1',
+            document_type: 'dominio_vigente',
+            source_field: 'doc_dominio_vigente',
+            original_filename: 'dominio.pdf',
+            version_number: 1,
+            extraction_status: 'pending',
+            created_at: '2026-07-29T15:30:00.000Z',
+          },
+        ],
+      },
+      error: null,
+      status: 200,
+    })
+
+    const response = await GET(buildRequest(), {
+      params: Promise.resolve({ id: 'project-1' }),
+    })
+
+    expect(await response.json()).toEqual({
+      project_id: 'project-1',
+      documents: [
+        {
+          id: 'document-1',
+          fileId: 'file-1',
+          document_type: 'dominio_vigente',
+          source_field: 'doc_dominio_vigente',
+          original_filename: 'dominio.pdf',
+          version_number: 1,
+          extraction_status: 'pending',
+          uploaded_at: '2026-07-29T15:30:00.000Z',
+        },
+      ],
+    })
+  })
+
   it('proxies retry with project-derived organization and project scope', async () => {
     microserviceFetchMock.mockResolvedValue({
       data: {

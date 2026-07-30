@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 interface InternalLegalDocument extends LegalDocument {
-  project_file_object_id?: string | null
+  file_id?: string | null
 }
 
 interface LegalDocumentListResponse {
@@ -76,12 +76,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       project_id: data.project_id,
       documents: data.documents.map((document) => ({
         id: document.id,
-        fileId: document.project_file_object_id ?? null,
+        fileId: document.file_id ?? null,
         document_type: document.document_type,
         source_field: document.source_field,
         original_filename: document.original_filename,
         version_number: document.version_number,
         extraction_status: document.extraction_status,
+        uploaded_at: document.created_at,
       })),
     })
   } catch (error) {
