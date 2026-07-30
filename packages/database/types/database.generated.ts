@@ -3040,6 +3040,206 @@ export type Database = {
           },
         ]
       }
+      llm_configuration_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          config_version: number | null
+          created_at: string
+          id: string
+          outcome: string
+          provider: string | null
+          task: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          config_version?: number | null
+          created_at?: string
+          id?: string
+          outcome?: string
+          provider?: string | null
+          task?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          config_version?: number | null
+          created_at?: string
+          id?: string
+          outcome?: string
+          provider?: string | null
+          task?: string | null
+        }
+        Relationships: []
+      }
+      llm_model_catalog_syncs: {
+        Row: {
+          last_error_code: string | null
+          last_synced_at: string
+          model_count: number
+          provider: string
+          status: string
+          updated_by: string | null
+        }
+        Insert: {
+          last_error_code?: string | null
+          last_synced_at?: string
+          model_count?: number
+          provider: string
+          status: string
+          updated_by?: string | null
+        }
+        Update: {
+          last_error_code?: string | null
+          last_synced_at?: string
+          model_count?: number
+          provider?: string
+          status?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      llm_provider_credentials: {
+        Row: {
+          api_key_encrypted: string
+          created_at: string
+          key_hint: string
+          last_error_code: string | null
+          last_tested_at: string | null
+          provider: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          api_key_encrypted: string
+          created_at?: string
+          key_hint: string
+          last_error_code?: string | null
+          last_tested_at?: string | null
+          provider: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          api_key_encrypted?: string
+          created_at?: string
+          key_hint?: string
+          last_error_code?: string | null
+          last_tested_at?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      llm_provider_models: {
+        Row: {
+          capabilities: string[]
+          created_at: string
+          display_name: string
+          is_available: boolean
+          last_seen_at: string
+          last_verified_at: string | null
+          model_id: string
+          owned_by: string | null
+          provider: string
+          raw_metadata: Json
+          reasoning_options: string[]
+          released_at: string | null
+          source: string
+          updated_at: string
+          verification_error_code: string | null
+          verification_status: string
+        }
+        Insert: {
+          capabilities?: string[]
+          created_at?: string
+          display_name: string
+          is_available?: boolean
+          last_seen_at?: string
+          last_verified_at?: string | null
+          model_id: string
+          owned_by?: string | null
+          provider: string
+          raw_metadata?: Json
+          reasoning_options?: string[]
+          released_at?: string | null
+          source?: string
+          updated_at?: string
+          verification_error_code?: string | null
+          verification_status?: string
+        }
+        Update: {
+          capabilities?: string[]
+          created_at?: string
+          display_name?: string
+          is_available?: boolean
+          last_seen_at?: string
+          last_verified_at?: string | null
+          model_id?: string
+          owned_by?: string | null
+          provider?: string
+          raw_metadata?: Json
+          reasoning_options?: string[]
+          released_at?: string | null
+          source?: string
+          updated_at?: string
+          verification_error_code?: string | null
+          verification_status?: string
+        }
+        Relationships: []
+      }
+      llm_task_configs: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          model: string
+          provider: string
+          reasoning_effort: string
+          task: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          model: string
+          provider: string
+          reasoning_effort?: string
+          task: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          model?: string
+          provider?: string
+          reasoning_effort?: string
+          task?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "llm_task_configs_provider_fkey"
+            columns: ["provider"]
+            isOneToOne: false
+            referencedRelation: "llm_provider_credentials"
+            referencedColumns: ["provider"]
+          },
+        ]
+      }
       lot_legal_data: {
         Row: {
           created_at: string

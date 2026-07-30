@@ -57,6 +57,11 @@ export const NAV_ITEMS = [
     label: 'Prompt Ops',
     icon: AiMagicIcon,
   },
+  {
+    href: '/super-admin/llms',
+    label: 'LLMs',
+    icon: AiMagicIcon,
+  },
 ]
 
 export const ESCRITURAS_LAB_NAV_ITEM = {

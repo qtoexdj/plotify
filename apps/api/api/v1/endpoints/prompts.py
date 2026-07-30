@@ -189,7 +189,7 @@ async def sandbox_prompt(body: SandboxRequest):
         ]
     )
 
-    llm_tools = get_llm_with_tools()
+    llm_tools = await get_llm_with_tools()
 
     prompt_value = await dynamic_prompt.ainvoke(
         {

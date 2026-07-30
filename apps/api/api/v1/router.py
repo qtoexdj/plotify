@@ -16,6 +16,7 @@ from .endpoints import (
     integrations,
     notifications,
     miniapp,
+    llms,
 )
 
 api_router = APIRouter()
@@ -35,5 +36,6 @@ api_router.include_router(escritura_templates.router)
 api_router.include_router(escritura_matrices.router)
 api_router.include_router(escritura_deliveries.router)
 api_router.include_router(integrations.router)  # ← Fase 5
+api_router.include_router(llms.router)
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(miniapp.router, prefix="/miniapp", tags=["miniapp"])

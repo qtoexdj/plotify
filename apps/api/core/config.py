@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     # contenido escaneado a texto fiel; alimenta el pipeline de texto existente
     # con su verificación. Reemplaza al OCR clásico (tesseract) para estos docs.
     LEGAL_TEXT_VISION_ENABLED: bool = False
-    LEGAL_TEXT_VISION_MODEL: str = "gpt-5.5"
+    LEGAL_TEXT_VISION_MODEL: str = "gpt-5.4"
     LEGAL_TEXT_VISION_PROVIDER: str = "openai"
     LEGAL_TEXT_VISION_REASONING_EFFORT: str = "low"
     LEGAL_TEXT_VISION_TIMEOUT_SECONDS: int = 240
@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     # LLM APIs
     OPENAI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
+    DEEPSEEK_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

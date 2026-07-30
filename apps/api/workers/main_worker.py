@@ -1,3 +1,4 @@
+from arq import cron
 from arq.connections import RedisSettings
 from core.config import get_settings
 from core.logger import setup_logging, get_logger
@@ -16,6 +17,7 @@ from workers.tasks.legal_document_ingestion import process_legal_document_ingest
 from workers.tasks.legal_title_analysis import analyze_project_title
 from workers.tasks.geometry_enrichment import process_geometry_enrichment
 from workers.tasks.escritura_workflow_outbox import process_escritura_workflow_outbox
+from workers.tasks.llm_model_catalog import sync_llm_model_catalog
 from services.worker_job_failures import require_explicit_job_outcome
 
 from core.checkpointer import setup_checkpointer, close_checkpointer
@@ -90,6 +92,18 @@ class WorkerSettings:
         analyze_project_title,
         process_geometry_enrichment,
         process_escritura_workflow_outbox,
+    ]
+
+    cron_jobs = [
+        cron(
+            sync_llm_model_catalog,
+            name="sync_llm_model_catalog_daily",
+            hour=4,
+            minute=15,
+            run_at_startup=False,
+            unique=True,
+            max_tries=1,
+        )
     ]
 
     # Eventos de ciclo de vida

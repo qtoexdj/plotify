@@ -2411,6 +2411,11 @@
         "type": "object"
       },
       "JsonValue": {},
+      "LLMTask": {
+        "enum": ["conversation", "title_analysis", "pdf_vision", "prompt_sandbox"],
+        "title": "LLMTask",
+        "type": "string"
+      },
       "LegalApprovalGrantListResponse": {
         "properties": {
           "grants": {
@@ -4523,6 +4528,25 @@
         "title": "PropietarioActual",
         "type": "object"
       },
+      "Provider": {
+        "enum": ["openai", "anthropic", "deepseek", "gemini"],
+        "title": "Provider",
+        "type": "string"
+      },
+      "ProviderCredentialRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "maxLength": 8192,
+            "minLength": 8,
+            "title": "Api Key",
+            "type": "string"
+          }
+        },
+        "required": ["api_key"],
+        "title": "ProviderCredentialRequest",
+        "type": "object"
+      },
       "ReadinessGateResponse": {
         "properties": {
           "blocking_variables": {
@@ -5436,6 +5460,40 @@
           }
         },
         "title": "StageOperationalResult",
+        "type": "object"
+      },
+      "TaskConfigurationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "model": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Provider"
+          },
+          "reasoning_effort": {
+            "default": "off",
+            "maxLength": 24,
+            "minLength": 2,
+            "title": "Reasoning Effort",
+            "type": "string"
+          }
+        },
+        "required": ["provider", "model", "expected_version"],
+        "title": "TaskConfigurationRequest",
         "type": "object"
       },
       "TelegramTokenRequest": {
@@ -10719,6 +10777,250 @@
         ],
         "summary": "Update Legal Variable",
         "tags": ["legal-variables"]
+      }
+    },
+    "/api/v1/llms/": {
+      "get": {
+        "operationId": "list_llm_configuration_api_v1_llms__get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "List Llm Configuration",
+        "tags": ["llms"]
+      }
+    },
+    "/api/v1/llms/providers/{provider}/credential": {
+      "put": {
+        "operationId": "save_provider_credential_api_v1_llms_providers__provider__credential_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Provider"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderCredentialRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Save Provider Credential",
+        "tags": ["llms"]
+      }
+    },
+    "/api/v1/llms/providers/{provider}/models/sync": {
+      "post": {
+        "operationId": "sync_provider_models_api_v1_llms_providers__provider__models_sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Provider"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Sync Provider Models",
+        "tags": ["llms"]
+      }
+    },
+    "/api/v1/llms/tasks/{task}": {
+      "put": {
+        "operationId": "update_llm_task_api_v1_llms_tasks__task__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/LLMTask"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-User-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskConfigurationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Update Llm Task",
+        "tags": ["llms"]
       }
     },
     "/api/v1/miniapp/bandeja": {

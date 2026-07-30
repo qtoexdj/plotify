@@ -387,6 +387,7 @@ export interface components {
       "organization_id": string
     }
     "JsonValue": unknown
+    "LLMTask": "conversation" | "title_analysis" | "pdf_vision" | "prompt_sandbox"
     "LegalApprovalGrantListResponse": {
       "grants"?: Array<components["schemas"]["LegalApprovalGrantResponse"]>
     }
@@ -717,6 +718,10 @@ export interface components {
       "tratamiento"?: components["schemas"]["EvidencedValue"] | null
       "upstream_subject_id"?: string | null
     }
+    "Provider": "openai" | "anthropic" | "deepseek" | "gemini"
+    "ProviderCredentialRequest": {
+      "api_key": string
+    }
     "ReadinessGateResponse": {
       "blocking_variables"?: Array<string>
       "gate": string
@@ -856,6 +861,13 @@ export interface components {
       "protected"?: Array<string>
       "skipped_same_hash"?: Array<string>
       "superseded"?: Array<string>
+    }
+    "TaskConfigurationRequest": {
+      "enabled"?: boolean
+      "expected_version": number
+      "model": string
+      "provider": components["schemas"]["Provider"]
+      "reasoning_effort"?: string
     }
     "TelegramTokenRequest": {
       "organization_id"?: string | null
@@ -1476,6 +1488,30 @@ export interface operations {
     path: "/api/v1/legal-variables/{variable_resolution_id}"
     requestBody: components["schemas"]["VariableUpdateRequest"]
     response: components["schemas"]["VariableReviewResponse"]
+  }
+  "list_llm_configuration_api_v1_llms__get": {
+    method: "GET"
+    path: "/api/v1/llms/"
+    requestBody: never
+    response: void
+  }
+  "save_provider_credential_api_v1_llms_providers__provider__credential_put": {
+    method: "PUT"
+    path: "/api/v1/llms/providers/{provider}/credential"
+    requestBody: components["schemas"]["ProviderCredentialRequest"]
+    response: void
+  }
+  "sync_provider_models_api_v1_llms_providers__provider__models_sync_post": {
+    method: "POST"
+    path: "/api/v1/llms/providers/{provider}/models/sync"
+    requestBody: never
+    response: void
+  }
+  "update_llm_task_api_v1_llms_tasks__task__put": {
+    method: "PUT"
+    path: "/api/v1/llms/tasks/{task}"
+    requestBody: components["schemas"]["TaskConfigurationRequest"]
+    response: void
   }
   "get_bandeja_api_v1_miniapp_bandeja_get": {
     method: "GET"

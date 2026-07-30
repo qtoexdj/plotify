@@ -1101,8 +1101,6 @@ async def run_title_analysis(
         outcome = await run_title_agent(
             source_documents,
             expediente={"sii_rol_matriz": sii_rol_matriz, "plano_superficie": None},
-            provider=settings.LEGAL_TITLE_AGENT_PROVIDER,
-            model=settings.LEGAL_TITLE_AGENT_MODEL,
             timeout=settings.LEGAL_TITLE_AGENT_TIMEOUT_SECONDS,
             max_iterations=getattr(settings, "LEGAL_TITLE_AGENT_MAX_ITERATIONS", 24),
         )

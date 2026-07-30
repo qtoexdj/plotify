@@ -23,6 +23,11 @@ from langgraph.prebuilt import ToolNode
 
 from core.config import get_settings
 from core.logger import get_logger
+from services.llm_control_plane import (
+    LLMConfigurationError,
+    LLMTask,
+    get_llm_control_plane,
+)
 from schemas.legal_titles import TitleAgentResult
 from agent_titulo.prompts import TITULO_AGENT_SYSTEM_PROMPT
 from agent_titulo.tools import TitleAgentContext, build_title_agent_tools
@@ -230,13 +235,9 @@ async def run_title_agent(
     """Run the title agent over the gathered source documents.
 
     ``llm`` is injectable for tests (scripted fake); production resolves the
-    client from settings. Returns ``available=False`` (empty result) when the
-    agent is disabled or the provider key is missing, so the orchestrator can
-    persist ``llm_disabled`` — same contract the pipeline had.
+    active title-analysis assignment from the central control plane.
     """
     settings = get_settings()
-    prov = provider or settings.LEGAL_TITLE_AGENT_PROVIDER
-    mdl = model or settings.LEGAL_TITLE_AGENT_MODEL
     tout = timeout or settings.LEGAL_TITLE_AGENT_TIMEOUT_SECONDS
     iterations = max_iterations or settings.LEGAL_TITLE_AGENT_MAX_ITERATIONS
 
@@ -244,7 +245,24 @@ async def run_title_agent(
         logger.info("run_title_agent_disabled_by_config")
         return TitleAgentRunOutcome(result=TitleAgentResult(), available=False)
 
-    client = llm if llm is not None else _get_llm_client(prov, mdl, tout)
+    client = llm
+    resolved_provider = provider or "injected"
+    resolved_model = model or (type(llm).__name__ if llm is not None else "unresolved")
+    if client is None:
+        try:
+            client, resolved = await get_llm_control_plane().resolve_chat_client(
+                LLMTask.TITLE_ANALYSIS
+            )
+            resolved_provider = resolved.provider.value
+            resolved_model = resolved.model
+            logger.info(
+                "title_analysis_llm_resolved",
+                provider=resolved.provider.value,
+                model=resolved.model,
+            )
+        except LLMConfigurationError as exc:
+            logger.warning("title_analysis_llm_unavailable", error=str(exc))
+            client = None
     if client is None:
         logger.info("run_title_agent_client_unavailable")
         return TitleAgentRunOutcome(result=TitleAgentResult(), available=False)
@@ -271,8 +289,8 @@ async def run_title_agent(
     }
     logger.info(
         "run_title_agent_started",
-        provider=prov,
-        model=mdl,
+        provider=resolved_provider,
+        model=resolved_model,
         documents=len(source_documents),
         max_iterations=iterations,
         timeout_seconds=tout,

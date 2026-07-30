@@ -268,7 +268,11 @@ def split_text_into_logical_pages(
     )
 
 
-def _extract_pdf_text_pages(source: LegalDocumentExtractionSource) -> LegalTextExtractionResult:
+def _extract_pdf_text_pages(
+    source: LegalDocumentExtractionSource,
+    *,
+    vision_config: Any | None = None,
+) -> LegalTextExtractionResult:
     try:
         from pypdf import PdfReader
     except ImportError as exc:
@@ -316,7 +320,11 @@ def _extract_pdf_text_pages(source: LegalDocumentExtractionSource) -> LegalTextE
         and page.char_count < PDF_VISION_TEXT_THRESHOLD
     )
     if settings.LEGAL_TEXT_VISION_ENABLED and scanned_pages:
-        return _extract_pdf_vision_pages(source, digital_pages=pages)
+        return _extract_pdf_vision_pages(
+            source,
+            digital_pages=pages,
+            vision_config=vision_config,
+        )
 
     non_empty_pages = tuple(page for page in pages if page.text_content)
     pages_needing_ocr = tuple(
@@ -350,6 +358,7 @@ def _extract_pdf_vision_pages(
     source: LegalDocumentExtractionSource,
     *,
     digital_pages: tuple[ExtractedLegalTextPage, ...],
+    vision_config: Any | None = None,
 ) -> LegalTextExtractionResult:
     """Transcribe el PDF con el modelo multimodal, que lee el contenido
     escaneado que la extracción de texto pierde. Si falla, cae al texto digital
@@ -370,7 +379,11 @@ def _extract_pdf_vision_pages(
     digital_fallback = tuple(p for p in digital_pages if p.text_content) or digital_pages
 
     try:
-        transcript = transcribe_pdf_with_vision_sync(source.content)
+        transcript = (
+            transcribe_pdf_with_vision_sync(source.content, vision_config)
+            if vision_config is not None
+            else transcribe_pdf_with_vision_sync(source.content)
+        )
     except LegalVisionTranscriptionError as exc:
         logger.warning("legal_text_vision_failed", error=str(exc))
         return LegalTextExtractionResult(
@@ -409,7 +422,11 @@ def _extract_pdf_vision_pages(
         stats={
             **base_stats,
             "vision_status": "ok",
-            "vision_model": get_settings().LEGAL_TEXT_VISION_MODEL,
+            "vision_model": (
+                vision_config.model
+                if vision_config is not None
+                else get_settings().LEGAL_TEXT_VISION_MODEL
+            ),
             "text_page_count": len(vision_pages),
             "empty_page_count": 0,
             "char_count": sum(p.char_count for p in vision_pages),
@@ -537,7 +554,25 @@ async def extract_text_pages(
 
     mime_type = source.mime_type.split(";")[0].strip().lower()
     if mime_type in SUPPORTED_PDF_MIME_TYPES:
-        return _extract_pdf_text_pages(source)
+        vision_config = None
+        from core.config import get_settings
+
+        if get_settings().LEGAL_TEXT_VISION_ENABLED:
+            from services.llm_control_plane import (
+                LLMConfigurationError,
+                LLMTask,
+                get_llm_control_plane,
+            )
+
+            try:
+                vision_config = await get_llm_control_plane().resolve(
+                    LLMTask.PDF_VISION
+                )
+                if not vision_config.enabled:
+                    vision_config = None
+            except LLMConfigurationError as exc:
+                logger.warning("legal_text_vision_config_unavailable", error=str(exc))
+        return _extract_pdf_text_pages(source, vision_config=vision_config)
     if mime_type in FUTURE_CONVERTER_MIME_TYPES:
         raise UnsupportedLegalTextConverterError(
             f"Converter for {mime_type} is not implemented yet"

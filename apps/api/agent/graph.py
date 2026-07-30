@@ -5,15 +5,12 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
-
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from core.checkpointer import get_checkpointer_pool
-from core.config import get_settings
 from core.database import get_supabase_client
 from core.logger import get_logger
+from services.llm_control_plane import LLMTask, get_llm_control_plane
 from agent.state import AgentState
 from agent.prompt_cache import get_active_prompt
 from agent.runtime_context import build_runtime_context, bind_tools_to_runtime_context
@@ -28,7 +25,6 @@ import agent.tools.clients  # noqa: F401 — registra @register_builtin en BUILT
 import agent.tools.reports  # noqa: F401 — registra @register_builtin en BUILTIN_HANDLERS
 
 logger = get_logger(__name__)
-settings = get_settings()
 
 # 1. Herramientas estáticas (para sandbox/testing via get_llm_with_tools)
 tools = [
@@ -50,28 +46,6 @@ RAW_PAYLOAD_LINE_RE = re.compile(
 )
 SENSITIVE_FENCE_LANGS = {"json", "env", "dotenv", "sql"}
 MAX_SKILL_INSTRUCTIONS_CHARS = 6000
-
-
-# 2. Inicializar el Modelo de Lenguaje Evaluador (LLM) Automáticamente
-def get_llm():
-    """Selecciona el LLM basado en qué llave de API existe en el entorno."""
-    if settings.OPENAI_API_KEY:
-        logger.info("Usando OpenAI GPT-4o-mini como cerebro del agente")
-        return ChatOpenAI(
-            model="gpt-4o-mini", temperature=0.3, api_key=settings.OPENAI_API_KEY
-        )
-    elif settings.ANTHROPIC_API_KEY:
-        logger.info("Usando Anthropic Claude 3 Haiku como cerebro del agente")
-        return ChatAnthropic(
-            model="claude-3-haiku-20240307",
-            temperature=0.3,
-            api_key=settings.ANTHROPIC_API_KEY,
-        )
-    else:
-        logger.warning(
-            "No hay llaves de OpenAI o Anthropic configuradas. Fallará la invocación."
-        )
-        return ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3)
 
 
 def sanitize_skill_instructions_for_prompt(markdown: str) -> str:
@@ -107,9 +81,9 @@ def sanitize_skill_instructions_for_prompt(markdown: str) -> str:
     return safe_markdown.strip()
 
 
-# 3. Vincular herramientas al LLM
-llm = get_llm()
-llm_with_tools = llm.bind_tools(tools)
+# Test-only override kept for the existing scripted agent tests. Production
+# resolves the active provider/task configuration for every graph build.
+llm: Any | None = None
 
 
 # 4. Router
@@ -121,9 +95,14 @@ def should_continue(state: AgentState):
     return END
 
 
-def get_llm_with_tools():
+async def get_llm_with_tools():
     """Retorna el LLM con tools bindeados. Para uso en sandbox y testing."""
-    return llm_with_tools
+    runtime_llm = llm
+    if runtime_llm is None:
+        runtime_llm, _ = await get_llm_control_plane().resolve_chat_client(
+            LLMTask.PROMPT_SANDBOX
+        )
+    return runtime_llm.bind_tools(tools)
 
 
 async def _get_checkpointer():
@@ -193,6 +172,16 @@ async def get_graph_for_org(
         allowed_tool_slugs=skill_runtime.allowed_tool_slugs,
     )
     org_tools = bind_tools_to_runtime_context(skill_runtime.tools, runtime_context)
+    runtime_llm = llm
+    if runtime_llm is None:
+        runtime_llm, resolved_llm = (
+            await get_llm_control_plane().resolve_chat_client(LLMTask.CONVERSATION)
+        )
+        logger.info(
+            "conversation_llm_resolved",
+            provider=resolved_llm.provider.value,
+            model=resolved_llm.model,
+        )
     safe_skill_instructions = sanitize_skill_instructions_for_prompt(
         skill_runtime.markdown_instructions
     )
@@ -233,7 +222,7 @@ async def get_graph_for_org(
                 MessagesPlaceholder(variable_name="messages"),
             ]
         )
-        _llm_with_tools = llm.bind_tools(org_tools)
+        _llm_with_tools = runtime_llm.bind_tools(org_tools)
         prompt_value = await dynamic_prompt.ainvoke(
             {
                 "messages": state["messages"],
