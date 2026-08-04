@@ -31,6 +31,7 @@ import {
 } from '@/lib/legal/variable-matrix-model'
 import type {
   LegalVariableEditPayload,
+  LegalVariableState,
   VariableInventoryItem,
   VariableInventoryResponse,
 } from '@/lib/legal/variable-resolution-types'
@@ -185,24 +186,75 @@ export function VariableMatrix({
       successMessage: string
     ) => {
       setSavingId(variable.id)
+      const nextState: LegalVariableState =
+        payload.state ??
+        (payload.action === 'approve'
+          ? 'approved'
+          : payload.action === 'mark_not_applicable'
+            ? 'not_applicable'
+            : 'resolved')
+
+      // Optimistic update in React state for instant UI response without full DB reload
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === variable.id
+            ? {
+                ...item,
+                state: nextState,
+                value_text: payload.value_text !== undefined ? payload.value_text : item.value_text,
+                value_json: payload.value_json !== undefined ? payload.value_json : item.value_json,
+                correction_reason:
+                  payload.correction_reason !== undefined
+                    ? payload.correction_reason
+                    : item.correction_reason,
+                reviewed_at: new Date().toISOString(),
+              }
+            : item
+        )
+      )
+      setEditorOpen(false)
+
       try {
         const response = await fetch(`/api/projects/${projectId}/legal-variables/${variable.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
-        const result = (await response.json()) as { error?: string }
+        const result = (await response.json()) as {
+          variable_resolution_id?: string
+          state?: LegalVariableState
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          audit_event_id?: string
+          error?: string
+        }
         if (!response.ok) throw new Error(result.error || 'Error al actualizar variable')
+
+        // Confirm official server response metadata
+        setItems((prevItems) =>
+          prevItems.map((item) =>
+            item.id === variable.id
+              ? {
+                  ...item,
+                  state: result.state ?? item.state,
+                  reviewed_by: result.reviewed_by ?? item.reviewed_by,
+                  reviewed_at: result.reviewed_at ?? item.reviewed_at,
+                }
+              : item
+          )
+        )
         toast.success(successMessage)
-        setEditorOpen(false)
-        await load()
       } catch (err) {
+        // Revert on error
+        setItems((prevItems) =>
+          prevItems.map((item) => (item.id === variable.id ? variable : item))
+        )
         toast.error(err instanceof Error ? err.message : 'Error al actualizar variable')
       } finally {
         setSavingId(null)
       }
     },
-    [projectId, load]
+    [projectId]
   )
 
   const approve = useCallback(
@@ -231,6 +283,20 @@ export function VariableMatrix({
     async (variableKeys: string[]): Promise<boolean> => {
       if (variableKeys.length === 0) return true
       setBulkSaving(true)
+
+      const keySet = new Set(variableKeys)
+      const nowIso = new Date().toISOString()
+      const previousItems = items
+
+      // Optimistic update
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          keySet.has(item.variable_key) && item.state !== 'approved'
+            ? { ...item, state: 'approved' as const, reviewed_at: nowIso }
+            : item
+        )
+      )
+
       try {
         const response = await fetch(`/api/projects/${projectId}/legal-variables/bulk-approve`, {
           method: 'POST',
@@ -240,16 +306,16 @@ export function VariableMatrix({
         const result = (await response.json()) as { approved_count?: number; error?: string }
         if (!response.ok) throw new Error(result.error || 'Error al aprobar en bloque')
         toast.success(`${result.approved_count ?? variableKeys.length} variables aprobadas`)
-        await load()
         return true
       } catch (err) {
+        setItems(previousItems)
         toast.error(err instanceof Error ? err.message : 'Error al aprobar en bloque')
         return false
       } finally {
         setBulkSaving(false)
       }
     },
-    [projectId, load]
+    [projectId, items]
   )
 
   const handleApproveMolde = useCallback(() => {
@@ -266,9 +332,14 @@ export function VariableMatrix({
         await bulkApproveProjectVariables(projectId, { variable_keys: variableKeys })
       }
       const matriz = await getMatrizProject(projectId)
-      const submitted = await submitMatriz(matriz.matriz.id)
-      const approved = await approveMatriz(submitted.matriz.id)
-      setMoldeStatus(approved.matriz.status)
+      let currentMatriz = matriz
+      if (currentMatriz.matriz.status === 'draft') {
+        currentMatriz = await submitMatriz(currentMatriz.matriz.id)
+      }
+      if (currentMatriz.matriz.status === 'legal_review_pending') {
+        currentMatriz = await approveMatriz(currentMatriz.matriz.id)
+      }
+      setMoldeStatus(currentMatriz.matriz.status)
       toast.success('Molde aprobado')
       setMoldeApprovalOpen(false)
       onApproveMolde?.()
@@ -397,22 +468,26 @@ export function VariableMatrix({
       ) : null}
 
       {scope === 'project' ? (
-        <div className="flex justify-stretch sm:justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            {visibleSections.reduce((acc, s) => acc + s.entries.length, 0)} variables en{' '}
+            {visibleSections.length} grupos
+          </span>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="min-h-10 w-full sm:w-auto"
+            className="h-8 text-xs font-medium px-3 min-h-8 w-full sm:w-auto"
             onClick={() => setManualOpen(true)}
           >
-            <HugeiconsIcon icon={Plus} className="size-4" aria-hidden />
+            <HugeiconsIcon icon={Plus} className="size-3.5" aria-hidden />
             Ingresar dato manual
           </Button>
         </div>
       ) : null}
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-        <div className="min-w-0 space-y-3">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+        <div className="min-w-0 max-h-[calc(100vh-260px)] min-h-[500px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground/30">
           {visibleSections.map((section) => (
             <ProducerGroup
               key={section.producer}
@@ -426,12 +501,13 @@ export function VariableMatrix({
               onBulkApprove={bulkApprove}
               onOpenSiiDetail={() => setSiiDetailOpen(true)}
               forceOpen={effectivePendingFocus}
+              initialOpen={false}
             />
           ))}
           {scope === 'project' && !effectivePendingFocus ? <SaleGapPanel /> : null}
         </div>
 
-        <aside className="min-w-0 xl:sticky xl:top-4 xl:self-start">
+        <aside className="min-w-0 max-h-[calc(100vh-260px)] overflow-y-auto pr-1 xl:sticky xl:top-4 xl:self-start">
           <VariableInspector
             entry={selected}
             saving={savingId !== null || bulkSaving}

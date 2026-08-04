@@ -24,7 +24,7 @@ from core.logger import get_logger
 
 logger = get_logger(__name__)
 
-LLM_TIMEOUT_SECONDS = 10
+LLM_TIMEOUT_SECONDS = 120
 MAX_API_KEY_LENGTH = 8192
 
 
@@ -379,6 +379,8 @@ def build_model_client(
         if reasoning_effort != "off":
             kwargs["reasoning_effort"] = reasoning_effort
             kwargs["extra_body"] = {"thinking": {"type": "enabled"}}
+        else:
+            kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
         return ChatDeepSeek(**kwargs)
     if provider is Provider.GEMINI:
         kwargs = dict(common)

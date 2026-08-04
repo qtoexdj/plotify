@@ -439,3 +439,30 @@ async def test_review_rolls_back_variable_update_when_audit_insert_fails():
     assert supabase.variable_updates[1]["state"] == "resolved"
     assert supabase.variable_updates[1]["value_text"] == "4698"
     assert supabase.variable_updates[1]["reviewed_by"] is None
+
+
+async def test_review_allows_reapproving_and_editing_approved_variables():
+    from schemas.legal_variables import VariableUpdateRequest
+    from services.legal_variable_resolution import update_legal_variable
+
+    supabase = FakeSupabase(variable_state="approved")
+    response = await update_legal_variable(
+        variable_resolution_id=VARIABLE_ID,
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        payload=VariableUpdateRequest.model_validate(
+            {
+                "action": "edit",
+                "value_text": '{"orden": 1, "test": true}',
+                "state": "approved",
+                "reviewed_by": USER_ID,
+                "correction_reason": "Actualizacion manual de inscripcion",
+            }
+        ),
+        supabase=supabase,
+    )
+
+    assert response.state == "approved"
+    assert supabase.variable_updates[0]["value_json"] == {"orden": 1, "test": True}
+    assert supabase.variable_updates[0]["value_text"] is None
+    assert supabase.variable_updates[0]["source_type"] == "manual"

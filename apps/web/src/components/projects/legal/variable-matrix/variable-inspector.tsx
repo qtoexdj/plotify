@@ -68,8 +68,12 @@ export function VariableInspector({
 
   if (!entry) {
     return (
-      <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        Selecciona una variable para ver su evidencia.
+      <div className="rounded-xl border border-dashed border-border/80 bg-muted/10 p-8 text-center text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">Ninguna variable seleccionada</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Haz clic en cualquier variable de la matriz para inspeccionar su evidencia o corregir su
+          valor.
+        </p>
       </div>
     )
   }
@@ -94,11 +98,11 @@ export function VariableInspector({
 
     return (
       <>
-        <div className="space-y-3 rounded-lg border border-border bg-card p-4 text-card-foreground">
+        <div className="space-y-3.5 rounded-xl border border-border/80 bg-card p-4 shadow-xs text-card-foreground">
           <div>
             <h3 className="text-sm font-semibold">Roles SII por lote</h3>
             <p className="text-sm text-muted-foreground">
-              {entry.lotCount} lotes con unidad y pre-rol del certificado SII.
+              {entry.lotCount} lotes asignados · {entry.variableKeys.length} variables.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -142,9 +146,9 @@ export function VariableInspector({
               </AlertDialogDescription>
             </AlertDialogHeader>
 
-            <div className="space-y-2">
+            <div className="space-y-2 py-2">
               <div
-                className="h-2 w-full overflow-hidden rounded-full bg-muted"
+                className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
                 role="progressbar"
                 aria-label="Progreso de aprobación de roles SII"
                 aria-valuemin={0}
@@ -196,14 +200,22 @@ export function VariableInspector({
   const item = entry.item
 
   return (
-    <div className="space-y-4 rounded-lg border border-border bg-card p-4 text-card-foreground">
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-foreground">{legalVariableDisplayLabel(item)}</h3>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="truncate">{item.variable_key}</span>
-          <Badge variant="outline">{LEGAL_VARIABLE_STATE_LABELS[item.state]}</Badge>
+    <div className="space-y-4 rounded-xl border border-border/80 bg-card p-4 shadow-xs text-card-foreground">
+      <div className="space-y-1.5 border-b border-border/60 pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h3 className="text-sm font-bold tracking-tight text-foreground">
+            {legalVariableDisplayLabel(item)}
+          </h3>
+          <Badge variant="outline" className="text-[11px] font-medium">
+            {LEGAL_VARIABLE_STATE_LABELS[item.state]}
+          </Badge>
         </div>
-        <div className="text-base font-medium text-foreground">{formatVariableValue(item)}</div>
+        <p className="truncate font-mono text-[11px] text-muted-foreground/70">
+          {item.variable_key}
+        </p>
+        <div className="mt-2 rounded-lg border border-border/50 bg-muted/30 p-3 text-xs font-medium text-foreground leading-relaxed break-words">
+          {formatVariableValue(item)}
+        </div>
       </div>
 
       {isPorRevisar(entry) ? (
@@ -221,7 +233,19 @@ export function VariableInspector({
             Corregir
           </Button>
         </div>
-      ) : null}
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={saving}
+            onClick={() => onEdit(item)}
+          >
+            Editar
+          </Button>
+        </div>
+      )}
 
       <LegalEvidenceViewer evidence={item.evidence} compact />
     </div>

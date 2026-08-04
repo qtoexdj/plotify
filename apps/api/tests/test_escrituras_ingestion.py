@@ -145,6 +145,7 @@ def test_register_uploaded_legal_document_returns_queued_job(
             "project_id": PROJECT_ID,
             "ingestion_job_id": INGESTION_JOB_ID,
         },
+        _job_id=f"legal-ingestion:{INGESTION_JOB_ID}",
     )
     persisted_payload = register_document.await_args.args[0]
     assert persisted_payload.organization_id == ORG_ID
@@ -557,6 +558,10 @@ class FakeIngestionSupabase:
                 job
                 for job in self.jobs
                 if all(job.get(key) == value for key, value in table.filters.items())
+                and all(
+                    job.get(key) in values
+                    for key, values in table.in_filters.items()
+                )
             ]
             if table.order_column:
                 rows.sort(
@@ -613,6 +618,44 @@ async def test_retry_can_reprocess_completed_documents_after_extractor_updates()
     assert result.legal_document.extraction_status == "queued"
     assert result.ingestion_job.attempt_number == 2
     assert supabase.documents[0]["extraction_status"] == "queued"
+
+
+async def test_ensure_ingestion_repairs_pending_document_without_a_job():
+    from services.legal_document_ingestion import ensure_legal_document_ingestion
+
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "pending"
+    supabase.jobs.clear()
+
+    result = await ensure_legal_document_ingestion(
+        legal_document_id="00000000-0000-4000-8000-000000000006",
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        supabase=supabase,
+    )
+
+    assert result.legal_document.extraction_status == "queued"
+    assert result.ingestion_job.status == "queued"
+    assert result.ingestion_job.attempt_number == 1
+    assert len(supabase.jobs) == 1
+
+
+async def test_ensure_ingestion_reuses_existing_active_job():
+    from services.legal_document_ingestion import ensure_legal_document_ingestion
+
+    supabase = FakeIngestionSupabase()
+    supabase.documents[0]["extraction_status"] = "queued"
+    supabase.jobs[0]["status"] = "queued"
+
+    result = await ensure_legal_document_ingestion(
+        legal_document_id="00000000-0000-4000-8000-000000000006",
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        supabase=supabase,
+    )
+
+    assert result.ingestion_job.id == "00000000-0000-4000-8000-000000000007"
+    assert len(supabase.jobs) == 1
 
 
 def _register_payload(**overrides) -> dict[str, object]:

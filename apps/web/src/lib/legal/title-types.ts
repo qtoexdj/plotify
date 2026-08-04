@@ -191,11 +191,19 @@ export interface SourceDocumentInfo {
   document_type: string
   filename: string
   version: number
+  extraction_status: string
+  text_char_count: number
+  ready_for_analysis: boolean
 }
 
 export interface RunMetadata {
   extractor_name: string
   model_name: string
+  provider?: string | null
+  reasoning_effort?: string | null
+  config_version?: number | null
+  llm_executed?: boolean
+  provider_error_code?: string | null
   prompt_version: string
   duration_ms: number
   created_at: string

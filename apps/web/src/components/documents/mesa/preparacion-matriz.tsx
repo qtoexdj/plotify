@@ -128,9 +128,7 @@ export function PreparacionMatriz({ projectId, blockers, onResolved }: Preparaci
       ) : null}
 
       {secciones.map(([section, items]) => {
-        const revisables = items
-          .filter((item) => item.producer === 'extracted')
-          .map((item) => item.key)
+        const revisables = items.map((item) => item.key)
         const aprobandoSeccion = ocupado === `section:${section}`
         return (
           <section key={section} className="rounded-md border border-border bg-card p-3">

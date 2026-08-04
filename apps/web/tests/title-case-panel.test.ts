@@ -12,6 +12,7 @@ import path from 'path'
 import {
   TitleCasePanel,
   TITLE_PANEL_STATE_LABELS,
+  describeTitleRun,
   deriveTitlePanelState,
   formatBlockingItem,
   formatElapsed,
@@ -58,6 +59,13 @@ describe('T029 — title case panel exports', () => {
 })
 
 describe('T029 — panel state matrix', () => {
+  it('keeps analysis disabled while source documents are not extracted', () => {
+    const source = readSource('../src/components/projects/legal/title-case-panel.tsx')
+    expect(source).toContain('documentsReadyForTitleAnalysis')
+    expect(source).toContain('Esperando extracción')
+    expect(source).toContain('document.ready_for_analysis')
+  })
+
   it('maps a missing analysis to the no_documents empty state', () => {
     expect(deriveTitlePanelState(null)).toBe('no_documents')
   })
@@ -93,6 +101,35 @@ describe('T029 — panel state matrix', () => {
     expect(TITLE_PANEL_STATE_LABELS.llm_disabled).toBe('Modo manual')
     expect(TITLE_PANEL_STATE_LABELS.no_documents).toBe('Sin documentos de título')
     expect(TITLE_PANEL_STATE_LABELS.not_started).toBe('Pendiente de análisis')
+  })
+})
+
+describe('LLM control-plane run metadata', () => {
+  it('shows the provider, resolved model and reasoning used by the title run', () => {
+    expect(
+      describeTitleRun({
+        extractor_name: 'agent_titulo',
+        model_name: 'claude-sonnet-4-6',
+        provider: 'anthropic',
+        reasoning_effort: 'high',
+        config_version: 7,
+        prompt_version: 'v1',
+        duration_ms: 1200,
+        created_at: '2026-07-29T00:00:00Z',
+      })
+    ).toBe('Anthropic · claude-sonnet-4-6 · razonamiento alto')
+  })
+
+  it('keeps legacy analyses readable when they only contain model_name', () => {
+    expect(
+      describeTitleRun({
+        extractor_name: 'agent_titulo',
+        model_name: 'gpt-5.4',
+        prompt_version: 'v1',
+        duration_ms: 1200,
+        created_at: '2026-07-29T00:00:00Z',
+      })
+    ).toBe('gpt-5.4')
   })
 })
 

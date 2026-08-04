@@ -329,6 +329,9 @@ class FakeSupabaseTable:
     def neq(self, *_args):
         return self
 
+    def in_(self, *_args):
+        return self
+
     def is_(self, *_args):
         return self
 
@@ -649,8 +652,16 @@ async def test_ocr_timeout_expired_raises_error(monkeypatch):
     assert repository.update_job_status.await_args_list[-1].kwargs["error_code"] == "ocr_timeout"
 
 
-async def test_ingestion_job_queues_title_analysis_for_title_document():
+async def test_ingestion_job_queues_title_analysis_for_title_document(monkeypatch):
     from services.legal_document_ingestion import run_document_ingestion_job
+    import services.legal_title_analysis as title_analysis_module
+
+    monkeypatch.setattr(title_analysis_module, "title_source_documents_ready", lambda docs: True)
+    monkeypatch.setattr(
+        title_analysis_module,
+        "gather_title_source_documents",
+        AsyncMock(return_value=[{"id": LEGAL_DOCUMENT_ID, "document_type": "dominio_vigente", "extraction_status": "variables_proposed"}]),
+    )
 
     supabase = FakeSupabase()
     mock_redis = AsyncMock()
@@ -665,13 +676,14 @@ async def test_ingestion_job_queues_title_analysis_for_title_document():
     )
 
     assert result.status == "variables_proposed"
-    mock_redis.enqueue_job.assert_awaited_once_with(
-        "analyze_project_title",
-        {
-            "organization_id": ORG_ID,
-            "project_id": PROJECT_ID,
-        }
-    )
+    assert mock_redis.enqueue_job.await_count == 1
+    args, kwargs = mock_redis.enqueue_job.await_args
+    assert args[0] == "analyze_project_title"
+    assert args[1] == {
+        "organization_id": ORG_ID,
+        "project_id": PROJECT_ID,
+    }
+    assert str(kwargs.get("_job_id", "")).startswith("title-analysis:")
 
 
 

@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { fileTypeFromBuffer } from 'file-type'
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
+import { microserviceFetch } from '@/lib/services/microservice.client'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -28,6 +29,13 @@ type LegalDocumentProjection = {
   version_number: number
   extraction_status: string
   created_at: string | null
+}
+
+type LegalDocumentIngestionResponse = {
+  legal_document_id: string
+  ingestion_job_id: string
+  extraction_status: string
+  attempt_number: number
 }
 
 function error(status: number, code: string) {
@@ -239,6 +247,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         .eq('project_id', projectId)
         .maybeSingle()
       legalDocumentProjection = existingDocument
+    }
+
+    const ingestionParams = new URLSearchParams({
+      organization_id: project.organization_id,
+      project_id: projectId,
+    })
+    const { data: ingestion, error: ingestionError } =
+      await microserviceFetch<LegalDocumentIngestionResponse>(
+        `/api/v1/legal-documents/${encodeURIComponent(referenceId!)}/ensure-ingestion?${ingestionParams}`,
+        { method: 'POST' }
+      )
+    if (ingestionError) {
+      // The durable document remains valid. The worker reconciler will repair
+      // this dispatch if the API or Redis is temporarily unavailable.
+      logger.warn(
+        {
+          projectId,
+          legalDocumentId: referenceId,
+          error: String(ingestionError),
+        },
+        'legal_document_ingestion_dispatch_deferred'
+      )
+    } else if (ingestion && legalDocumentProjection) {
+      legalDocumentProjection = {
+        ...legalDocumentProjection,
+        extraction_status: ingestion.extraction_status,
+      }
     }
 
     if (legalDocumentProjection) {

@@ -398,9 +398,8 @@ def _plain_title_owner(owner: dict[str, Any]) -> dict[str, Any]:
 def build_title_snapshot_values(
     title_analysis: dict[str, Any] | None,
 ) -> dict[str, Any] | None:
-    """SDD 009 contract: an approved title contributes domain values only —
-    no evidence/verified/parser metadata inside the snapshot values."""
-    if not title_analysis or str(title_analysis.get("status")) != "approved":
+    """SDD 009 contract: title analysis contributes domain values to the snapshot."""
+    if not title_analysis or title_analysis.get("status") != "approved":
         return None
     analysis_json = title_analysis.get("analysis_json")
     analysis_json = analysis_json if isinstance(analysis_json, dict) else {}
@@ -567,6 +566,36 @@ def build_variable_snapshot(
     titulo_values = build_title_snapshot_values(title_analysis)
     if titulo_values is not None:
         snapshot["titulo"] = titulo_values
+
+    # Auto-derive sag.plano_cbr_registro if missing or empty
+    cbr_entry = snapshot.get("sag.plano_cbr_registro")
+    if not cbr_entry or not cbr_entry.get("value_text"):
+        derived_cbr = None
+        if titulo_values and titulo_values.get("inscripciones"):
+            inscriptions = titulo_values.get("inscripciones")
+            if isinstance(inscriptions, list) and inscriptions:
+                first_i = inscriptions[0]
+                if isinstance(first_i, dict) and first_i.get("cbr"):
+                    cbr_str = str(first_i["cbr"]).strip()
+                    if not cbr_str.lower().startswith("conservador"):
+                        derived_cbr = f"Conservador de Bienes Raíces de {cbr_str}"
+                    else:
+                        derived_cbr = cbr_str
+        if not derived_cbr and project_legal_data and project_legal_data.get("sii_comuna"):
+            comuna_str = str(project_legal_data["sii_comuna"]).strip()
+            if not comuna_str.lower().startswith("conservador"):
+                derived_cbr = f"Conservador de Bienes Raíces de {comuna_str}"
+            else:
+                derived_cbr = comuna_str
+        if derived_cbr:
+            snapshot["sag.plano_cbr_registro"] = {
+                "value_text": derived_cbr,
+                "value_json": None,
+                "state": "approved",
+                "source_type": "derived",
+                "source_ref": {"source": "project_cbr_derivation"},
+                "confidence": 1.0,
+            }
 
     return snapshot
 
@@ -895,6 +924,13 @@ async def fetch_project_matriz_snapshot(
         from core.database import get_supabase_client
 
         supabase = get_supabase_client()
+
+    from services.legal_title_analysis import sync_title_analysis_alerts_to_matrix
+    await sync_title_analysis_alerts_to_matrix(
+        organization_id=organization_id,
+        project_id=project_id,
+        supabase=supabase,
+    )
 
     (
         variables_result,

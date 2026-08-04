@@ -62,8 +62,8 @@ def test_gemini_transcribes_native_pdf_with_structured_output_and_thinking(monke
     assert captured["url"].endswith("/models/gemini-3.6-flash:generateContent")
     assert captured["headers"]["x-goog-api-key"] == "gemini-key"
     request = captured["request"]
-    inline_data = request["contents"][0]["parts"][0]["inline_data"]
-    assert inline_data["mime_type"] == "application/pdf"
+    inline_data = request["contents"][0]["parts"][0]["inlineData"]
+    assert inline_data["mimeType"] == "application/pdf"
     assert inline_data["data"]
     assert request["generationConfig"]["thinkingConfig"] == {
         "thinkingLevel": "high"

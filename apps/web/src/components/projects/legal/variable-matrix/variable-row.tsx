@@ -6,11 +6,23 @@ import { isPorRevisar, type MatrixEntry } from '@/lib/legal/variable-matrix-mode
 import type { VariableInventoryItem } from '@/lib/legal/variable-resolution-types'
 import { legalVariableDisplayLabel } from '@/lib/legal/variable-labels'
 
-/** Valor legible de una variable (texto, JSON serializado, o guion). */
+/** Valor legible de una variable (texto, resumen de JSON, o guion). */
 export function formatVariableValue(item: VariableInventoryItem): string {
   if (item.value_text) return item.value_text
   if (item.value_json !== null && item.value_json !== undefined) {
-    return JSON.stringify(item.value_json)
+    if (Array.isArray(item.value_json)) {
+      if (item.variable_key === 'titulo.inscripciones[]') {
+        return `${item.value_json.length} ${item.value_json.length === 1 ? 'inscripción' : 'inscripciones'}`
+      }
+      if (item.variable_key === 'titulo.propietarios[]') {
+        return `${item.value_json.length} ${item.value_json.length === 1 ? 'propietario' : 'propietarios'}`
+      }
+      return `${item.value_json.length} elementos`
+    }
+    if (typeof item.value_json === 'object') {
+      return 'Estructura configurada'
+    }
+    return String(item.value_json)
   }
   return '—'
 }
@@ -60,8 +72,7 @@ export function VariableRow({
   onOpenSiiDetail,
 }: VariableRowProps) {
   const canApprove = entry.kind === 'single' && isPorRevisar(entry)
-  const canEdit =
-    entry.kind === 'single' && (entry.producer === 'manual' || entry.producer === 'authored')
+  const canEdit = entry.kind === 'single'
   const pending = isPorRevisar(entry)
   const confidence = entry.kind === 'single' ? formatConfidence(entry.item.confidence) : ''
 
@@ -80,32 +91,36 @@ export function VariableRow({
         }
       }}
       className={cn(
-        'grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 border-t px-3 py-3 text-sm transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
-        pending ? 'border-t-warning/20 bg-warning/10' : 'border-border',
-        selected && 'bg-primary/5'
+        'grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 border-t px-3.5 py-3 text-sm transition-all duration-150 hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center',
+        pending ? 'border-t-warning/20 bg-warning/5 hover:bg-warning/10' : 'border-border/60',
+        selected && 'bg-primary/10 ring-1 ring-inset ring-primary/30 border-l-2 border-l-primary'
       )}
     >
       <span
         aria-hidden
         className={cn(
           'mt-1.5 shrink-0 rounded-full sm:mt-0',
-          pending ? 'size-2.5 ring-2 ring-warning/40' : 'size-1.5',
+          pending ? 'size-2.5 ring-2 ring-warning/30' : 'size-1.5',
           BUCKET_DOT[entry.bucket]
         )}
       />
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium text-foreground">{entryLabel(entry)}</div>
-        <div className="truncate text-xs text-muted-foreground">{entryKeyText(entry)}</div>
+        <div className="truncate font-mono text-[11px] text-muted-foreground/70">
+          {entryKeyText(entry)}
+        </div>
       </div>
       <div className="col-start-2 flex min-w-0 flex-wrap items-center gap-2 sm:col-start-auto sm:justify-end">
-        <div className="min-w-0 max-w-full truncate text-foreground sm:max-w-44 sm:text-right">
+        <div className="min-w-0 max-w-full truncate text-sm font-medium text-foreground sm:max-w-48 sm:text-right">
           {entryValue(entry)}
         </div>
         {confidence ? (
-          <span className="shrink-0 font-mono text-xs text-muted-foreground">{confidence}</span>
+          <span className="shrink-0 rounded bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+            {confidence}
+          </span>
         ) : null}
         {pending ? (
-          <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
+          <span className="shrink-0 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
             por aprobar
           </span>
         ) : null}
@@ -114,7 +129,7 @@ export function VariableRow({
             type="button"
             size="sm"
             variant="secondary"
-            className="min-h-10 w-full sm:w-auto"
+            className="h-8 text-xs font-medium px-3 min-h-8 w-full sm:w-auto"
             disabled={saving}
             onClick={(event) => {
               event.stopPropagation()
@@ -129,7 +144,7 @@ export function VariableRow({
             type="button"
             size="sm"
             variant="outline"
-            className="min-h-10 w-full sm:w-auto"
+            className="h-8 text-xs font-medium px-3 min-h-8 w-full sm:w-auto"
             disabled={saving}
             onClick={(event) => {
               event.stopPropagation()
@@ -143,7 +158,7 @@ export function VariableRow({
             type="button"
             size="sm"
             variant="outline"
-            className="min-h-10 w-full sm:w-auto"
+            className="h-8 text-xs font-medium px-3 min-h-8 w-full sm:w-auto"
             onClick={(event) => {
               event.stopPropagation()
               onOpenSiiDetail()

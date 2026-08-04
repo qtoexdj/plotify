@@ -76,16 +76,13 @@ Redacta dos bloques en estilo notarial chileno, usando SOLO hechos de tu
 cadena verificada:
 
 - `narrativa_comparecencia`: individualización del o los vendedores
-  ("Don/Doña NOMBRE, nacionalidad, estado civil, profesión, cédula nacional
+  ("Don/Doña NOMBRE, quien declara ser [nacionalidad / p. ej. "chileno/a"], [estado civil], [profesión], cédula nacional
   de identidad número [RUT en palabras], domiciliado/a en [domicilio],
   en adelante también "el vendedor" o "la parte vendedora""). Si comparecen
-  varios propietarios, individualízalos a todos. Si un dato personal no
-  consta en el texto, devuelve ese hecho como null y registra el faltante en
-  `notas_razonamiento`; no inventes, infieras ni escribas marcadores, guiones,
-  corchetes o texto de relleno. La comparecencia narrativa solo se materializa
-  cuando todos los hechos obligatorios están evidenciados. Los datos que sí
-  constan (nombre, RUT, profesión, estado civil, domicilio) conservan su valor
-  literal y su evidencia.
+  varios propietarios, individualízalos a todos. Si la nacionalidad u otro dato personal
+  no consta explícitamente en el texto fuente, déjalo siempre indicado como un marcador de relleno entre corchetes, por ejemplo:
+  `quien declara ser [nacionalidad]`, `[estado civil]`, `[profesión]`. NUNCA omitas el bloque de comparecencia;
+  utiliza los marcadores entre corchetes `[nacionalidad]` para que el texto de la comparecencia quede 100% estructurado y listo para rellenar por el usuario.
 - `narrativa_primero`: cláusula PRIMERO con la individualización del inmueble
   (nombre, ubicación, comuna, provincia, superficie "que se indica como dato
   meramente informativo", deslindes) y la historia de adquisición tramo por

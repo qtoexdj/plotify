@@ -318,11 +318,14 @@ describe('T016 - Escrituras legal document ingestion from web uploads', () => {
         source_field: 'doc_roles',
         original_filename: 'certificado-roles.pdf',
         version_number: 1,
-        extraction_status: 'pending',
+        extraction_status: 'queued',
         uploaded_at: '2026-07-29T15:30:00.000Z',
       },
     })
-    expect(microserviceFetch).not.toHaveBeenCalled()
+    expect(microserviceFetch).toHaveBeenCalledWith(
+      '/api/v1/legal-documents/legal-doc-1/ensure-ingestion?organization_id=org-1&project_id=project-1',
+      { method: 'POST' }
+    )
   })
 
   it('rejects invalid project document uploads before legal document registration', async () => {

@@ -417,7 +417,7 @@ async def test_get_project_variable_inventory_exposes_producer_by_group_and_key(
 
     assert producer_by_key == {
         "vendedor.nombre": "extracted",
-        "sag.plano_cbr_numero": "manual",
+        "sag.plano_cbr_numero": "extracted",
         "comprador.nombre": "sale_gap",
         "clausulas.saneamiento_eviccion": "authored",
         "documento.notario.nombre": "signing",

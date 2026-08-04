@@ -455,6 +455,186 @@ async def create_ingestion_job(
     return DocumentIngestionJobResponse.model_validate(row)
 
 
+async def _find_active_ingestion_job(
+    *,
+    supabase: Any,
+    legal_document_id: str,
+) -> DocumentIngestionJobResponse | None:
+    result = await _run_supabase(
+        lambda: (
+            supabase.table("document_ingestion_jobs")
+            .select("*")
+            .eq("legal_document_id", legal_document_id)
+            .in_("status", ("queued", "processing"))
+            .order("attempt_number", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    row = _first_row(result)
+    return DocumentIngestionJobResponse.model_validate(row) if row else None
+
+
+async def ensure_legal_document_ingestion(
+    *,
+    legal_document_id: str,
+    organization_id: str,
+    project_id: str,
+    supabase: Any | None = None,
+) -> LegalDocumentRegistrationResult:
+    """Ensure an uploaded legal document has one durable active ingestion job.
+
+    This is the recovery boundary for the secure file gateway: the file and
+    legal-document rows may already be committed when Redis or the API becomes
+    temporarily unavailable. Repeated calls reuse the active DB job, while the
+    partial unique index on ``document_ingestion_jobs`` remains the final race
+    guard.
+    """
+
+    client = supabase or _get_supabase_client()
+    document = await get_legal_document_for_ingestion(
+        supabase=client,
+        legal_document_id=legal_document_id,
+        organization_id=organization_id,
+        project_id=project_id,
+    )
+    if document.extraction_status not in {"pending", "queued", "processing"}:
+        raise LegalDocumentValidationError(
+            "Only pending, queued or processing legal documents can be ensured."
+        )
+
+    active_job = await _find_active_ingestion_job(
+        supabase=client,
+        legal_document_id=legal_document_id,
+    )
+    if active_job is not None:
+        effective_status = (
+            "processing" if active_job.status == "processing" else "queued"
+        )
+        if document.extraction_status != effective_status:
+            await _run_supabase(
+                lambda: (
+                    client.table("legal_documents")
+                    .update({"extraction_status": effective_status})
+                    .eq("id", legal_document_id)
+                    .eq("organization_id", organization_id)
+                    .eq("project_id", project_id)
+                    .execute()
+                )
+            )
+            document = document.model_copy(
+                update={"extraction_status": effective_status}
+            )
+        return LegalDocumentRegistrationResult(
+            legal_document=document,
+            ingestion_job=active_job,
+        )
+
+    attempts_result = await _run_supabase(
+        lambda: (
+            client.table("document_ingestion_jobs")
+            .select("attempt_number")
+            .eq("legal_document_id", legal_document_id)
+            .order("attempt_number", desc=True)
+            .limit(1)
+            .execute()
+        )
+    )
+    latest_attempt = _first_row(attempts_result)
+    attempt_number = (
+        int(latest_attempt.get("attempt_number") or 0) + 1
+        if latest_attempt
+        else 1
+    )
+    await _run_supabase(
+        lambda: (
+            client.table("legal_documents")
+            .update({"extraction_status": QUEUED_STATUS})
+            .eq("id", legal_document_id)
+            .eq("organization_id", organization_id)
+            .eq("project_id", project_id)
+            .execute()
+        )
+    )
+    queued_document = document.model_copy(
+        update={"extraction_status": QUEUED_STATUS}
+    )
+    try:
+        ingestion_job = await create_ingestion_job(
+            supabase=client,
+            legal_document=queued_document,
+            attempt_number=attempt_number,
+        )
+    except Exception:
+        # A concurrent request may have won the partial-unique-index race.
+        active_job = await _find_active_ingestion_job(
+            supabase=client,
+            legal_document_id=legal_document_id,
+        )
+        if active_job is None:
+            raise
+        ingestion_job = active_job
+
+    logger.info(
+        "legal_document_ingestion_ensured",
+        organization_id=organization_id,
+        project_id=project_id,
+        legal_document_id=legal_document_id,
+        ingestion_job_id=ingestion_job.id,
+        attempt_number=ingestion_job.attempt_number,
+    )
+    return LegalDocumentRegistrationResult(
+        legal_document=queued_document,
+        ingestion_job=ingestion_job,
+    )
+
+
+async def recover_pending_legal_document_ingestions(
+    *,
+    limit: int = 25,
+    supabase: Any | None = None,
+) -> list[LegalDocumentRegistrationResult]:
+    """Repair durable legal-document rows whose Redis dispatch was missed.
+
+    Upload persistence and queue dispatch cannot be one transaction. This
+    bounded reconciler makes the database the source of truth and safely
+    replays dispatch through :func:`ensure_legal_document_ingestion`.
+    """
+
+    client = supabase or _get_supabase_client()
+    result = await _run_supabase(
+        lambda: (
+            client.table("legal_documents")
+            .select("id, organization_id, project_id")
+            .in_("extraction_status", ("pending", "queued"))
+            .is_("superseded_by", "null")
+            .order("created_at")
+            .limit(max(1, min(limit, 100)))
+            .execute()
+        )
+    )
+    recovered: list[LegalDocumentRegistrationResult] = []
+    for row in _rows(result):
+        try:
+            recovered.append(
+                await ensure_legal_document_ingestion(
+                    legal_document_id=str(row["id"]),
+                    organization_id=str(row["organization_id"]),
+                    project_id=str(row["project_id"]),
+                    supabase=client,
+                )
+            )
+        except Exception as exc:
+            logger.error(
+                "legal_document_ingestion_recovery_failed",
+                legal_document_id=row.get("id"),
+                organization_id=row.get("organization_id"),
+                project_id=row.get("project_id"),
+                error=str(exc),
+            )
+    return recovered
+
+
 async def register_legal_document(
     payload: LegalDocumentRegisterRequest
     | LegalDocumentRegistrationInput
@@ -951,18 +1131,47 @@ async def run_document_ingestion_job(
     )
     if document.document_type in TITLE_ANALYSIS_DOCUMENT_TYPES:
         try:
+            from services.legal_title_analysis import (
+                compute_source_content_hash,
+                gather_title_source_documents,
+                title_source_documents_ready,
+            )
+
+            source_documents = await gather_title_source_documents(
+                organization_id=organization_id,
+                project_id=project_id,
+                supabase=client,
+            )
+            if not title_source_documents_ready(source_documents):
+                logger.info(
+                    "title_analysis_deferred_documents_not_ready",
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    legal_document_id=legal_document_id,
+                )
+                return LegalDocumentIngestionRunResult(
+                    legal_document_id=legal_document_id,
+                    organization_id=organization_id,
+                    project_id=project_id,
+                    ingestion_job_id=ingestion_job_id,
+                    status=final_status,
+                )
+
             arq_pool = redis
             if arq_pool is None:
                 from core.redis import get_arq_pool
+
                 arq_pool = await get_arq_pool()
-            
+
             if arq_pool is not None:
+                source_content_hash = compute_source_content_hash(source_documents)
                 await arq_pool.enqueue_job(
                     "analyze_project_title",
                     {
                         "organization_id": organization_id,
                         "project_id": project_id,
-                    }
+                    },
+                    _job_id=f"title-analysis:{project_id}:{source_content_hash}",
                 )
                 logger.info(
                     "title_analysis_queued_after_ingestion",

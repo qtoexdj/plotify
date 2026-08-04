@@ -91,11 +91,18 @@ function factLabel(fact: SellerFact | undefined): string {
   return `${fact.value} · ${fact.state === 'manual_approved' ? 'Aprobación manual' : 'Con evidencia'}`
 }
 
+export function isJsonVariable(variable: VariableInventoryItem | null): boolean {
+  if (!variable) return false
+  if (variable.value_json !== null && variable.value_json !== undefined) return true
+  return variable.variable_key.endsWith('[]')
+}
+
 function formatValue(variable: VariableInventoryItem | null) {
   if (!variable) return ''
   if (variable.value_text) return variable.value_text
   if (variable.value_json !== null && variable.value_json !== undefined) {
-    return JSON.stringify(variable.value_json)
+    if (typeof variable.value_json === 'string') return variable.value_json
+    return JSON.stringify(variable.value_json, null, 2)
   }
   return ''
 }
@@ -161,6 +168,7 @@ function LegalVariableEditorContent({
   const [correctionReason, setCorrectionReason] = useState(() => variable.correction_reason ?? '')
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const comparecientes = parseComparecientes(variable.value_json)
+  const isJson = isJsonVariable(variable)
 
   useEffect(() => {
     if (open) returnFocusRef.current = document.activeElement as HTMLElement | null
@@ -169,15 +177,28 @@ function LegalVariableEditorContent({
   const trimmedReason = correctionReason.trim()
   const trimmedValue = valueText.trim()
 
+  const parsedJson = useMemo(() => {
+    if (!trimmedValue) return null
+    if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
+      try {
+        return JSON.parse(trimmedValue)
+      } catch {
+        return null
+      }
+    }
+    return null
+  }, [trimmedValue])
+
   const basePayload = useMemo<LegalVariableEditPayload>(
     () => ({
       action: 'edit',
-      value_text: trimmedValue || null,
+      value_text: parsedJson ? null : trimmedValue || null,
+      value_json: parsedJson ?? (isJson && !trimmedValue ? null : undefined),
       state: trimmedValue ? 'resolved' : 'missing',
       correction_reason: trimmedReason || null,
       evidence_policy: 'keep_existing',
     }),
-    [trimmedReason, trimmedValue]
+    [trimmedReason, trimmedValue, parsedJson, isJson]
   )
 
   // SDD 011: el motivo es opcional para ingresar/corregir un valor; solo se
@@ -264,6 +285,18 @@ function LegalVariableEditorContent({
                     </dl>
                   </div>
                 ))}
+              </div>
+            ) : isJson ? (
+              <div className="space-y-2">
+                <Label htmlFor="legal-variable-value">Valor actual (Estructura JSON)</Label>
+                <Textarea
+                  id="legal-variable-value"
+                  value={valueText}
+                  onChange={(event) => setValueText(event.target.value)}
+                  placeholder="Ingresa la estructura JSON revisada"
+                  className="font-mono text-xs leading-relaxed"
+                  rows={12}
+                />
               </div>
             ) : (
               <div className="space-y-2">

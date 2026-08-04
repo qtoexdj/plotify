@@ -68,6 +68,7 @@ interface ProducerGroupProps {
   onBulkApprove: (variableKeys: string[]) => Promise<boolean> | boolean | void
   onOpenSiiDetail: () => void
   forceOpen?: boolean
+  initialOpen?: boolean
 }
 
 export function ProducerGroup({
@@ -81,21 +82,17 @@ export function ProducerGroup({
   onBulkApprove,
   onOpenSiiDetail,
   forceOpen = false,
+  initialOpen = true,
 }: ProducerGroupProps) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(initialOpen)
   const Icon = PRODUCER_META[section.producer].icon
   const display = producerDisplay(section)
   const canBulk = ACTIONABLE_PRODUCERS.includes(section.producer) && section.porRevisar > 0
   const hasPending = section.porRevisar > 0
-  const isCollapsible =
-    section.producer === 'extracted' ||
-    section.producer === 'manual' ||
-    section.producer === 'authored'
-  const effectiveOpen = isCollapsible ? forceOpen || open : true
-  const firstEditableItem =
-    section.producer === 'manual' || section.producer === 'authored'
-      ? section.entries.find((entry) => entry.kind === 'single')?.item
-      : undefined
+  const hasSelected = section.entries.some((entry) => entry.id === selectedId)
+  const isCollapsible = true
+  const effectiveOpen = isCollapsible ? forceOpen || hasSelected || open : true
+  const firstEditableItem = section.entries.find((entry) => entry.kind === 'single')?.item
 
   const rows = (
     <div>
@@ -119,39 +116,43 @@ export function ProducerGroup({
       data-testid={`producer-group-${section.producer}`}
       data-has-pending={hasPending ? 'true' : undefined}
       className={cn(
-        'rounded-lg border bg-card text-card-foreground transition-colors',
-        hasPending ? 'border-warning/40 shadow-sm shadow-warning/10' : 'border-border'
+        'rounded-xl border bg-card text-card-foreground shadow-xs transition-all duration-200 overflow-hidden',
+        hasPending ? 'border-warning/40 ring-1 ring-warning/20' : 'border-border/80'
       )}
     >
       <header
         className={cn(
-          'grid gap-2 border-b px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center',
-          hasPending ? 'border-warning/20 bg-warning/10' : 'border-border'
+          'grid gap-2 border-b px-3.5 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center',
+          hasPending ? 'border-warning/20 bg-warning/5' : 'border-border/60 bg-muted/20'
         )}
       >
         {isCollapsible ? (
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex min-h-11 min-w-0 items-center gap-2.5 rounded-md text-left outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex min-h-10 min-w-0 items-center gap-3 rounded-lg text-left outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               aria-label={`${effectiveOpen ? 'Contraer' : 'Expandir'} ${display.label}`}
             >
               <span
                 className={cn(
-                  'flex size-8 shrink-0 items-center justify-center rounded-md',
-                  hasPending ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'
+                  'flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+                  hasPending
+                    ? 'bg-warning/15 text-warning ring-1 ring-warning/30'
+                    : 'bg-muted/80 text-muted-foreground'
                 )}
               >
                 <HugeiconsIcon icon={Icon} className="size-4" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{display.label}</span>
+                <span className="block truncate text-sm font-semibold tracking-tight text-foreground">
+                  {display.label}
+                </span>
                 <span className="block truncate text-xs text-muted-foreground">{display.hint}</span>
               </span>
               <HugeiconsIcon
                 icon={ChevronDown}
                 className={cn(
-                  'size-4 shrink-0 text-muted-foreground transition-transform',
+                  'size-4 shrink-0 text-muted-foreground transition-transform duration-200',
                   effectiveOpen && 'rotate-180'
                 )}
                 aria-hidden
@@ -159,17 +160,21 @@ export function ProducerGroup({
             </button>
           </CollapsibleTrigger>
         ) : (
-          <div className="flex min-h-11 min-w-0 items-center gap-2.5">
+          <div className="flex min-h-10 min-w-0 items-center gap-3">
             <span
               className={cn(
-                'flex size-8 shrink-0 items-center justify-center rounded-md',
-                hasPending ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'
+                'flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+                hasPending
+                  ? 'bg-warning/15 text-warning ring-1 ring-warning/30'
+                  : 'bg-muted/80 text-muted-foreground'
               )}
             >
               <HugeiconsIcon icon={Icon} className="size-4" aria-hidden />
             </span>
             <div className="min-w-0">
-              <h3 className="truncate text-sm font-semibold">{display.label}</h3>
+              <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">
+                {display.label}
+              </h3>
               <p className="truncate text-xs text-muted-foreground">{display.hint}</p>
             </div>
           </div>
@@ -180,7 +185,7 @@ export function ProducerGroup({
               type="button"
               size="sm"
               variant="secondary"
-              className="min-h-10 w-full sm:w-auto"
+              className="h-8 text-xs font-medium px-3 min-h-8 w-full sm:w-auto"
               disabled={bulkSaving}
               onClick={() => onBulkApprove(porRevisarKeys(section))}
             >
@@ -192,7 +197,7 @@ export function ProducerGroup({
               type="button"
               size="sm"
               variant="outline"
-              className="min-h-10 w-full sm:w-auto"
+              className="h-8 text-xs font-medium px-3 min-h-8 w-full sm:w-auto"
               onClick={() => onEdit(firstEditableItem)}
             >
               Editar datos
@@ -201,8 +206,10 @@ export function ProducerGroup({
           {!canBulk ? (
             <span
               className={cn(
-                'text-xs',
-                hasPending ? 'font-medium text-warning' : 'text-muted-foreground'
+                'text-xs font-medium px-2 py-0.5 rounded-full',
+                hasPending
+                  ? 'border border-warning/30 bg-warning/10 text-warning'
+                  : 'text-muted-foreground bg-muted/50'
               )}
             >
               {hasPending ? `${section.porRevisar} por revisar` : 'sin pendientes'}

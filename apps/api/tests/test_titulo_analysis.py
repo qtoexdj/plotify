@@ -43,6 +43,10 @@ def _agent_outcome(
     *,
     comparecencia: str | None = None,
     primero: str | None = None,
+    provider: str | None = None,
+    model: str | None = None,
+    reasoning_effort: str | None = None,
+    config_version: int | None = None,
 ) -> TitleAgentRunOutcome:
     return TitleAgentRunOutcome(
         result=TitleAgentResult(
@@ -54,6 +58,10 @@ def _agent_outcome(
         token_usage={"input_tokens": 100, "output_tokens": 40, "total_tokens": 140},
         llm_calls=4,
         available=True,
+        provider=provider,
+        model=model,
+        reasoning_effort=reasoning_effort,
+        config_version=config_version,
     )
 
 
@@ -143,6 +151,82 @@ async def test_gathers_only_active_title_documents_with_ordered_pages(teno_title
     assert all(doc["pages"] for doc in gathered)
     assert gathered[0]["pages"][0]["page_number"] == 1
     assert "text_content" in gathered[0]["pages"][0]
+
+
+async def test_manual_reanalysis_rejects_documents_still_waiting_for_extraction(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    pending_document = {
+        "id": DOC_2023_ID,
+        "legal_document_id": DOC_2023_ID,
+        "document_type": "dominio_vigente",
+        "filename": "Dominio pendiente.pdf",
+        "version": 1,
+        "extraction_status": "pending",
+        "pages": [],
+    }
+
+    async def fake_gather_title_source_documents(**_kwargs):
+        return [pending_document]
+
+    monkeypatch.setattr(
+        legal_title_analysis,
+        "gather_title_source_documents",
+        fake_gather_title_source_documents,
+    )
+
+    with pytest.raises(
+        legal_title_analysis.LegalTitleAnalysisConflictError,
+        match="not ready",
+    ):
+        await legal_title_analysis.request_title_reanalysis(
+            organization_id=ORG_ID,
+            project_id=PROJECT_ID,
+            supabase=object(),
+            redis=SimpleNamespace(),
+        )
+
+
+async def test_persists_resolved_control_plane_model_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+    teno_title_documents: list[dict],
+    golden_title_analysis: TitleAnalysis,
+):
+    async def fake_gather_title_source_documents(**_kwargs):
+        return teno_title_documents
+
+    async def fake_check_idempotency(**_kwargs):
+        return None
+
+    async def fake_run_title_agent(*_args, **_kwargs):
+        return _agent_outcome(
+            golden_title_analysis,
+            provider="anthropic",
+            model="claude-sonnet-4-6",
+            reasoning_effort="off",
+            config_version=7,
+        )
+
+    monkeypatch.setattr(legal_title_analysis, "get_settings", lambda: _settings())
+    monkeypatch.setattr(
+        legal_title_analysis,
+        "gather_title_source_documents",
+        fake_gather_title_source_documents,
+    )
+    monkeypatch.setattr(legal_title_analysis, "check_idempotency", fake_check_idempotency)
+    monkeypatch.setattr("agent_titulo.runner.run_title_agent", fake_run_title_agent)
+
+    result = await legal_title_analysis.run_title_analysis(
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        supabase=object(),
+    )
+
+    assert result.run is not None
+    assert result.run.model_name == "claude-sonnet-4-6"
+    assert result.run.provider == "anthropic"
+    assert result.run.reasoning_effort == "off"
+    assert result.run.config_version == 7
 
 
 def test_source_content_hash_is_stable_by_order_and_changes_with_page_text(
@@ -601,7 +685,7 @@ async def test_alerts_persist_with_taxonomy_evidence_and_pending_resolution(
         assert alert.evidence.legal_document_id
 
     alert_props = [p for p in proposals if p.variable_key == "titulo.alertas[]"]
-    assert len(alert_props) == len(result.alerts)
+    assert len(alert_props) == 1
     assert all(p.evidence for p in alert_props)
 
 

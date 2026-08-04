@@ -19,6 +19,8 @@ const VARIABLE_LABELS: Record<string, string> = {
   'sii.unidad_nombre': 'Unidad SII',
   'titulo.propietarios': 'Propietarios del titulo',
   'vendedor.domicilio': 'Domicilio del vendedor',
+  'vendedor.estado_civil': 'Estado civil del vendedor',
+  'vendedor.nacionalidad': 'Nacionalidad del vendedor',
   'vendedor.nombre': 'Nombre del vendedor',
   'vendedor.profesion_giro': 'Profesion o giro del vendedor',
   'vendedor.rut': 'RUT del vendedor',

@@ -34,3 +34,41 @@ async def process_legal_document_ingestion(ctx: dict, payload: dict[str, Any]) -
         redis=ctx.get("redis"),
     )
     return result.status
+
+
+async def reconcile_legal_document_ingestions(ctx: dict) -> int:
+    """Re-dispatch pending durable ingestion jobs missed by the upload path."""
+
+    from services.legal_document_ingestion import (
+        recover_pending_legal_document_ingestions,
+    )
+
+    recovered = await recover_pending_legal_document_ingestions()
+    redis = ctx.get("redis")
+    if redis is None:
+        logger.warning("legal_ingestion_reconciler_without_redis")
+        return 0
+
+    dispatched = 0
+    for result in recovered:
+        payload = {
+            "legal_document_id": result.legal_document.id,
+            "organization_id": result.legal_document.organization_id,
+            "project_id": result.legal_document.project_id,
+            "ingestion_job_id": result.ingestion_job.id,
+        }
+        try:
+            await redis.enqueue_job(
+                "process_legal_document_ingestion",
+                payload,
+                _job_id=f"legal-ingestion:{result.ingestion_job.id}",
+            )
+            dispatched += 1
+        except Exception as exc:
+            logger.error(
+                "legal_ingestion_reconciler_dispatch_failed",
+                legal_document_id=result.legal_document.id,
+                ingestion_job_id=result.ingestion_job.id,
+                error=str(exc),
+            )
+    return dispatched

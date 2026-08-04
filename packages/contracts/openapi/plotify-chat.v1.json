@@ -6010,6 +6010,17 @@
       },
       "TitleAnalysisRunDetails": {
         "properties": {
+          "config_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Version"
+          },
           "created_at": {
             "anyOf": [
               {
@@ -6044,6 +6055,28 @@
           "prompt_version": {
             "title": "Prompt Version",
             "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "reasoning_effort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Effort"
           }
         },
         "required": ["extractor_name", "model_name", "prompt_version"],

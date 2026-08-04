@@ -58,6 +58,10 @@ class TitleAgentRunOutcome:
     )
     llm_calls: int = 0
     available: bool = True
+    provider: str | None = None
+    model: str | None = None
+    reasoning_effort: str | None = None
+    config_version: int | None = None
 
 
 def _get_llm_client(provider: str, model: str, timeout: int) -> Any:
@@ -248,6 +252,8 @@ async def run_title_agent(
     client = llm
     resolved_provider = provider or "injected"
     resolved_model = model or (type(llm).__name__ if llm is not None else "unresolved")
+    resolved_reasoning_effort = "off" if llm is not None else None
+    resolved_config_version = 0 if llm is not None else None
     if client is None:
         try:
             client, resolved = await get_llm_control_plane().resolve_chat_client(
@@ -255,10 +261,14 @@ async def run_title_agent(
             )
             resolved_provider = resolved.provider.value
             resolved_model = resolved.model
+            resolved_reasoning_effort = resolved.reasoning_effort
+            resolved_config_version = resolved.version
             logger.info(
                 "title_analysis_llm_resolved",
                 provider=resolved.provider.value,
                 model=resolved.model,
+                reasoning_effort=resolved.reasoning_effort,
+                config_version=resolved.version,
             )
         except LLMConfigurationError as exc:
             logger.warning("title_analysis_llm_unavailable", error=str(exc))
@@ -327,4 +337,8 @@ async def run_title_agent(
         token_usage=token_usage,
         llm_calls=call_counter["llm_calls"],
         available=True,
+        provider=resolved_provider,
+        model=resolved_model,
+        reasoning_effort=resolved_reasoning_effort,
+        config_version=resolved_config_version,
     )

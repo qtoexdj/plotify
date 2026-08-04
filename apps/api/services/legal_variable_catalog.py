@@ -150,7 +150,9 @@ VARIABLE_KEYS_BY_GROUP: Final[dict[str, tuple[str, ...]]] = {
         "vendedor.nombre",
         "vendedor.rut",
         "vendedor.domicilio",
+        "vendedor.estado_civil",
         "vendedor.profesion_giro",
+        "vendedor.nacionalidad",
         "vendedor.representantes[]",
     ),
     "comprador": (
@@ -334,10 +336,10 @@ _PRODUCER_BY_GROUP: Final[dict[str, str]] = {
 # extraen; los datos del Conservador (numero/anio/registro del plano y oficina
 # sectorial) son captura manual al subir el plano.
 _PRODUCER_BY_KEY: Final[dict[str, str]] = {
-    "sag.plano_cbr_numero": "manual",
-    "sag.plano_cbr_anio": "manual",
-    "sag.plano_cbr_registro": "manual",
-    "sag.oficina_sectorial": "manual",
+    "sag.plano_cbr_numero": "extracted",
+    "sag.plano_cbr_anio": "extracted",
+    "sag.plano_cbr_registro": "extracted",
+    "sag.oficina_sectorial": "extracted",
 }
 
 
@@ -540,7 +542,9 @@ VARIABLE_LABELS: Final[dict[str, str]] = {
     "vendedor.nombre": "Nombre del vendedor",
     "vendedor.rut": "RUT del vendedor",
     "vendedor.domicilio": "Domicilio del vendedor",
+    "vendedor.estado_civil": "Estado civil del vendedor",
     "vendedor.profesion_giro": "Profesión o giro del vendedor",
+    "vendedor.nacionalidad": "Nacionalidad del vendedor",
     "vendedor.representantes[]": "Representantes del vendedor",
     "comprador.nombre": "Nombre del comprador",
     "comprador.rut": "RUT del comprador",

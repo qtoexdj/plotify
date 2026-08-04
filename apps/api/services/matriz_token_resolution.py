@@ -243,12 +243,23 @@ def snapshot_entry(variable_snapshot: dict[str, Any], key: str) -> dict[str, Any
 
 
 def titulo_value(variable_snapshot: dict[str, Any], block_or_array_key: str) -> Any:
-    """Resolve ``titulo.<field>`` keys against the approved titulo group."""
+    """Resolve ``titulo.<field>`` keys against the approved titulo group or top-level snapshot entry."""
+    entry = variable_snapshot.get(block_or_array_key)
+    if isinstance(entry, dict):
+        state = entry.get("state")
+        if state not in {"superseded", "missing"}:
+            text = _entry_text(entry)
+            if text is not None:
+                return text
+            if entry.get("value_json") is not None:
+                return entry.get("value_json")
+
     titulo = variable_snapshot.get("titulo")
-    if not isinstance(titulo, dict):
-        return None
-    field_name = block_or_array_key.removeprefix(TITULO_PREFIX).removesuffix("[]")
-    return titulo.get(field_name)
+    if isinstance(titulo, dict):
+        field_name = block_or_array_key.removeprefix(TITULO_PREFIX).removesuffix("[]")
+        return titulo.get(field_name)
+
+    return None
 
 
 def _entry_text(entry: dict[str, Any]) -> str | None:
@@ -293,6 +304,46 @@ def _is_truthy_condition(entry: dict[str, Any] | None) -> bool | None:
         return value_text.strip().lower() in TRUE_TEXT_VALUES
     if value_json is not None:
         return bool(value_json)
+    return None
+
+
+def _sag_plano_cbr_registro_derived(variable_snapshot: dict[str, Any]) -> str | None:
+    """Derive sag.plano_cbr_registro from explicit entry, title CBR, or comuna."""
+    entry = snapshot_entry(variable_snapshot, "sag.plano_cbr_registro")
+    if entry and entry.get("value_text") and str(entry.get("value_text")).strip():
+        return str(entry["value_text"]).strip()
+
+    titulo = variable_snapshot.get("titulo")
+    if isinstance(titulo, dict):
+        inscripciones = titulo.get("inscripciones")
+        if isinstance(inscripciones, list) and inscripciones:
+            first_insc = inscripciones[0]
+            if isinstance(first_insc, dict):
+                cbr = first_insc.get("cbr")
+                if isinstance(cbr, str) and cbr.strip():
+                    cbr_name = cbr.strip()
+                    if not cbr_name.lower().startswith("conservador"):
+                        return f"Conservador de Bienes Raíces de {cbr_name}"
+                    return cbr_name
+
+    comuna_entry = snapshot_entry(variable_snapshot, "sii.comuna") or snapshot_entry(
+        variable_snapshot, "matriz.comuna"
+    )
+    if comuna_entry and comuna_entry.get("value_text"):
+        comuna = str(comuna_entry["value_text"]).strip()
+        if comuna:
+            if not comuna.lower().startswith("conservador"):
+                return f"Conservador de Bienes Raíces de {comuna}"
+            return comuna
+
+    office_entry = snapshot_entry(variable_snapshot, "sag.oficina_sectorial")
+    if office_entry and office_entry.get("value_text"):
+        office = str(office_entry["value_text"]).strip()
+        if office:
+            if not office.lower().startswith("conservador"):
+                return f"Conservador de Bienes Raíces de {office}"
+            return office
+
     return None
 
 
@@ -393,6 +444,19 @@ class _ClauseResolver:
                         variable_key=key,
                         status="resolved",
                         value_text=texto,
+                        state="derived",
+                        source_type="derived",
+                        label_override=node_label,
+                    )
+                )
+        if key == "sag.plano_cbr_registro":
+            cbr_text = _sag_plano_cbr_registro_derived(self.snapshot)
+            if cbr_text:
+                return self._record(
+                    TokenResolutionEntry(
+                        variable_key=key,
+                        status="resolved",
+                        value_text=cbr_text,
                         state="derived",
                         source_type="derived",
                         label_override=node_label,

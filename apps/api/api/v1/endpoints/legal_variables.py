@@ -35,6 +35,7 @@ from services.legal_document_ingestion import (
     LegalDocumentScopeError,
     LegalDocumentValidationError,
     archive_legal_document as archive_legal_document_service,
+    ensure_legal_document_ingestion as ensure_legal_document_ingestion_service,
     list_project_legal_documents as list_project_legal_documents_service,
     queue_retry_for_legal_document as queue_retry_for_legal_document_service,
     register_legal_document as register_legal_document_service,
@@ -70,6 +71,30 @@ router = APIRouter(
     tags=["legal-variables"],
     dependencies=[Depends(verify_internal_secret)],
 )
+
+
+async def _enqueue_ingestion_job(redis: Any | None, result: Any) -> None:
+    if redis is None:
+        return
+    job_payload = {
+        "legal_document_id": result.legal_document.id,
+        "organization_id": result.legal_document.organization_id,
+        "project_id": result.legal_document.project_id,
+        "ingestion_job_id": result.ingestion_job.id,
+    }
+    try:
+        await redis.enqueue_job(
+            "process_legal_document_ingestion",
+            job_payload,
+            _job_id=f"legal-ingestion:{result.ingestion_job.id}",
+        )
+    except Exception as exc:
+        logger.error(
+            "legal_document_ingestion_enqueue_failed",
+            legal_document_id=result.legal_document.id,
+            ingestion_job_id=result.ingestion_job.id,
+            error=str(exc),
+        )
 
 
 async def get_optional_arq_pool() -> Any | None:
@@ -140,22 +165,7 @@ async def register_legal_document(
             detail=str(exc),
         ) from exc
 
-    job_payload = {
-        "legal_document_id": result.legal_document.id,
-        "organization_id": result.legal_document.organization_id,
-        "project_id": result.legal_document.project_id,
-        "ingestion_job_id": result.ingestion_job.id,
-    }
-    if redis is not None:
-        try:
-            await redis.enqueue_job("process_legal_document_ingestion", job_payload)
-        except Exception as exc:
-            logger.error(
-                "legal_document_ingestion_enqueue_failed",
-                legal_document_id=result.legal_document.id,
-                ingestion_job_id=result.ingestion_job.id,
-                error=str(exc),
-            )
+    await _enqueue_ingestion_job(redis, result)
 
     return LegalDocumentRegistrationQueuedResponse(
         legal_document_id=result.legal_document.id,
@@ -228,23 +238,54 @@ async def retry_legal_document_ingestion(
             detail=str(exc),
         ) from exc
 
-    job_payload = {
-        "legal_document_id": result.legal_document.id,
-        "organization_id": result.legal_document.organization_id,
-        "project_id": result.legal_document.project_id,
-        "ingestion_job_id": result.ingestion_job.id,
-    }
-    if redis is not None:
-        try:
-            await redis.enqueue_job("process_legal_document_ingestion", job_payload)
-        except Exception as exc:
-            logger.error(
-                "legal_document_retry_enqueue_failed",
-                legal_document_id=result.legal_document.id,
-                ingestion_job_id=result.ingestion_job.id,
-                error=str(exc),
-            )
+    await _enqueue_ingestion_job(redis, result)
 
+    return LegalDocumentRetryResponse(
+        legal_document_id=result.legal_document.id,
+        ingestion_job_id=result.ingestion_job.id,
+        extraction_status=result.legal_document.extraction_status,
+        attempt_number=result.ingestion_job.attempt_number,
+    )
+
+
+@router.post(
+    "/legal-documents/{legal_document_id}/ensure-ingestion",
+    response_model=LegalDocumentRetryResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def ensure_legal_document_ingestion(
+    legal_document_id: str,
+    organization_id: str = Query(...),
+    project_id: str = Query(...),
+    redis: Any | None = Depends(get_optional_arq_pool),
+) -> LegalDocumentRetryResponse:
+    ensure_legal_documents_feature_enabled(
+        organization_id=organization_id,
+        project_id=project_id,
+    )
+    try:
+        result = await ensure_legal_document_ingestion_service(
+            legal_document_id=legal_document_id,
+            organization_id=organization_id,
+            project_id=project_id,
+        )
+    except LegalDocumentValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except LegalDocumentScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except LegalDocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    await _enqueue_ingestion_job(redis, result)
     return LegalDocumentRetryResponse(
         legal_document_id=result.legal_document.id,
         ingestion_job_id=result.ingestion_job.id,

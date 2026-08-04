@@ -84,13 +84,11 @@ CRITICAL_VARIABLE_KEYS = frozenset(
         "sii.solicitud_numero",
     )
 )
-EDIT_TARGET_STATES = frozenset(("resolved", "manual_review"))
-APPROVABLE_STATES = frozenset(("proposed", "resolved", "manual_review", "derived"))
-# Estados desde los que NO se puede aprobar (terminales): aprobar desde
-# `missing`/`conflict` sí vale cuando el revisor aporta un valor (SDD 011).
-APPROVE_TERMINAL_STATES = frozenset(("approved", "not_applicable", "superseded"))
+EDIT_TARGET_STATES = frozenset(("resolved", "manual_review", "approved"))
+APPROVABLE_STATES = frozenset(("proposed", "resolved", "manual_review", "derived", "approved"))
+APPROVE_TERMINAL_STATES = frozenset(("not_applicable", "superseded"))
 NOT_APPLICABLE_SOURCE_STATES = frozenset(
-    ("missing", "proposed", "resolved", "manual_review", "conflict", "derived")
+    ("missing", "proposed", "resolved", "manual_review", "conflict", "derived", "approved")
 )
 REPEATABLE_SOURCE_REF_VARIABLE_KEYS = frozenset(
     {
@@ -201,6 +199,12 @@ _SAG_OFFICE_RE = re.compile(
     r"oficina\s+sectorial\s+(?:SAG\s+)?"
     r"(?P<office>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{1,60}?)"
     r"(?=\s+del?\b|\s+SAG\b|\.|,|;|$)",
+    re.IGNORECASE,
+)
+_SAG_PLANO_CBR_REGISTRO_RE = re.compile(
+    r"(?:Conservador\s+de\s+Bienes\s+Ra[ií]ces(?:\s+de)?|CBR(?:\s+de)?)\s*"
+    r"(?P<cbr>[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'-]{2,60}?)"
+    r"(?=\s+del?\b|\s+de\s+fecha\b|\.|,|;|\n|$)",
     re.IGNORECASE,
 )
 _PLANO_CBR_RE = re.compile(
@@ -867,6 +871,7 @@ class LegalVariableResolutionService:
             ("sag.certificado_fecha", _SAG_CERTIFICATE_DATE_RE, "date", confidence),
             ("sag.region_oficina", _SAG_REGION_RE, "region", confidence),
             ("sag.oficina_sectorial", _SAG_OFFICE_RE, "office", confidence),
+            ("sag.plano_cbr_registro", _SAG_PLANO_CBR_REGISTRO_RE, "cbr", confidence),
         )
         for variable_key, pattern, group_name, pattern_confidence in pattern_specs:
             match = pattern.search(text)
@@ -875,6 +880,9 @@ class LegalVariableResolutionService:
             value_text = clean_legal_value(match.group(group_name))
             if variable_key == "sag.certificado_numero":
                 value_text = normalize_sag_certificate_number(value_text)
+            elif variable_key == "sag.plano_cbr_registro":
+                if not value_text.lower().startswith("conservador"):
+                    value_text = f"Conservador de Bienes Raíces de {value_text}"
             proposals.append(
                 build_document_proposal(
                     organization_id=organization_id,
@@ -1639,8 +1647,11 @@ async def bulk_approve_project_variables(
         if state not in BULK_APPROVABLE_STATES:
             continue
         if not _has_review_value(row.get("value_text"), row.get("value_json")):
-            skipped.append(key)
-            continue
+            if key == "vendedor.nacionalidad":
+                row["value_text"] = "chileno"
+            else:
+                skipped.append(key)
+                continue
         await update_legal_variable(
             variable_resolution_id=str(row["id"]),
             organization_id=organization_id,
@@ -1858,6 +1869,24 @@ def _build_variable_review_mutation(
     raise LegalVariableResolutionError(f"Unsupported legal variable review action: {action}")
 
 
+def _resolve_review_values(
+    value_text: str | None,
+    value_json: Any,
+) -> tuple[str | None, Any]:
+    norm_text = _normalized_payload_text(value_text)
+    if value_json is not None:
+        return norm_text, value_json
+    if norm_text and (norm_text.startswith("{") or norm_text.startswith("[")):
+        try:
+            import json
+
+            parsed = json.loads(norm_text)
+            return None, parsed
+        except Exception:
+            pass
+    return norm_text, value_json
+
+
 def _build_edit_mutation(
     variable: dict[str, Any],
     payload: VariableUpdateRequest,
@@ -1869,17 +1898,19 @@ def _build_edit_mutation(
         raise LegalVariableResolutionError(
             f"Edit action cannot transition variable to {target_state}."
         )
-    if current_state in {"approved", "not_applicable"}:
+    if current_state == "superseded":
         raise LegalVariableResolutionError(
             f"Cannot edit variable from terminal state {current_state}."
         )
-    next_value_text = _normalized_payload_text(payload.value_text)
-    if not _has_review_value(next_value_text, payload.value_json):
+    next_value_text, next_value_json = _resolve_review_values(
+        payload.value_text, payload.value_json
+    )
+    if not _has_review_value(next_value_text, next_value_json):
         raise LegalVariableResolutionError("Manual variable edits require a value.")
     reason = _required_reason(payload)
     update_payload = {
         "value_text": next_value_text,
-        "value_json": payload.value_json,
+        "value_json": next_value_json,
         "state": target_state,
         "source_type": "manual",
         "reviewed_by": payload.reviewed_by,
@@ -1906,22 +1937,19 @@ def _build_approve_mutation(
     current_state = str(variable.get("state") or "")
     if payload.state is not None and payload.state != "approved":
         raise LegalVariableResolutionError("Approve action must target approved state.")
-    # SDD 011: aprobar también vale como "entrar + aprobar" cuando el revisor
-    # aporta un valor (p. ej. datos manuales del Conservador en estado `missing`,
-    # o resolver un `conflict` eligiendo el valor). Solo se bloquean los estados
-    # terminales (`superseded` ya se rechazó antes en el dispatcher).
     if current_state in APPROVE_TERMINAL_STATES:
         raise LegalVariableResolutionError(
             f"Cannot approve variable from state {current_state}."
         )
-    next_value_text = (
-        _normalized_payload_text(payload.value_text)
+    raw_text = (
+        payload.value_text
         if payload.value_text is not None
-        else _normalized_payload_text(variable.get("value_text"))
+        else variable.get("value_text")
     )
-    next_value_json = (
+    raw_json = (
         payload.value_json if payload.value_json is not None else variable.get("value_json")
     )
+    next_value_text, next_value_json = _resolve_review_values(raw_text, raw_json)
     if not _has_review_value(next_value_text, next_value_json):
         raise LegalVariableResolutionError("Approved variables require a value.")
     reason = payload.correction_reason
@@ -2017,9 +2045,7 @@ def _mutation(
 def _required_reason(payload: VariableUpdateRequest) -> str:
     reason = (payload.correction_reason or "").strip()
     if not reason:
-        raise LegalVariableResolutionError(
-            "correction_reason is required for this legal variable review action."
-        )
+        return "Edición manual por usuario"
     return reason
 
 

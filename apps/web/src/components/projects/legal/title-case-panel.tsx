@@ -20,6 +20,7 @@ import {
 import {
   TITLE_CASE_PANEL_ANCHOR,
   type ProjectTitleCase,
+  type TitleAlert,
   type TitleApproveBlockingItem,
   type TitleCasePanelState,
 } from '@/lib/legal/title-types'
@@ -46,6 +47,54 @@ export const TITLE_STRUCTURE_LABELS: Record<string, string> = {
   compra_derechos: 'Compra de derechos',
   herencia: 'Herencia',
   mixto: 'Mixto',
+}
+
+const LLM_PROVIDER_LABELS: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  deepseek: 'DeepSeek',
+  gemini: 'Gemini',
+}
+
+const REASONING_EFFORT_LABELS: Record<string, string> = {
+  off: 'sin razonamiento',
+  minimal: 'razonamiento mínimo',
+  low: 'razonamiento bajo',
+  medium: 'razonamiento medio',
+  high: 'razonamiento alto',
+  xhigh: 'razonamiento extra alto',
+  max: 'razonamiento máximo',
+}
+
+export function describeTitleRun(run: ProjectTitleCase['run']): string {
+  if (!run) return ''
+  if (run.llm_executed === false) return 'No se ejecutó ningún modelo'
+  const parts = [
+    run.provider ? (LLM_PROVIDER_LABELS[run.provider] ?? run.provider) : null,
+    run.model_name,
+    run.reasoning_effort
+      ? (REASONING_EFFORT_LABELS[run.reasoning_effort] ?? run.reasoning_effort)
+      : null,
+  ]
+  return parts.filter(Boolean).join(' · ')
+}
+
+export function documentsReadyForTitleAnalysis(analysis: ProjectTitleCase | null): boolean {
+  const documents = analysis?.source_documents ?? []
+  return documents.length > 0 && documents.every((document) => document.ready_for_analysis)
+}
+
+const PROVIDER_ERROR_LABELS: Record<string, string> = {
+  insufficient_credit: 'El proveedor rechazó la solicitud por saldo o créditos insuficientes.',
+  rate_limit: 'El proveedor alcanzó su límite temporal de solicitudes.',
+  invalid_api_key: 'La credencial configurada para el proveedor no es válida.',
+  provider_timeout: 'El proveedor no respondió dentro del tiempo permitido.',
+  provider_error: 'El proveedor devolvió un error al ejecutar el análisis.',
+}
+
+export function describeProviderError(code: string | null | undefined): string {
+  if (!code) return 'El análisis no pudo completarse.'
+  return PROVIDER_ERROR_LABELS[code] ?? 'El proveedor devolvió un error al ejecutar el análisis.'
 }
 
 /** Map the fetched analysis (or its absence) to the panel state matrix. */
@@ -171,6 +220,10 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
   }, [analysis?.status, projectId])
 
   const handleReanalyze = useCallback(async () => {
+    if (!documentsReadyForTitleAnalysis(analysis)) {
+      setActionError('Espera a que termine la extracción de todos los documentos.')
+      return
+    }
     // Reanalizar descarta el análisis vigente y empieza de cero (supersede):
     // en modo manual produce un análisis vacío y se pierden los datos ya
     // ingresados. Se confirma antes para evitar la pérdida accidental.
@@ -192,7 +245,19 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
       await load()
     }
     setReanalyzing(false)
-  }, [projectId, load])
+  }, [analysis, projectId, load])
+
+  const handleAlertResolved = useCallback((alertIndex: number, updatedAlert: TitleAlert) => {
+    setAnalysis((prev) => {
+      if (!prev) return prev
+      const updatedAlerts = [...prev.alerts]
+      updatedAlerts[alertIndex] = updatedAlert
+      return {
+        ...prev,
+        alerts: updatedAlerts,
+      }
+    })
+  }, [])
 
   const handleApprove = useCallback(async () => {
     if (!analysis) return
@@ -213,6 +278,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
   }, [analysis, projectId])
 
   const state = deriveTitlePanelState(analysis)
+  const documentsReady = documentsReadyForTitleAnalysis(analysis)
   // El agente corre en background; mientras encola o procesa, mostramos un
   // diálogo de carga para que se note que está trabajando.
   const showProcessing = reanalyzing || state === 'processing'
@@ -248,10 +314,10 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
             type="button"
             variant="outline"
             size="sm"
-            disabled={reanalyzing}
+            disabled={reanalyzing || !documentsReady}
             onClick={handleReanalyze}
           >
-            {reanalyzing ? 'Encolando…' : 'Reanalizar'}
+            {reanalyzing ? 'Encolando…' : documentsReady ? 'Reanalizar' : 'Esperando extracción'}
           </Button>
         )}
       </header>
@@ -267,8 +333,23 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
             {describeSourceDocuments(analysis) ? ` (${describeSourceDocuments(analysis)})` : ''}.
             Inicia el análisis para extraer la cadena de adquisición.
           </p>
-          <Button type="button" size="sm" disabled={reanalyzing} onClick={handleReanalyze}>
-            {reanalyzing ? 'Encolando…' : 'Analizar título'}
+          {!documentsReady && (
+            <p className="rounded-md border border-info/20 bg-info/10 p-2 text-info">
+              Los documentos todavía se están preparando. El análisis se habilitará cuando todos
+              tengan texto extraído.
+            </p>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            disabled={reanalyzing || !documentsReady}
+            onClick={handleReanalyze}
+          >
+            {reanalyzing
+              ? 'Encolando…'
+              : documentsReady
+                ? 'Analizar título'
+                : 'Esperando extracción'}
           </Button>
         </div>
       )}
@@ -292,8 +373,13 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
 
       {state === 'failed' && analysis && (
         <p className="rounded-md border border-destructive/20 bg-destructive/10 p-2 text-xs text-destructive">
-          El análisis falló{analysis.run ? ` (modelo ${analysis.run.model_name})` : ''}. Usa
-          “Reanalizar” para reintentar.
+          {describeProviderError(analysis.run?.provider_error_code)}{' '}
+          {analysis.run?.llm_executed === false
+            ? 'No se llegó a ejecutar ningún modelo.'
+            : analysis.run
+              ? `Configuración usada: ${describeTitleRun(analysis.run)}.`
+              : ''}{' '}
+          Usa “Reanalizar” para reintentar.
         </p>
       )}
 
@@ -334,7 +420,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
             )}
             {analysis.run?.model_name && (
               <span className="text-muted-foreground">
-                {analysis.run.model_name}
+                {describeTitleRun(analysis.run)}
                 {typeof analysis.run.duration_ms === 'number'
                   ? ` · ${(analysis.run.duration_ms / 1000).toFixed(1)}s`
                   : ''}
@@ -448,7 +534,7 @@ export function TitleCasePanel({ projectId, onNavigateToDocuments }: TitleCasePa
               analysisId={analysis.id}
               alerts={analysis.alerts}
               disabled={state === 'approved'}
-              onResolved={() => void load()}
+              onResolved={handleAlertResolved}
             />
           </div>
 

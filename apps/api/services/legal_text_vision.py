@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import time
 from typing import Any
 
 import requests
@@ -145,7 +146,29 @@ def _transcribe_pdf_with_gemini(
 ) -> list[tuple[int, str]]:
     generation_config: dict[str, Any] = {
         "responseMimeType": "application/json",
-        "responseJsonSchema": _VisionTranscript.model_json_schema(),
+        "responseSchema": {
+            "type": "object",
+            "properties": {
+                "pages": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "page_number": {
+                                "type": "integer",
+                                "description": "Número de página del PDF (1-based).",
+                            },
+                            "text": {
+                                "type": "string",
+                                "description": "Transcripción literal y completa de la página.",
+                            },
+                        },
+                        "required": ["page_number", "text"],
+                    },
+                }
+            },
+            "required": ["pages"],
+        },
     }
     if reasoning_effort != "off":
         generation_config["thinkingConfig"] = {
@@ -157,8 +180,8 @@ def _transcribe_pdf_with_gemini(
                 "role": "user",
                 "parts": [
                     {
-                        "inline_data": {
-                            "mime_type": "application/pdf",
+                        "inlineData": {
+                            "mimeType": "application/pdf",
                             "data": base64.b64encode(pdf_bytes).decode("ascii"),
                         }
                     },
@@ -172,24 +195,39 @@ def _transcribe_pdf_with_gemini(
         "https://generativelanguage.googleapis.com/v1beta/"
         f"models/{model}:generateContent"
     )
-    try:
-        response = requests.post(
-            url,
-            headers={
-                "Content-Type": "application/json",
-                "x-goog-api-key": api_key,
-            },
-            json=payload,
-            timeout=timeout_seconds,
-        )
-        response.raise_for_status()
-        body = response.json()
-        text = body["candidates"][0]["content"]["parts"][0]["text"]
-        parsed = _VisionTranscript.model_validate_json(text)
-    except Exception as exc:
-        raise LegalVisionTranscriptionError(
-            f"Vision transcription request failed: {exc}"
-        ) from exc
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.post(
+                url,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": api_key,
+                },
+                json=payload,
+                timeout=timeout_seconds,
+            )
+            response.raise_for_status()
+            body = response.json()
+            text = body["candidates"][0]["content"]["parts"][0]["text"]
+            parsed = _VisionTranscript.model_validate_json(text)
+            break
+        except requests.exceptions.HTTPError as http_err:
+            if http_err.response is not None and http_err.response.status_code in {503, 429} and attempt < max_retries:
+                logger.warning(
+                    "gemini_vision_transient_error_retrying",
+                    status_code=http_err.response.status_code,
+                    attempt=attempt,
+                )
+                time.sleep(2 * attempt)
+                continue
+            raise LegalVisionTranscriptionError(
+                f"Vision transcription request failed: {http_err}"
+            ) from http_err
+        except Exception as exc:
+            raise LegalVisionTranscriptionError(
+                f"Vision transcription request failed: {exc}"
+            ) from exc
     if not parsed.pages:
         raise LegalVisionTranscriptionError("Vision transcription returned no pages.")
     pages = sorted(parsed.pages, key=lambda page: page.page_number)

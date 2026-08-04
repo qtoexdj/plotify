@@ -45,6 +45,9 @@ ACTIVE_TITLE_DOCUMENT_STATUSES = (
     "needs_review",
     "failed",
 )
+READY_TITLE_DOCUMENT_STATUSES = frozenset(
+    {"text_extracted", "variables_proposed", "needs_review"}
+)
 # Matriz identity keys staged by stage_title_analysis_proposals; together with
 # titulo.* they gate title-case approval.
 MATRIZ_IDENTITY_VARIABLE_KEYS = frozenset(
@@ -330,6 +333,26 @@ def compute_source_content_hash(documents: Sequence[dict[str, Any]]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def title_source_document_readiness(document: dict[str, Any]) -> tuple[bool, int]:
+    text_char_count = sum(
+        len(str(page.get("text_content") or "").strip())
+        for page in document.get("pages", [])
+        if isinstance(page, dict)
+    )
+    ready = (
+        str(document.get("extraction_status") or "")
+        in READY_TITLE_DOCUMENT_STATUSES
+        and text_char_count > 0
+    )
+    return ready, text_char_count
+
+
+def title_source_documents_ready(documents: Sequence[dict[str, Any]]) -> bool:
+    return bool(documents) and all(
+        title_source_document_readiness(document)[0] for document in documents
+    )
+
+
 async def check_idempotency(
     project_id: str,
     source_content_hash: str,
@@ -378,16 +401,29 @@ def _source_document_ids(documents: Sequence[dict[str, Any]]) -> list[str]:
 def _source_document_responses(
     documents: Sequence[dict[str, Any]]
 ) -> list[TitleAnalysisSourceDocument]:
-    return [
-        TitleAnalysisSourceDocument(
-            legal_document_id=str(document.get("id") or document.get("legal_document_id")),
-            document_type=str(document.get("document_type") or ""),
-            filename=document.get("filename") or document.get("original_filename"),
-            version=int(document.get("version") or document.get("version_number") or 1),
+    responses: list[TitleAnalysisSourceDocument] = []
+    for document in documents:
+        if not (document.get("id") or document.get("legal_document_id")):
+            continue
+        ready, text_char_count = title_source_document_readiness(document)
+        responses.append(
+            TitleAnalysisSourceDocument(
+                legal_document_id=str(
+                    document.get("id") or document.get("legal_document_id")
+                ),
+                document_type=str(document.get("document_type") or ""),
+                filename=document.get("filename") or document.get("original_filename"),
+                version=int(
+                    document.get("version") or document.get("version_number") or 1
+                ),
+                extraction_status=str(
+                    document.get("extraction_status") or "text_extracted"
+                ),
+                text_char_count=text_char_count,
+                ready_for_analysis=ready,
+            )
         )
-        for document in documents
-        if document.get("id") or document.get("legal_document_id")
-    ]
+    return responses
 
 
 def _duration_ms(started_at: datetime) -> int:
@@ -474,6 +510,19 @@ def _hydrate_title_analysis_row(
         except ValueError:
             created_at = None
     alerts_payload = row.get("alerts") if isinstance(row.get("alerts"), list) else []
+    verification_payload = (
+        row.get("verification_stats")
+        if isinstance(row.get("verification_stats"), dict)
+        else {}
+    )
+    llm_runtime = (
+        verification_payload.get("llm_runtime")
+        if isinstance(verification_payload.get("llm_runtime"), dict)
+        else {}
+    )
+    llm_executed = bool(verification_payload.get("llm_executed")) or bool(
+        llm_runtime.get("model")
+    )
     verification = _verification_from_row(row)
     pending_review = [
         TitleAnalysisPendingReview(
@@ -499,6 +548,27 @@ def _hydrate_title_analysis_row(
         run=TitleAnalysisRunDetails(
             extractor_name=str(row.get("extractor_name") or EXTRACTOR_NAME),
             model_name=str(row.get("model_name") or ""),
+            provider=(
+                str(llm_runtime["provider"])
+                if llm_runtime.get("provider") is not None
+                else None
+            ),
+            reasoning_effort=(
+                str(llm_runtime["reasoning_effort"])
+                if llm_runtime.get("reasoning_effort") is not None
+                else None
+            ),
+            config_version=(
+                int(llm_runtime["config_version"])
+                if llm_runtime.get("config_version") is not None
+                else None
+            ),
+            llm_executed=llm_executed,
+            provider_error_code=(
+                str(verification_payload["provider_error_code"])
+                if verification_payload.get("provider_error_code") is not None
+                else None
+            ),
             prompt_version=str(row.get("prompt_version") or PROMPT_VERSION),
             duration_ms=row.get("duration_ms"),
             created_at=created_at,
@@ -797,6 +867,35 @@ async def stage_title_analysis_proposals(
             )
         )
 
+        if idx == 0:
+            seller_scalar_mappings = [
+                ("vendedor.nombre", prop_act.nombre, f"{prop_prefix}.nombre"),
+                ("vendedor.rut", prop_act.rut, f"{prop_prefix}.rut"),
+                ("vendedor.domicilio", prop_act.domicilio, f"{prop_prefix}.domicilio"),
+                ("vendedor.estado_civil", prop_act.estado_civil, f"{prop_prefix}.estado_civil"),
+                ("vendedor.profesion_giro", prop_act.profesion, f"{prop_prefix}.profesion"),
+                ("vendedor.nacionalidad", prop_act.nacionalidad, f"{prop_prefix}.nacionalidad"),
+            ]
+            for var_key, ev_val, path in seller_scalar_mappings:
+                val_text = ev_val.value if ev_val and ev_val.value is not None else None
+                if var_key == "vendedor.nacionalidad" and not val_text:
+                    val_text = "chileno"
+                state = "approved" if (var_key == "vendedor.nacionalidad" and val_text) else determine_state(path, ev_val)
+                evidences = get_evidence_inputs(ev_val)
+                conf = (ev_val.confidence if ev_val and ev_val.confidence is not None else 1.0)
+                proposals.append(
+                    VariableProposalInput(
+                        organization_id=organization_id,
+                        project_id=project_id,
+                        variable_key=var_key,
+                        value_text=val_text,
+                        state=state,
+                        confidence=conf,
+                        extractor_name=EXTRACTOR_NAME,
+                        evidence=evidences,
+                    )
+                )
+
     # D. Narrative Comparecencia (agent-drafted, fact-checked)
     checks = block_checks or {}
     comparecencia_check = checks.get("comparecencia") or {}
@@ -849,29 +948,38 @@ async def stage_title_analysis_proposals(
         )
     )
 
-    # F. Alerts (repeatable)
-    for idx, alert in enumerate(analysis.alertas):
+    # F. Alerts (repeatable, staged as single composite row to comply with unique index)
+    if analysis.alertas:
+        first_alert = analysis.alertas[0]
         alert_evidences = []
-        if alert.evidence and alert.evidence.legal_document_id:
-            doc_id = alert.evidence.legal_document_id
-            page_num = alert.evidence.page_number
+        if first_alert.evidence and first_alert.evidence.legal_document_id:
+            doc_id = first_alert.evidence.legal_document_id
+            page_num = first_alert.evidence.page_number
             page_id = page_id_map.get((doc_id, int(page_num))) if page_num is not None else None
             alert_evidences.append(
                 VariableEvidenceInput(
                     legal_document_id=doc_id,
                     legal_document_page_id=page_id,
-                    snippet=alert.evidence.snippet,
+                    snippet=first_alert.evidence.snippet,
                 )
             )
+
+        alert_state = (
+            "not_applicable"
+            if first_alert.resolution == "dismissed_with_reason"
+            else "approved"
+            if first_alert.resolution in {"acknowledged", "clause_added"}
+            else "proposed"
+        )
 
         proposals.append(
             VariableProposalInput(
                 organization_id=organization_id,
                 project_id=project_id,
                 variable_key="titulo.alertas[]",
-                value_json=alert.model_dump(mode="json"),
-                state="proposed",
-                source_ref={"alert_index": idx},
+                value_json=first_alert.model_dump(mode="json"),
+                state=alert_state,
+                source_ref={"alert_index": 0},
                 confidence=1.0,
                 extractor_name=EXTRACTOR_NAME,
                 evidence=tuple(alert_evidences),
@@ -1154,6 +1262,13 @@ async def run_title_analysis(
         stats["block_checks"] = block_checks
         stats["agent_notes"] = outcome.result.notas_razonamiento
         stats["llm_calls"] = outcome.llm_calls
+        stats["llm_executed"] = True
+        stats["llm_runtime"] = {
+            "provider": outcome.provider,
+            "model": outcome.model,
+            "reasoning_effort": outcome.reasoning_effort,
+            "config_version": outcome.config_version,
+        }
 
         # 6. Stage variable proposals
         await stage_title_analysis_proposals(
@@ -1191,6 +1306,7 @@ async def run_title_analysis(
                 "narrative_primero_generated": primero_generated,
                 "verification_stats": stats,
                 "token_usage": outcome.token_usage,
+                "model_name": outcome.model or str(row.get("model_name") or ""),
                 "duration_ms": _duration_ms(started_at),
                 "failure_code": None,
             },
@@ -1202,6 +1318,18 @@ async def run_title_analysis(
     except Exception as exc:
         logger.exception("title_analysis_failed_detailed", project_id=project_id)
         failure_code = _failure_code_for_exception(exc)
+        error_text = str(exc).lower()
+        provider_error_code = (
+            "insufficient_credit"
+            if any(token in error_text for token in ("insufficient", "credit", "balance"))
+            else "rate_limit"
+            if any(token in error_text for token in ("rate limit", "429", "quota"))
+            else "invalid_api_key"
+            if any(token in error_text for token in ("api key", "authentication", "unauthorized"))
+            else "provider_timeout"
+            if "timeout" in error_text
+            else "provider_error"
+        )
         logger.warning(
             "title_analysis_failed",
             project_id=project_id,
@@ -1216,6 +1344,15 @@ async def run_title_analysis(
                 "status": "failed",
                 "duration_ms": _duration_ms(started_at),
                 "failure_code": failure_code,
+                "verification_stats": {
+                    **(
+                        row.get("verification_stats")
+                        if isinstance(row.get("verification_stats"), dict)
+                        else {}
+                    ),
+                    "llm_executed": True,
+                    "provider_error_code": provider_error_code,
+                },
             },
         )
         return _hydrate_title_analysis_row(
@@ -1349,6 +1486,20 @@ async def request_title_reanalysis(
             "Project has no active title documents to analyze."
         )
 
+    not_ready_documents = [
+        document
+        for document in source_documents
+        if not title_source_document_readiness(document)[0]
+    ]
+    if not_ready_documents:
+        filenames = ", ".join(
+            str(document.get("filename") or document.get("id") or "document")
+            for document in not_ready_documents
+        )
+        raise LegalTitleAnalysisConflictError(
+            "Title source documents are not ready for analysis: " + filenames
+        )
+
     source_content_hash = compute_source_content_hash(source_documents)
     settings = get_settings()
     # "Reanalizar" explícito SIEMPRE re-corre: el usuario lo pidió y pudo haber
@@ -1416,6 +1567,7 @@ async def request_title_reanalysis(
                 "project_id": project_id,
                 "trigger": "manual_reanalyze",
             },
+            _job_id=f"title-analysis:{placeholder['id']}",
         )
         queued = True
         logger.info(
@@ -1465,12 +1617,78 @@ async def update_title_narrative(
         )
 
     edited_column = f"narrative_{block}_edited"
+
+    analysis = TitleAnalysis.model_validate(row.get("analysis_json") or {})
+    comparecencia_effective = (
+        edited_text
+        if block == "comparecencia"
+        else (
+            row.get("narrative_comparecencia_edited")
+            or row.get("narrative_comparecencia_generated")
+        )
+    )
+    primero_effective = (
+        edited_text
+        if block == "primero"
+        else (
+            row.get("narrative_primero_edited")
+            or row.get("narrative_primero_generated")
+        )
+    )
+
+    from services.legal_title_block_check import check_title_blocks
+
+    block_checks = check_title_blocks(
+        comparecencia=comparecencia_effective,
+        primero=primero_effective,
+        analysis=analysis,
+    )
+
+    current_stats = (
+        row.get("verification_stats")
+        if isinstance(row.get("verification_stats"), dict)
+        else {}
+    )
+    updated_stats = {**current_stats, "block_checks": block_checks}
+
     updated_row = await _update_title_analysis(
         supabase=client,
         analysis_id=str(row["id"]),
         existing_row=row,
-        payload={edited_column: edited_text},
+        payload={
+            edited_column: edited_text,
+            "verification_stats": updated_stats,
+        },
     )
+
+    # Sync narrative block edit directly to variable_resolutions so the matrix doesn't ask to approve again
+    target_var_key = (
+        "titulo.comparecencia_vendedor_texto"
+        if block == "comparecencia"
+        else "titulo.clausula_primero_texto"
+    )
+    b_check = (block_checks or {}).get(block) or {}
+    new_state = "approved" if b_check.get("ok") else "manual_review"
+
+    if hasattr(client, "table"):
+        try:
+            await _run_supabase(
+                lambda: (
+                    client.table("variable_resolutions")
+                    .update({
+                        "value_text": edited_text,
+                        "state": new_state,
+                        "reviewed_by": edited_by,
+                        "reviewed_at": datetime.now(timezone.utc).isoformat(),
+                    })
+                    .eq("organization_id", str(row["organization_id"]))
+                    .eq("project_id", str(row["project_id"]))
+                    .eq("variable_key", target_var_key)
+                    .execute()
+                )
+            )
+        except Exception as sync_exc:
+            logger.warning("sync_narrative_to_variable_resolutions_failed", error=str(sync_exc))
     await _insert_review_decision(
         supabase=client,
         decision_payload={
@@ -1550,6 +1768,43 @@ async def resolve_title_alert(
         existing_row=row,
         payload={"alerts": updated_alerts},
     )
+
+    # Sync alert resolution to variable_resolutions so the matrix automatically approves it
+    target_state = "not_applicable" if resolution == "dismissed_with_reason" else "approved"
+    alert_payload = updated_alerts[alert_index]
+    if hasattr(client, "table"):
+        try:
+            existing_vars = await _run_supabase(
+                lambda: (
+                    client.table("variable_resolutions")
+                    .select("id, source_ref, value_json")
+                    .eq("organization_id", organization_id)
+                    .eq("project_id", project_id)
+                    .eq("variable_key", "titulo.alertas[]")
+                    .execute()
+                )
+            )
+            for var_row in _rows(existing_vars):
+                s_ref = var_row.get("source_ref") if isinstance(var_row.get("source_ref"), dict) else {}
+                val_json = var_row.get("value_json") if isinstance(var_row.get("value_json"), dict) else {}
+                if s_ref.get("alert_index") == alert_index or val_json.get("tipo") == alert_payload.get("tipo"):
+                    await _run_supabase(
+                        lambda var_id=var_row["id"]: (
+                            client.table("variable_resolutions")
+                            .update({
+                                "value_json": alert_payload,
+                                "state": target_state,
+                                "reviewed_by": resolved_by,
+                                "reviewed_at": datetime.now(timezone.utc).isoformat(),
+                            })
+                            .eq("id", var_id)
+                            .execute()
+                        )
+                    )
+                    break
+        except Exception as sync_exc:
+            logger.warning("sync_title_alert_to_variable_resolutions_failed", error=str(sync_exc))
+
     await _insert_review_decision(
         supabase=client,
         decision_payload={
@@ -1576,6 +1831,78 @@ async def resolve_title_alert(
         resolved_by=resolved_by,
     )
     return TitleAlert.model_validate(updated_alerts[alert_index])
+
+
+async def sync_title_analysis_alerts_to_matrix(
+    *,
+    organization_id: str,
+    project_id: str,
+    supabase: Any | None = None,
+) -> None:
+    """Sync all triaged title_analyses alerts to variable_resolutions table."""
+    client = supabase or _get_supabase_client()
+    if not hasattr(client, "table"):
+        return
+    try:
+        res = await _run_supabase(
+            lambda: (
+                client.table("title_analyses")
+                .select("id, alerts")
+                .eq("organization_id", organization_id)
+                .eq("project_id", project_id)
+                .neq("status", "superseded")
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+        )
+        title_row = _first_row(res)
+        if not title_row:
+            return
+        alerts = title_row.get("alerts") if isinstance(title_row.get("alerts"), list) else []
+        if not alerts:
+            return
+
+        existing_vars = await _run_supabase(
+            lambda: (
+                client.table("variable_resolutions")
+                .select("id, source_ref, value_json, state")
+                .eq("organization_id", organization_id)
+                .eq("project_id", project_id)
+                .eq("variable_key", "titulo.alertas[]")
+                .execute()
+            )
+        )
+        existing_rows = _rows(existing_vars)
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        for idx, alert in enumerate(alerts):
+            if not isinstance(alert, dict):
+                continue
+            resolution = alert.get("resolution", "pending")
+            if resolution == "pending":
+                continue
+            target_state = "not_applicable" if resolution == "dismissed_with_reason" else "approved"
+
+            for var_row in existing_rows:
+                s_ref = var_row.get("source_ref") if isinstance(var_row.get("source_ref"), dict) else {}
+                val_json = var_row.get("value_json") if isinstance(var_row.get("value_json"), dict) else {}
+                if s_ref.get("alert_index") == idx or val_json.get("tipo") == alert.get("tipo"):
+                    if str(var_row.get("state")) != target_state or val_json.get("resolution") != resolution:
+                        await _run_supabase(
+                            lambda var_id=var_row["id"]: (
+                                client.table("variable_resolutions")
+                                .update({
+                                    "value_json": alert,
+                                    "state": target_state,
+                                    "reviewed_at": now_iso,
+                                })
+                                .eq("id", var_id)
+                                .execute()
+                            )
+                        )
+    except Exception as exc:
+        logger.warning("sync_title_analysis_alerts_to_matrix_failed", error=str(exc))
 
 
 async def _fetch_title_variable_rows(

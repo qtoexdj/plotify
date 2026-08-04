@@ -953,11 +953,14 @@ export interface components {
       "verification"?: components["schemas"]["TitleAnalysisVerification"] | null
     }
     "TitleAnalysisRunDetails": {
+      "config_version"?: number | null
       "created_at"?: string | null
       "duration_ms"?: number | null
       "extractor_name": string
       "model_name": string
       "prompt_version": string
+      "provider"?: string | null
+      "reasoning_effort"?: string | null
     }
     "TitleAnalysisSourceDocument": {
       "document_type": string

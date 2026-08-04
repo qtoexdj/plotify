@@ -324,7 +324,7 @@ begin
   ) values (
     v_attempt.organization_id, v_attempt.project_id, v_attempt.escritura_case_id,
     'matriz_approved', 'approved', 'semantic_validation_passed',
-    v_attempt.actor_user_id, v_attempt.origin, 'semantic_validation',
+    v_attempt.actor_user_id, v_attempt.origin, 'review_approved',
     null, null,
     jsonb_build_object('attemptId', v_attempt.id, 'validationId', v_validation.id,
       'legalGrantId', v_attempt.legal_approval_grant_id, 'operationId', p_operation_id)

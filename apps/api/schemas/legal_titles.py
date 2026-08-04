@@ -197,6 +197,11 @@ class TitleAgentResult(LegalTitleBaseModel):
 class TitleAnalysisRunDetails(LegalTitleResponseModel):
     extractor_name: str
     model_name: str
+    provider: str | None = None
+    reasoning_effort: str | None = None
+    config_version: int | None = None
+    llm_executed: bool = False
+    provider_error_code: str | None = None
     prompt_version: str
     duration_ms: int | None = None
     created_at: datetime | None = None
@@ -249,6 +254,9 @@ class TitleAnalysisSourceDocument(LegalTitleResponseModel):
     document_type: str
     filename: str | None = None
     version: int = 1
+    extraction_status: str = "pending"
+    text_char_count: int = 0
+    ready_for_analysis: bool = False
 
 
 class TitleAnalysisResponseData(LegalTitleResponseModel):

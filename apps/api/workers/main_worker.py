@@ -13,7 +13,10 @@ from workers.tasks.notification_worker import (
     send_generated_document,
     send_notification,
 )
-from workers.tasks.legal_document_ingestion import process_legal_document_ingestion
+from workers.tasks.legal_document_ingestion import (
+    process_legal_document_ingestion,
+    reconcile_legal_document_ingestions,
+)
 from workers.tasks.legal_title_analysis import analyze_project_title
 from workers.tasks.geometry_enrichment import process_geometry_enrichment
 from workers.tasks.escritura_workflow_outbox import process_escritura_workflow_outbox
@@ -95,6 +98,14 @@ class WorkerSettings:
     ]
 
     cron_jobs = [
+        cron(
+            reconcile_legal_document_ingestions,
+            name="reconcile_legal_document_ingestions",
+            second=20,
+            run_at_startup=True,
+            unique=True,
+            max_tries=1,
+        ),
         cron(
             sync_llm_model_catalog,
             name="sync_llm_model_catalog_daily",
