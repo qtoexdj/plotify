@@ -18,6 +18,7 @@
     "test:api": "cd apps/api && .venv/bin/python -m pytest -q",
     "contracts:generate": "cd apps/api && ./.venv/bin/python scripts/export_openapi_contract.py",
     "verify:migrations": "pnpm --filter @plotify/database verify:migrations",
+    "check:agent-context": "node scripts/agent-context/check.mjs",
     "security:scan": "node scripts/production-readiness/security-scan.mjs",
     "verify:production-readiness": "node scripts/production-readiness/verify.mjs",
     "evidence:archive": "node scripts/production-readiness/evidence-archive.mjs",

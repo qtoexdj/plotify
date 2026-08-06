@@ -1,5 +1,10 @@
 # Plotify — Documentación del Proyecto
 
+## Contexto para agentes y documentación
+
+- [Mapa Técnico Actual](30%20-%20Arquitectura/Mapa%20Técnico%20Actual.md): stack, fronteras, versiones y navegación por código.
+- [Guía de Contexto, SDD y Obsidian](40%20-%20Guias%20%26%20Convenciones/Flujo%20de%20Contexto,%20SDD%20y%20Obsidian.md): mantenimiento del vault durante trabajo asistido.
+
 > **B2B SaaS para inmobiliarias y loteadoras** — Gestión completa de proyectos de loteamiento.
 > **Versión actual:** V2.1 (CAD Freeze)
 

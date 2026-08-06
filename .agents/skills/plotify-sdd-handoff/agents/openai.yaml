@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plotify SDD Handoff"
+  short_description: "Cierra SDD y sincroniza Obsidian"
+  default_prompt: "Use $plotify-sdd-handoff para cerrar este SDD y actualizar la memoria de Plotify."

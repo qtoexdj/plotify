@@ -1,95 +1,66 @@
-<!-- SPECKIT START -->
+# Plotify — instrucciones para agentes
 
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
-`specs/019-hardening-produccion/plan.md`
+Este es el único archivo de instrucciones automáticas del repositorio. Responde siempre en español y empieza cada sesión leyendo [memory.md](memory.md). `memory.md` es estado operativo; no sustituye código, SDD ni esta norma.
 
-<!-- SPECKIT END -->
+## Inicio de trabajo
 
-## Plotify Project Memory
+1. Lee `memory.md`, identifica la feature activa y luego abre sus `plan.md` y `tasks.md`.
+2. Ejecuta `git status --short`, preserva cambios ajenos y ejecuta `codegraph sync .`.
+3. Usa CodeGraph para estructura, símbolos, callers, callees e impacto antes de editar código.
+4. Consulta sólo las notas necesarias de `plotify_memori/`; nunca uses `plotify_memori/.obsidian/` como fuente de producto.
+5. Para una librería, SDK, CLI, API o servicio cloud, usa Context7: primero resuelve la librería y después consulta documentación vigente. No lo uses para lógica local ni refactors.
+6. Antes de tareas complejas, selecciona y usa la skill aplicable. Registra en `memory.md` sólo las skills efectivamente usadas, con motivo y resultado.
 
-- Use `plotify_memori/` as Plotify's official curated product and architecture memory.
-- Do not use `plotify_memori/.obsidian/` as a product source.
-- Before generating specs, plans, or tasks, contrast `plotify_memori/` against the real codebase with CodeGraph.
-- Use CodeGraph for project structure, symbol relationships, impact analysis, and implementation context.
-- Use Context7 only when current documentation is needed for external libraries, SDKs, CLIs, APIs, or cloud services.
+El mapa técnico del vault está en [Mapa Técnico Actual](plotify_memori/30%20-%20Arquitectura/Mapa%20T%C3%A9cnico%20Actual.md).
 
-## SDD Implementation Flow
+## Fuentes de verdad
 
-This repository uses Spec Kit SDD as the implementation authority. The active feature is:
+| Dominio | Fuente |
+| --- | --- |
+| Alcance e instrucciones | Sistema y usuario |
+| Procedimiento de agentes | Este archivo |
+| Principios de ingeniería | `.specify/memory/constitution.md` |
+| Intención y tarea actual | Feature activa en `specs/` |
+| Comportamiento y versiones reales | Código, manifiestos, lockfiles, migraciones y tests |
+| Producto, arquitectura e historial | `plotify_memori/` |
+| Estado y correcciones entre sesiones | `memory.md` |
 
-- `specs/019-hardening-produccion/spec.md`
-- `specs/019-hardening-produccion/plan.md`
-- `specs/019-hardening-produccion/research.md`
-- `specs/019-hardening-produccion/data-model.md`
-- `specs/019-hardening-produccion/quickstart.md`
-- `specs/019-hardening-produccion/contracts/`
-- `specs/019-hardening-produccion/tasks.md` (created by `/speckit-tasks`)
-- `.specify/memory/constitution.md`
+No resuelvas conflictos en silencio: registra la discrepancia, contrástala con evidencia y pide decisión si afecta producto, seguridad o alcance. El código describe el comportamiento actual; el SDD, el esperado.
 
-Before implementation:
+## Flujo SDD
 
-1. Read `specs/019-hardening-produccion/tasks.md` and `plan.md`.
-2. Run or request `$speckit-analyze` after any change to constitution, spec, plan, or tasks.
-3. Do not start implementation while critical analyze findings remain unresolved.
-4. Run `git status --short` and `codegraph sync .`.
-5. Implement exactly one unchecked task from `tasks.md` unless the user explicitly asks for a different scope.
+Spec Kit gobierna el ciclo `constitution → specify → clarify → plan → tasks → analyze → implement`.
 
-During implementation:
+- Tras cambiar constitution, spec, plan o tasks, ejecuta o solicita `$speckit-analyze`. No implementes con hallazgos `CRITICAL` pendientes.
+- Implementa una sola tarea pendiente por ciclo y respeta orden y dependencias, salvo instrucción explícita del usuario.
+- Ejecuta el `Verify` de la tarea. Marca `[x]` sólo con aceptación y Verify verde, o autorización expresa del usuario.
+- Si una tarea cruza más de cinco archivos o mezcla DB/API/web sin ser integración declarada, divídela o pide confirmación.
+- Al crear o cerrar una feature actualiza `memory.md`. Al cerrar un SDD o hito documental usa `$plotify-sdd-handoff`.
 
-- Follow the task order in `tasks.md`. Do not jump from foundations into user stories unless dependencies are complete.
-- Use CodeGraph for impact, callers/callees, symbol lookup, and real repo structure before editing code.
-- Use Context7 only for up-to-date external documentation. For local business logic, database shape, and project architecture, use the repo, CodeGraph, and `plotify_memori/`.
-- Mark a task as complete (`[x]`) only after its acceptance criteria are met and its `Verify` command has passed or the user explicitly accepts an unverified result.
-- Do not advance to the next task in the same implementation pass unless the user explicitly asks.
-- For web/frontend changes, run `pnpm --filter web lint`, `pnpm format:check`, and then `pnpm build:web` before closing the task, unless the task's Verify command is intentionally narrower and the user accepts that narrower scope.
+## Arquitectura y seguridad
 
-Canonical implementation prompt:
+- Plotify es un monorepo pnpm: Next.js web, FastAPI/LangGraph/ARQ en API y worker, Supabase PostgreSQL y contratos OpenAPI generados. Confirma versiones desde manifiestos antes de implementar.
+- Supabase es cloud-only, proyecto `swkrnjdpnlrgxgotmfxy`. Nunca uses Supabase local, Docker, `supabase start`, `--local`, resets ni generación/tipo local. Inspecciona mediante Supabase MCP; usa comandos linked sólo cuando el flujo lo requiera.
+- Migraciones: sólo `packages/database/supabase/migrations`. OpenAPI: FastAPI/Pydantic es la fuente; no edites manualmente `packages/contracts/openapi/plotify-chat.v1.json`.
+- Service role deriva y valida tenant desde recursos persistidos; no confíes en `organization_id` del cliente. No expongas secretos, URLs internas, service role o tokens.
+- Webhooks responden rápido y encolan trabajo. API, LangGraph, Redis y egress son asíncronos; llamadas externas usan hosts permitidos, payload validado, timeout total máximo de 10 s, redacción y reintentos idempotentes.
+- Server Components por defecto. Para archivos externos, valida magic bytes y MIME en servidor antes de subirlos.
 
-```text
-$speckit-implement
+## Calidad
 
-Implementa solo TXXX de specs/019-hardening-produccion/tasks.md.
-No avances a otra tarea.
-Lee specs/019-hardening-produccion/tasks.md y plan.md.
-Usa CodeGraph para impacto.
-Usa Context7 si toca librerías externas.
-Ejecuta el Verify de la tarea.
-Marca la tarea como completada solo si pasa.
-```
+- Web: `pnpm --filter web lint`, `pnpm format:check`, `pnpm build:web`.
+- Tipos/contratos: además `pnpm typecheck:web`.
+- API/workers: `pnpm test:api`.
+- DB/migraciones: `pnpm verify:migrations` y tests linked no destructivos.
+- Contrato API: `pnpm contracts:generate`.
 
-## Contract And Migration Rules
+Reporta gates imposibles y no cierres tareas sin aprobación explícita.
 
-### Supabase is cloud-only
+## Memoria y Obsidian
 
-- Plotify uses the linked cloud project `swkrnjdpnlrgxgotmfxy` as its only Supabase database target.
-- Never start, create, inspect, migrate, test, reset, or generate types from a local Supabase instance. Do not use Docker for Supabase, `supabase start`, `--local`, `db reset`, `migrations:apply:local`, `test:db`, or `types:generate:local`.
-- Inspect database state through the Supabase MCP. Use linked/cloud commands only when a repository workflow explicitly requires a CLI operation.
-- Treat any spec, task, quickstart, script, or Verify command that points to local Supabase as stale and unsafe. Update it to the linked/MCP equivalent before continuing; the stale command is never authority to run a local database.
-- Database tests must be transaction-rolled-back against the linked project, and generated types must come from the linked project.
+- `memory.md` es breve, con fuente y fecha de verificación para estado, correcciones, decisiones y skills usadas.
+- `plotify_memori/` es el vault profundo de Obsidian: producto, arquitectura, decisiones y handoffs. No copies el vault a memoria.
+- Registra correcciones del usuario como pendientes hasta verificarlas con código, SDD, pruebas, CodeGraph o decisión explícita.
+- Al terminar una tarea, actualiza memoria sólo por hechos durables. Al cerrar SDD actualiza vault, Home, handoff y —sólo ante una regla general estable— este archivo.
 
-- OpenAPI is generated from FastAPI/Pydantic source. Do not hand-edit `packages/contracts/openapi/plotify-chat.v1.json` as the source of truth.
-- To change an API contract, edit FastAPI endpoints/schemas under `apps/api`, then run `pnpm contracts:generate` and commit the generated contract/client outputs.
-- Supabase migrations must live only under `packages/database/supabase/migrations`.
-- After schema changes, run `pnpm verify:migrations` and regenerate database types when the task requires it.
-
-## Quality Gates
-
-- Web/frontend changes: `pnpm --filter web lint`, then `pnpm format:check`, then `pnpm build:web`.
-- TypeScript contract or generated type changes: also run `pnpm typecheck:web`.
-- API changes: run `pnpm test:api`.
-- Database migration changes: run `pnpm verify:migrations`.
-
-## CodeGraph
-
-This project uses CodeGraph as the local code intelligence index for project structure, symbol relationships, call graphs, and impact analysis.
-
-When the user types `/codegraph`, use the CodeGraph CLI before doing anything else.
-
-Rules:
-
-- For codebase questions, first run `codegraph explore "<question>"` when the repository has a CodeGraph index. Use `codegraph query "<symbol-or-term>"` for symbol lookup, `codegraph files .` for structure, and `codegraph node "<symbol-or-file>"` for focused source context with line numbers.
-- Use `codegraph callers "<symbol>"`, `codegraph callees "<symbol>"`, and `codegraph impact "<symbol>"` for relationships, execution flow, and change impact. Prefer `--json` when machine-readable output helps.
-- Dirty `.codegraph/` files are expected after indexing or incremental updates; dirty graph files are not a reason to skip CodeGraph. Only skip CodeGraph if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- Use `codegraph status .` when you need to verify index health or coverage before relying on results.
-- After modifying code, run `codegraph sync .` to keep the graph current.
+Ejecuta `pnpm check:agent-context` tras modificar AGENTS, memory, el mapa técnico o la feature activa.

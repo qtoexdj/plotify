@@ -216,9 +216,9 @@ agentes y subagentes. Ese documento define:
 - formato de handoff;
 - condiciones de detencion.
 
-Las reglas globales `.agents/rules/sdd-implementation.md`,
-`.agents/rules/plotify-rules.md` y `.agents/rules/plotify-chat.md` deben apuntar
-a SDD 007 mientras esta feature este activa.
+Históricamente, este handoff usó reglas bajo `.agents/rules/`. Fueron retiradas
+el 2026-08-06 para eliminar instrucciones contradictorias; la norma vigente está
+en `AGENTS.md` y la feature activa se declara en `memory.md`.
 
 ## Estado final
 
