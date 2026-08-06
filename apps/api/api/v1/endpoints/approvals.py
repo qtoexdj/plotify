@@ -1,3 +1,6 @@
+import hashlib
+import json
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from arq.connections import ArqRedis
 from schemas.approval import (
@@ -145,7 +148,27 @@ async def request_sale(
                 elif profile.get("phone"):
                     vendor_phone = profile["phone"]
 
-        # 3. Insertar solicitud
+        # 3. Registrar operación de idempotencia duradera
+        operation_id = str(uuid.uuid4())
+        idempotency_key = f"sale_req_{body.lot_id}_{operation_id[:8]}"
+        payload_dict = body.payload.model_dump(mode="json")
+        payload_bytes = json.dumps(payload_dict, sort_keys=True).encode()
+        request_hash = hashlib.sha256(payload_bytes).hexdigest()
+
+        supabase.table("idempotency_operations").insert({
+            "id": operation_id,
+            "organization_id": organization_id,
+            "principal_type": "service",
+            "principal_subject": str(body.vendor_id),
+            "operation_type": "sale.approve",
+            "resource_scope": f"approval_request:{body.lot_id}",
+            "idempotency_key": idempotency_key,
+            "request_hash": request_hash,
+            "status": "processing",
+            "source_kind": "web",
+        }).execute()
+
+        # 4. Insertar solicitud de aprobación con operation_id
         insert_data = {
             "lot_id": body.lot_id,
             "organization_id": organization_id,
@@ -153,11 +176,14 @@ async def request_sale(
             "vendor_name": body.vendor_name,
             "vendor_phone": vendor_phone,
             "vendor_platform": body.vendor_platform,
-            "payload": body.payload.model_dump(mode="json"),
+            "payload": payload_dict,
             "status": "pending",
             "request_type": "sale",
             "sale_mode": "direct" if lot["estado"] == "disponible" else "reserved",
             "previous_lot_state": lot["estado"],
+            "operation_id": operation_id,
+            "request_hash": request_hash,
+            "idempotency_key": idempotency_key,
         }
         insert_res = supabase.table("approval_requests").insert(insert_data).execute()
 

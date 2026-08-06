@@ -107,6 +107,14 @@ class WorkerSettings:
             max_tries=1,
         ),
         cron(
+            process_escritura_workflow_outbox,
+            name="reconcile_escritura_workflow_outbox",
+            second=45,
+            run_at_startup=True,
+            unique=True,
+            max_tries=1,
+        ),
+        cron(
             sync_llm_model_catalog,
             name="sync_llm_model_catalog_daily",
             hour=4,

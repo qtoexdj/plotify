@@ -94,10 +94,28 @@ async def process_escritura_workflow_outbox(
         attempted = await repository.begin_attempt(item.id, worker_id=worker_id)
         from services.escritura_auto_pipeline import run_case_cascade
 
+        escritura_case_id = (
+            attempted.payload.get("escritura_case_id")
+            or attempted.payload.get("escrituraCaseId")
+        )
+        if not escritura_case_id and attempted.event_type == "sale_approved":
+            from services.escritura_sale_hook import handle_sale_validated_for_escritura
+
+            hook_result = await handle_sale_validated_for_escritura(
+                organization_id=attempted.organization_id,
+                lot_id=attempted.payload.get("lot_id"),
+                validated_by=None,
+            )
+            escritura_case_id = hook_result.escritura_case_id
+
+        if not escritura_case_id:
+            raise ValueError(
+                "escritura_case_id missing and could not be created from outbox payload"
+            )
+
         arguments = {
             "organization_id": attempted.organization_id,
-            "escritura_case_id": attempted.payload.get("escritura_case_id")
-            or attempted.payload.get("escrituraCaseId"),
+            "escritura_case_id": escritura_case_id,
             "trigger": "workflow_outbox",
             "workflow_outbox_id": attempted.id,
             "automatic_escritura_hard_off": hard_off,

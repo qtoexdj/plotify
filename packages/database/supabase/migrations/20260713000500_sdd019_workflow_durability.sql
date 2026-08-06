@@ -1065,7 +1065,7 @@ begin
 
   payload := request_row.payload;
   transition_version := request_row.approved_transition_version + 1;
-  event_fingerprint := encode(
+  v_event_fingerprint := encode(
     extensions.digest(
       concat_ws(
         '|', 'outbox-v1', 'sale_approved', request_row.organization_id::text,
@@ -1075,7 +1075,7 @@ begin
     ),
     'hex'
   );
-  audit_event_key := encode(
+  v_audit_event_key := encode(
     extensions.digest(
       concat_ws(
         '|', 'audit-v1', request_row.organization_id::text,
@@ -1137,7 +1137,7 @@ begin
       'vendor_id', request_row.vendor_id,
       'approved_transition_version', transition_version
     ),
-    request_row.operation_id, audit_event_key, 'succeeded'
+    request_row.operation_id, v_audit_event_key, 'succeeded'
   );
 
   insert into public.workflow_outbox (
@@ -1145,7 +1145,7 @@ begin
     event_fingerprint, operation_id, payload
   ) values (
     request_row.organization_id, 'sale_approval', request_row.id, 'sale_approved',
-    event_fingerprint, request_row.operation_id,
+    v_event_fingerprint, request_row.operation_id,
     jsonb_build_object(
       'schema_version', 'outbox-v1',
       'approval_request_id', request_row.id,
