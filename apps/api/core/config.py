@@ -1,5 +1,8 @@
 from functools import lru_cache
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -94,6 +97,13 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     DEEPSEEK_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
+
+    # SDD 019 Release / Rollout Controls (Hard-off environment overrides).
+    # Defaults "false": el camino corto prioriza generar escrituras. Producción
+    # blindada exige setearlas a "true" explícitamente en el entorno (fail-closed).
+    PLOTIFY_HARD_OFF_AUTOMATIC_ESCRITURA: str = "false"
+    PLOTIFY_HARD_OFF_CANONICAL_GEOMETRY_IMPORT: str = "false"
+    PLOTIFY_HARD_OFF_DOCUMENT_CAPABILITIES: str = "false"
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

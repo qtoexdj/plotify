@@ -1,6 +1,7 @@
 import hashlib
 import json
 import uuid
+from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from arq.connections import ArqRedis
 from schemas.approval import (
@@ -148,51 +149,31 @@ async def request_sale(
                 elif profile.get("phone"):
                     vendor_phone = profile["phone"]
 
-        # 3. Registrar operación de idempotencia duradera
-        operation_id = str(uuid.uuid4())
-        idempotency_key = f"sale_req_{body.lot_id}_{operation_id[:8]}"
+        # 3. Invocación de RPC Atómica transaccional (lock del lote, vendibilidad, idempotencia e inserción en BD)
         payload_dict = body.payload.model_dump(mode="json")
-        payload_bytes = json.dumps(payload_dict, sort_keys=True).encode()
-        request_hash = hashlib.sha256(payload_bytes).hexdigest()
+        rpc_res = supabase.rpc(
+            "create_sale_request_db",
+            {
+                "p_lot_id": body.lot_id,
+                "p_organization_id": organization_id,
+                "p_vendor_id": body.vendor_id,
+                "p_vendor_name": body.vendor_name,
+                "p_vendor_phone": vendor_phone,
+                "p_vendor_platform": body.vendor_platform,
+                "p_payload": payload_dict,
+                "p_sale_mode": "direct" if lot["estado"] == "disponible" else "reserved",
+                "p_previous_lot_state": lot["estado"],
+                "p_idempotency_key": body.idempotency_key,
+            },
+        ).execute()
 
-        supabase.table("idempotency_operations").insert({
-            "id": operation_id,
-            "organization_id": organization_id,
-            "principal_type": "service",
-            "principal_subject": str(body.vendor_id),
-            "operation_type": "sale.approve",
-            "resource_scope": f"approval_request:{body.lot_id}",
-            "idempotency_key": idempotency_key,
-            "request_hash": request_hash,
-            "status": "processing",
-            "source_kind": "web",
-        }).execute()
+        result_data = rpc_res.data if isinstance(rpc_res.data, dict) else {}
+        if not result_data.get("success"):
+            error_code = result_data.get("code") or 409
+            error_msg = result_data.get("error") or "Error al crear la solicitud de venta."
+            raise HTTPException(status_code=error_code, detail=error_msg)
 
-        # 4. Insertar solicitud de aprobación con operation_id
-        insert_data = {
-            "lot_id": body.lot_id,
-            "organization_id": organization_id,
-            "vendor_id": body.vendor_id,
-            "vendor_name": body.vendor_name,
-            "vendor_phone": vendor_phone,
-            "vendor_platform": body.vendor_platform,
-            "payload": payload_dict,
-            "status": "pending",
-            "request_type": "sale",
-            "sale_mode": "direct" if lot["estado"] == "disponible" else "reserved",
-            "previous_lot_state": lot["estado"],
-            "operation_id": operation_id,
-            "request_hash": request_hash,
-            "idempotency_key": idempotency_key,
-        }
-        insert_res = supabase.table("approval_requests").insert(insert_data).execute()
-
-        if not insert_res.data:
-            raise HTTPException(
-                status_code=500, detail="Error al crear la solicitud de aprobación de venta."
-            )
-
-        approval_id = insert_res.data[0]["id"]
+        approval_id = result_data["approval_id"]
 
         # 4. Encolar notificación al admin
         await redis.enqueue_job("notify_admin_approval", approval_id)
@@ -215,7 +196,7 @@ async def request_sale(
 
 import asyncio
 from pydantic import BaseModel, Field
-from typing import Any
+from typing import Any, Optional
 
 async def get_approval_organization_id(approval_id: str, supabase: Any | None = None) -> str:
     from core.database import get_supabase_client
@@ -274,8 +255,8 @@ async def get_approval_request(
 
 class DecisionRequest(BaseModel):
     action: str = Field(..., pattern=r"^(approve|reject)$")
-    organization_id: str
-    admin_id: str
+    organization_id: Optional[str] = None
+    admin_id: Optional[str] = None
 
 
 @router.post(
@@ -290,23 +271,37 @@ async def decide_approval_request(
     redis: ArqRedis = Depends(get_arq_pool),
 ):
     """
-    Procesa la decisión de un admin por la vía web.
-    Valida multi-tenant y encola el procesamiento.
+    Procesa la decisión de un admin por la vía web/api/miniapp.
+    Valida multi-tenant a nivel de servidor y ejecuta la decisión atómica.
     """
     supabase = get_supabase_client()
-    await require_approval_organization(approval_id, body.organization_id, supabase=supabase)
     
-    # Validar que el admin_id tenga rol admin en la organizacion
-    await require_admin_role(body.admin_id, body.organization_id, supabase=supabase)
+    # 1. Derivar la organization_id real desde la solicitud en BD
+    org_id = await get_approval_organization_id(approval_id, supabase=supabase)
+    if body.organization_id and body.organization_id != org_id:
+        raise HTTPException(
+            status_code=403,
+            detail="organization_id no coincide con la solicitud de aprobación.",
+        )
 
-    # Ejecutar la decision en la base de datos de forma sincrona (usando asyncio.to_thread por debajo)
-    # Si falla (ej: ya procesado), lanzara HTTPException(status_code=409) o ValueError
+    # 2. Exigir identidad de admin explícita y verificada
+    admin_id = body.admin_id
+    if not admin_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Se requiere la identidad del administrador autenticado (admin_id).",
+        )
+
+    # 3. Validar rol admin explícito para la organización de la solicitud
+    await require_admin_role(admin_id, org_id, supabase=supabase)
+
+    # 4. Ejecutar la decisión en BD
     try:
         db_result = await execute_admin_decision_db(
-            org_id=body.organization_id,
+            org_id=org_id,
             approval_id=approval_id,
             action=body.action,
-            admin_id=body.admin_id,
+            admin_id=admin_id,
         )
     except HTTPException:
         raise
@@ -318,17 +313,17 @@ async def decide_approval_request(
     try:
         await redis.enqueue_job(
             "send_decision_notifications",
-            body.organization_id,
+            org_id,
             approval_id,
             body.action,
-            body.admin_id,
+            admin_id,
             db_result,
         )
     except Exception as redis_err:
         logger.error(
             "notification_enqueue_failed",
             approval_id=approval_id,
-            org_id=body.organization_id,
+            org_id=org_id,
             error=str(redis_err),
         )
 

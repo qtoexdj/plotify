@@ -97,7 +97,6 @@ async def execute_admin_decision_db(
         request_type == "sale"
         and action == "approve"
         and lot_id
-        and not workflow_outbox_id
     ):
         from services.escritura_sale_hook import handle_sale_validated_for_escritura
 
@@ -109,15 +108,13 @@ async def execute_admin_decision_db(
                 supabase=supabase,
             )
             escritura_hook_result = hook_result.to_dict()
-            # SDD 017 (T011): con el borrador del caso listo, intentar la
-            # cascada de aprobación por excepción — best-effort, jamás
-            # revierte la venta ya aprobada. Sin molde de proyecto todavía
-            # (ready_for_borrador=False) no hay nada que la cascada pueda
-            # avanzar; el caso queda variables_pending como hasta ahora.
             if hook_result.ready_for_borrador and hook_result.escritura_case_id:
                 from services.escritura_auto_pipeline import run_case_cascade
 
                 try:
+                    # Camino corto SDD019: la cascada se ejecuta siempre de forma
+                    # síncrona tras la aprobación (aunque exista outbox durable).
+                    # Así el administrador ve resultado inmediato sin esperar al worker.
                     await run_case_cascade(
                         organization_id=org_id,
                         escritura_case_id=hook_result.escritura_case_id,

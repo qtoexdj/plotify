@@ -292,6 +292,10 @@ class FakeSupabase:
     def execute(self, table: FakeSupabaseTable):
         if table.name == "lots":
             return SimpleNamespace(data=self.lot_row)
+        if table.name == "projects":
+            return SimpleNamespace(
+                data=[{"id": PROJECT_ID, "organization_id": ORG_ID}]
+            )
         if table.name == "variable_resolutions":
             return SimpleNamespace(data=self.variables)
         if table.name == "lot_legal_data":

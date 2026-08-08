@@ -34,6 +34,23 @@ export function readLocalMigrationHistory(root = migrationsRoot) {
 
 export function parseRemoteMigrationList(output) {
   const rows = []
+  // La CLI supabase actual devuelve JSON: {"migrations":[{"local","remote","time"}]}.
+  const jsonStart = output.indexOf('{')
+  if (jsonStart >= 0) {
+    try {
+      const parsed = JSON.parse(output.slice(jsonStart))
+      const migrations = Array.isArray(parsed?.migrations) ? parsed.migrations : []
+      for (const item of migrations) {
+        const version = item?.remote || item?.local
+        if (typeof version === 'string' && /^\d{14}$/.test(version)) {
+          rows.push({ version })
+        }
+      }
+      return rows.sort((left, right) => left.version.localeCompare(right.version))
+    } catch {
+      // fall through a formato tabular legacy si el JSON está malformado
+    }
+  }
   for (const line of output.split(/\r?\n/)) {
     const columns = line.split('|').map((item) => item.trim())
     if (columns.length < 2) continue
@@ -48,7 +65,7 @@ export function inspectLinkedMigrationHistory(adapter = execFileSync) {
   const output = adapter(
     'pnpm',
     ['--filter', '@plotify/database', 'exec', 'supabase', 'migration', 'list', '--linked'],
-    { cwd: resolve(databaseRoot, '../..'), encoding: 'utf8' }
+    { cwd: resolve(databaseRoot, 'supabase'), encoding: 'utf8' }
   )
   return parseRemoteMigrationList(output)
 }

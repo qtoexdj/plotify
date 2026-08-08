@@ -233,7 +233,7 @@ def test_decide_approval_rejects_cross_tenant():
         )
 
     assert response.status_code == 403
-    assert "organization_id no corresponde" in response.json()["detail"]
+    assert "organization_id no coincide" in response.json()["detail"]
 
 
 def test_decide_reject_approval_rejects_cross_tenant():
@@ -263,7 +263,7 @@ def test_decide_reject_approval_rejects_cross_tenant():
         )
 
     assert response.status_code == 403
-    assert "organization_id no corresponde" in response.json()["detail"]
+    assert "organization_id no coincide" in response.json()["detail"]
 
 
 def test_list_legal_documents_rejects_cross_tenant_project_scope():

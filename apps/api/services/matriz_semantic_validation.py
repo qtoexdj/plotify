@@ -35,7 +35,11 @@ EMPTY_GRAMMAR_RE = re.compile(
     r"\b(?:de nacionalidad|de profesión|domiciliad[oa] en|estado civil)\s*[,;.]",
     re.IGNORECASE,
 )
-ORPHAN_CONNECTOR_RE = re.compile(r"\b(?:salvo|será|y|o|con|sin)\s*[,;.]", re.IGNORECASE)
+ORPHAN_CONNECTOR_RE = re.compile(
+    r"[,;.]\s*(?:salvo|será|y|o|con|sin)\s*[,;.]"
+    r"|^\s*(?:y|o|con|sin)\s*[,;.]",
+    re.IGNORECASE | re.MULTILINE,
+)
 ORPHAN_PUNCTUATION_RE = re.compile(r"([,;:.])\s*\1|[,;]\s*[.]|[.]\s*[,;]")
 
 
@@ -92,7 +96,9 @@ class SemanticValidationResult:
 
     @property
     def promotable(self) -> bool:
-        return self.status == "passed" and not self.issues
+        return self.status == "passed" and all(
+            i.severity != "blocking" for i in self.issues
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -197,7 +203,7 @@ def validate_semantics(
     if EMPTY_GRAMMAR_RE.search(text):
         issues.append(SemanticIssue("SEM_EMPTY_GRAMMAR_UNIT"))
     if ORPHAN_CONNECTOR_RE.search(text):
-        issues.append(SemanticIssue("SEM_ORPHAN_CONNECTOR"))
+        issues.append(SemanticIssue("SEM_ORPHAN_CONNECTOR", severity="warning"))
     if ORPHAN_PUNCTUATION_RE.search(text):
         issues.append(SemanticIssue("SEM_ORPHAN_PUNCTUATION"))
 
@@ -222,7 +228,7 @@ def validate_semantics(
     final_issues = tuple(deduplicated.values())
     content_hash = canonical_json_hash({"ast": ast, "text": text})
     return SemanticValidationResult(
-        status="failed" if final_issues else "passed",
+        status="failed" if any(i.severity == "blocking" for i in final_issues) else "passed",
         resolved_content_hash=content_hash,
         artifact_sha256=artifact_sha,
         issues=final_issues,

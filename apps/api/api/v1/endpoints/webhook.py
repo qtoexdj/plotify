@@ -13,6 +13,47 @@ logger = get_logger(__name__)
 settings = get_settings()
 
 
+async def _run_decision_and_cascade(
+    *,
+    org_id: str,
+    approval_id: str,
+    action: str,
+    admin_id: str,
+    channel: str | None = "telegram",
+) -> None:
+    """Camino corto SDD019: ejecuta la decisión de aprobación + cascada de
+    escritura inline, sin depender del worker ARQ."""
+    try:
+        from core.database import get_supabase_client
+        from workers.tasks.approval_processor import (
+            execute_admin_decision_db,
+            send_decision_notifications,
+        )
+
+        supabase = get_supabase_client()
+        db_result = await execute_admin_decision_db(
+            org_id=org_id,
+            approval_id=approval_id,
+            action=action,
+            admin_id=admin_id,
+            channel=channel,
+        )
+        await send_decision_notifications(
+            ctx={},
+            org_id=org_id,
+            approval_id=approval_id,
+            action=action,
+            admin_id=admin_id,
+            db_result=db_result,
+        )
+    except Exception as exc:
+        logger.error(
+            "inline_decision_cascade_failed",
+            approval_id=approval_id,
+            error=str(exc),
+        )
+
+
 def _telegram_secret_token_state(
     expected_token: str, provided_token: str | None
 ) -> str:
@@ -269,6 +310,16 @@ async def receive_telegram_webhook(
                     action,
                     chat_id,
                 )
+                # Camino corto SDD019: ejecutar también la cascada inline desde el
+                # webhook para que el administrador reciba la escritura de inmediato
+                # sin depender del worker ARQ (que puede estar bloqueado por timeouts).
+                import asyncio as _asyncio
+                _asyncio.ensure_future(_run_decision_and_cascade(
+                    org_id=org_id,
+                    approval_id=approval_id,
+                    action=action,
+                    admin_id=chat_id,
+                ))
                 logger.info(
                     "Decisión de admin encolada.",
                     action=action,

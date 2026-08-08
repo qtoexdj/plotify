@@ -128,18 +128,32 @@ async def _assert_lot_scope(
     project_id: str,
     lot_id: str,
 ) -> None:
-    result = await asyncio.to_thread(
+    lot_res = await asyncio.to_thread(
         lambda: (
             client.table("lots")
-            .select("id, project_id, projects!inner(organization_id)")
+            .select("id, project_id")
             .eq("id", lot_id)
-            .eq("project_id", project_id)
-            .eq("projects.organization_id", organization_id)
-            .maybe_single()
+            .limit(1)
             .execute()
         )
     )
-    if not _safe_data(result):
+    lot_row = _first_row(_safe_data(lot_res))
+    if not lot_row or str(lot_row.get("project_id")) != project_id:
+        raise EscrituraReadinessScopeError(
+            "lot_id does not belong to the requested organization/project."
+        )
+
+    proj_res = await asyncio.to_thread(
+        lambda: (
+            client.table("projects")
+            .select("id, organization_id")
+            .eq("id", project_id)
+            .limit(1)
+            .execute()
+        )
+    )
+    proj_row = _first_row(_safe_data(proj_res))
+    if not proj_row or str(proj_row.get("organization_id")) != organization_id:
         raise EscrituraReadinessScopeError(
             "lot_id does not belong to the requested organization/project."
         )
@@ -487,6 +501,7 @@ def build_variable_snapshot(
         )
         if comuna:
             snapshot["sii.comuna"] = {
+                "variable_key": "sii.comuna",
                 "value_text": comuna,
                 "value_json": None,
                 "state": "approved",
@@ -498,6 +513,7 @@ def build_variable_snapshot(
         pre_rol = lot_legal_data.get("sii_pre_role")
         if pre_rol:
             snapshot["sii.pre_rol_lote"] = {
+                "variable_key": "sii.pre_rol_lote",
                 "value_text": pre_rol,
                 "value_json": None,
                 "state": "approved",
@@ -512,6 +528,7 @@ def build_variable_snapshot(
         unidad = lot_legal_data.get("sii_unit_name")
         if unidad:
             snapshot["sii.unidad_nombre"] = {
+                "variable_key": "sii.unidad_nombre",
                 "value_text": unidad,
                 "value_json": None,
                 "state": "approved",
@@ -526,6 +543,7 @@ def build_variable_snapshot(
         rol_texto = lot_legal_data.get("sii_role_in_process_text")
         if rol_texto:
             snapshot["sii.rol_avaluo_en_tramite_texto"] = {
+                "variable_key": "sii.rol_avaluo_en_tramite_texto",
                 "value_text": rol_texto,
                 "value_json": None,
                 "state": "approved",
@@ -546,6 +564,7 @@ def build_variable_snapshot(
         )
         if role_status == "rol_en_tramite" and role_value:
             snapshot["lote.rol_tramite"] = {
+                "variable_key": "lote.rol_tramite",
                 "value_text": role_value,
                 "value_json": None,
                 "state": "approved",
@@ -555,6 +574,7 @@ def build_variable_snapshot(
             }
         if role_value:
             snapshot["lote.rol_avaluo"] = {
+                "variable_key": "lote.rol_avaluo",
                 "value_text": role_value,
                 "value_json": None,
                 "state": "approved",
@@ -613,7 +633,7 @@ async def _fetch_project_sii_common_data(
                 .select(PROJECT_SII_COMMON_COLUMNS)
                 .eq("project_id", project_id)
                 .eq("organization_id", organization_id)
-                .maybe_single()
+                .limit(1)
                 .execute()
             )
         )
@@ -825,7 +845,7 @@ async def fetch_readiness_inputs(
                 .eq("organization_id", organization_id)
                 .eq("project_id", project_id)
                 .eq("lot_id", lot_id)
-                .maybe_single()
+                .limit(1)
                 .execute()
             )
         ),
@@ -1135,7 +1155,7 @@ async def get_active_escritura_case(
             .eq("project_id", project_id)
             .eq("lot_id", lot_id)
             .neq("case_status", "cancelled")
-            .maybe_single()
+            .limit(1)
             .execute()
         )
     )
@@ -1228,7 +1248,7 @@ async def create_escritura_case_snapshot(
             .eq("project_id", project_id)
             .eq("lot_id", lot_id)
             .neq("case_status", "cancelled")
-            .maybe_single()
+            .limit(1)
             .execute()
         )
     )

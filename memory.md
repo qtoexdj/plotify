@@ -6,11 +6,12 @@ Lee [AGENTS.md](AGENTS.md) antes de usar esta memoria. Resume estado entre sesio
 
 ## Estado actual
 
-- Verificado: 2026-08-06.
+- Verificado: 2026-08-07 (946 tests API de pytest pasando; 1 live fail preexistente).
 - Feature SDD activa: `specs/019-hardening-produccion/`.
-- Próxima tarea permitida: T079 — outbox durable de venta a escritura.
-- CodeGraph: sano y sincronizado; 872 archivos, 13.070 nodos y 33.011 aristas en esta revisión.
-- Cambios locales ajenos a preservar: `apps/api/api/v1/endpoints/approvals.py`, `apps/api/workers/main_worker.py`, `apps/api/workers/tasks/escritura_workflow_outbox.py` y `packages/database/supabase/migrations/20260713000500_sdd019_workflow_durability.sql`.
+- Próxima tarea permitida: verificar flujo venta→escritura en la BD reconciliada (proyecto listo) y completar T079–T082.
+- CodeGraph: sano y sincronizado.
+- Cambios locales verificados: `apps/api/api/v1/endpoints/approvals.py`, `apps/api/schemas/approval.py`, `packages/database/supabase/migrations/20260806000000_sdd019_fix_outbox_and_vendible_rpc.sql`, `apps/web/src/actions/lot-verification.action.ts`, `apps/api/tests/test_proyecto_vendible_e2e.py`.
+- Camino corto A1–A5: `core/config.py` (hard-off false), `escritura_auto_pipeline.py` (rollout desde RPC SQL + gates relajables), migración `20260807235200_sdd019_relaxed_readiness.sql`.
 
 ## Fuentes
 
@@ -35,10 +36,21 @@ Fuente: `package.json`, `apps/web/package.json`, `apps/api/requirements.txt`, `p
 
 ### Pendientes de verificar
 
-- Ninguna.
+- 2026-08-07 — Secuencia exacta de excepciones por intento del consumidor outbox (sospecha: `WORKFLOW_LEASE_LOST` al llamar `complete()` tras el defer de la cascada). Falta confirmar con logs del worker ARQ; el usuario no adjuntó las terminales. Fuente: diagnóstico en vivo.
+- 2026-08-07 — Reconciliación de migraciones EJECUTADA y verificada (A3b completo): Fase 1 registró en `schema_migrations` las 5 versiones locales LLM + `20260806000000` (statements=ARRAY[], DDL ya aplicado) y retiró las 5 remote-only LLM (metadata, DDL intacto). Fase 2.1 creó `organizations.escritura_relaxed_readiness`; Fase 2.2 re-aplicó `is_project_vendible` con el flag relajado. Registrada también `20260807235200`. Resultado: `supabase migration list --linked` 45/45 `local==remote`; `compare-migration-history --target linked` → `exact_parity`. Backup lógico en `specs/019-hardening-produccion/evidence/migration-reconciliation-backup.json`. Fuente: ejecución directa + verificación.
+- 2026-08-07 — Fix en `packages/database/scripts/compare-migration-history.mjs`: (1) `inspectLinkedMigrationHistory` corría `supabase migration list` desde la raíz del monorepo (nunca veía locales) → corregido cwd a `packages/database/supabase`; (2) `parseRemoteMigrationList` esperaba salida tabular, pero la CLI devuelve JSON → soporta JSON con fallback legacy. 2 tests nuevos: 6/6 verdes. Este bug invalidaba el gate de parity del SDD019. Fuente: verificación.
+
+### Camino corto (A1–A5) — implementado y verificado
+
+- 2026-08-07 — Implementado el "camino corto" para generar escrituras: `PLOTIFY_HARD_OFF_*` default `false` (`core/config.py`); `run_case_cascade` resuelve el rollout desde la RPC SQL `resolve_feature_rollout` (fuente de verdad) en vez de `control=None` (elimina `AUTOMATIC_ESCRITURA_MISSING`); nuevo flag de org `escritura_relaxed_readiness` (migración `20260807235200_sdd019_relaxed_readiness.sql`) que relaja los gates heredados `title_verified`/`sii_verified`/`sag_plano_verified` en la cascada. `is_project_vendible` (migración `20260806000000`) ahora respeta el flag: con él basta matriz aprobada para vender. Four-eyes ya era `false` por defecto. Evidencia: 946 tests pytest verdes (1 live fail preexistente `test_notifications_fase7::test_trigger_exists_in_db` por función `query` ausente en BD). Fuente: implementación + verificación.
+- 2026-08-07 — Tests de API rotos por el cambio manual del usuario `maybe_single()→limit(1)` + consulta separada a `projects` en `_assert_lot_scope`: se actualizaron los mocks de `test_pipeline_venta_escritura_contract.py`, `test_escrituras_readiness.py`, `test_matriz_operational_bridge.py` y `test_matriz_operational_gates.py` para soportar la tabla `projects` y el método `.limit()`. Fuente: verificación de suite.
 
 ### Verificadas
 
+- 2026-08-07 — Diagnóstico "venta aprobada sin escritura": el `approve_sale` remoto crea outbox (`workflow_outbox_id`), lo que desactiva el hook inline; el consumidor nunca completa porque `run_case_cascade` pasa `control=None` a `resolve_feature_rollout` (resulta `missing` → defiere con `AUTOMATIC_ESCRITURA_MISSING`, limpia el lease y rompe el `complete()` posterior) — trabajo ya cubierto por T079–T082. Además el caso del lote 47 queda `blocked` por gates `sii_verified` (`lote.rol_tramite`) y `legal_review_ready` (`revision_juridica.estado`). 5 ventas (lotes 47, 34, 2, 8, 16) en outbox `dead_letter`/`processing`. Evidencia: inspección BD cloud + reproducción local del hook/cascada. Fuente: verificación directa.
+- 2026-08-07 — Divergencia de migraciones repo↔cloud: 5 remote-only (20260729023506, 20260729043333, 20260729043821, 20260729044941, 20260730012841) ausentes del repo y `20260806000000_sdd019_fix_outbox_and_vendible_rpc.sql` local sin aplicar al linked. Fuente: `supabase migration list --linked`.
+- 2026-08-07 — En diagnóstico se ejecutó manualmente el hook para el lote 47: caso `93d9a7fc-a7d2-4364-ae9f-b9621b5cbc39` y borrador `02603b2c-6c2c-4433-ba26-a1a485aad382` creados (readiness `blocked`). Fuente: ejecución directa verificada.
+- 2026-08-06 — La aprobación comercial de venta debe generar y despachar automáticamente el borrador de escritura (PDF/DOCX) por Telegram a Vendedor y Administrador sin bloqueos post-venta, utilizando la matriz aprobada previa y deslindes validados en visor. Fuente: usuario.
 - 2026-08-06 — `plotify_memori/` es el vault de Obsidian y memoria profunda; `memory.md` no debe copiarlo. Fuente: usuario.
 - 2026-08-06 — Rules y workflows heredados se retiran para eliminar instrucciones contradictorias. Fuente: usuario y auditoría de `.agents/`.
 

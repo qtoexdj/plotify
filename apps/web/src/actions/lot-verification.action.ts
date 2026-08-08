@@ -523,18 +523,17 @@ export async function makeProjectOperational(
       }
     }
 
-    // 5. Update project status to operational
-    const { error: updateError } = await supabase
-      .from('projects')
-      .update({
-        estado: 'operational',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', projectId)
+    // 5. Atomic RPC activation: activate_project_sales
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      'activate_project_sales',
+      { p_project_id: projectId }
+    )
 
-    if (updateError) {
-      logger.error({ projectId, error: updateError }, 'make_project_operational_failed')
-      return { success: false, error: 'Error al actualizar el estado del proyecto' }
+    if (rpcError || !rpcResult?.success) {
+      const errorMsg =
+        rpcResult?.error || rpcError?.message || 'Error al actualizar el estado del proyecto'
+      logger.error({ projectId, error: rpcError || rpcResult }, 'make_project_operational_failed')
+      return { success: false, error: errorMsg }
     }
 
     // 6. Audit log

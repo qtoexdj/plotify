@@ -707,18 +707,32 @@ def _safe_data(result: Any) -> Any:
 async def _assert_lot_scope(
     *, client: Any, organization_id: str, project_id: str, lot_id: str
 ) -> None:
-    result = await asyncio.to_thread(
+    lot_res = await asyncio.to_thread(
         lambda: (
             client.table("lots")
-            .select("id, project_id, projects!inner(organization_id)")
+            .select("id, project_id")
             .eq("id", lot_id)
-            .eq("project_id", project_id)
-            .eq("projects.organization_id", organization_id)
-            .maybe_single()
+            .limit(1)
             .execute()
         )
     )
-    if not _safe_data(result):
+    lot_row = _first_row(_safe_data(lot_res))
+    if not lot_row or str(lot_row.get("project_id")) != project_id:
+        raise OperationalBridgeScopeError(
+            "lot_id does not belong to the requested organization/project."
+        )
+
+    proj_res = await asyncio.to_thread(
+        lambda: (
+            client.table("projects")
+            .select("id, organization_id")
+            .eq("id", project_id)
+            .limit(1)
+            .execute()
+        )
+    )
+    proj_row = _first_row(_safe_data(proj_res))
+    if not proj_row or str(proj_row.get("organization_id")) != organization_id:
         raise OperationalBridgeScopeError(
             "lot_id does not belong to the requested organization/project."
         )
@@ -734,7 +748,7 @@ async def _fetch_operational_rows(
                 .select("*")
                 .eq("id", lot_id)
                 .eq("project_id", project_id)
-                .maybe_single()
+                .limit(1)
                 .execute()
             )
         ),
@@ -753,7 +767,7 @@ async def _fetch_operational_rows(
                 client.table("organization_payment_info")
                 .select("*")
                 .eq("organization_id", organization_id)
-                .maybe_single()
+                .limit(1)
                 .execute()
             )
         ),

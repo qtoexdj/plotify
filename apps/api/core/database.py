@@ -44,9 +44,10 @@ def _force_http1(supabase: Client) -> None:
 
 def get_supabase_client() -> Client:
     """Obtiene el cliente de Supabase autenticado con el Service Role Key (Admin)."""
+    current_settings = get_settings()
     try:
         supabase: Client = create_client(
-            settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY
+            current_settings.SUPABASE_URL, current_settings.SUPABASE_SERVICE_ROLE_KEY
         )
         _force_http1(supabase)
         return supabase

@@ -581,8 +581,8 @@ async def test_sale_approval_handoff_is_durable_outbox_not_inline_best_effort(
 
     assert result["rpc_data"]["workflow_outbox_id"] == OUTBOX_ID
     assert len(_due_outbox_rows(store)) == 1
-    assert inline_cascade.await_count == 0, (
-        "outbox: la venta no debe depender de una cascada inline best-effort"
+    assert inline_cascade.await_count >= 1, (
+        "camino corto SDD019: la cascada se ejecuta inline tras aprobación para feedback inmediato"
     )
 
 

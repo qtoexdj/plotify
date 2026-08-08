@@ -31,6 +31,7 @@ class ReservationRequest(BaseModel):
     vendor_phone: str
     vendor_platform: str = Field(..., pattern=r"^(telegram|whatsapp)$")
     payload: ReservationPayload
+    idempotency_key: Optional[str] = None
 
 
 class SalePayload(BaseModel):
@@ -63,6 +64,7 @@ class SaleRequest(BaseModel):
     payload: SalePayload
     sale_mode: Optional[Literal["direct", "reserved"]] = None
     previous_lot_state: Optional[Literal["disponible", "reservado"]] = None
+    idempotency_key: Optional[str] = None
 
 
 class ReservationResponse(BaseModel):
@@ -78,6 +80,16 @@ class DecisionResponse(BaseModel):
 
     success: bool
     error: Optional[str] = None
+
+
+class DecisionRequest(BaseModel):
+    """Payload para decisión administrativa de aprobación/rechazo."""
+
+    action: Literal["approve", "reject"]
+    admin_id: Optional[str] = None
+    organization_id: Optional[str] = None
+    reason: Optional[str] = None
+
 
 
 class ApprovalRequestDetailResponse(BaseModel):

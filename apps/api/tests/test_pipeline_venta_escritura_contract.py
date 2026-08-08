@@ -79,6 +79,9 @@ def _make_mock_supabase(lot_state="reservado", lot_org_id="org-a-uuid"):
 
     supabase = MagicMock()
     supabase.table.side_effect = get_table_mock
+    supabase.rpc.return_value.execute.return_value = MagicMock(
+        data={"success": True, "approval_id": "new-approval-uuid"}
+    )
     return supabase, approval_query
 
 
@@ -125,9 +128,9 @@ async def test_request_sale_payload_keeps_comprador_fields():
 
     assert response.status_code == 202
 
-    approval_query.insert.assert_called_once()
-    inserted_request = approval_query.insert.call_args.args[0]
-    payload = inserted_request["payload"]
+    supabase.rpc.assert_called_once()
+    rpc_kwargs = supabase.rpc.call_args[0][1]
+    payload = rpc_kwargs["p_payload"]
     assert payload["cliente_nacionalidad"] == "chilena"
     assert payload["cliente_region"] == "Maule"
     assert payload["cliente_comuna"] == "Teno"
@@ -238,6 +241,8 @@ class _FakeSupabase:
             # 0 filas: real supabase-py devuelve None, no un objeto con
             # .data = None (FR-001/T006).
             return None
+        if table.name == "projects":
+            return MagicMock(data=[{"id": PROJECT_ID, "organization_id": ORG_ID}])
         if table.name == "variable_resolutions":
             if table.operation == "select":
                 return MagicMock(data=[])

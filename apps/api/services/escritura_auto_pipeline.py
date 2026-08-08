@@ -21,7 +21,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from core.logger import get_logger
-from core.release_flags import resolve_feature_rollout
 from services.escritura_case_workflow import (
     _alert_clause_blockers,
     _approve_semantic_candidate,
@@ -99,6 +98,81 @@ def _is_review_checkpoint_blocker(blocker: dict[str, Any]) -> bool:
     )
 
 
+def _is_relaxed_readiness_blocker(blocker: dict[str, Any], relaxed: bool) -> bool:
+    """Camino corto SDD019: cuando la org relaja readiness, los gates
+    heredados del proyecto (title_verified/sii_verified/sag_plano_verified)
+    dejan de bloquear la generación y quedan como advertencia trazable."""
+    if not relaxed:
+        return False
+    return (
+        blocker.get("kind") == "readiness_gate"
+        and blocker.get("gate") in INHERITED_PROJECT_READINESS_GATES
+    )
+
+
+def _relaxed_token_keys(case_row: dict[str, Any], relaxed: bool) -> set[str]:
+    """Devuelve las claves de variable que deben relajarse cuando
+    los gates heredados están bloqueados pero la org tiene el flag activo."""
+    if not relaxed:
+        return set()
+    readiness_gates = _as_dict(case_row.get("readiness_gates"))
+    keys: set[str] = set()
+    for gate_key in INHERITED_PROJECT_READINESS_GATES:
+        gate = readiness_gates.get(gate_key)
+        if isinstance(gate, dict) and gate.get("status") == "blocked":
+            for var in gate.get("blocking_variables") or []:
+                keys.add(str(var))
+    return keys
+
+
+def _is_relaxed_token_missing(
+    blocker: dict[str, Any], relaxed_keys: set[str]
+) -> bool:
+    """Un `token_missing` cuya clave proviene de un gate heredado relajado
+    no debe bloquear la generación."""
+    return (
+        blocker.get("kind") == "token_missing"
+        and str(blocker.get("key") or "") in relaxed_keys
+    )
+
+
+def _inject_relaxed_placeholders(
+    case_row: dict[str, Any], relaxed_keys: set[str]
+) -> None:
+    """Inyecta placeholders en el variable_snapshot para tokens de gates
+    relajados, de modo que el resolver de la matriz no los reporte como
+    missing y la validación semántica no los rechace.
+
+    El DOCX resultante incluirá el valor "[pendiente]" como marcador visible.
+    """
+    snapshot = _as_dict(case_row.get("variable_snapshot"))
+    injected = 0
+    for key in relaxed_keys:
+        existing = snapshot.get(key)
+        if isinstance(existing, dict):
+            if existing.get("state") in ("missing", "unresolved", None):
+                existing["state"] = "resolved"
+                existing.setdefault("value_text", "(pendiente)")
+                existing.setdefault("value_json", None)
+                existing["source_type"] = "relaxed"
+                existing["confidence"] = 0.0
+                existing["variable_key"] = key
+                injected += 1
+                continue
+            continue
+        snapshot[key] = {
+            "variable_key": key,
+            "state": "resolved",
+            "value_text": "(pendiente)",
+            "value_json": None,
+            "source_type": "relaxed",
+            "confidence": 0.0,
+        }
+        injected += 1
+    if injected:
+        case_row["variable_snapshot"] = snapshot
+
+
 async def _fetch_org_review_policy(client: Any, organization_id: str) -> str:
     result = await asyncio.to_thread(
         lambda: (
@@ -112,6 +186,26 @@ async def _fetch_org_review_policy(client: Any, organization_id: str) -> str:
     row = _first_row(getattr(result, "data", None))
     policy = row.get("escritura_review_policy") if row else None
     return str(policy) if policy else "every_sale"
+
+
+async def _org_relaxed_readiness(client: Any, organization_id: str) -> bool:
+    """Camino corto SDD019: la org puede relajar los gates heredados del
+    proyecto (title_verified/sii_verified/sag_plano_verified) para generar
+    escrituras con los datos disponibles. Ausencia del flag o error = estricto."""
+    try:
+        result = await asyncio.to_thread(
+            lambda: (
+                client.table("organizations")
+                .select("escritura_relaxed_readiness")
+                .eq("id", organization_id)
+                .limit(1)
+                .execute()
+            )
+        )
+    except Exception:
+        return False
+    row = _first_row(getattr(result, "data", None))
+    return bool(row.get("escritura_relaxed_readiness")) if row else False
 
 
 async def _fetch_latest_rejection_reason(
@@ -432,6 +526,11 @@ async def _run_case_cascade(
     project_id = str(case_row["project_id"])
     ensure_legal_documents_feature_enabled(organization_id=org_id, project_id=project_id)
 
+    relaxed_readiness = await _org_relaxed_readiness(client, org_id)
+    relaxed_token_keys = _relaxed_token_keys(case_row, relaxed_readiness)
+    if relaxed_token_keys:
+        _inject_relaxed_placeholders(case_row, relaxed_token_keys)
+
     matrix_row = await _fetch_active_matrix(client, case_id, org_id, project_id)
     if matrix_row is None:
         matrix_row = await _lazy_create_matrix(client, case_row, org_id)
@@ -538,7 +637,13 @@ async def _run_case_cascade(
             created_at=run_row.get("created_at"),
         )
 
-    real_blockers = [b for b in blockers if not _is_review_checkpoint_blocker(b)]
+    real_blockers = [
+        b
+        for b in blockers
+        if not _is_review_checkpoint_blocker(b)
+        and not _is_relaxed_readiness_blocker(b, relaxed_readiness)
+        and not _is_relaxed_token_missing(b, relaxed_token_keys)
+    ]
     review_pending = any(_is_review_checkpoint_blocker(b) for b in blockers)
 
     if real_blockers:
@@ -715,6 +820,8 @@ async def _run_case_cascade(
             b
             for b in (*alert_blockers, *readiness_blockers)
             if not _is_review_checkpoint_blocker(b)
+            and not _is_relaxed_readiness_blocker(b, relaxed_readiness)
+            and not _is_relaxed_token_missing(b, relaxed_token_keys)
         ]
         if generation_blockers:
             return await _exception(generation_blockers)
@@ -793,6 +900,43 @@ async def _begin_pipeline_outbox_attempt(client: Any, workflow_outbox_id: str) -
     )
 
 
+async def _resolve_rollout_from_db(
+    client: Any,
+    *,
+    feature_key: str,
+    organization_id: str,
+    project_id: str | None,
+    hard_off: bool,
+) -> bool:
+    """Resolve the rollout control from Supabase (source of truth).
+
+    Fail closed: hard-off, lectura con error, o control ausente/off producen
+    False. Solo ON o projects-scoped devuelven True, igual que el RPC SQL
+    `resolve_feature_rollout` que usa el worker antes del claim.
+    """
+    if hard_off:
+        return False
+    try:
+        response = await asyncio.to_thread(
+            lambda: client.rpc(
+                "resolve_feature_rollout",
+                {
+                    "p_feature_key": feature_key,
+                    "p_organization_id": str(organization_id),
+                    "p_project_id": project_id,
+                },
+            ).execute()
+        )
+    except Exception:
+        return False
+    data = getattr(response, "data", None)
+    if isinstance(data, list):
+        data = data[0] if data else False
+    if isinstance(data, dict):
+        data = next(iter(data.values()), False)
+    return data is True
+
+
 async def run_case_cascade(
     *,
     organization_id: str,
@@ -812,16 +956,21 @@ async def run_case_cascade(
 
     if workflow_outbox_id:
         case_row = await _fetch_case(client, case_id, org_id)
-        rollout = resolve_feature_rollout(
+        # Resolver el control desde la fuente de verdad (Supabase), no desde
+        # un control Python hardcodeado: antes el `control=None` forzaba
+        # "missing" y difería el outbox con AUTOMATIC_ESCRITURA_MISSING,
+        # impidiendo que la venta→escritura avanzara jamás.
+        rollout_enabled = await _resolve_rollout_from_db(
+            client,
             feature_key="automatic_escritura",
             organization_id=org_id,
             project_id=str(case_row.get("project_id") or "") or None,
-            control=None,
             hard_off=automatic_escritura_hard_off,
         )
-        if not rollout.enabled:
+        if not rollout_enabled:
+            reason = "hard_off" if automatic_escritura_hard_off else "control_off"
             await _defer_workflow_outbox_for_feature_off(
-                client, workflow_outbox_id=str(workflow_outbox_id), reason=rollout.reason
+                client, workflow_outbox_id=str(workflow_outbox_id), reason=reason
             )
             return CascadeRunResult(run_id=None, outcome="deferred_feature_off")
         await _begin_pipeline_outbox_attempt(client, str(workflow_outbox_id))

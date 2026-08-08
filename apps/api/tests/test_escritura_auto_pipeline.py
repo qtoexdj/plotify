@@ -22,7 +22,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from core.release_flags import EffectiveRollout
 from services import escritura_auto_pipeline as pipeline
 from services import escritura_case_workflow
 from services.matriz_semantic_validation import generation_fingerprint
@@ -185,9 +184,32 @@ class FakeStore:
     def __init__(self):
         self.tables: dict[str, list[dict[str, Any]]] = {}
         self.storage = FakeStorage()
+        # Flag para simular un cliente Supabase con RPC disponible. Por defecto
+        # apagado: `_system_approve_matriz` revisa `hasattr(client, "rpc")` y
+        # usa la rama legacy (sin validación semántica) en el resto de tests.
+        # Los tests de outbox lo activan para ejercitar el camino estricto.
+        self.rpc_enabled = False
+        self.rpc_results: dict[str, Any] = {}
 
     def table(self, name: str) -> FakeQuery:
         return FakeQuery(self, name)
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "rpc":
+            if not self.rpc_enabled:
+                raise AttributeError(
+                    f"'FakeStore' object has no attribute 'rpc' (rpc_enabled=False)"
+                )
+
+            def _rpc(rpc_name: str, params: dict[str, Any] | None = None) -> Any:
+                result = self.rpc_results.get(rpc_name, False)
+                return SimpleNamespace(
+                    data=result,
+                    execute=lambda: SimpleNamespace(data=result),
+                )
+
+            return _rpc
+        raise AttributeError(f"'FakeStore' object has no attribute {name!r}")
 
 
 class FakeTelegramClient:
@@ -202,9 +224,13 @@ class FakeTelegramClient:
 # ─── Seed helpers ─────────────────────────────────────────────────────────────
 
 
-def _seed_org(store: FakeStore, *, policy: str = "every_sale") -> None:
+def _seed_org(store: FakeStore, *, policy: str = "every_sale", relaxed: bool = False) -> None:
     store.tables.setdefault("organizations", []).append(
-        {"id": ORG_ID, "escritura_review_policy": policy}
+        {
+            "id": ORG_ID,
+            "escritura_review_policy": policy,
+            "escritura_relaxed_readiness": relaxed,
+        }
     )
 
 
@@ -353,10 +379,10 @@ def _seed_matrix(
 
 
 def _seed_happy_case(
-    store: FakeStore, *, policy: str = "exceptions_only", status: str = "draft"
+    store: FakeStore, *, policy: str = "exceptions_only", status: str = "draft", relaxed: bool = False
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Caso sin blockers reales, listo para que la cascada avance."""
-    _seed_org(store, policy=policy)
+    _seed_org(store, policy=policy, relaxed=relaxed)
     _seed_project(store)
     _seed_abogado_redactor(store)
     case_row = _seed_case(store, legal_review_pending=(status == "draft"))
@@ -479,6 +505,56 @@ class TestHappyPathExceptionsOnly:
         )
 
         assert result.outcome == "completed"
+
+
+# ─── (a2) Camino corto: escritura_relaxed_readiness relaja gates heredados ──
+
+
+class TestRelaxedReadiness:
+    @pytest.mark.parametrize("relaxed", [False, True])
+    @pytest.mark.asyncio
+    async def test_relaxed_flag_controls_inherited_project_gates(self, monkeypatch, relaxed: bool):
+        """Con `escritura_relaxed_readiness=false` el gate heredado
+        `sii_verified` bloqueado detiene la cascada; con `true` la cascada
+        avanza y genera la escritura (camino corto SDD019)."""
+        store = FakeStore()
+        _patch_admin_with_telegram(monkeypatch, store)
+        _patch_telegram(monkeypatch, FakeTelegramClient())
+        _seed_org(store, policy="exceptions_only", relaxed=relaxed)
+        _seed_project(store)
+        _seed_abogado_redactor(store)
+        case_row = _seed_case(
+            store,
+            legal_review_pending=True,
+            extra_readiness_gates={
+                "sii_verified": {
+                    "gate": "sii_verified",
+                    "status": "blocked",
+                    "blocking_variables": ["sii.rol_avaluo_en_tramite_texto"],
+                    "warnings": [],
+                }
+            },
+        )
+        template = _seed_template(store)
+        _seed_matrix(
+            store,
+            case_row=case_row,
+            template=template,
+            status="draft",
+            source_project_matriz_id=str(uuid.uuid4()),
+        )
+
+        result = await pipeline.run_case_cascade(
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            trigger="manual_retry",
+            supabase=store,
+        )
+
+        if relaxed:
+            assert result.outcome == "completed"
+        else:
+            assert result.outcome == "exception"
 
 
 # ─── (b) every_sale → se detiene en awaiting_review ──────────────────────────
@@ -1166,12 +1242,9 @@ async def test_automatic_escritura_off_defers_without_attempt_or_legacy_path(
     store.tables["workflow_outbox"] = [outbox]
     legacy_generator = AsyncMock(return_value=SimpleNamespace(id="legacy-generation"))
     monkeypatch.setattr(pipeline, "_generate_minuta_row", legacy_generator)
-    monkeypatch.setattr(
-        pipeline,
-        "resolve_feature_rollout",
-        lambda **_kwargs: EffectiveRollout(False, "off", None, reason),
-        raising=False,
-    )
+    # OFF por control de BD: la RPC resolve_feature_rollout devuelve False.
+    store.rpc_enabled = True
+    store.rpc_results["resolve_feature_rollout"] = False
 
     await pipeline.run_case_cascade(
         organization_id=ORG_ID,
@@ -1205,13 +1278,18 @@ async def test_automatic_escritura_project_or_on_permits_outbox(
     _patch_telegram(monkeypatch, FakeTelegramClient())
     _seed_happy_case(store, policy="exceptions_only", status="approved")
     outbox = _outbox_row()
+    # En producción el worker ejecuta begin_workflow_outbox_attempt (RPC) antes
+    # de llamar la cascada; aquí se simula ese estado ya consumido.
+    outbox["status"] = "processing"
+    outbox["attempt_count"] = 1
     store.tables["workflow_outbox"] = [outbox]
-    monkeypatch.setattr(
-        pipeline,
-        "resolve_feature_rollout",
-        lambda **_kwargs: EffectiveRollout(True, mode, 1, mode),
-        raising=False,
-    )
+    # ON/projects por control de BD: la RPC resolve_feature_rollout devuelve True.
+    store.rpc_enabled = True
+    store.rpc_results["resolve_feature_rollout"] = True
+    # El foco de este test es el desbloqueo del rollout; la generación estricta
+    # (que exige validación semántica previa) se cubre en los tests de semántica.
+    fake_generation = AsyncMock(return_value=SimpleNamespace(id="gen-outbox-on"))
+    monkeypatch.setattr(pipeline, "_generate_minuta_row", fake_generation)
 
     result = await pipeline.run_case_cascade(
         organization_id=ORG_ID,

@@ -182,6 +182,9 @@ class TestCaseCreationInvokesBridge:
             def neq(self, *_a):
                 return self
 
+            def limit(self, *_a):
+                return self
+
             def maybe_single(self):
                 return self
 
@@ -200,7 +203,25 @@ class TestCaseCreationInvokesBridge:
         inserted: list[dict] = []
 
         class FakeClient:
+            def _scope_table(self, name):
+                table = SimpleNamespace()
+                data = (
+                    [{"id": LOT_ID, "project_id": PROJECT_ID}]
+                    if name == "lots"
+                    else [{"id": PROJECT_ID, "organization_id": ORG_ID}]
+                )
+
+                def chain(*_a, **_k):
+                    return table
+
+                for method in ("select", "eq", "neq", "limit", "maybe_single"):
+                    setattr(table, method, chain)
+                table.execute = lambda: SimpleNamespace(data=data)
+                return table
+
             def table(self, name):
+                if name in ("lots", "projects"):
+                    return self._scope_table(name)
                 assert name == "escritura_cases"
                 return FakeCaseTable(inserted)
 
@@ -251,6 +272,9 @@ class TestCaseCreationInvokesBridge:
             def neq(self, *_a):
                 return self
 
+            def limit(self, *_a):
+                return self
+
             def maybe_single(self):
                 return self
 
@@ -263,7 +287,25 @@ class TestCaseCreationInvokesBridge:
                 return SimpleNamespace(data=[payload] if payload else None)
 
         class FakeClient:
+            def _scope_table(self, name):
+                table = SimpleNamespace()
+                data = (
+                    [{"id": LOT_ID, "project_id": PROJECT_ID}]
+                    if name == "lots"
+                    else [{"id": PROJECT_ID, "organization_id": ORG_ID}]
+                )
+
+                def chain(*_a, **_k):
+                    return table
+
+                for method in ("select", "eq", "neq", "limit", "maybe_single"):
+                    setattr(table, method, chain)
+                table.execute = lambda: SimpleNamespace(data=data)
+                return table
+
             def table(self, name):
+                if name in ("lots", "projects"):
+                    return self._scope_table(name)
                 assert name == "escritura_cases"
                 return FakeCaseTable()
 
@@ -311,6 +353,7 @@ class TestCaseCreationInvokesBridge:
                     "eq",
                     "neq",
                     "maybe_single",
+                    "limit",
                     "insert",
                     "update",
                 ):
