@@ -8,7 +8,9 @@ Lee [AGENTS.md](AGENTS.md) antes de usar esta memoria. Resume estado entre sesio
 
 - Verificado: 2026-08-12 (949 tests API de pytest pasando; 1 live fail preexistente `test_trigger_exists_in_db`).
 - Feature SDD activa: `specs/019-hardening-produccion/`.
-- Próxima tarea permitida: reiniciar worker ARQ (F4) y completar T079–T082.
+- Próxima tarea permitida: completar T079–T082 (outbox durable en tasks.md).
+- Worker ARQ reiniciado con código nuevo (verificado: start 17:09 local > mtime 12:49 de database.py; API 14:19 también posterior).
+- F4 verificado: 0 zombies reales (>5min), outbox 12/12 completed, worker procesa ciclos sin acumular transacciones huérfanas.
 - CodeGraph: sano y sincronizado.
 - Camino corto A1–A5: `core/config.py` (hard-off false), `escritura_auto_pipeline.py` (rollout desde RPC SQL + gates relajables), migración `20260807235200_sdd019_relaxed_readiness.sql`.
 - F1–F6 pool PostgREST: singleton cliente en `core/database.py` (timeout 30s, pool limitado), migraciones `20260812165003_sdd019_idle_transaction_timeout` y `20260812165010_sdd019_outbox_lock_timeout` aplicadas al linked (parity 0/0), script `apps/api/scripts/check_idle_transactions.py`, runbook `docs/runbooks/postgres-connection-pool.md`, test de regresión singleton.
