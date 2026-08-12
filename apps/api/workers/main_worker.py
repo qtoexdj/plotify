@@ -21,6 +21,7 @@ from workers.tasks.legal_title_analysis import analyze_project_title
 from workers.tasks.geometry_enrichment import process_geometry_enrichment
 from workers.tasks.escritura_workflow_outbox import process_escritura_workflow_outbox
 from workers.tasks.llm_model_catalog import sync_llm_model_catalog
+from workers.tasks.idle_transaction_monitor import check_idle_transactions_cron
 from services.worker_job_failures import require_explicit_job_outcome
 
 from core.checkpointer import setup_checkpointer, close_checkpointer
@@ -95,6 +96,7 @@ class WorkerSettings:
         analyze_project_title,
         process_geometry_enrichment,
         process_escritura_workflow_outbox,
+        check_idle_transactions_cron,
     ]
 
     cron_jobs = [
@@ -121,6 +123,15 @@ class WorkerSettings:
             max_tries=1,
         ),
         cron(
+            check_idle_transactions_cron,
+            name="check_idle_transactions_monitor",
+            # Cada 10min (600s): monitoreo pasivo de sesiones idle_in_transaction
+            second=600,
+            run_at_startup=False,
+            unique=True,
+            max_tries=1,
+        ),
+        cron(
             sync_llm_model_catalog,
             name="sync_llm_model_catalog_daily",
             hour=4,
@@ -128,7 +139,7 @@ class WorkerSettings:
             run_at_startup=False,
             unique=True,
             max_tries=1,
-        )
+        ),
     ]
 
     # Eventos de ciclo de vida

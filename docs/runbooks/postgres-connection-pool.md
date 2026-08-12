@@ -55,6 +55,14 @@ select pg_terminate_backend(<pid>);
 - Migración `20260812165010_sdd019_outbox_lock_timeout.sql`:
   `lock_timeout = 5s` en heartbeat/begin/finish/release del outbox — fallan
   rápido en vez de esperar el lock 120s.
+- Migraciones `20260812220304` y `20260812222206_sdd019_rls_initplan_complete.sql`:
+  `auth.uid()` envuelto como `(select auth.uid())` en todas las políticas y funciones RLS (InitPlan evaluado 1x por query vs N× por fila).
+- Migración `20260812224500_sdd019_epoch_statement_triggers.sql`:
+  Triggers de epoch convertidos a `FOR EACH STATEMENT` con transition tables (`REFERENCING NEW TABLE / OLD TABLE`) para reducir N UPDATEs a `projects` a 1 solo por sentencia SQL.
+- Migración `20260812225000_sdd019_rpc_hash_optimization.sql`:
+  `md5()` en lugar de `sha256` para `event_fingerprint` y `audit_event_key` internos en `approve_sale`.
+- Worker ARQ `main_worker.py` / `idle_transaction_monitor.py`:
+  Cron `check_idle_transactions_monitor` ejecutado automáticamente cada 10 minutos para alerta preventiva.
 
 ## Rollback
 
@@ -62,7 +70,7 @@ Ninguna de las tres mitigaciones es destructiva:
 
 - Singleton: revertir `core/database.py` (no toca datos).
 - `idle_in_transaction_session_timeout`: `ALTER DATABASE postgres RESET
-  idle_in_transaction_session_timeout;`
+idle_in_transaction_session_timeout;`
 - `lock_timeout` de las RPC: recrear las funciones desde
   `20260713000500_sdd019_workflow_durability.sql` (versión previa).
 
@@ -72,5 +80,5 @@ Ninguna de las tres mitigaciones es destructiva:
 2. Verificar ventas afectadas: lotes `vendido` sin generación (comparar
    `lots` vs `escritura_minuta_generations`).
 3. Re-ejecutar la cascada para esos lotes con `handle_sale_validated_for_
-   escritura` + `run_case_cascade` (trigger `manual_retry`).
+escritura` + `run_case_cascade` (trigger `manual_retry`).
 4. Reiniciar el worker ARQ para que use el código actualizado.
