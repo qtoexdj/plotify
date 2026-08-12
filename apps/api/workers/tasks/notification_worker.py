@@ -36,10 +36,12 @@ async def send_notification(ctx: dict, payload: dict) -> str:
         template = NOTIFICATION_TEMPLATES.get(event_type)
         if not template:
             logger.warning("unknown_notification_type", event_type=event_type)
+            ctx["job_outcome"] = True
             return "UNKNOWN_TYPE"
 
         if not org_id:
             logger.error("missing_organization_id", payload=payload)
+            ctx["job_outcome"] = True
             return "MISSING_ORG_ID"
 
         try:
@@ -50,6 +52,7 @@ async def send_notification(ctx: dict, payload: dict) -> str:
                 event_type=event_type,
                 missing_key=str(e),
             )
+            ctx["job_outcome"] = True
             return "TEMPLATE_KEY_ERROR"
 
         # Obtener admins de la org con telegram_chat_id
@@ -65,6 +68,7 @@ async def send_notification(ctx: dict, payload: dict) -> str:
         telegram_client = await get_telegram_client_for_org(org_id)
         if not telegram_client:
             logger.warning("no_telegram_client_for_org", org_id=org_id)
+            ctx["job_outcome"] = True
             return "NO_TELEGRAM_CLIENT"
 
         sent_count = 0
@@ -88,11 +92,14 @@ async def send_notification(ctx: dict, payload: dict) -> str:
             logger.warning(
                 "no_admins_with_telegram", org_id=org_id, event_type=event_type
             )
+            ctx["job_outcome"] = True
             return "NO_RECIPIENTS"
 
+        ctx["job_outcome"] = True
         return f"OK:{sent_count}"
 
     except Exception as exc:
+        ctx["job_outcome"] = False
         logger.error(
             "send_notification_error",
             event_type=payload.get("event_type"),
@@ -143,6 +150,7 @@ async def send_generated_document(ctx: dict, payload: dict) -> str:
     document_id = payload.get("document_id")
     organization_id = payload.get("organization_id")
     if not document_id or not organization_id:
+        ctx["job_outcome"] = True
         return "MISSING_DOCUMENT_OR_ORG"
 
     supabase = get_supabase_client()
@@ -155,6 +163,7 @@ async def send_generated_document(ctx: dict, payload: dict) -> str:
         .execute()
     )
     if not result.data:
+        ctx["job_outcome"] = True
         return "DOCUMENT_NOT_FOUND"
 
     document = result.data[0]
@@ -185,6 +194,7 @@ async def send_generated_document(ctx: dict, payload: dict) -> str:
             organization_id=organization_id,
             payload=delivery_payload,
         )
+        ctx["job_outcome"] = True
         return "SENT"
     except Exception as exc:
         attempts += 1
@@ -204,6 +214,7 @@ async def send_generated_document(ctx: dict, payload: dict) -> str:
             organization_id=organization_id,
             payload={**delivery_payload, "error": str(exc), "attempts": attempts},
         )
+        ctx["job_outcome"] = False
         return "FAILED"
 
 

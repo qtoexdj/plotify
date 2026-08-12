@@ -64,6 +64,7 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             logger.error(
                 "Solicitud de aprobación no encontrada.", approval_id=approval_id
             )
+            ctx["job_outcome"] = True
             return "APPROVAL_NOT_FOUND"
 
         request = req_res.data[0]
@@ -108,6 +109,7 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
             logger.warning(
                 "No se encontraron administradores para la organización.", org_id=org_id
             )
+            ctx["job_outcome"] = True
             return "NO_ADMINS_FOUND"
 
         # Obtener datos de contacto de los admins
@@ -311,9 +313,11 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
                     error=str(db_err)
                 )
 
+        ctx["job_outcome"] = True
         return "SUCCESS"
 
     except Exception as e:
+        ctx["job_outcome"] = False
         logger.error(
             "Error enviando notificación de aprobación.",
             error=str(e),

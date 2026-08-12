@@ -444,9 +444,11 @@ async def send_decision_notifications(
                 
             await telegram_client.send_text(admin_id, admin_msg, reply_markup=reply_markup)
 
+        ctx["job_outcome"] = True
         return "SUCCESS"
 
     except Exception as e:
+        ctx["job_outcome"] = False
         logger.error(
             "Error enviando notificaciones de decision.",
             error=str(e),
@@ -495,8 +497,10 @@ async def process_admin_decision(
             admin_id=admin_id,
             db_result=db_result,
         )
+        ctx["job_outcome"] = True
         return "SUCCESS"
     except HTTPException as e:
+        ctx["job_outcome"] = False
         logger.error(
             "HTTPException procesando decision de admin en el job arq.",
             status_code=e.status_code,
@@ -511,6 +515,7 @@ async def process_admin_decision(
             return "NOT_FOUND"
         return f"ERROR: {e.detail}"
     except Exception as e:
+        ctx["job_outcome"] = False
         logger.error(
             "Error procesando decision de admin en el job arq.",
             error=str(e),

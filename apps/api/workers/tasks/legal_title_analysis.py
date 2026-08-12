@@ -21,6 +21,7 @@ async def analyze_project_title(ctx: dict, payload: dict[str, Any]) -> str:
 
     if not organization_id or not project_id:
         logger.error("analyze_project_title_missing_payload_fields", payload=payload)
+        ctx["job_outcome"] = True
         return "MISSING_REQUIRED_FIELDS"
 
     from services.legal_title_analysis import run_title_analysis
@@ -29,4 +30,5 @@ async def analyze_project_title(ctx: dict, payload: dict[str, Any]) -> str:
         organization_id=str(organization_id),
         project_id=str(project_id),
     )
+    ctx["job_outcome"] = True
     return result.status

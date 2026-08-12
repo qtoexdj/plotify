@@ -22,6 +22,7 @@ async def process_legal_document_ingestion(ctx: dict, payload: dict[str, Any]) -
 
     if not legal_document_id or not organization_id or not project_id:
         logger.error("legal_ingestion_missing_payload_fields", payload=payload)
+        ctx["job_outcome"] = True
         return "MISSING_REQUIRED_FIELDS"
 
     from services.legal_document_ingestion import run_document_ingestion_job
@@ -33,6 +34,7 @@ async def process_legal_document_ingestion(ctx: dict, payload: dict[str, Any]) -
         ingestion_job_id=payload.get("ingestion_job_id"),
         redis=ctx.get("redis"),
     )
+    ctx["job_outcome"] = True
     return result.status
 
 
@@ -47,6 +49,7 @@ async def reconcile_legal_document_ingestions(ctx: dict) -> int:
     redis = ctx.get("redis")
     if redis is None:
         logger.warning("legal_ingestion_reconciler_without_redis")
+        ctx["job_outcome"] = True
         return 0
 
     dispatched = 0
@@ -71,4 +74,5 @@ async def reconcile_legal_document_ingestions(ctx: dict) -> int:
                 ingestion_job_id=result.ingestion_job.id,
                 error=str(exc),
             )
+    ctx["job_outcome"] = True
     return dispatched

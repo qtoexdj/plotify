@@ -757,9 +757,11 @@ async def process_incoming_message(ctx: dict, payload_dict: dict) -> str:
         logger.info(
             "Mensaje procesado y despachado exitosamente", message_id=payload.message_id
         )
+        ctx["job_outcome"] = True
         return "SUCCESS"
 
     except Exception as e:
+        ctx["job_outcome"] = False
         logger.error(
             "Error crítico procesando el mensaje en background",
             error=str(e),
@@ -796,6 +798,7 @@ async def link_telegram_account(
                     telegram_chat_id,
                     "❌ Este enlace de vinculación ha expirado o es inválido. Genera uno nuevo en el CRM.",
                 )
+            ctx["job_outcome"] = True
             return "EXPIRED_TOKEN"
 
         # El valor de redis.get es bytes si no se decodifica
@@ -829,6 +832,7 @@ async def link_telegram_account(
                     telegram_chat_id,
                     "❌ Ocurrió un error al vincular tu cuenta. Por favor contacta a soporte.",
                 )
+            ctx["job_outcome"] = False
             return "DB_ERROR"
 
         user_profile = check_res.data[0]
@@ -903,8 +907,10 @@ async def link_telegram_account(
             await telegram_client.send_text(telegram_chat_id, success_msg)
 
         logger.info("Cuenta vinculada exitosamente", profile_id=profile_id)
+        ctx["job_outcome"] = True
         return "SUCCESS"
 
     except Exception as e:
+        ctx["job_outcome"] = False
         logger.error("Error en link_telegram_account", error=str(e))
         return "ERROR"
