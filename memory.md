@@ -6,12 +6,12 @@ Lee [AGENTS.md](AGENTS.md) antes de usar esta memoria. Resume estado entre sesio
 
 ## Estado actual
 
-- Verificado: 2026-08-07 (946 tests API de pytest pasando; 1 live fail preexistente).
+- Verificado: 2026-08-12 (949 tests API de pytest pasando; 1 live fail preexistente `test_trigger_exists_in_db`).
 - Feature SDD activa: `specs/019-hardening-produccion/`.
-- Próxima tarea permitida: verificar flujo venta→escritura en la BD reconciliada (proyecto listo) y completar T079–T082.
+- Próxima tarea permitida: reiniciar worker ARQ (F4) y completar T079–T082.
 - CodeGraph: sano y sincronizado.
-- Cambios locales verificados: `apps/api/api/v1/endpoints/approvals.py`, `apps/api/schemas/approval.py`, `packages/database/supabase/migrations/20260806000000_sdd019_fix_outbox_and_vendible_rpc.sql`, `apps/web/src/actions/lot-verification.action.ts`, `apps/api/tests/test_proyecto_vendible_e2e.py`.
 - Camino corto A1–A5: `core/config.py` (hard-off false), `escritura_auto_pipeline.py` (rollout desde RPC SQL + gates relajables), migración `20260807235200_sdd019_relaxed_readiness.sql`.
+- F1–F6 pool PostgREST: singleton cliente en `core/database.py` (timeout 30s, pool limitado), migraciones `20260812165003_sdd019_idle_transaction_timeout` y `20260812165010_sdd019_outbox_lock_timeout` aplicadas al linked (parity 0/0), script `apps/api/scripts/check_idle_transactions.py`, runbook `docs/runbooks/postgres-connection-pool.md`, test de regresión singleton.
 
 ## Fuentes
 
@@ -46,6 +46,8 @@ Fuente: `package.json`, `apps/web/package.json`, `apps/api/requirements.txt`, `p
 - 2026-08-07 — Tests de API rotos por el cambio manual del usuario `maybe_single()→limit(1)` + consulta separada a `projects` en `_assert_lot_scope`: se actualizaron los mocks de `test_pipeline_venta_escritura_contract.py`, `test_escrituras_readiness.py`, `test_matriz_operational_bridge.py` y `test_matriz_operational_gates.py` para soportar la tabla `projects` y el método `.limit()`. Fuente: verificación de suite.
 
 ### Verificadas
+
+- 2026-08-12 — Agotamiento del pool PostgREST (PGRST003) diagnosticado: `get_supabase_client()` creaba un cliente httpx nuevo por llamada (~145 call sites) con timeout 120s; peticiones abandonadas dejaban transacciones huérfanas (`idle in transaction`) que Supavisor retiene para siempre (`idle_in_transaction_session_timeout=0`), retenían locks de fila sobre `workflow_outbox` y generaban más timeouts (loop) hasta agotar el pool. El puente operacional hacía supersede (UPDATE ok) + insert (INSERT falla) → variables `superseded` sin reemplazo ("faltantes aunque aprobadas"). Fixes F1–F6 aplicados: singleton cliente (timeout 30s, pool HTTP/1.1 10/5), `idle_in_transaction_session_timeout='5min'` (registrado en `pg_db_role_setting`), `lock_timeout=5s` en RPCs del outbox, script de monitoreo + runbook, test de regresión. 7 zombies terminados manualmente. Fuente: inspección pg_stat_activity/pg_locks + docs Supabase (Context7) + verificación en suite.
 
 - 2026-08-07 — Diagnóstico "venta aprobada sin escritura": el `approve_sale` remoto crea outbox (`workflow_outbox_id`), lo que desactiva el hook inline; el consumidor nunca completa porque `run_case_cascade` pasa `control=None` a `resolve_feature_rollout` (resulta `missing` → defiere con `AUTOMATIC_ESCRITURA_MISSING`, limpia el lease y rompe el `complete()` posterior) — trabajo ya cubierto por T079–T082. Además el caso del lote 47 queda `blocked` por gates `sii_verified` (`lote.rol_tramite`) y `legal_review_ready` (`revision_juridica.estado`). 5 ventas (lotes 47, 34, 2, 8, 16) en outbox `dead_letter`/`processing`. Evidencia: inspección BD cloud + reproducción local del hook/cascada. Fuente: verificación directa.
 - 2026-08-07 — Divergencia de migraciones repo↔cloud: 5 remote-only (20260729023506, 20260729043333, 20260729043821, 20260729044941, 20260730012841) ausentes del repo y `20260806000000_sdd019_fix_outbox_and_vendible_rpc.sql` local sin aplicar al linked. Fuente: `supabase migration list --linked`.
