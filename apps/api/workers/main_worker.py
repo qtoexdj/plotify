@@ -101,7 +101,10 @@ class WorkerSettings:
         cron(
             reconcile_legal_document_ingestions,
             name="reconcile_legal_document_ingestions",
-            second=20,
+            # Cada 2min (antes 20s): la recuperación de ingestions durables no
+            # necesita polling tan agresivo y cada ciclo consume CPU del
+            # proyecto cloud (advertencia "exhausting resources" de Supabase).
+            second=120,
             run_at_startup=True,
             unique=True,
             max_tries=1,
@@ -109,7 +112,10 @@ class WorkerSettings:
         cron(
             process_escritura_workflow_outbox,
             name="reconcile_escritura_workflow_outbox",
-            second=45,
+            # Se mantiene en 60s (antes 45s): SC-008 exige recuperar la
+            # obligación durable dentro de 2 minutos desde que el worker
+            # vuelve; 60s cumple y reduce el gasto de CPU por polling.
+            second=60,
             run_at_startup=True,
             unique=True,
             max_tries=1,
