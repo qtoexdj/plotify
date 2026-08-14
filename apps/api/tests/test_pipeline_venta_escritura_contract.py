@@ -232,6 +232,14 @@ class _FakeSupabase:
     def table(self, name):
         return _FakeTable(self, name)
 
+    def rpc(self, name, params):
+        if name != "batch_upsert_variable_resolutions":
+            raise AssertionError(f"unexpected rpc {name}")
+        rows = params.get("p_rows") or []
+        self.inserted.extend(rows)
+        data = [{**row, "id": f"var-{index}"} for index, row in enumerate(rows)]
+        return MagicMock(execute=MagicMock(return_value=MagicMock(data=data)))
+
     def execute(self, table: _FakeTable):
         if table.name == "lots":
             return MagicMock(data=APPROVED_LOT)

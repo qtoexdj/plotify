@@ -1005,6 +1005,19 @@ async def test_repeatable_sii_role_text_scoping_by_unit_index():
             return SimpleNamespace(data=inserted_payloads)
 
     class FakeSupabase:
+        def rpc(self, name: str, params: dict):
+            nonlocal inserted_payloads
+            assert name == "batch_upsert_variable_resolutions"
+            rows = params.get("p_rows") or []
+            inserted_payloads.extend(rows)
+            data = [{**p, "id": f"var-{i}"} for i, p in enumerate(rows)]
+
+            class _RpcCall:
+                def execute(self):
+                    return SimpleNamespace(data=data)
+
+            return _RpcCall()
+
         def table(self, name: str):
             return FakeSupabaseTable()
 

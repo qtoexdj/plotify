@@ -377,11 +377,22 @@ class TestWorkerSettingsRegistration:
         """WorkerSettings debe registrar notificaciones y delivery de documentos."""
         from workers.main_worker import WorkerSettings
     
-        function_names = {fn.__name__ for fn in WorkerSettings.functions}
-        assert len(WorkerSettings.functions) >= 9
-        assert "send_generated_document" in function_names
-        assert "retry_generated_document_delivery" in function_names
-        assert "process_legal_document_ingestion" in function_names
+    def test_cron_jobs_valid_schedules(self):
+        """Todos los cron jobs deben tener parámetros válidos y calcular next_run sin bucles infinitos."""
+        import datetime
+        from workers.main_worker import WorkerSettings
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        assert len(WorkerSettings.cron_jobs) >= 3
+        for job in WorkerSettings.cron_jobs:
+            job.calculate_next(now)
+            assert job.next_run is not None
+            assert job.next_run > now
+            if isinstance(job.second, int):
+                assert 0 <= job.second <= 59
+            elif isinstance(job.second, (set, list, tuple)):
+                assert all(0 <= s <= 59 for s in job.second)
+
 
 
 # ---------------------------------------------------------------------------

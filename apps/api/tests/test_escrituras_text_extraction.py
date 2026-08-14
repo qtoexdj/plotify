@@ -361,6 +361,17 @@ class FakeSupabase:
     def table(self, name: str) -> FakeSupabaseTable:
         return FakeSupabaseTable(self, name)
 
+    def rpc(self, name: str, params: dict):
+        from types import SimpleNamespace
+
+        assert name == "batch_upsert_variable_resolutions"
+        rows = params.get("p_rows") or []
+        self.inserted_variables = [
+            {**row, "id": f"variable-{index}"} for index, row in enumerate(rows)
+        ]
+        data = self.inserted_variables
+        return SimpleNamespace(execute=lambda: SimpleNamespace(data=data))
+
     def execute(self, table: FakeSupabaseTable):
         from types import SimpleNamespace
 

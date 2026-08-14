@@ -103,10 +103,9 @@ class WorkerSettings:
         cron(
             reconcile_legal_document_ingestions,
             name="reconcile_legal_document_ingestions",
-            # Cada 2min (antes 20s): la recuperación de ingestions durables no
-            # necesita polling tan agresivo y cada ciclo consume CPU del
-            # proyecto cloud (advertencia "exhausting resources" de Supabase).
-            second=120,
+            # Cada 2 minutos: minutos pares (0, 2, 4, ..., 58) en segundo 0.
+            minute=set(range(0, 60, 2)),
+            second=0,
             run_at_startup=True,
             unique=True,
             max_tries=1,
@@ -114,10 +113,9 @@ class WorkerSettings:
         cron(
             process_escritura_workflow_outbox,
             name="reconcile_escritura_workflow_outbox",
-            # Se mantiene en 60s (antes 45s): SC-008 exige recuperar la
-            # obligación durable dentro de 2 minutos desde que el worker
-            # vuelve; 60s cumple y reduce el gasto de CPU por polling.
-            second=60,
+            # Cada 1 minuto: cada minuto en segundo 0.
+            minute=None,
+            second=0,
             run_at_startup=True,
             unique=True,
             max_tries=1,
@@ -125,8 +123,9 @@ class WorkerSettings:
         cron(
             check_idle_transactions_cron,
             name="check_idle_transactions_monitor",
-            # Cada 10min (600s): monitoreo pasivo de sesiones idle_in_transaction
-            second=600,
+            # Cada 10 minutos: minutos 0, 10, 20, 30, 40, 50 en segundo 0.
+            minute=set(range(0, 60, 10)),
+            second=0,
             run_at_startup=False,
             unique=True,
             max_tries=1,
@@ -136,6 +135,7 @@ class WorkerSettings:
             name="sync_llm_model_catalog_daily",
             hour=4,
             minute=15,
+            second=0,
             run_at_startup=False,
             unique=True,
             max_tries=1,
