@@ -432,13 +432,33 @@ class FakeTable:
 
 
 class FakeSupabase:
-    """Fake client for bridge staging: lots/lot_records/payment/variables."""
+    """Fake client for bridge staging: lots/lot_records/payment/variables.
+
+    persist_proposals usa el RPC atómico ``batch_upsert_variable_resolutions``
+    (SDD019); el fake lo simula registrando los payloads en ``inserted`` y una
+    entrada en ``supersede_calls`` por invocación (el RPC hace el supersede
+    en la DB).
+    """
 
     def __init__(self, rows: dict, active_variables: list[dict] | None = None):
         self.rows = rows
         self.active_variables = active_variables or []
         self.inserted: list[dict] = []
-        self.supersede_calls: list[FakeTable] = []
+        self.supersede_calls: list[str] = []
+
+    def rpc(self, name: str, params: dict):
+        if name != "batch_upsert_variable_resolutions":
+            raise AssertionError(f"unexpected rpc {name}")
+        rows = params.get("p_rows") or []
+        self.inserted.extend(rows)
+        self.supersede_calls.append(name)
+        data = [{**p, "id": f"var-{i}"} for i, p in enumerate(rows)]
+
+        class _RpcCall:
+            def execute(self):
+                return SimpleNamespace(data=data)
+
+        return _RpcCall()
 
     def table(self, name: str) -> FakeTable:
         return FakeTable(self, name)
@@ -581,10 +601,10 @@ class TestStagingIdempotency:
         assert outcome.missing == ()
         assert outcome.skipped_same_hash == ()
         assert outcome.protected == ()
-        # SDD16 (SC-001/SC-002): datos ya humano-aprobados en la venta quedan
-        # resolved de entrada, para que el único pendiente humano del caso
-        # sea la revisión jurídica (no ~35 aprobaciones extra por variable).
-        assert {payload["state"] for payload in fake.inserted} == {"resolved"}
+        # A1-bis+A6 (bug 2026-08-13): datos ya humano-aprobados en la venta
+        # se siembran 'approved' (system/geometry) o 'derived' (renders de
+        # números→palabras: precio_letras, superficie_texto, etc.), NO
+        # 'resolved' — la mesa del molde contaba 'resolved' como "por aprobar".        assert {payload["state"] for payload in fake.inserted} == {"approved", "derived"}
         assert {payload["approval_required"] for payload in fake.inserted} == {False}
 
     @pytest.mark.asyncio
@@ -695,8 +715,8 @@ class TestStagingIdempotency:
         states = {
             payload["variable_key"]: payload["state"] for payload in fake.inserted
         }
-        assert states["comprador.nombre"] == "resolved"
-        assert states["lote.deslindes"] == "resolved"
+        assert states["comprador.nombre"] == "approved"
+        assert states["lote.deslindes"] == "approved"
 
     @pytest.mark.asyncio
     async def test_human_resolved_rows_stay_protected(self):
@@ -752,4 +772,4 @@ class TestStagingIdempotency:
             payload["variable_key"]: payload["state"] for payload in fake.inserted
         }
         assert states["comprador.estado_civil"] == "missing"
-        assert states["comprador.nombre"] == "resolved"
+        assert states["comprador.nombre"] == "approved"

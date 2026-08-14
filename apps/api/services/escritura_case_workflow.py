@@ -19,7 +19,7 @@ import hashlib
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 from urllib.parse import quote
 
@@ -2449,10 +2449,23 @@ async def _upsert_lot_variable(
     value_text: str,
     reviewed_by: str | None,
     reviewed_at: str,
+    actor: Literal["human", "system"] = "human",
 ) -> dict[str, Any]:
     """Fija revision_juridica.* scope lote (nunca proyecto, a diferencia de
     documento.abogado_redactor.*): es una decisión por caso, no un dato de
-    organización. Sin propuesta previa que aprobar -> state='resolved'."""
+    organización.
+
+    El ``actor`` decide el ``state`` persistido:
+      - ``human`` (revisión humana vía submit_legal_review) -> ``resolved``:
+        la aprobación manual subsiguiente la mueve a ``approved`` y deja
+        auditoría explícita en legal_review_decisions.
+      - ``system`` (cascada autoaprobando en modo exceptions_only) ->
+        ``approved``: un acto del sistema con approval_required=False es
+        final al sembrarlo; persistirlo como ``resolved`` lo dejaba eternamente
+        como "por aprobar" en la mesa del molde aunque el gate ya esté
+        satisfecho (bug 2026-08-13, venta Lote 26 Teno 2).
+    """
+    target_state = "approved" if actor == "system" else "resolved"
     existing_result = await asyncio.to_thread(
         lambda: (
             client.table("variable_resolutions")
@@ -2475,7 +2488,7 @@ async def _upsert_lot_variable(
                 .update(
                     {
                         "value_text": value_text,
-                        "state": "resolved",
+                        "state": target_state,
                         "reviewed_by": reviewed_by,
                         "reviewed_at": reviewed_at,
                     }
@@ -2494,7 +2507,7 @@ async def _upsert_lot_variable(
         "variable_key": variable_key,
         "variable_group": "revision_juridica",
         "value_text": value_text,
-        "state": "resolved",
+        "state": target_state,
         "source_type": "legal_review",
         "reviewed_by": reviewed_by,
         "reviewed_at": reviewed_at,

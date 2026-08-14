@@ -232,6 +232,21 @@ def _seed_org(store: FakeStore, *, policy: str = "every_sale", relaxed: bool = F
             "escritura_relaxed_readiness": relaxed,
         }
     )
+    # B (bug 3): _system_approve_matriz ahora siempre exige un grant de
+    # aprobación legal activo (antes la rama legacy de tests lo evitaba). Se
+    # siembra uno por defecto para no tocar cada test happy-path.
+    store.tables.setdefault("legal_approval_grants", []).append(
+        {
+            "id": "grant-1",
+            "organization_id": ORG_ID,
+            "project_id": None,
+            "grantee_user_id": "admin-1",
+            "granted_by": "grantor-1",
+            "active": True,
+            "granted_at": "2026-08-04T00:35:05Z",
+            "expires_at": None,
+        }
+    )
 
 
 def _seed_project(
@@ -409,12 +424,78 @@ def _patch_admin_with_telegram(monkeypatch, store: FakeStore, admin_id: str = "a
     )
 
 
+def _patch_create_case_snapshot(monkeypatch, store):
+    """A2/A3 (bug 2026-08-13): la cascada ahora refresca el snapshot del caso
+    (readiness_gates persistido) tras system_approve_legal_review y antes del
+    completed result. En los tests de orquestación esto no aporta cobertura (la
+    chequa real de variables vive en test_escrituras_readiness.py) y exigiría
+    sembrar `lot_legal_data`, `project_legal_data` y `titulo_agent` por cada
+    test happy path. Se patchea a una fake que devuelve el ``case_row`` actual
+    (sin mutar gates) para preservar el contract de `create_escritura_case_snapshot`.
+    """
+
+    async def _fake_create(*, supabase, lot_id, **_kwargs):
+        client = supabase
+        for row in getattr(client, "tables", {}).get("escritura_cases", []):
+            if str(row.get("lot_id")) == str(lot_id):
+                return row
+        return None
+
+    monkeypatch.setattr(
+        "services.escritura_auto_pipeline.create_escritura_case_snapshot",
+        _fake_create,
+    )
+
+
+def _patch_system_approve_semantic_candidate(monkeypatch):
+    """B (bug 3): _system_approve_matriz ya no tiene la rama `hasattr(client,
+    "rpc")` legacy y siempre invoca _approve_semantic_candidate (camino real).
+    En los tests de orquestación no validamos semántica DOCX (test propias),
+    así que se patchea _approve_semantic_candidate para que simule el resultado
+    exitoso: mutar matrix_row a status='approved'/approval_origin='system' y
+    devolverlo. La inserción de legal_review_decisions(matriz_approved) sigue
+    haciéndola _system_approve_matriz en producción.
+    """
+
+    async def _fake_approve(*, client, matrix_row, case_row, actor_id,
+                            operation_key, legal_grant_id, origin):
+        updated = dict(matrix_row)
+        updated["status"] = "approved"
+        updated["approved_by"] = None
+        updated["approved_at"] = "2026-08-13T00:00:00Z"
+        updated["approval_origin"] = origin
+        # El caller re-leerá la matriz de store; la mutación debe reflejarse ahí.
+        for row in client.tables.get("escritura_matrices", []):
+            if str(row.get("id")) == str(matrix_row.get("id")):
+                row.update(updated)
+                break
+        return updated
+
+    monkeypatch.setattr(
+        "services.escritura_auto_pipeline._approve_semantic_candidate",
+        _fake_approve,
+    )
+
+
 @pytest.fixture(autouse=True)
 def _no_feature_gate(monkeypatch):
     monkeypatch.setattr(
         "api.v1.endpoints.legal_variables.ensure_legal_documents_feature_enabled",
         lambda **_kwargs: None,
     )
+
+
+@pytest.fixture(autouse=True)
+def _patch_cascade_side_effects(monkeypatch):
+    """A2/A3+B (bug 2026-08-13): la cascada ahora (1) refresca el snapshot del
+    caso tras _system_approve_legal_review y antes del completed, y (2) exige
+    _approve_semantic_candidate (camino real) en _system_approve_matriz. En
+    los tests de orquestación estos side-effects se simulan para no desviar la
+    cobertura hacia mocks de validación semántica / readiness que viven en sus
+    propios tests.
+    """
+    _patch_create_case_snapshot(monkeypatch, None)
+    _patch_system_approve_semantic_candidate(monkeypatch)
 
 
 # ─── (a) Feliz exceptions_only → completed sin actos humanos ────────────────
@@ -692,6 +773,67 @@ class TestRealBlockersException:
         )
 
         assert result.outcome == "exception"
+
+    @pytest.mark.asyncio
+    async def test_matrix_semantic_approval_failure_yields_exception(self, monkeypatch):
+        """C (bug 4, 2026-08-13): _approve_semantic_candidate mueve la matriz a
+        'approved' vía RPC `finalize_matriz_approval` tras validación semántica
+        del DOCX. Si el RPC deja status='failed' (validación semántica rechazó
+        el documento), la cascada NO debe reportar step approve=executed y
+        outcome='completed' con la matriz realmente en draft (bug Lote 26
+        Teno 2: cascade 'completed' pese a matriz status='draft' v4). Re-leer
+        la matriz de BD tras el approve y cortar con exception kind=
+        'matriz_approval_failed' si el status real no es 'approved'.
+        """
+        store = FakeStore()
+        _patch_admin_with_telegram(monkeypatch, store)
+        _patch_telegram(monkeypatch, FakeTelegramClient())
+        _seed_org(store, policy="exceptions_only")
+        _seed_project(store)
+        _seed_abogado_redactor(store)
+        case_row = _seed_case(store, legal_review_pending=True)
+        template = _seed_template(store)
+        _seed_matrix(store, case_row=case_row, template=template, status="draft")
+
+        # Sobrescribe el fake autouse: _approve_semantic_candidate "falla" —
+        # devuelve matrix_row con status='failed' (no 'approved'), simulando
+        # un DOCX inválido cuyo finalize_matriz_approval rollbackó.
+        async def _failing_approve(*, client, matrix_row, case_row, actor_id,
+                                   operation_key, legal_grant_id, origin):
+            failed = dict(matrix_row)
+            failed["status"] = "failed"
+            # Refleja el status real en el store (la cascada re-leerá).
+            for row in client.tables.get("escritura_matrices", []):
+                if str(row.get("id")) == str(matrix_row.get("id")):
+                    row.update(failed)
+                    break
+            return failed
+
+        monkeypatch.setattr(
+            "services.escritura_auto_pipeline._approve_semantic_candidate",
+            _failing_approve,
+        )
+
+        result = await pipeline.run_case_cascade(
+            organization_id=ORG_ID,
+            escritura_case_id=CASE_ID,
+            trigger="sale_validated",
+            supabase=store,
+        )
+
+        assert result.outcome == "exception"
+        # Step approve debe registrarse skipped con detail=status=failed, y
+        # la corrida termina en exception — NO en completed con executed.
+        approve_step = next((s for s in result.steps if s["step"] == "approve"), None)
+        assert approve_step is not None
+        assert approve_step["action"] == "skipped"
+        assert "failed" in str(approve_step.get("detail", ""))
+        assert len(result.causes) == 1
+        assert result.causes[0]["kind"] == "matriz_approval_failed"
+        # Nada se generó.
+        assert not store.tables.get("escritura_minuta_generations")
+        # La matriz quedó en su estado fallido.
+        assert store.tables["escritura_matrices"][0]["status"] == "failed"
 
 
 # ─── (d)/(e) Idempotencia y reanudación ──────────────────────────────────────

@@ -917,14 +917,25 @@ async def stage_operational_variables(
             lot_id=lot_id,
             extractor_name=OPERATIONAL_BRIDGE_EXTRACTOR_NAME,
             confidence=1.0 if variable.has_value else None,
-            # SDD16 (SC-001/SC-002, AS2): el único pendiente humano de un caso
-            # debe ser la revisión jurídica. Estos datos ya pasaron por un
-            # humano al aprobar la venta (admin, por Telegram); tratarlos
-            # como "proposed" los deja bloqueando la mesa (BLOCKED_SNAPSHOT_
-            # STATES en matriz_token_resolution.py) sin ninguna pantalla que
-            # los apruebe uno por uno. classify_proposals igual los baja a
-            # "missing"/"conflict" si corresponde.
-            state="resolved",
+            # A1-bis+A6 (bug 2026-08-13, "31 datos por aprobar en mesa del Lote 26"):
+            # el puente estaba hardcodeado a state='resolved' para todas las
+            # variables que siembra (comprador/lote/servidumbre/transaccion). La
+            # mesa del molde cuenta 'resolved' como "por aprobar" aunque el
+            # valor ya esté sembrado y la venta ya esté aprobada por el admin
+            # vía Telegram — no hay ninguna pantalla que apruebe cada variable
+            # individualmente. Ahora:
+            #   - source_type='derived' (superficie_texto, precio_letras,
+            #     superficie_ha_texto, servidumbre.superficie_texto,
+            #     detalle_pago[], saldo_pendiente — cálculos del renderer sobre
+            #     el padre aprobado) -> state='derived'. La mesa cuenta
+            #     'derived' como "listo".
+            #   - source_type=otros ('system'/'geometry') -> state='approved'.
+            #     La venta ya pasó por un humano (admin, por Telegram); tratar
+            #     estas como 'resolved' las dejaba eternamente como "por
+            #     aprobar" sin pantalla que las resuelva.
+            # classify_proposals igual las baja a 'missing'/'conflict' si
+            # corresponde (no se salta validación).
+            state=("derived" if variable.source_type == "derived" else "approved"),
             approval_required=False,
         )
         for variable in to_stage

@@ -1028,51 +1028,16 @@ class LegalVariableResolutionService:
         if not variable_payloads:
             return VariablePersistenceResult(variable_rows=(), evidence_rows=())
 
-        # Supersede active resolutions for the same scope to prevent duplicate key errors
-        supersede_tasks = []
-        for payload in variable_payloads:
-            project_id = payload.get("project_id")
-            lot_id = payload.get("lot_id")
-            escritura_case_id = payload.get("escritura_case_id")
-            variable_key = payload.get("variable_key")
-
-            def _supersede(proj=project_id, lot=lot_id, case=escritura_case_id, key=variable_key, p=payload):
-                query = (
-                    client.table("variable_resolutions")
-                    .update({"state": "superseded"})
-                    .eq("project_id", proj)
-                    .eq("variable_key", key)
-                    .neq("state", "superseded")
-                )
-                if lot:
-                    query = query.eq("lot_id", lot)
-                else:
-                    query = query.is_("lot_id", "null")
-                if case:
-                    query = query.eq("escritura_case_id", case)
-                else:
-                    query = query.is_("escritura_case_id", "null")
-
-                if key in {"sii.unidad_nombre", "sii.pre_rol_lote", "sii.rol_avaluo_en_tramite_texto"}:
-                    unit_index = p.get("source_ref", {}).get("unit_index")
-                    if unit_index is not None:
-                        query = query.eq("source_ref->>unit_index", str(unit_index))
-
-                query.execute()
-
-            supersede_tasks.append(asyncio.to_thread(_supersede))
-
-        if supersede_tasks:
-            await asyncio.gather(*supersede_tasks)
-
-        classification_counts: dict[str, int] = {}
-        for item in proposals:
-            classification_counts[item.classification] = (
-                classification_counts.get(item.classification, 0) + 1
-            )
-
+        # Persistencia atómica vía RPC Postgres: supersede + insert por fila en
+        # una sola transacción con lock de tabla (SDD019 fix "superseded sin
+        # reemplazo"). El patrón anterior (PATCH supersede + INSERT batch en dos
+        # requests) corría en paralelo (webhook inline + job ARQ) y dejaba filas
+        # superseded sin reemplazo con 23505 duplicate key.
         variable_result = await asyncio.to_thread(
-            lambda: client.table("variable_resolutions").insert(variable_payloads).execute()
+            lambda: client.rpc(
+                "batch_upsert_variable_resolutions",
+                {"p_rows": variable_payloads},
+            ).execute()
         )
         variable_rows = tuple(variable_result.data or ())
         evidence_payloads = self._evidence_payloads(proposals, variable_rows)
@@ -1083,6 +1048,12 @@ class LegalVariableResolutionService:
                 lambda: client.table("document_evidence").insert(evidence_payloads).execute()
             )
             evidence_rows = tuple(evidence_result.data or ())
+
+        classification_counts: dict[str, int] = {}
+        for item in proposals:
+            classification_counts[item.classification] = (
+                classification_counts.get(item.classification, 0) + 1
+            )
 
         first_proposal = proposals[0].proposal
         logger.info(
@@ -1273,7 +1244,7 @@ def _variable_token_keys(content_json: Any) -> set[str]:
 
 
 async def _ensure_authored_variable_gaps(
-    *, supabase: Any, organization_id: str, project_id: str
+    *, supabase: Any, organization_id: str, project_id: str, lot_id: str | None = None
 ) -> None:
     """SDD 013 (alineacion LOTE 29, excepcion puntual y acotada a "el motor no
     se toca"): las variables `authored` sin default de catalogo (p. ej.
@@ -1287,6 +1258,12 @@ async def _ensure_authored_variable_gaps(
     fetch del inventario del proyecto, sin migracion de backfill) y solo
     agrega filas `missing` que faltaban; no toca resolucion, gates, snapshot
     ni el renderer.
+
+    A5 (bug 2026-08-13): cuando `lot_id` está presente (mesa del caso) se
+    ejecuta también para que las variables authored con default del catalogo
+    sembren como `state='derived'` en scope lote (no proyecto) — p. ej.
+    `mandato.facultades`. Antes sólo corría en scope proyecto y la mesa del
+    caso no las veía (filtro `lot_id IS NULL` asimétrico resuelto en A4).
     """
     template_result = await asyncio.to_thread(
         lambda: (
@@ -1316,49 +1293,90 @@ async def _ensure_authored_variable_gaps(
     for clause in _rows(clauses_result):
         referenced_keys |= _variable_token_keys(clause.get("content_json"))
 
-    gap_keys = sorted(
-        key
-        for key in referenced_keys
-        if variable_producer(key) == "authored" and authored_variable_default(key) is None
+    authored_keys = sorted(
+        key for key in referenced_keys if variable_producer(key) == "authored"
     )
-    if not gap_keys:
+    if not authored_keys:
         return
 
     existing_result = await asyncio.to_thread(
         lambda: (
             supabase.table("variable_resolutions")
-            .select("variable_key")
+            .select("variable_key,state,value_text,source_ref,lot_id")
             .eq("organization_id", organization_id)
             .eq("project_id", project_id)
-            .is_("lot_id", "null")
-            .in_("variable_key", gap_keys)
+            .in_("variable_key", authored_keys)
+            .neq("state", "superseded")
             .execute()
         )
     )
-    existing_keys = {row["variable_key"] for row in _rows(existing_result)}
-    missing_keys = [key for key in gap_keys if key not in existing_keys]
-    if not missing_keys:
+    by_key_scope: dict[tuple[str, str], dict[str, Any]] = {}
+    by_key_project: dict[str, dict[str, Any]] = {}
+    for row in _rows(existing_result):
+        row_lot = row.get("lot_id")
+        by_key_scope[(row["variable_key"], str(row_lot) or "")] = row
+        if row_lot is None:
+            by_key_project[row["variable_key"]] = row
+
+    payloads: list[dict[str, Any]] = []
+    seeded_keys: list[str] = []
+    target_lot_str = str(lot_id) if lot_id else ""
+    for key in authored_keys:
+        default = authored_variable_default(key)
+        # Si la variable tiene default en el catálogo (state + value), sembrarla
+        # como derived; sin default → state='missing' (no se puede auto-resolver).
+        if default is not None:
+            target_state = str(default.get("state") or "derived")
+            value_text = (
+                default.get("value_text") if isinstance(default.get("value_text"), str)
+                else None
+            )
+        else:
+            target_state = "missing"
+            value_text = None
+
+        existing_scope = by_key_scope.get((key, target_lot_str))
+        if existing_scope is not None:
+            # Ya existe una fila activa para este scope; no pisar.
+            continue
+
+        # A5-b (bug 2026-08-13): si lot_id está presente y ya existe fila
+        # activa en scope PROJECT (lot_id IS NULL) con algún valor real, no
+        # sembramos una segunda fila en scope lote. La authored var es típicamente
+        # por proyecto (mandato, personería, cláusulas). El merge lot+project del
+        # inventario la resuelve; sembrar una duplicada missing en scope lote
+        # haría que la mesa mostrara "Falta" pisando el valor del molde.
+        if lot_id is not None:
+            project_row = by_key_project.get(key)
+            if project_row is not None:
+                proj_state = str(project_row.get("state") or "")
+                proj_value = project_row.get("value_text")
+                if proj_state in {"approved", "resolved"} and proj_value:
+                    continue
+
+        payloads.append(
+            {
+                "organization_id": organization_id,
+                "project_id": project_id,
+                "lot_id": lot_id,
+                "escritura_case_id": None,
+                "variable_key": key,
+                "variable_group": variable_group_for_key(key),
+                "value_text": value_text,
+                "value_json": None,
+                "state": target_state,
+                "source_type": "legal_review",
+                "source_ref": {"seeded_by": "ensure_authored_variable_gaps"},
+                "confidence": None,
+                "extractor_name": None,
+                "approval_required": target_state == "missing",
+                "reviewed_at": datetime.now(UTC).isoformat() if target_state != "missing" else None,
+            }
+        )
+        seeded_keys.append(key)
+    if not payloads:
         return
 
-    payloads = [
-        {
-            "organization_id": organization_id,
-            "project_id": project_id,
-            "lot_id": None,
-            "escritura_case_id": None,
-            "variable_key": key,
-            "variable_group": variable_group_for_key(key),
-            "value_text": None,
-            "value_json": None,
-            "state": "missing",
-            "source_type": "legal_review",
-            "source_ref": {"seeded_by": "ensure_authored_variable_gaps"},
-            "confidence": None,
-            "extractor_name": None,
-            "approval_required": True,
-        }
-        for key in missing_keys
-    ]
     await asyncio.to_thread(
         lambda: supabase.table("variable_resolutions").insert(payloads).execute()
     )
@@ -1366,7 +1384,8 @@ async def _ensure_authored_variable_gaps(
         "authored_variable_gaps_seeded",
         organization_id=organization_id,
         project_id=project_id,
-        variable_keys=missing_keys,
+        lot_id=str(lot_id) if lot_id else None,
+        variable_keys=seeded_keys,
     )
 
 
@@ -1392,12 +1411,18 @@ async def get_project_variable_inventory(
         project_id=project_id,
         lot_id=lot_id,
     )
-    if lot_id is None:
-        await _ensure_authored_variable_gaps(
-            supabase=client,
-            organization_id=organization_id,
-            project_id=project_id,
-        )
+    # A5 (bug 2026-08-13): sembrar authored variables faltantes en el scope
+    # solicitado (proyecto cuando molde; lote cuando caso), con state='derived'
+    # si el catálogo trae default o state='missing' si no. Antes sólo corría
+    # en scope proyecto, por lo que `mandato.facultades` (default 'derived') y
+    # `mandato.rectificacion_rut` (sin default) nunca aparecían en la mesa del
+    # caso y el abogado no tenía dónde completarlos.
+    await _ensure_authored_variable_gaps(
+        supabase=client,
+        organization_id=organization_id,
+        project_id=project_id,
+        lot_id=lot_id,
+    )
     variable_rows = await _fetch_variable_resolution_rows(
         supabase=client,
         organization_id=organization_id,
@@ -2108,7 +2133,16 @@ async def _fetch_variable_resolution_rows(
     group: str | None,
 ) -> list[dict[str, Any]]:
     def _fetch() -> list[dict[str, Any]]:
-        query = (
+        # A4 (bug 2026-08-13, "31 datos por aprobar en la mesa del Lote 26"):
+        # antes, al pasar `lot_id`, el query hacía `.eq("lot_id", lot_id)` y
+        # excluía las variables aprovadas en el MOLDE del proyecto (sag.*,
+        # vendedor.nombre, evidencia.certificado_gp_referencia, mandato.*).
+        # El caso hereda esas variables del molde: la mesa las mostraba como
+        # "Falta" aunque existían aprovadas a nivel proyecto y el snapshot del
+        # caso ya las consumía. Ahora se mergeean las filas de scope proyecto
+        # (lot_id IS NULL) con las de scope lote (lot_id = X); si una misma
+        # clave aparece en ambos, gana la del lote (más específica).
+        base = (
             supabase.table("variable_resolutions")
             .select("*")
             .eq("organization_id", organization_id)
@@ -2117,15 +2151,38 @@ async def _fetch_variable_resolution_rows(
             .order("variable_key")
         )
         if lot_id:
-            query = query.eq("lot_id", lot_id)
+            base = base.or_(f"lot_id.eq.{lot_id},lot_id.is.null")
         if state:
-            query = query.eq("state", state)
+            base = base.eq("state", state)
         else:
-            query = query.neq("state", "superseded")
+            base = base.neq("state", "superseded")
         if group:
-            query = query.eq("variable_group", group)
-        result = query.execute()
-        return _rows(result)
+            base = base.eq("variable_group", group)
+        result = base.execute()
+        rows = _rows(result)
+        if not lot_id:
+            return rows
+        # Merge lot+project: si hay dos filas con la misma (variable_key, scope
+        # efectivo), prefiere la scope-lote sobre la scope-proyecto.
+        merged: dict[tuple[str, str, str | None], dict[str, Any]] = {}
+        for row in rows:
+            row_lot = row.get("lot_id")
+            row_case = row.get("escritura_case_id")
+            row_unit_index = ""
+            if (row.get("variable_key") or "") in {
+                "sii.unidad_nombre", "sii.pre_rol_lote", "sii.rol_avaluo_en_tramite_texto"
+            }:
+                row_unit_index = str((row.get("source_ref") or {}).get("unit_index") or "")
+            key = (str(row.get("variable_key") or ""), str(row_case or ""), str(row_unit_index))
+            existing = merged.get(key)
+            if existing is None:
+                merged[key] = row
+                continue
+            # Pre-existente: gana scope lote si row_lot == lot_id; sino el ya puesto.
+            existing_lot = existing.get("lot_id")
+            if row_lot == lot_id and existing_lot != lot_id:
+                merged[key] = row
+        return list(merged.values())
 
     return await asyncio.to_thread(_fetch)
 

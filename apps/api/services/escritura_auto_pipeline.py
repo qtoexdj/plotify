@@ -20,6 +20,8 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
+from fastapi import HTTPException
+
 from core.logger import get_logger
 from services.escritura_case_workflow import (
     _alert_clause_blockers,
@@ -46,6 +48,7 @@ from services.escritura_case_workflow import (
     INHERITED_PROJECT_READINESS_GATES,
 )
 from services.escritura_delivery import _recipient_chat_id
+from services.escritura_readiness import create_escritura_case_snapshot
 
 logger = get_logger(__name__)
 
@@ -372,61 +375,63 @@ async def _system_approve_matriz(
     inherited_from_matriz_id: str | None,
     inherited_matriz_version: int | None,
 ) -> dict[str, Any]:
-    if hasattr(client, "rpc"):
-        grant_result = await asyncio.to_thread(
-            lambda: (
-                client.table("legal_approval_grants")
-                .select("id, grantee_user_id")
-                .eq("organization_id", str(matrix_row["organization_id"]))
-                .eq("active", True)
-                .order("granted_at", desc=True)
-                .limit(1)
-                .execute()
-            )
-        )
-        grant = _first_row(getattr(grant_result, "data", None))
-        if not grant:
-            raise RuntimeError("LEGAL_APPROVAL_REQUIRED")
-        return await _approve_semantic_candidate(
-            client=client,
-            matrix_row=matrix_row,
-            case_row=case_row,
-            actor_id=str(grant["grantee_user_id"]),
-            operation_key=f"system:{matrix_row['id']}:{matrix_row['version']}:{trigger}",
-            legal_grant_id=str(grant["id"]),
-            origin="system",
-        )
-    now = _utc_now_iso()
-    payload = {
-        "status": "approved",
-        "approved_by": None,
-        "approved_at": now,
-        "approval_origin": "system",
-        "version": int(matrix_row["version"]) + 1,
-    }
-    result = await asyncio.to_thread(
+    # B (bug 3, 2026-08-13): la bifurcación `hasattr(client, "rpc")` dejaba dos
+    # caminos — el real (con grant + RPC begin/finalize_matriz_approval + validación
+    # semántica del DOCX) y un fallback de tests que sólo UPDATEaba status='approved'
+    # sin pasar por ninguna verificación semántica. Los tests que usan fakes sin
+    # `.rpc` validaban un camino que NUNCA se ejecuta en producción, por lo que las
+    # fallas semánticas pasaban desapercibidas en suite y aparecían como matriz
+    # status='draft' con cascade outcome='completed' en vivo (Lote 26 Teno 2).
+    # Ahora el sistema siempre exige grant + _approve_semantic_candidate; si no hay
+    # grant, levanta LEGAL_APPROVAL_REQUIRED (behavior parejo tests↔prod).
+    grant_result = await asyncio.to_thread(
         lambda: (
-            client.table("escritura_matrices")
-            .update(payload)
-            .eq("id", str(matrix_row["id"]))
+            client.table("legal_approval_grants")
+            .select("id, grantee_user_id")
             .eq("organization_id", str(matrix_row["organization_id"]))
+            .eq("active", True)
+            .order("granted_at", desc=True)
+            .limit(1)
             .execute()
         )
     )
-    updated = _first_row(getattr(result, "data", None)) or {**matrix_row, **payload}
-    await _insert_matriz_review_decision(
+    grant = _first_row(getattr(grant_result, "data", None))
+    if not grant:
+        raise RuntimeError("LEGAL_APPROVAL_REQUIRED")
+    updated = await _approve_semantic_candidate(
         client=client,
-        matrix_row=updated,
+        matrix_row=matrix_row,
         case_row=case_row,
-        decision_type="matriz_approved",
-        decision_status="approved",
-        decided_by=None,
-        reason="cascade_auto_approve",
+        actor_id=str(grant["grantee_user_id"]),
+        operation_key=f"system:{matrix_row['id']}:{matrix_row['version']}:{trigger}",
+        legal_grant_id=str(grant["id"]),
         origin="system",
-        trigger=trigger,
-        inherited_from_matriz_id=inherited_from_matriz_id,
-        inherited_matriz_version=inherited_matriz_version,
     )
+    # `_approve_semantic_candidate` mueve la matriz a 'approved' vía RPC, pero
+    # no inserta la decisión auditada en legal_review_decisions — la insertamos
+    # aquí, preservando la auditoría 'matriz_approved'/'origin=system' que tenía
+    # el camino viejo. Best-effort: una falla de auditoría no revierte la
+    # aprobación efectiva (igual que en submit_case_matriz/approve_case_matriz).
+    try:
+        await _insert_matriz_review_decision(
+            client=client,
+            matrix_row=updated or matrix_row,
+            case_row=case_row,
+            decision_type="matriz_approved",
+            decision_status="approved",
+            decided_by=None,
+            reason="cascade_auto_approve",
+            origin="system",
+            trigger=trigger,
+            inherited_from_matriz_id=inherited_from_matriz_id,
+            inherited_matriz_version=inherited_matriz_version,
+        )
+    except Exception:  # noqa: BLE001 - auditoría best-effort
+        logger.error(
+            "system_approve_matriz_audit_failed",
+            matriz_id=str(matrix_row.get("id")),
+            error="no se pudo insertar legal_review_decisions(matriz_approved)",
+        )
     return updated
 
 
@@ -451,6 +456,7 @@ async def _system_approve_legal_review(
         value_text="aprobada",
         reviewed_by=None,
         reviewed_at=now,
+        actor="system",
     )
     await _upsert_lot_variable(
         client,
@@ -461,6 +467,7 @@ async def _system_approve_legal_review(
         value_text="sistema",
         reviewed_by=None,
         reviewed_at=now,
+        actor="system",
     )
     await _upsert_lot_variable(
         client,
@@ -471,6 +478,7 @@ async def _system_approve_legal_review(
         value_text=now,
         reviewed_by=None,
         reviewed_at=now,
+        actor="system",
     )
     await asyncio.to_thread(
         lambda: (
@@ -733,22 +741,108 @@ async def _run_case_cascade(
 
         await _system_approve_legal_review(client, case_row=case_row, trigger=trigger)
         steps.append({"step": "legal_review", "action": "executed", "detail": "system_approved"})
+        # A2 (bug 2026-08-13): el snapshot del caso (readiness_gates en BD) quedó
+        # congelado en la creación previo a la siembra de revision_juridica.*.
+        # Refrescarlo ahora (idempotente, stage_operational=False) para que la
+        # mesa y las notificaciones vean legal_review_ready.status='ready' en
+        # vez del snapshot stale que disparaba el mensaje "Borrador por revisar"
+        # contradictorio tras una cascada ya completada (Lote 26 Teno 2).
+        lot_id = str(case_row["lot_id"])
+        case_row = await create_escritura_case_snapshot(
+            organization_id=org_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            stage_operational=False,
+            supabase=client,
+        )
     else:
         steps.append({"step": "legal_review", "action": "skipped", "detail": "already_approved"})
 
     # 4) Aprobar la matriz (system) — hereda el molde vigente.
     if matrix_row.get("status") == "legal_review_pending":
-        matrix_row = await _system_approve_matriz(
-            client,
-            matrix_row,
-            case_row,
-            trigger=trigger,
-            inherited_from_matriz_id=(
-                str(project_matriz_id) if project_matriz_id else None
-            ),
-            inherited_matriz_version=project_matriz_version,
+        # C + C-bis (bug 4, 2026-08-13): _approve_semantic_candidate puede
+        # lanzar HTTPException DOCUMENT_SEMANTIC_INVALID si el DOCX no pasa
+        # validación (p. ej. token lote.rol_tramite sin resolver). Antes la
+        # cascada reportaba step approve=executed con status=failed en BD y
+        # outcome=completed (bug Lote 26). Ahora se captura la excepción, se
+        # mapean los issues semánticos a causes humanizadas y se corta con
+        # outcome=exception kind=matriz_approval_failed.
+        try:
+            matrix_row = await _system_approve_matriz(
+                client,
+                matrix_row,
+                case_row,
+                trigger=trigger,
+                inherited_from_matriz_id=(
+                    str(project_matriz_id) if project_matriz_id else None
+                ),
+                inherited_matriz_version=project_matriz_version,
+            )
+        except HTTPException as exc:
+            detail = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
+            sem_issues = detail.get("issues") if isinstance(detail.get("issues"), list) else []
+            causes = []
+            for issue in sem_issues:
+                path = str((issue or {}).get("path") or issue.get("code") or "unknown")
+                causes.append(
+                    {
+                        "kind": "matriz_approval_failed",
+                        "title": "La aprobación de la matriz no se materializó",
+                        "description": (
+                            f"Validación semántica del documento falló: "
+                            f"{detail.get('code', 'DOCUMENT_SEMANTIC_INVALID')} "
+                            f"en '{path}'. Verifica que el token referenciado "
+                            f"tenga valor resuelto antes de aprobar."
+                        ),
+                        "fix_url": f"/projects/{project_id}?tab=legal",
+                    }
+                )
+            if not causes:
+                causes.append(
+                    {
+                        "kind": "matriz_approval_failed",
+                        "title": "La aprobación de la matriz no se materializó",
+                        "description": str(detail) or "Validación semántica falló.",
+                        "fix_url": f"/projects/{project_id}?tab=legal",
+                    }
+                )
+            steps.append(
+                {"step": "approve", "action": "skipped", "detail": "semantic_failed"}
+            )
+            return await _exception(causes)
+        # Re-leer la matriz de BD (camino exitoso); si el RPC finalizó pero
+        # dejó status != 'approved' por otra razón, también cortar exception.
+        refreshed_matrix = await _fetch_active_matrix(
+            client, case_id, org_id, project_id
         )
-        steps.append({"step": "approve", "action": "executed"})
+        if refreshed_matrix is not None:
+            matrix_row = refreshed_matrix
+        if matrix_row.get("status") == "approved":
+            steps.append({"step": "approve", "action": "executed"})
+        else:
+            steps.append(
+                {
+                    "step": "approve",
+                    "action": "skipped",
+                    "detail": f"status={matrix_row.get('status')}",
+                }
+            )
+            return await _exception(
+                [
+                    {
+                        "kind": "matriz_approval_failed",
+                        "title": "La aprobación de la matriz no se materializó",
+                        "description": (
+                            f"La matriz del caso no quedó 'approved' tras la "
+                            f"aprobación automática (estado real: "
+                            f"{matrix_row.get('status')}). Revisa si la validación "
+                            f"semántica del documento falló o si no hay un grant "
+                            f"de aprobación legal activo para la organización."
+                        ),
+                        "fix_url": f"/projects/{project_id}?tab=legal",
+                    }
+                ]
+            )
     elif matrix_row.get("status") == "approved":
         steps.append({"step": "approve", "action": "skipped", "detail": "already_approved"})
     else:
@@ -839,6 +933,29 @@ async def _run_case_cascade(
         )
         steps.append({"step": "generate", "action": "executed"})
         generation_id = str(generation.id)
+
+    # A3 (bug 2026-08-13, defensivo): antes de reportar 'completed', re-snapshotea
+    # el caso (idempotente). Garantiza que readiness_gates persistido refleje
+    # todos los avances (system_approve_legal_review + system_approve_matriz +
+    # _generate_minuta_row), incluso si A2 fallara por alguna rama (p. ej.
+    # existing_generation idle, o caso que ya venía 'approved'). Es el mismo
+    # patrón que submit_legal_review ya usaba tras el acto humano.
+    try:
+        lot_id = lot_id if "lot_id" in locals() else str(case_row["lot_id"])
+        await create_escritura_case_snapshot(
+            organization_id=org_id,
+            project_id=project_id,
+            lot_id=lot_id,
+            stage_operational=False,
+            supabase=client,
+        )
+    except Exception:  # noqa: BLE001 - snapshot best-effort, no revierte completed
+        logger.error(
+            "escritura_cascade_final_snapshot_failed",
+            organization_id=org_id,
+            escritura_case_id=case_id,
+            exc_info=True,
+        )
 
     run_row = await _insert_cascade_run(
         client,

@@ -1779,11 +1779,56 @@ class TestRetryCascade:
         store.tables.setdefault("organizations", []).append(
             {"id": ORG_ID, "escritura_review_policy": "exceptions_only"}
         )
+        # B (bug 3, 2026-08-13): _system_approve_matriz ahora exige grant de
+        # aprobación legal activo (camino parejo tests↔prod).
+        store.tables.setdefault("legal_approval_grants", []).append(
+            {
+                "id": "grant-1",
+                "organization_id": ORG_ID,
+                "project_id": None,
+                "grantee_user_id": "admin-1",
+                "granted_by": "grantor-1",
+                "active": True,
+                "granted_at": "2026-08-04T00:35:05Z",
+                "expires_at": None,
+            }
+        )
         template = _seed_template(store)
         case_row = _seed_case(store)
         self._mark_project_warning_acknowledged(store)
         self._seed_abogado_redactor(store)
         matrix = _seed_matrix(store, case_row=case_row, template=template, status="draft")
+
+        # A2/A3+B: side-effects nuevos de la cascada se patchean a fakes para
+        # que el test de orquestación no requiera sembrar lot_legal_data /
+        # validación semántica DOCX (cubierto en sus propios tests).
+        async def _fake_create(*, supabase, lot_id, **_kwargs):
+            for row in getattr(supabase, "tables", {}).get("escritura_cases", []):
+                if str(row.get("lot_id")) == str(lot_id):
+                    return row
+            return None
+
+        async def _fake_approve(*, client, matrix_row, case_row, actor_id,
+                                operation_key, legal_grant_id, origin):
+            updated = dict(matrix_row)
+            updated["status"] = "approved"
+            updated["approved_by"] = None
+            updated["approved_at"] = "2026-08-13T00:00:00Z"
+            updated["approval_origin"] = origin
+            for row in client.tables.get("escritura_matrices", []):
+                if str(row.get("id")) == str(matrix_row.get("id")):
+                    row.update(updated)
+                    break
+            return updated
+
+        monkeypatch.setattr(
+            "services.escritura_auto_pipeline.create_escritura_case_snapshot",
+            _fake_create,
+        )
+        monkeypatch.setattr(
+            "services.escritura_auto_pipeline._approve_semantic_candidate",
+            _fake_approve,
+        )
 
         response = _client(_build_app(store, monkeypatch)).post(
             f"/api/v1/escritura-cases/{CASE_ID}/retry-cascade",
