@@ -22,6 +22,7 @@ asyncio_mode = auto (pytest.ini) — no se necesita @pytest.mark.asyncio
 """
 
 import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # ---------------------------------------------------------------------------
@@ -764,3 +765,294 @@ async def test_telegram_callback_authorization_denied():
     # Debería responder 200 OK para evitar reintentos de Telegram, pero no encolar el job y notificar falta de autorización
     assert response.status_code == 200
     mock_redis.enqueue_job.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# Regresión: alcance de notificaciones con el modelo real de roles
+# (organization_members.role ∈ {admin, user}; vendor = user + fila activa en vendors)
+# ---------------------------------------------------------------------------
+
+
+class _ScopeFakeQuery:
+    def __init__(self, rows):
+        self._rows = rows
+        self._filters = []
+        self._is_filters = []
+        self._orderings = []
+        self._range_bounds = None
+        self._action = "select"
+        self._payload = None
+
+    def select(self, *_args):
+        return self
+
+    def eq(self, column, value):
+        self._filters.append((column, value))
+        return self
+
+    def is_(self, column, value):
+        self._is_filters.append((column, value))
+        return self
+
+    def limit(self, _count):
+        return self
+
+    def order(self, column, desc=False):
+        self._orderings.append((column, bool(desc)))
+        return self
+
+    def range(self, start, end):
+        self._range_bounds = (start, end)
+        return self
+
+    def insert(self, payload):
+        self._action = "insert"
+        self._payload = payload
+        return self
+
+    def execute(self):
+        if self._action == "insert":
+            return SimpleNamespace(data=[dict(self._payload)])
+        rows = [
+            row
+            for row in self._rows
+            if all(str(row.get(c)) == str(v) for c, v in self._filters)
+        ]
+        for column, value in self._is_filters:
+            if value == "null":
+                rows = [row for row in rows if row.get(column) is None]
+            elif value == "not.null":
+                rows = [row for row in rows if row.get(column) is not None]
+        for column, desc in reversed(self._orderings):
+            rows.sort(key=lambda row: str(row.get(column) or ""), reverse=desc)
+        if self._range_bounds is not None:
+            start, end = self._range_bounds
+            rows = rows[start : end + 1]
+        return SimpleNamespace(data=rows)
+
+
+class _ScopeFakeSupabase:
+    def __init__(self, tables):
+        self._tables = tables
+
+    def table(self, table_name):
+        return _ScopeFakeQuery(self._tables.get(table_name, []))
+
+
+ORG_NOTIF = "00000000-0000-4000-8000-000000000001"
+ADMIN_NOTIF = "00000000-0000-4000-8000-000000000002"
+VENDOR_USER_NOTIF = "00000000-0000-4000-8000-000000000003"
+OTHER_USER_NOTIF = "00000000-0000-4000-8000-000000000004"
+LOT_NOTIF = "00000000-0000-4000-8000-000000000005"
+PROJECT_NOTIF = "00000000-0000-4000-8000-000000000006"
+
+
+def _nested_approval(status_val, lot_numero, request_type="sale"):
+    return {
+        "id": "00000000-0000-4000-8000-00000000000a",
+        "request_type": request_type,
+        "status": status_val,
+        "vendor_name": "Vendedora A",
+        "payload": {"cliente_nombre": "Ana Perez", "valor_reserva": 1000000},
+        "resolved_at": None,
+        "lot_id": LOT_NOTIF,
+        "lots": {
+            "id": LOT_NOTIF,
+            "numero_lote": lot_numero,
+            "projects": {"id": PROJECT_NOTIF, "name": "Teno - El Condor"},
+        },
+    }
+
+
+async def test_resolve_scope_admin_direct(monkeypatch):
+    from api.v1.endpoints.notifications import _resolve_member_notification_scope
+
+    supabase = _ScopeFakeSupabase(
+        {
+            "organization_members": [
+                {
+                    "organization_id": ORG_NOTIF,
+                    "user_id": ADMIN_NOTIF,
+                    "role": "admin",
+                }
+            ],
+            "vendors": [],
+        }
+    )
+    scope = await _resolve_member_notification_scope(
+        supabase, ORG_NOTIF, ADMIN_NOTIF
+    )
+    assert scope == "admin"
+
+
+async def test_resolve_scope_user_with_vendor_row_is_vendor(monkeypatch):
+    from api.v1.endpoints.notifications import _resolve_member_notification_scope
+
+    supabase = _ScopeFakeSupabase(
+        {
+            "organization_members": [
+                {
+                    "organization_id": ORG_NOTIF,
+                    "user_id": VENDOR_USER_NOTIF,
+                    "role": "user",
+                }
+            ],
+            "vendors": [
+                {
+                    "id": "00000000-0000-4000-8000-00000000000b",
+                    "user_id": VENDOR_USER_NOTIF,
+                    "organization_id": ORG_NOTIF,
+                    "active": True,
+                }
+            ],
+        }
+    )
+    scope = await _resolve_member_notification_scope(
+        supabase, ORG_NOTIF, VENDOR_USER_NOTIF
+    )
+    assert scope == "vendor"
+
+
+async def test_resolve_scope_user_without_vendor_row_is_user(monkeypatch):
+    from api.v1.endpoints.notifications import _resolve_member_notification_scope
+
+    supabase = _ScopeFakeSupabase(
+        {
+            "organization_members": [
+                {
+                    "organization_id": ORG_NOTIF,
+                    "user_id": OTHER_USER_NOTIF,
+                    "role": "user",
+                }
+            ],
+            "vendors": [],
+        }
+    )
+    scope = await _resolve_member_notification_scope(
+        supabase, ORG_NOTIF, OTHER_USER_NOTIF
+    )
+    assert scope == "user"
+
+
+async def test_resolve_scope_non_member_raises_403(monkeypatch):
+    from fastapi import HTTPException
+    from api.v1.endpoints.notifications import _resolve_member_notification_scope
+
+    supabase = _ScopeFakeSupabase({"organization_members": [], "vendors": []})
+    with pytest.raises(HTTPException) as exc_info:
+        await _resolve_member_notification_scope(
+            supabase, ORG_NOTIF, OTHER_USER_NOTIF
+        )
+    assert exc_info.value.status_code == 403
+
+
+async def test_list_notifications_vendor_sees_only_own_rows(monkeypatch):
+    """FR-006: un miembro 'user' con fila activa en vendors ve SOLO sus propios
+    eventos (recipient_id), nunca los dirigidos a admins."""
+    from api.v1.endpoints import notifications as notif_endpoint
+
+    supabase = _ScopeFakeSupabase(
+        {
+            "organization_members": [
+                {
+                    "organization_id": ORG_NOTIF,
+                    "user_id": VENDOR_USER_NOTIF,
+                    "role": "user",
+                }
+            ],
+            "vendors": [
+                {
+                    "id": "00000000-0000-4000-8000-00000000000b",
+                    "user_id": VENDOR_USER_NOTIF,
+                    "organization_id": ORG_NOTIF,
+                    "active": True,
+                }
+            ],
+            "notification_events": [
+                {
+                    "id": "00000000-0000-4000-8000-000000000011",
+                    "approval_id": "00000000-0000-4000-8000-00000000000a",
+                    "organization_id": ORG_NOTIF,
+                    "recipient_id": ADMIN_NOTIF,
+                    "recipient_role": "admin",
+                    "read_at": None,
+                    "dismissed_at": None,
+                    "created_at": "2026-08-14T10:00:00Z",
+                    "approval_requests": _nested_approval("pending", 12),
+                },
+                {
+                    "id": "00000000-0000-4000-8000-000000000012",
+                    "approval_id": "00000000-0000-4000-8000-00000000000a",
+                    "organization_id": ORG_NOTIF,
+                    "recipient_id": VENDOR_USER_NOTIF,
+                    "recipient_role": "vendor",
+                    "read_at": None,
+                    "dismissed_at": None,
+                    "created_at": "2026-08-14T10:01:00Z",
+                    "approval_requests": _nested_approval("approved", 12),
+                },
+            ],
+        }
+    )
+    monkeypatch.setattr(notif_endpoint, "get_supabase_client", lambda: supabase)
+
+    response = await notif_endpoint.list_notifications(
+        x_user_id=VENDOR_USER_NOTIF, x_organization_id=ORG_NOTIF, limit=50, offset=0
+    )
+
+    assert [item.id for item in response.items] == [
+        "00000000-0000-4000-8000-000000000012"
+    ]
+    assert response.counts.unread == 1
+
+
+async def test_list_notifications_admin_sees_admin_rows(monkeypatch):
+    """FR-004: el admin ve los eventos de rol admin de su organización."""
+    from api.v1.endpoints import notifications as notif_endpoint
+
+    supabase = _ScopeFakeSupabase(
+        {
+            "organization_members": [
+                {
+                    "organization_id": ORG_NOTIF,
+                    "user_id": ADMIN_NOTIF,
+                    "role": "admin",
+                }
+            ],
+            "vendors": [],
+            "notification_events": [
+                {
+                    "id": "00000000-0000-4000-8000-000000000011",
+                    "approval_id": "00000000-0000-4000-8000-00000000000a",
+                    "organization_id": ORG_NOTIF,
+                    "recipient_id": ADMIN_NOTIF,
+                    "recipient_role": "admin",
+                    "read_at": None,
+                    "dismissed_at": None,
+                    "created_at": "2026-08-14T10:00:00Z",
+                    "approval_requests": _nested_approval("pending", 12),
+                },
+                {
+                    "id": "00000000-0000-4000-8000-000000000012",
+                    "approval_id": "00000000-0000-4000-8000-00000000000a",
+                    "organization_id": ORG_NOTIF,
+                    "recipient_id": VENDOR_USER_NOTIF,
+                    "recipient_role": "vendor",
+                    "read_at": None,
+                    "dismissed_at": None,
+                    "created_at": "2026-08-14T10:01:00Z",
+                    "approval_requests": _nested_approval("approved", 12),
+                },
+            ],
+        }
+    )
+    monkeypatch.setattr(notif_endpoint, "get_supabase_client", lambda: supabase)
+
+    response = await notif_endpoint.list_notifications(
+        x_user_id=ADMIN_NOTIF, x_organization_id=ORG_NOTIF, limit=50, offset=0
+    )
+
+    assert [item.id for item in response.items] == [
+        "00000000-0000-4000-8000-000000000011"
+    ]
+    assert response.items[0].can_decide is True

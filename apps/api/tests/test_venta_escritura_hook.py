@@ -113,6 +113,18 @@ class FakeRpc:
 
     def execute(self):
         self.store.rpc_calls.append((self.name, self.args))
+        if self.name == "approve_sale" and self.store.rpc_replayed:
+            return SimpleNamespace(
+                data={
+                    "success": True,
+                    "lot_id": LOT_ID,
+                    "workflow_outbox_id": OUTBOX_ID,
+                    "vendor_phone": "+56912345678",
+                    "vendor_platform": "telegram",
+                    "vendor_name": "Vendedor A",
+                    "replayed": True,
+                }
+            )
         if self.name == "approve_sale" and self.store.atomic_outbox_on_sale:
             approval_id = self.args["p_approval_id"]
             outbox_rows = self.store.tables.setdefault("workflow_outbox", [])
@@ -149,10 +161,11 @@ class FakeRpc:
 
 
 class FakeSupabase:
-    def __init__(self, *, atomic_outbox_on_sale: bool = False):
+    def __init__(self, *, atomic_outbox_on_sale: bool = False, rpc_replayed: bool = False):
         self.tables: dict[str, list[dict[str, Any]]] = {}
         self.rpc_calls: list[tuple[str, dict[str, Any]]] = []
         self.atomic_outbox_on_sale = atomic_outbox_on_sale
+        self.rpc_replayed = rpc_replayed
 
     def table(self, name: str) -> FakeQuery:
         return FakeQuery(self, name)
@@ -209,8 +222,12 @@ def _case_row() -> dict[str, Any]:
     }
 
 
-def _seed_sale_approval_store(*, atomic_outbox_on_sale: bool = False) -> FakeSupabase:
-    store = FakeSupabase(atomic_outbox_on_sale=atomic_outbox_on_sale)
+def _seed_sale_approval_store(
+    *, atomic_outbox_on_sale: bool = False, rpc_replayed: bool = False
+) -> FakeSupabase:
+    store = FakeSupabase(
+        atomic_outbox_on_sale=atomic_outbox_on_sale, rpc_replayed=rpc_replayed
+    )
     store.tables["approval_requests"] = [
         {
             "id": "approval-sale-uuid",
@@ -924,3 +941,94 @@ async def test_admin_is_notified_with_mesa_link_when_draft_is_ready(monkeypatch)
     assert "Borrador por revisar" in sent_message
     assert "Abrir borrador" in sent_message
     assert f"http://localhost:3000/documentos/matriz/{CASE_ID}" in sent_message
+
+
+# ---------------------------------------------------------------------------
+# Regresión: idempotencia del consumidor ante approve_sale replayed=true
+# (camino corto inline del webhook Telegram + job ARQ process_admin_decision)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_sale_approval_replay_skips_hook_cascade_and_audit(monkeypatch):
+    """approve_sale replayed=true NO debe re-correr el hook de escritura, la
+    cascada ni la auditoría: la segunda ejecución (ARQ tras el camino corto
+    inline) debe ser inerte para evitar notificaciones duplicadas."""
+    store = _seed_sale_approval_store(atomic_outbox_on_sale=True, rpc_replayed=True)
+    hook = AsyncMock(return_value=_ready_hook_result())
+    cascade = AsyncMock()
+    audit = AsyncMock()
+
+    monkeypatch.setattr(approval_processor, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(
+        escritura_sale_hook, "handle_sale_validated_for_escritura", hook
+    )
+    monkeypatch.setattr(escritura_auto_pipeline, "run_case_cascade", cascade)
+    monkeypatch.setattr(approval_processor, "log_agent_action", audit)
+
+    result = await approval_processor.execute_admin_decision_db(
+        org_id=ORG_ID,
+        approval_id="approval-sale-uuid",
+        action="approve",
+        admin_id=ADMIN_ID,
+    )
+
+    assert result["replayed"] is True
+    assert result["workflow_outbox_id"] == OUTBOX_ID
+    hook.assert_not_awaited()
+    cascade.assert_not_awaited()
+    audit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_send_decision_notifications_skips_on_replayed():
+    """db_result replayed=True → no se envía mensaje al vendedor ni al admin,
+    ni se registran eventos de notificación duplicados."""
+    db_result = {
+        "replayed": True,
+        "rpc_data": {
+            "lot_id": LOT_ID,
+            "vendor_phone": "+56912345678",
+            "vendor_platform": "telegram",
+            "vendor_name": "Vendedor A",
+        },
+        "request_type": "sale",
+    }
+    ctx: dict = {}
+
+    result = await approval_processor.send_decision_notifications(
+        ctx=ctx,
+        org_id=ORG_ID,
+        approval_id="approval-sale-uuid",
+        action="approve",
+        admin_id=ADMIN_ID,
+        db_result=db_result,
+    )
+
+    assert result == "REPLAYED"
+    assert ctx["job_outcome"] is True
+
+
+@pytest.mark.asyncio
+async def test_process_admin_decision_replay_returns_without_notifications(
+    monkeypatch,
+):
+    """El job ARQ de decisión sobre una solicitud ya decidida (replayed) sale
+    temprano sin re-enviar notificaciones ni despertar el outbox."""
+    store = _seed_sale_approval_store(atomic_outbox_on_sale=True, rpc_replayed=True)
+    send = AsyncMock()
+    wakeup = AsyncMock()
+
+    monkeypatch.setattr(approval_processor, "get_supabase_client", lambda: store)
+    monkeypatch.setattr(approval_processor, "send_decision_notifications", send)
+    monkeypatch.setattr(
+        escritura_sale_hook, "wakeup_sale_workflow_outbox", wakeup
+    )
+
+    result = await approval_processor.process_admin_decision(
+        {}, ORG_ID, "approval-sale-uuid", "approve", ADMIN_ID
+    )
+
+    assert result == "REPLAYED"
+    send.assert_not_awaited()
+    wakeup.assert_not_awaited()

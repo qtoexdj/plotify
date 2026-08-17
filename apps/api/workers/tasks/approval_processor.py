@@ -86,6 +86,23 @@ async def execute_admin_decision_db(
         error_msg = rpc_data.get("error", "already_processed") if rpc_data else "already_processed"
         raise HTTPException(status_code=409, detail=error_msg)
 
+    # Idempotencia en consumidor: approve_sale/approve_reservation responden
+    # success=true con `replayed=true` cuando la solicitud ya fue decidida.
+    # El camino corto del webhook Telegram ejecuta la decisión inline Y encola
+    # process_admin_decision; sin este guard, la segunda ejecución volvía a
+    # correr hook/cascada/auditoría y DUPLICABA las notificaciones al vendedor.
+    if rpc_data.get("replayed"):
+        return {
+            "replayed": True,
+            "rpc_data": rpc_data,
+            "request_type": request_type,
+            "sale_mode": request_info.get("sale_mode"),
+            "previous_lot_state": request_info.get("previous_lot_state"),
+            "escritura_hook": None,
+            "escritura_hook_error": None,
+            "workflow_outbox_id": rpc_data.get("workflow_outbox_id"),
+        }
+
     # 3. Compatibilidad con targets anteriores a SDD019. En el esquema nuevo,
     # approve_sale devuelve workflow_outbox_id y el consumidor durable crea el
     # caso/borrador; nunca se ejecuta la cascada inline.
@@ -192,6 +209,14 @@ async def send_decision_notifications(
     Job ARQ: Envía las notificaciones asíncronas de Telegram/WhatsApp
     al vendedor y la confirmación final al administrador.
     """
+    if db_result.get("replayed"):
+        ctx["job_outcome"] = True
+        logger.info(
+            "send_decision_notifications_skipped_replayed",
+            approval_id=approval_id,
+        )
+        return "REPLAYED"
+
     try:
         supabase = get_supabase_client()
         telegram_client = await get_telegram_client_for_org(org_id)
@@ -472,6 +497,13 @@ async def process_admin_decision(
             admin_id=admin_id,
             channel=channel,
         )
+        if db_result.get("replayed"):
+            ctx["job_outcome"] = True
+            logger.info(
+                "process_admin_decision_replayed",
+                approval_id=approval_id,
+            )
+            return "REPLAYED"
         workflow_outbox_id = db_result.get("workflow_outbox_id")
         if workflow_outbox_id:
             from services.escritura_sale_hook import wakeup_sale_workflow_outbox
