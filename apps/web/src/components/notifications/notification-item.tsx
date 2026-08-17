@@ -155,7 +155,7 @@ export function NotificationItem({
         disabled={dismissing}
         aria-label="Descartar notificación"
         title="Descartar notificación"
-        className="absolute top-3 right-10 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="absolute top-3 right-10 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {dismissing ? (
           <Spinner className="h-3.5 w-3.5" />
