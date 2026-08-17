@@ -37,6 +37,18 @@ Para superadmin: header adicional `X-User-Id` validado por `verify_super_admin`.
 - `GET /api/v1/approvals/{id}` — Consulta estado de solicitud.
 - Valida payload con Pydantic `ReservationRequest`.
 
+### notifications.py
+
+Campana de notificaciones web (dashboard).
+
+- `GET /api/v1/notifications/` — Lista paginada (limit/offset, max 50) de eventos no descartados con conteos globales del scope (excluyen descartadas) y copy de contexto (`title`/`message`/`action_label`/`deep_link`).
+- `POST /api/v1/notifications/{id}/read` — Marca una notificacion como leida.
+- `POST /api/v1/notifications/{id}/dismiss` — Soft-dismiss idempotente (escribe `dismissed_at`, nunca borra). Scope: admin → filas `recipient_role=admin` de su org; no-admin → solo propias.
+- `POST /api/v1/notifications/read-all` — Marca todas las no leidas del scope en una operacion, retorna `updated_count`.
+- `POST /api/v1/notifications/{approval_id}/decide` — Decide aprobacion desde la campana (RPC + job ARQ de notificaciones).
+
+El alcance por rol se resuelve con `_resolve_member_notification_scope`: admin = rol `admin` en `organization_members`; vendedor = rol `user` + fila activa en `vendors`; resto = alcance propio.
+
 ### users.py
 
 - Endpoints de gestion de usuarios.

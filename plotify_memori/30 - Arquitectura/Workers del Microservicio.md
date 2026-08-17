@@ -38,6 +38,8 @@ Procesa decisiones de aprobacion/rechazo de admins.
 
 **Exporta:**
 - `process_admin_decision(ctx, org_id, approval_id, action, admin_id)` — Llama RPC de Supabase (`approve_reservation` o `reject_reservation`), notifica al vendor del resultado (Telegram > WhatsApp), envia confirmacion al admin.
+- `execute_admin_decision_db(...)` — Ejecuta el RPC de decision. Idempotente ante replays: si el RPC responde `replayed=true` (la solicitud ya fue decidida por el camino corto inline del webhook), retorna temprano sin re-ejecutar hook de escritura, cascada ni auditoria.
+- `send_decision_notifications(...)` — Envia notificaciones al vendedor y confirmacion al admin; retorna `REPLAYED` sin enviar cuando `db_result.replayed` es verdadero (previene duplicados de Telegram y filas `notification_events` duplicadas).
 
 ---
 

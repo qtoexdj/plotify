@@ -152,6 +152,7 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[SDD 010 Mesa de Escritura - Handoff]]
 - [[SDD 011 Venta-Escritura - Handoff]]
 - [[SDD 016 Pipeline Remediacion UX - Handoff]]
+- [[SDD 021 Notificaciones Gestion Completa - Handoff]]
 
 ---
 
@@ -184,3 +185,4 @@ Cambios ya aplicados que explican el estado operativo actual del monorepo.
 - [[SDD 010 Mesa de Escritura - Handoff]] - Mesa legal implementada tecnicamente: documento continuo, evidencia, edicion in-place, plantillas sin JSON y retiro de la capa vieja; queda pendiente el gate humano de usabilidad.
 - [[SDD 011 Venta-Escritura - Handoff]] - Venta validada crea borrador automatico desde matriz del proyecto aprobada y lo entrega al vendedor por Telegram/web; queda pendiente el gate humano T026.
 - [[SDD 016 Pipeline Remediacion UX - Handoff]] - Cierra el pipeline venta→escritura (puente defensivo, revision juridica, entrega admin+vendedor), agrega checklist de preparacion, configuracion de organizacion/Telegram, verificacion masiva de lotes y la migracion de seguridad de HG-2 (revoke + bucket privado + RLS); queda pendiente el gate humano T082/HG-3.
+- [[SDD 021 Notificaciones Gestion Completa - Handoff]] - Campana de notificaciones web completa: descarte soft por item, contador numerico de pendientes, copy con CTA navegable, read-all en 1 operacion, paginacion de 50 con "Cargar mas", refresco al abrir/foco/60s y accesibilidad por teclado. Sin migraciones. Revisado como senior y con correcciones aplicadas.
