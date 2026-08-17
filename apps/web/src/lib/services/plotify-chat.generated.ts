@@ -81,6 +81,10 @@ export interface components {
       "bot_username": string
       "is_active": boolean
     }
+    "BulkReadResponse": {
+      "success": boolean
+      "updated_count": number
+    }
     "BulkVerifyLotsRequest": {
       "admin_id": string
       "tolerance_pct"?: number
@@ -191,8 +195,8 @@ export interface components {
     }
     "DecisionRequest": {
       "action": string
-      "admin_id": string
-      "organization_id": string
+      "admin_id"?: string | null
+      "organization_id"?: string | null
     }
     "DecisionResponse": {
       "error"?: string | null
@@ -203,6 +207,10 @@ export interface components {
       "nombre": string
       "valor_certificado": string
       "valor_vendedor": string
+    }
+    "DismissResponse": {
+      "dismissed_at": string
+      "success": boolean
     }
     "DismissedAlert": {
       "reason"?: string | null
@@ -665,6 +673,7 @@ export interface components {
       "created_at": string
       "decided_at"?: string | null
       "deep_link"?: string | null
+      "dismissed_at"?: string | null
       "flow_state_description"?: string | null
       "flow_state_label"?: string | null
       "id": string
@@ -748,6 +757,7 @@ export interface components {
       "valor_reserva": number
     }
     "ReservationRequest": {
+      "idempotency_key"?: string | null
       "lot_id": string
       "organization_id": string
       "payload": components["schemas"]["ReservationPayload"]
@@ -804,6 +814,7 @@ export interface components {
       "valor_final": number
     }
     "SaleRequest": {
+      "idempotency_key"?: string | null
       "lot_id": string
       "organization_id": string
       "payload": components["schemas"]["SalePayload"]
@@ -957,15 +968,20 @@ export interface components {
       "created_at"?: string | null
       "duration_ms"?: number | null
       "extractor_name": string
+      "llm_executed"?: boolean
       "model_name": string
       "prompt_version": string
       "provider"?: string | null
+      "provider_error_code"?: string | null
       "reasoning_effort"?: string | null
     }
     "TitleAnalysisSourceDocument": {
       "document_type": string
+      "extraction_status"?: string
       "filename"?: string | null
       "legal_document_id": string
+      "ready_for_analysis"?: boolean
+      "text_char_count"?: number
       "version"?: number
     }
     "TitleAnalysisVerification": {
@@ -1420,6 +1436,12 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["LegalDocumentArchiveResponse"]
   }
+  "ensure_legal_document_ingestion_api_v1_legal_documents__legal_document_id__ensure_ingestion_post": {
+    method: "POST"
+    path: "/api/v1/legal-documents/{legal_document_id}/ensure-ingestion"
+    requestBody: never
+    response: components["schemas"]["LegalDocumentRetryResponse"]
+  }
   "retry_legal_document_ingestion_api_v1_legal_documents__legal_document_id__retry_post": {
     method: "POST"
     path: "/api/v1/legal-documents/{legal_document_id}/retry"
@@ -1612,11 +1634,23 @@ export interface operations {
     requestBody: never
     response: components["schemas"]["NotificationListResponse"]
   }
+  "markAllNotificationsRead": {
+    method: "POST"
+    path: "/api/v1/notifications/read-all"
+    requestBody: never
+    response: components["schemas"]["BulkReadResponse"]
+  }
   "decideNotificationApproval": {
     method: "POST"
     path: "/api/v1/notifications/{approval_id}/decide"
     requestBody: components["schemas"]["NotificationDecisionRequest"]
     response: components["schemas"]["NotificationDecisionResponse"]
+  }
+  "dismissNotification": {
+    method: "POST"
+    path: "/api/v1/notifications/{notification_id}/dismiss"
+    requestBody: never
+    response: components["schemas"]["DismissResponse"]
   }
   "markNotificationRead": {
     method: "POST"

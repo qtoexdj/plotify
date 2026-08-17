@@ -3,6 +3,8 @@ import { mvpWebAuthFixtures } from './mvp-fixtures.test'
 import {
   listNotifications,
   decideNotificationApproval,
+  dismissNotification,
+  markAllNotificationsRead,
 } from '../src/lib/services/notifications.service'
 import type { NotificationItem } from '../src/lib/services/notifications.service'
 import { microserviceFetch } from '../src/lib/services/microservice.client'
@@ -174,6 +176,126 @@ describe('US1: Header Notification Center list tests with real service', () => {
     expect(result.success).toBe(true)
     expect(result.items).toHaveLength(0)
     expect(result.counts.unread).toBe(0)
+  })
+
+  it('sends pagination limit/offset query params when provided', async () => {
+    vi.mocked(microserviceFetch).mockResolvedValue({
+      data: {
+        items: [mockNotificationsData[0]],
+        counts: { pending: 1, approved: 0, rejected: 0, unread: 1 },
+      },
+      error: null,
+      status: 200,
+    })
+
+    const result = await listNotifications('admin-a', 'org-a', { limit: 50, offset: 50 })
+
+    expect(result.success).toBe(true)
+    expect(result.items).toHaveLength(1)
+    expect(microserviceFetch).toHaveBeenCalledWith(
+      '/api/v1/notifications/?limit=50&offset=50',
+      expect.objectContaining({
+        headers: {
+          'X-User-Id': 'admin-a',
+          'X-Organization-Id': 'org-a',
+        },
+      })
+    )
+  })
+
+  it('does not append query params when no options are given', async () => {
+    vi.mocked(microserviceFetch).mockResolvedValue({
+      data: { items: [], counts: { pending: 0, approved: 0, rejected: 0, unread: 0 } },
+      error: null,
+      status: 200,
+    })
+
+    await listNotifications('admin-a', 'org-a')
+
+    expect(microserviceFetch).toHaveBeenCalledWith('/api/v1/notifications/', expect.any(Object))
+  })
+})
+
+describe('US1: Dismiss notification from the bell (soft-dismiss)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls the dismiss endpoint with the X-User-Id header', async () => {
+    vi.mocked(microserviceFetch).mockResolvedValue({
+      data: { success: true, dismissed_at: '2026-08-14T12:00:00Z' },
+      error: null,
+      status: 200,
+    })
+
+    const result = await dismissNotification('notif-1', 'admin-a')
+
+    expect(result.success).toBe(true)
+    expect(result.dismissedAt).toBe('2026-08-14T12:00:00Z')
+    expect(microserviceFetch).toHaveBeenCalledWith(
+      '/api/v1/notifications/notif-1/dismiss',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'X-User-Id': 'admin-a',
+        },
+      })
+    )
+  })
+
+  it('returns an error when the microservice fails', async () => {
+    vi.mocked(microserviceFetch).mockResolvedValue({
+      data: null,
+      error: 'Notificación no encontrada',
+      status: 404,
+    })
+
+    const result = await dismissNotification('notif-1', 'admin-a')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Notificación no encontrada')
+  })
+})
+
+describe('US4: Mark all notifications as read in a single operation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls the read-all endpoint with tenant headers', async () => {
+    vi.mocked(microserviceFetch).mockResolvedValue({
+      data: { success: true, updated_count: 10 },
+      error: null,
+      status: 200,
+    })
+
+    const result = await markAllNotificationsRead('admin-a', 'org-a')
+
+    expect(result.success).toBe(true)
+    expect(result.updatedCount).toBe(10)
+    expect(microserviceFetch).toHaveBeenCalledWith(
+      '/api/v1/notifications/read-all',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'X-User-Id': 'admin-a',
+          'X-Organization-Id': 'org-a',
+        },
+      })
+    )
+  })
+
+  it('returns an error when the operation fails', async () => {
+    vi.mocked(microserviceFetch).mockResolvedValue({
+      data: null,
+      error: 'Error del microservicio',
+      status: 500,
+    })
+
+    const result = await markAllNotificationsRead('admin-a', 'org-a')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Error del microservicio')
   })
 })
 

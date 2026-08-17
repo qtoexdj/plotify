@@ -20,6 +20,7 @@ class NotificationItem(BaseModel):
     decided_at: Optional[str] = None
     can_decide: bool
     read_at: Optional[str] = None
+    dismissed_at: Optional[str] = None
 
 class NotificationCounts(BaseModel):
     pending: int
@@ -37,6 +38,14 @@ class MarkReadRequest(BaseModel):
 class MarkReadResponse(BaseModel):
     success: bool
     read_at: str
+
+class DismissResponse(BaseModel):
+    success: bool
+    dismissed_at: str
+
+class BulkReadResponse(BaseModel):
+    success: bool
+    updated_count: int
 
 class NotificationDecisionRequest(BaseModel):
     approval_id: str

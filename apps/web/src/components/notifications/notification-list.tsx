@@ -1,7 +1,13 @@
 'use client'
 
 import { HugeiconsIcon } from '@hugeicons/react'
-import { NotificationOff01Icon, AlertCircleIcon, Tick02Icon } from '@hugeicons/core-free-icons'
+import {
+  NotificationOff01Icon,
+  AlertCircleIcon,
+  Tick02Icon,
+  ArrowDown01Icon,
+} from '@hugeicons/core-free-icons'
+import { Spinner } from '@/components/ui/spinner'
 import { NotificationItem } from './notification-item'
 import type { NotificationItem as NotificationItemType } from '@/lib/services/notifications.service'
 
@@ -13,6 +19,10 @@ interface NotificationListProps {
   onMarkRead: (notificationId: string) => Promise<void>
   onDecide?: (approvalId: string, action: 'approve' | 'reject') => Promise<void>
   onMarkAllRead?: () => Promise<void>
+  onDismiss: (notificationId: string) => Promise<void>
+  hasMore?: boolean
+  loadingMore?: boolean
+  onLoadMore?: () => Promise<void>
 }
 
 function NotificationSkeleton() {
@@ -60,6 +70,10 @@ export function NotificationList({
   onMarkRead,
   onDecide,
   onMarkAllRead,
+  onDismiss,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }: NotificationListProps) {
   const unreadItems = items.filter((item) => !item.read_at)
 
@@ -124,7 +138,10 @@ export function NotificationList({
       {/* Cabecera del Listado con opción de Marcar Todo */}
       {unreadItems.length > 0 && onMarkAllRead && (
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/10">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          <span
+            className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider"
+            aria-live="polite"
+          >
             {unreadItems.length} sin leer
           </span>
           <button
@@ -147,14 +164,14 @@ export function NotificationList({
           if (groupItems.length === 0) return null
 
           return (
-            <div key={key} className="space-y-2.5">
+            <div key={key}>
               <div className="flex items-center gap-2 px-1">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   {key}
                 </span>
                 <span className="flex-1 h-px bg-border/40" />
               </div>
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 mt-2.5">
                 {groupItems.map((item) => (
                   <NotificationItem
                     key={item.id}
@@ -162,12 +179,34 @@ export function NotificationList({
                     userRole={userRole}
                     onMarkRead={onMarkRead}
                     onDecide={onDecide}
+                    onDismiss={onDismiss}
                   />
                 ))}
               </div>
             </div>
           )
         })}
+
+        {/* Carga progresiva del historial */}
+        {hasMore && onLoadMore && (
+          <div className="pt-1 pb-2 flex justify-center">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onLoadMore()
+              }}
+              disabled={loadingMore}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 font-semibold h-8 text-[11px] px-3 text-muted-foreground transition-all disabled:opacity-60"
+            >
+              {loadingMore ? (
+                <Spinner className="h-3.5 w-3.5" />
+              ) : (
+                <HugeiconsIcon icon={ArrowDown01Icon} className="h-3.5 w-3.5" />
+              )}
+              Cargar más
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

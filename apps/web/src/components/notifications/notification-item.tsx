@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type KeyboardEvent } from 'react'
+import Link from 'next/link'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Tick02Icon,
@@ -10,6 +11,7 @@ import {
   Location01Icon,
   Calendar01Icon,
   SparklesIcon,
+  NotificationOff01Icon,
 } from '@hugeicons/core-free-icons'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
@@ -21,17 +23,26 @@ interface NotificationItemProps {
   userRole: 'admin' | 'vendor'
   onMarkRead: (notificationId: string) => Promise<void>
   onDecide?: (approvalId: string, action: 'approve' | 'reject') => Promise<void>
+  onDismiss: (notificationId: string) => Promise<void>
 }
 
-export function NotificationItem({ item, userRole, onMarkRead, onDecide }: NotificationItemProps) {
+export function NotificationItem({
+  item,
+  userRole,
+  onMarkRead,
+  onDecide,
+  onDismiss,
+}: NotificationItemProps) {
   const [deciding, setDeciding] = useState<'approve' | 'reject' | null>(null)
   const [markingRead, setMarkingRead] = useState(false)
+  const [dismissing, setDismissing] = useState(false)
   const [optimisticStatus, setOptimisticStatus] = useState<string | null>(null)
 
   const isSale = item.request_type === 'sale'
   const currentStatus = optimisticStatus || item.status
   const isPending = currentStatus === 'pending'
   const isApproved = currentStatus === 'approved'
+  const isUnread = !item.read_at
 
   const formattedDate = new Date(item.created_at).toLocaleDateString('es-CL', {
     day: 'numeric',
@@ -56,31 +67,102 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
   }
 
   const handleItemClick = async () => {
-    if (!item.read_at && !markingRead) {
-      setMarkingRead(true)
-      try {
-        await onMarkRead(item.id)
-      } finally {
-        setMarkingRead(false)
-      }
+    if (!isUnread || markingRead) return
+    setMarkingRead(true)
+    try {
+      await onMarkRead(item.id)
+    } finally {
+      setMarkingRead(false)
+    }
+  }
+
+  const handleItemKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!isUnread) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      e.stopPropagation()
+      handleItemClick()
+    }
+  }
+
+  const handleDismissClick = async () => {
+    if (dismissing) return
+    setDismissing(true)
+    try {
+      await onDismiss(item.id)
+    } finally {
+      setDismissing(false)
     }
   }
 
   const isVendor = userRole === 'vendor'
 
+  const fallbackTitle = isVendor
+    ? isSale
+      ? 'Solicitud de Venta'
+      : 'Solicitud de Reserva'
+    : isSale
+      ? 'Aprobación de Venta'
+      : 'Aprobación de Reserva'
+  const title = item.title || fallbackTitle
+
+  const hasDestination = Boolean(item.deep_link && item.action_label)
+
   return (
     <div
+      role="article"
+      aria-label={`Notificación${isUnread ? ' sin leer' : ''}: ${title}`}
       onClick={handleItemClick}
+      tabIndex={isUnread ? 0 : -1}
+      onKeyDown={handleItemKeyDown}
       className={`p-3.5 rounded-xl border transition-all duration-200 flex flex-col gap-3.5 shadow-sm text-left relative overflow-hidden group ${
-        !item.read_at
-          ? 'bg-accent/5 border-accent/15 hover:bg-accent/10 cursor-pointer'
+        isUnread
+          ? 'bg-accent/5 border-accent/15 hover:bg-accent/10 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
           : 'bg-background hover:bg-muted/40 border-border'
       }`}
     >
       {/* Sutil indicador estático para notificaciones no leídas */}
-      {!item.read_at && (
-        <span className="absolute top-3.5 right-3.5 h-2 w-2 rounded-full bg-primary" />
+      {isUnread && <span className="absolute top-3.5 right-3.5 h-2 w-2 rounded-full bg-primary" />}
+
+      {/* Control de marcar como leída (teclado accesible, solo no leídas) */}
+      {isUnread && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleItemClick()
+          }}
+          disabled={markingRead}
+          aria-label="Marcar como leída"
+          title="Marcar como leída"
+          className="absolute top-3 right-[4.5rem] h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-accent hover:bg-accent/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {markingRead ? (
+            <Spinner className="h-3.5 w-3.5" />
+          ) : (
+            <HugeiconsIcon icon={Tick02Icon} className="h-3.5 w-3.5 stroke-[1.5]" />
+          )}
+        </button>
       )}
+
+      {/* Control de descarte (soft-dismiss) */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          handleDismissClick()
+        }}
+        disabled={dismissing}
+        aria-label="Descartar notificación"
+        title="Descartar notificación"
+        className="absolute top-3 right-10 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {dismissing ? (
+          <Spinner className="h-3.5 w-3.5" />
+        ) : (
+          <HugeiconsIcon icon={NotificationOff01Icon} className="h-3.5 w-3.5 stroke-[1.5]" />
+        )}
+      </button>
 
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
@@ -96,15 +178,7 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
 
           <div className="space-y-0.5">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-xs text-foreground">
-                {isVendor
-                  ? isSale
-                    ? 'Solicitud de Venta'
-                    : 'Solicitud de Reserva'
-                  : isSale
-                    ? 'Aprobación de Venta'
-                    : 'Aprobación de Reserva'}
-              </span>
+              <span className="font-semibold text-xs text-foreground">{title}</span>
               <Badge
                 variant="outline"
                 className="text-[10px] py-0 px-1.5 font-semibold bg-background"
@@ -136,6 +210,11 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
                 : 'Rechazada'}
         </Badge>
       </div>
+
+      {/* Copy de contexto calculado por el servidor */}
+      {item.message && (
+        <p className="text-[11px] leading-relaxed text-muted-foreground">{item.message}</p>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-2.5 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
@@ -181,6 +260,20 @@ export function NotificationItem({ item, userRole, onMarkRead, onDecide }: Notif
           </div>
         )}
       </div>
+
+      {/* Llamada a la acción con destino (1 clic) */}
+      {hasDestination && (
+        <div className="border-t border-border pt-3">
+          <Link
+            href={item.deep_link!}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-accent-foreground hover:bg-accent/90 font-semibold h-8 text-[11px] px-3 shadow-sm"
+          >
+            <HugeiconsIcon icon={Task01Icon} className="h-3.5 w-3.5" />
+            {item.action_label}
+          </Link>
+        </div>
+      )}
 
       {/* Botones de acción administrativa */}
       {userRole === 'admin' && item.can_decide && onDecide && (

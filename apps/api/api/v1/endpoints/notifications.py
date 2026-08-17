@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Query
 from arq.connections import ArqRedis
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -9,6 +9,8 @@ from schemas.notification import (
     NotificationItem,
     NotificationCounts,
     MarkReadResponse,
+    DismissResponse,
+    BulkReadResponse,
     NotificationDecisionResponse,
     NotificationDecisionRequest
 )
@@ -33,6 +35,48 @@ def _first_row(data):
     if isinstance(data, list):
         return data[0] if data else None
     return data if isinstance(data, dict) else None
+
+
+async def _resolve_member_notification_scope(
+    supabase, organization_id: str, user_id: str
+) -> str:
+    """Resuelve el alcance de notificaciones según el modelo real de roles.
+
+    `organization_members.role` solo admite 'admin' | 'user' (no existe
+    'vendor' en la base). Un miembro 'user' es vendedor si y solo si tiene
+    una fila activa en `vendors` para la organización; su alcance son sus
+    propios eventos (recipient_id). Los admins ven los eventos admin de la
+    organización. Cualquier otro 'user' (sin fila vendor) queda en alcance
+    propio por seguridad.
+    """
+    member_res = (
+        supabase.table("organization_members")
+        .select("role")
+        .eq("organization_id", organization_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    if not member_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El usuario no es miembro de esta organización.",
+        )
+    role = member_res.data[0]["role"]
+    if role == "admin":
+        return "admin"
+    vendor_res = (
+        supabase.table("vendors")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("organization_id", organization_id)
+        .eq("active", True)
+        .limit(1)
+        .execute()
+    )
+    if vendor_res.data:
+        return "vendor"
+    return "user"
 
 
 def _sale_approved_notification_copy(
@@ -133,10 +177,16 @@ def _notification_copy_for_item(
 async def list_notifications(
     x_user_id: str = Header(..., alias="X-User-Id"),
     x_organization_id: str = Header(..., alias="X-Organization-Id"),
+    limit: int = Query(default=50, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
 ):
     """
     Lista las notificaciones de aprobaciones y solicitudes pendientes/recientes
     según el rol y la organización del usuario autenticado.
+
+    Solo devuelve notificaciones no descartadas, ordenadas de más reciente a
+    más antigua y paginadas (máximo 50 por consulta). Los conteos son globales
+    del alcance del usuario (excluyen descartadas), no de la página.
     """
     # Validar formato UUID para evitar errores de sintaxis 500 en Postgres
     try:
@@ -150,49 +200,68 @@ async def list_notifications(
 
     supabase = get_supabase_client()
     
-    # 1. Resolver el rol del usuario en la organización
-    member_res = (
-        supabase.table("organization_members")
-        .select("role")
-        .eq("organization_id", x_organization_id)
-        .eq("user_id", x_user_id)
-        .limit(1)
-        .execute()
+    # 1. Resolver el alcance de notificaciones del usuario en la organización
+    scope = await _resolve_member_notification_scope(
+        supabase, x_organization_id, x_user_id
     )
     
-    if not member_res.data:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="El usuario no es miembro de esta organización."
-        )
-        
-    user_role = member_res.data[0]["role"]
+    # 2. Conteos globales del alcance (excluyen notificaciones descartadas)
+    counts_query = supabase.table("notification_events").select(
+        "id, read_at, approval_requests!inner(status)"
+    ).eq("organization_id", x_organization_id).is_("dismissed_at", "null")
     
-    # 2. Consultar notificaciones en base de datos
-    query = supabase.table("notification_events").select(
-        "id, approval_id, recipient_role, read_at, dismissed_at, created_at, "
-        "approval_requests!inner(id, request_type, status, vendor_name, payload, resolved_at, lot_id, "
-        "lots!inner(id, numero_lote, projects!inner(id, name)))"
-    ).eq("organization_id", x_organization_id)
-    
-    if user_role == "vendor":
-        query = query.eq("recipient_id", x_user_id)
+    if scope == "admin":
+        counts_query = counts_query.eq("recipient_role", "admin")
     else:
-        query = query.eq("recipient_role", "admin")
+        counts_query = counts_query.eq("recipient_id", x_user_id)
         
-    res = query.order("created_at", desc=True).execute()
+    counts_res = counts_query.execute()
     
-    if not res.data:
-        return NotificationListResponse(
-            items=[],
-            counts=NotificationCounts(pending=0, approved=0, rejected=0, unread=0)
-        )
-    
-    items = []
     pending_cnt = 0
     approved_cnt = 0
     rejected_cnt = 0
     unread_cnt = 0
+    
+    for row in counts_res.data or []:
+        app_req = row.get("approval_requests")
+        if not app_req:
+            continue
+        status_val = app_req.get("status", "pending")
+        if status_val == "pending":
+            pending_cnt += 1
+        elif status_val == "approved":
+            approved_cnt += 1
+        elif status_val == "rejected":
+            rejected_cnt += 1
+        if not row.get("read_at"):
+            unread_cnt += 1
+    
+    # 3. Consultar notificaciones (paginadas) en base de datos
+    query = supabase.table("notification_events").select(
+        "id, approval_id, recipient_role, read_at, dismissed_at, created_at, "
+        "approval_requests!inner(id, request_type, status, vendor_name, payload, resolved_at, lot_id, "
+        "lots!inner(id, numero_lote, projects!inner(id, name)))"
+    ).eq("organization_id", x_organization_id).is_("dismissed_at", "null")
+    
+    if scope == "admin":
+        query = query.eq("recipient_role", "admin")
+    else:
+        query = query.eq("recipient_id", x_user_id)
+        
+    res = query.order("created_at", desc=True).order("id", desc=True).range(offset, offset + limit - 1).execute()
+    
+    if not res.data:
+        return NotificationListResponse(
+            items=[],
+            counts=NotificationCounts(
+                pending=pending_cnt,
+                approved=approved_cnt,
+                rejected=rejected_cnt,
+                unread=unread_cnt
+            )
+        )
+    
+    items = []
     
     for row in res.data:
         app_req = row.get("approval_requests")
@@ -242,17 +311,6 @@ async def list_notifications(
         )
         copy_payload = asdict(copy) if copy else {}
         
-        # Conteo
-        if status_val == "pending":
-            pending_cnt += 1
-        elif status_val == "approved":
-            approved_cnt += 1
-        elif status_val == "rejected":
-            rejected_cnt += 1
-            
-        if not read_at_val:
-            unread_cnt += 1
-            
         items.append(
             NotificationItem(
                 id=row["id"],
@@ -265,8 +323,9 @@ async def list_notifications(
                 vendor_name=app_req.get("vendor_name", "N/A"),
                 created_at=row["created_at"],
                 decided_at=app_req.get("resolved_at"),
-                can_decide=(user_role == "admin" and status_val == "pending"),
+                can_decide=(scope == "admin" and status_val == "pending"),
                 read_at=read_at_val,
+                dismissed_at=row.get("dismissed_at"),
                 **copy_payload,
             )
         )
@@ -323,25 +382,13 @@ async def mark_notification_read(
     notification = notif_res.data[0]
     
     # Validar membresía del x_user_id en la organización de la notificación (tenant validation)
-    member_res = (
-        supabase.table("organization_members")
-        .select("role")
-        .eq("organization_id", notification["organization_id"])
-        .eq("user_id", x_user_id)
-        .limit(1)
-        .execute()
+    scope = await _resolve_member_notification_scope(
+        supabase, notification["organization_id"], x_user_id
     )
     
-    if not member_res.data:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No autorizado para marcar esta notificación. El usuario no pertenece a la organización."
-        )
-        
-    user_role = member_res.data[0]["role"]
-    
-    # Si el usuario es vendedor, debe coincidir estrictamente su recipient_id para evitar leaks entre vendedores
-    if user_role == "vendor":
+    # Los no-admin (vendedores y usuarios sin rol operativo) solo pueden
+    # marcar como leídas sus propias notificaciones.
+    if scope != "admin":
         if str(notification["recipient_id"]) != str(x_user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -366,6 +413,155 @@ async def mark_notification_read(
     return MarkReadResponse(
         success=True,
         read_at=now_str
+    )
+
+@router.post(
+    "/{notification_id}/dismiss",
+    status_code=status.HTTP_200_OK,
+    response_model=DismissResponse,
+    operation_id="dismissNotification",
+)
+async def dismiss_notification(
+    notification_id: str,
+    x_user_id: str = Header(..., alias="X-User-Id"),
+):
+    """
+    Descarta (soft-dismiss) una notificación para su destinatario.
+
+    El registro permanece en la base con la marca temporal de descarte para
+    auditoría (nunca se elimina físicamente) y la solicitud subyacente no se
+    altera: sigue siendo decidible por otros canales. Es idempotente: si la
+    notificación ya estaba descartada, devuelve la marca existente.
+    """
+    # Validar formato UUID para evitar errores de sintaxis 500 en Postgres
+    try:
+        UUID(notification_id)
+        UUID(x_user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Los identificadores no tienen un formato UUID válido."
+        )
+
+    supabase = get_supabase_client()
+
+    notif_res = (
+        supabase.table("notification_events")
+        .select("id, recipient_id, organization_id, recipient_role, dismissed_at")
+        .eq("id", notification_id)
+        .limit(1)
+        .execute()
+    )
+
+    if not notif_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notificación no encontrada."
+        )
+
+    notification = notif_res.data[0]
+
+    # Validar membresía del x_user_id en la organización de la notificación (tenant validation)
+    scope = await _resolve_member_notification_scope(
+        supabase, notification["organization_id"], x_user_id
+    )
+
+    # Scope idéntico a list/read-all: los no-admin (vendedores y usuarios sin
+    # rol operativo) solo descartan sus propias notificaciones; los admin solo
+    # filas admin de su organización (FR-004: aislamiento por rol).
+    if scope == "admin":
+        if notification.get("recipient_role") != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No autorizado para descartar esta notificación.",
+            )
+    else:
+        if str(notification["recipient_id"]) != str(x_user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No autorizado para descartar esta notificación.",
+            )
+
+    # Idempotencia: no reescribir la marca de un descarte previo.
+    existing = notification.get("dismissed_at")
+    if existing:
+        return DismissResponse(success=True, dismissed_at=existing)
+
+    now_str = datetime.now(timezone.utc).isoformat()
+
+    update_res = (
+        supabase.table("notification_events")
+        .update({"dismissed_at": now_str})
+        .eq("id", notification_id)
+        .execute()
+    )
+
+    if not update_res.data:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al descartar la notificación."
+        )
+
+    return DismissResponse(
+        success=True,
+        dismissed_at=now_str
+    )
+
+@router.post(
+    "/read-all",
+    status_code=status.HTTP_200_OK,
+    response_model=BulkReadResponse,
+    operation_id="markAllNotificationsRead",
+)
+async def mark_all_notifications_read(
+    x_user_id: str = Header(..., alias="X-User-Id"),
+    x_organization_id: str = Header(..., alias="X-Organization-Id"),
+):
+    """
+    Marca todas las notificaciones sin leer del alcance del usuario como
+    leídas en una única operación.
+
+    Excluye las notificaciones descartadas. Para administradores el alcance
+    son los eventos de rol admin de su organización; para el resto, solo los
+    propios (recipient_id).
+    """
+    # Validar formato UUID para evitar errores de sintaxis 500 en Postgres
+    try:
+        UUID(x_user_id)
+        UUID(x_organization_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Los identificadores de usuario u organización no tienen un formato UUID válido."
+        )
+
+    supabase = get_supabase_client()
+
+    # Validar membresía del usuario en la organización (tenant validation)
+    scope = await _resolve_member_notification_scope(
+        supabase, x_organization_id, x_user_id
+    )
+
+    update_query = (
+        supabase.table("notification_events")
+        .update({"read_at": datetime.now(timezone.utc).isoformat()})
+        .eq("organization_id", x_organization_id)
+        .is_("read_at", "null")
+        .is_("dismissed_at", "null")
+    )
+
+    if scope == "admin":
+        update_query = update_query.eq("recipient_role", "admin")
+    else:
+        update_query = update_query.eq("recipient_id", x_user_id)
+
+    update_res = update_query.execute()
+
+    updated_count = len(update_res.data) if update_res.data else 0
+
+    return BulkReadResponse(
+        success=True,
+        updated_count=updated_count
     )
 
 @router.post(

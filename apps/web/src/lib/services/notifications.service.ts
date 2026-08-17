@@ -13,23 +13,35 @@ export interface ListNotificationsResult {
   error?: string
 }
 
+export interface ListNotificationsOptions {
+  limit?: number
+  offset?: number
+}
+
 /**
  * Obtiene la lista y conteos de notificaciones para un usuario específico.
+ * El listado está paginado (máximo 50 por consulta); los conteos son globales
+ * del alcance del usuario (excluyen notificaciones descartadas).
  */
 export async function listNotifications(
   userId: string,
-  organizationId: string
+  organizationId: string,
+  options: ListNotificationsOptions = {}
 ): Promise<ListNotificationsResult> {
-  const { data, error } = await microserviceFetch<OperationResponse<'listNotifications'>>(
-    '/api/v1/notifications/',
-    {
-      method: 'GET',
-      headers: {
-        'X-User-Id': userId,
-        'X-Organization-Id': organizationId,
-      },
-    }
-  )
+  const { limit, offset } = options
+  const params = new URLSearchParams()
+  if (limit !== undefined) params.set('limit', String(limit))
+  if (offset !== undefined) params.set('offset', String(offset))
+  const query = params.toString()
+  const path = `/api/v1/notifications/${query ? `?${query}` : ''}`
+
+  const { data, error } = await microserviceFetch<OperationResponse<'listNotifications'>>(path, {
+    method: 'GET',
+    headers: {
+      'X-User-Id': userId,
+      'X-Organization-Id': organizationId,
+    },
+  })
 
   if (error || !data) {
     return {
@@ -74,6 +86,70 @@ export async function markNotificationRead(
   return {
     success: true,
     readAt: data.read_at,
+  }
+}
+
+/**
+ * Descarta (soft-dismiss) una notificación para su destinatario.
+ * El registro permanece con la marca temporal (auditoría) y la solicitud
+ * subyacente no se altera. Es idempotente.
+ */
+export async function dismissNotification(
+  notificationId: string,
+  userId: string
+): Promise<{ success: boolean; dismissedAt?: string; error?: string }> {
+  const { data, error } = await microserviceFetch<OperationResponse<'dismissNotification'>>(
+    `/api/v1/notifications/${notificationId}/dismiss`,
+    {
+      method: 'POST',
+      headers: {
+        'X-User-Id': userId,
+      },
+    }
+  )
+
+  if (error || !data || !data.success) {
+    return {
+      success: false,
+      error: error ?? 'Error al descartar la notificación',
+    }
+  }
+
+  return {
+    success: true,
+    dismissedAt: data.dismissed_at,
+  }
+}
+
+/**
+ * Marca todas las notificaciones sin leer del alcance del usuario como leídas
+ * en una única operación. Excluye las descartadas.
+ */
+export async function markAllNotificationsRead(
+  userId: string,
+  organizationId: string
+): Promise<{ success: boolean; updatedCount?: number; error?: string }> {
+  const { data, error } = await microserviceFetch<OperationResponse<'markAllNotificationsRead'>>(
+    '/api/v1/notifications/read-all',
+    {
+      method: 'POST',
+      headers: {
+        'X-User-Id': userId,
+        'X-Organization-Id': organizationId,
+      },
+    }
+  )
+
+  if (error || !data || !data.success) {
+    return {
+      success: false,
+      error: error ?? 'Error al marcar las notificaciones como leídas',
+    }
+  }
+
+  return {
+    success: true,
+    updatedCount: data.updated_count,
   }
 }
 
