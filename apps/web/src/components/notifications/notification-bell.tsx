@@ -234,7 +234,7 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
   }
 
   // Decidir aprobaciones directamente desde las notificaciones
-  const handleDecide = async (approvalId: string, action: 'approve' | 'reject') => {
+  const handleDecide = async (approvalId: string, action: 'approve' | 'reject'): Promise<void> => {
     try {
       const result = await decideNotificationApproval(approvalId, action, userId, organizationId)
 
@@ -244,7 +244,9 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
             ? 'Esta solicitud ya fue procesada por otro canal (ej. Telegram).'
             : result.error || 'Error al procesar la decisión.'
 
-        throw new Error(message)
+        toast.error(message)
+        await fetchNotifications()
+        return
       }
 
       toast.success(
@@ -259,7 +261,6 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
       const errorMsg = err as Error
       toast.error(errorMsg.message || 'Error al procesar la decisión.')
       await fetchNotifications()
-      throw err
     }
   }
 

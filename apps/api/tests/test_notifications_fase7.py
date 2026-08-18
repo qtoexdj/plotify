@@ -777,6 +777,7 @@ class _ScopeFakeQuery:
     def __init__(self, rows):
         self._rows = rows
         self._filters = []
+        self._in_filters = []
         self._is_filters = []
         self._orderings = []
         self._range_bounds = None
@@ -805,6 +806,10 @@ class _ScopeFakeQuery:
         self._range_bounds = (start, end)
         return self
 
+    def in_(self, column, values):
+        self._in_filters.append((column, [str(v) for v in values]))
+        return self
+
     def insert(self, payload):
         self._action = "insert"
         self._payload = payload
@@ -818,6 +823,8 @@ class _ScopeFakeQuery:
             for row in self._rows
             if all(str(row.get(c)) == str(v) for c, v in self._filters)
         ]
+        for column, values in self._in_filters:
+            rows = [row for row in rows if str(row.get(column)) in values]
         for column, value in self._is_filters:
             if value == "null":
                 rows = [row for row in rows if row.get(column) is None]

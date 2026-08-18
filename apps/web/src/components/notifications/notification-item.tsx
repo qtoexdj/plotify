@@ -11,7 +11,7 @@ import {
   Location01Icon,
   Calendar01Icon,
   SparklesIcon,
-  NotificationOff01Icon,
+  Delete02Icon,
 } from '@hugeicons/core-free-icons'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
@@ -58,9 +58,8 @@ export function NotificationItem({
     setOptimisticStatus(targetStatus)
     try {
       await onDecide(item.approval_id, action)
-    } catch (error) {
+    } catch {
       setOptimisticStatus(null)
-      throw error
     } finally {
       setDeciding(null)
     }
@@ -122,93 +121,106 @@ export function NotificationItem({
       }`}
     >
       {/* Sutil indicador estático para notificaciones no leídas */}
-      {isUnread && <span className="absolute top-3.5 right-3.5 h-2 w-2 rounded-full bg-primary" />}
+      {isUnread && <span className="absolute top-2 left-2 h-1.5 w-1.5 rounded-full bg-primary" />}
 
-      {/* Control de marcar como leída (teclado accesible, solo no leídas) */}
-      {isUnread && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleItemClick()
-          }}
-          disabled={markingRead}
-          aria-label="Marcar como leída"
-          title="Marcar como leída"
-          className="absolute top-3 right-[4.5rem] h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-accent hover:bg-accent/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {markingRead ? (
-            <Spinner className="h-3.5 w-3.5" />
-          ) : (
-            <HugeiconsIcon icon={Tick02Icon} className="h-3.5 w-3.5 stroke-[1.5]" />
-          )}
-        </button>
-      )}
-
-      {/* Control de descarte (soft-dismiss) */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          handleDismissClick()
-        }}
-        disabled={dismissing}
-        aria-label="Descartar notificación"
-        title="Descartar notificación"
-        className="absolute top-3 right-10 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {dismissing ? (
-          <Spinner className="h-3.5 w-3.5" />
-        ) : (
-          <HugeiconsIcon icon={NotificationOff01Icon} className="h-3.5 w-3.5 stroke-[1.5]" />
-        )}
-      </button>
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5">
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex items-start gap-2.5 min-w-0 flex-1">
           <div
-            className={`p-2 rounded-lg border shrink-0 ${
-              isSale
-                ? 'bg-accent/10 text-accent border-accent/25'
-                : 'bg-success/10 text-success border-success/25'
+            className={`p-2 rounded-lg border shrink-0 flex items-center justify-center ${
+              isApproved
+                ? 'bg-success/15 text-success border-success/30'
+                : isPending
+                  ? 'bg-warning/15 text-warning border-warning/30'
+                  : 'bg-primary/15 text-primary border-primary/30'
             }`}
           >
-            <HugeiconsIcon icon={Task01Icon} className="h-4.5 w-4.5 stroke-[1.5]" />
+            <HugeiconsIcon
+              icon={isApproved ? Tick02Icon : Task01Icon}
+              className="h-4.5 w-4.5 stroke-[2]"
+            />
           </div>
 
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-xs text-foreground">{title}</span>
-              <Badge
-                variant="outline"
-                className="text-[10px] py-0 px-1.5 font-semibold bg-background"
-              >
-                {item.lot_label}
-              </Badge>
+              <span className="font-semibold text-xs text-foreground leading-tight">{title}</span>
+              {item.lot_label && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] py-0 px-1.5 font-semibold bg-background shrink-0"
+                >
+                  {item.lot_label}
+                </Badge>
+              )}
             </div>
-            <p className="text-[11px] text-muted-foreground font-medium">{item.project_name}</p>
+            <p className="text-[11px] text-muted-foreground font-medium truncate">
+              {item.project_name}
+            </p>
           </div>
         </div>
 
-        <Badge
-          className={`text-[10px] font-bold py-0.5 px-2 border transition-all duration-300 ${
-            isPending
-              ? 'bg-warning/10 text-warning border-warning/25 shadow-none'
+        <div className="flex items-center gap-1 shrink-0">
+          <Badge
+            className={`text-[10px] font-bold py-0.5 px-2 border transition-all duration-300 ${
+              isPending
+                ? 'bg-warning/10 text-warning border-warning/25 shadow-none'
+                : isApproved
+                  ? isVendor
+                    ? 'bg-success/10 text-success border-success/25 shadow-none'
+                    : 'bg-success/10 text-success border-success/25 shadow-none'
+                  : 'bg-destructive/10 text-destructive border-destructive/20 shadow-none'
+            }`}
+          >
+            {isPending
+              ? 'En Proceso'
               : isApproved
-                ? 'bg-success/10 text-success border-success/25 shadow-none'
-                : 'bg-destructive/10 text-destructive border-destructive/20 shadow-none'
-          }`}
-        >
-          {isPending
-            ? 'En Proceso'
-            : isApproved
-              ? isVendor
-                ? 'Procesada con éxito'
-                : 'Aprobada'
-              : isVendor
-                ? 'No Aprobada'
-                : 'Rechazada'}
-        </Badge>
+                ? isVendor
+                  ? 'Procesada con éxito'
+                  : 'Aprobada'
+                : isVendor
+                  ? 'No Aprobada'
+                  : 'Rechazada'}
+          </Badge>
+
+          {/* Control de marcar como leída (teclado accesible, solo no leídas) */}
+          {isUnread && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleItemClick()
+              }}
+              disabled={markingRead}
+              aria-label="Marcar como leída"
+              title="Marcar como leída"
+              className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {markingRead ? (
+                <Spinner className="h-3.5 w-3.5" />
+              ) : (
+                <HugeiconsIcon icon={Tick02Icon} className="h-3.5 w-3.5 stroke-[1.5]" />
+              )}
+            </button>
+          )}
+
+          {/* Control de eliminar / descartar */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDismissClick()
+            }}
+            disabled={dismissing}
+            aria-label="Descartar notificación"
+            title="Eliminar notificación"
+            className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {dismissing ? (
+              <Spinner className="h-3.5 w-3.5" />
+            ) : (
+              <HugeiconsIcon icon={Delete02Icon} className="h-3.5 w-3.5 stroke-[1.5]" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Copy de contexto calculado por el servidor */}
@@ -267,7 +279,7 @@ export function NotificationItem({
           <Link
             href={item.deep_link!}
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-accent-foreground hover:bg-accent/90 font-semibold h-8 text-[11px] px-3 shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-8 text-[11px] px-3 shadow-sm transition-colors"
           >
             <HugeiconsIcon icon={Task01Icon} className="h-3.5 w-3.5" />
             {item.action_label}

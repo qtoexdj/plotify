@@ -28,6 +28,7 @@ vi.mock('@hugeicons/core-free-icons', () => ({
   Location01Icon: 'Location01Icon',
   Calendar01Icon: 'Calendar01Icon',
   SparklesIcon: 'SparklesIcon',
+  Delete02Icon: 'Delete02Icon',
   NotificationOff01Icon: 'NotificationOff01Icon',
   Notification01Icon: 'Notification01Icon',
   AlertCircleIcon: 'AlertCircleIcon',
@@ -240,5 +241,23 @@ describe('US2: Contador de pendientes accionables', () => {
     await screen.findByText('3')
 
     expect(listNotifications).toHaveBeenCalledWith('u1', 'o1', { limit: 50, offset: 0 })
+  })
+})
+
+describe('FR-005: Aislamiento cross-tenant de la campana', () => {
+  it('una respuesta 403 del backend no crashea: muestra el estado de error sin campana de pendientes', async () => {
+    vi.mocked(listNotifications).mockResolvedValue({
+      success: false,
+      items: [],
+      counts: { pending: 0, approved: 0, rejected: 0, unread: 0 },
+      error: 'No autorizado para esta organización.',
+    })
+
+    render(<NotificationBell userId="u1" organizationId="org-ajena" userRole="admin" />)
+
+    expect(
+      await screen.findByText('No autorizado para esta organización.')
+    ).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /solicitudes pendientes/ })).toBeNull()
   })
 })

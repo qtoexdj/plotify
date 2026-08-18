@@ -81,45 +81,49 @@ async def _resolve_member_notification_scope(
 
 def _sale_approved_notification_copy(
     *,
-    supabase,
+    supabase=None,
     organization_id: str,
     project_id: str | None,
     lot_id: str,
     lot_label: str,
+    case_row: dict | None = None,
+    matrix_row: dict | None = None,
 ) -> AdminNotificationCopy | None:
-    case_res = (
-        supabase.table("escritura_cases")
-        .select("id, case_status, readiness_status, readiness_gates")
-        .eq("organization_id", organization_id)
-        .eq("lot_id", lot_id)
-        .limit(1)
-        .execute()
-    )
-    case_row = _first_row(
-        [
-            row
-            for row in (case_res.data or [])
-            if row.get("case_status") != "cancelled"
-        ]
-    )
+    if case_row is None and supabase is not None:
+        case_res = (
+            supabase.table("escritura_cases")
+            .select("id, case_status, readiness_status, readiness_gates")
+            .eq("organization_id", organization_id)
+            .eq("lot_id", lot_id)
+            .limit(1)
+            .execute()
+        )
+        case_row = _first_row(
+            [
+                row
+                for row in (case_res.data or [])
+                if row.get("case_status") != "cancelled"
+            ]
+        )
     if not case_row:
         return None
 
-    matrix_res = (
-        supabase.table("escritura_matrices")
-        .select("id, status, source_project_matriz_id")
-        .eq("organization_id", organization_id)
-        .eq("escritura_case_id", str(case_row["id"]))
-        .limit(1)
-        .execute()
-    )
-    matrix_row = _first_row(
-        [
-            row
-            for row in (matrix_res.data or [])
-            if row.get("status") != "superseded"
-        ]
-    )
+    if matrix_row is None and supabase is not None:
+        matrix_res = (
+            supabase.table("escritura_matrices")
+            .select("id, status, source_project_matriz_id")
+            .eq("organization_id", organization_id)
+            .eq("escritura_case_id", str(case_row["id"]))
+            .limit(1)
+            .execute()
+        )
+        matrix_row = _first_row(
+            [
+                row
+                for row in (matrix_res.data or [])
+                if row.get("status") != "superseded"
+            ]
+        )
     if matrix_row and matrix_row.get("source_project_matriz_id"):
         return draft_ready_for_review_copy(
             escritura_case_id=str(case_row["id"]),
@@ -139,7 +143,7 @@ def _sale_approved_notification_copy(
 
 def _notification_copy_for_item(
     *,
-    supabase,
+    supabase=None,
     organization_id: str,
     request_type: str,
     status_val: str,
@@ -148,6 +152,8 @@ def _notification_copy_for_item(
     lot_label: str,
     project_name: str,
     client_name: str,
+    case_row: dict | None = None,
+    matrix_row: dict | None = None,
 ) -> AdminNotificationCopy | None:
     if request_type != "sale":
         return None
@@ -165,6 +171,8 @@ def _notification_copy_for_item(
             project_id=project_id,
             lot_id=lot_id,
             lot_label=lot_label,
+            case_row=case_row,
+            matrix_row=matrix_row,
         )
     return None
 
@@ -261,6 +269,48 @@ async def list_notifications(
             )
         )
     
+    # Batch-fetch escritura_cases y matrices para ventas aprobadas (elimina N+1 queries)
+    approved_lot_ids = [
+        str(row["approval_requests"]["lot_id"])
+        for row in res.data
+        if row.get("approval_requests")
+        and row["approval_requests"].get("request_type") == "sale"
+        and row["approval_requests"].get("status") == "approved"
+        and row["approval_requests"].get("lot_id")
+    ]
+
+    cases_by_lot: dict[str, dict] = {}
+    matrices_by_case: dict[str, dict] = {}
+
+    if approved_lot_ids:
+        cases_res = (
+            supabase.table("escritura_cases")
+            .select("id, lot_id, case_status, readiness_status, readiness_gates")
+            .eq("organization_id", x_organization_id)
+            .in_("lot_id", list(set(approved_lot_ids)))
+            .execute()
+        )
+        for c in cases_res.data or []:
+            if c.get("case_status") != "cancelled":
+                lot_k = str(c.get("lot_id"))
+                if lot_k not in cases_by_lot:
+                    cases_by_lot[lot_k] = c
+
+        case_ids = [str(c["id"]) for c in cases_by_lot.values() if c.get("id")]
+        if case_ids:
+            mat_res = (
+                supabase.table("escritura_matrices")
+                .select("id, escritura_case_id, status, source_project_matriz_id")
+                .eq("organization_id", x_organization_id)
+                .in_("escritura_case_id", case_ids)
+                .execute()
+            )
+            for m in mat_res.data or []:
+                if m.get("status") != "superseded":
+                    case_k = str(m.get("escritura_case_id"))
+                    if case_k not in matrices_by_case:
+                        matrices_by_case[case_k] = m
+
     items = []
     
     for row in res.data:
@@ -298,16 +348,22 @@ async def list_notifications(
         lot_label = f"Lote {lot.get('numero_lote', 'N/A')}"
         project_name = project.get("name", "N/A")
         client_name = payload.get("cliente_nombre", "N/A")
+        lot_id_str = str(app_req.get("lot_id"))
+        prefetched_case = cases_by_lot.get(lot_id_str)
+        prefetched_matrix = matrices_by_case.get(str(prefetched_case["id"])) if prefetched_case else None
+
         copy = _notification_copy_for_item(
             supabase=supabase,
             organization_id=x_organization_id,
             request_type=request_type,
             status_val=status_val,
             project_id=str(project["id"]) if project.get("id") else None,
-            lot_id=str(app_req.get("lot_id")),
+            lot_id=lot_id_str,
             lot_label=lot_label,
             project_name=project_name,
             client_name=client_name,
+            case_row=prefetched_case,
+            matrix_row=prefetched_matrix,
         )
         copy_payload = asdict(copy) if copy else {}
         
