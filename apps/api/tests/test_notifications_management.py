@@ -497,3 +497,92 @@ async def test_list_pagination(monkeypatch):
     ids_page1 = [item.id for item in page1.items]
     ids_page2 = [item.id for item in page2.items]
     assert not set(ids_page1) & set(ids_page2)
+
+
+# ---------------------------------------------------------------------------
+# Aislamiento cross-tenant (FR-005): un miembro de OTRA organización no puede
+# leer ni mutar notificaciones de esta organización, aunque sea admin en la
+# suya. La membresía se valida contra la organización del recurso consultado.
+# ---------------------------------------------------------------------------
+
+ORG_B = "00000000-0000-4000-8000-000000000021"
+ADMIN_B = "00000000-0000-4000-8000-000000000022"
+
+
+def _cross_org_tables():
+    tables = _base_tables()
+    tables["organization_members"].append(
+        {"organization_id": ORG_B, "user_id": ADMIN_B, "role": "admin"}
+    )
+    return tables
+
+
+async def test_list_member_of_other_org_forbidden(monkeypatch):
+    """FR-005: listar notificaciones de una org ajena → 403 aunque el usuario
+    sea admin de su propia organización."""
+    from fastapi import HTTPException
+    from api.v1.endpoints.notifications import list_notifications
+
+    tables = _cross_org_tables()
+    _monkeypatch_supabase(monkeypatch, tables)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await list_notifications(
+            x_user_id=ADMIN_B, x_organization_id=ORG_N, limit=50, offset=0
+        )
+    assert exc_info.value.status_code == 403
+
+
+async def test_dismiss_member_of_other_org_forbidden(monkeypatch):
+    """FR-005: descartar una notificación de una org ajena → 403 sin efectos."""
+    from fastapi import HTTPException
+    from api.v1.endpoints.notifications import dismiss_notification
+
+    tables = _cross_org_tables()
+    _monkeypatch_supabase(monkeypatch, tables)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await dismiss_notification(notification_id=NOTIF_OWN, x_user_id=ADMIN_B)
+    assert exc_info.value.status_code == 403
+    row = [
+        row for row in tables["notification_events"] if row["id"] == NOTIF_OWN
+    ][0]
+    assert row["dismissed_at"] is None
+
+
+async def test_mark_read_member_of_other_org_forbidden(monkeypatch):
+    """FR-005: marcar leída una notificación de una org ajena → 403 sin efectos."""
+    from fastapi import HTTPException
+    from api.v1.endpoints.notifications import mark_notification_read
+
+    tables = _cross_org_tables()
+    _monkeypatch_supabase(monkeypatch, tables)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await mark_notification_read(notification_id=NOTIF_OWN, x_user_id=ADMIN_B)
+    assert exc_info.value.status_code == 403
+    row = [
+        row for row in tables["notification_events"] if row["id"] == NOTIF_OWN
+    ][0]
+    assert row["read_at"] is None
+
+
+async def test_read_all_member_of_other_org_forbidden(monkeypatch):
+    """FR-005: read-all sobre una org ajena → 403 sin efectos."""
+    from fastapi import HTTPException
+    from api.v1.endpoints.notifications import mark_all_notifications_read
+
+    tables = _cross_org_tables()
+    _monkeypatch_supabase(monkeypatch, tables)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await mark_all_notifications_read(
+            x_user_id=ADMIN_B, x_organization_id=ORG_N
+        )
+    assert exc_info.value.status_code == 403
+    unread = [
+        row
+        for row in tables["notification_events"]
+        if row["read_at"] is None and row["organization_id"] == ORG_N
+    ]
+    assert len(unread) == 3

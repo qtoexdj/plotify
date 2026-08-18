@@ -421,7 +421,9 @@ async def send_decision_notifications(
                     "delivery_status": status_val
                 }
                 await asyncio.to_thread(
-                    lambda: supabase.table("notification_events").insert(notif_event).execute()
+                    lambda: supabase.table("notification_events")
+                    .upsert(notif_event, ignore_duplicates=True)
+                    .execute()
                 )
                 logger.info(
                     "Evento de notificación registrado en BD para el vendedor.",

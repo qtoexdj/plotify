@@ -44,6 +44,12 @@ class FakeQuery:
         self.payload = payload
         return self
 
+    def upsert(self, payload, *, ignore_duplicates=False, on_conflict="", **kwargs):
+        self.action = "upsert"
+        self.payload = payload
+        self.ignore_duplicates = ignore_duplicates
+        return self
+
     def update(self, payload):
         self.action = "update"
         self.payload = payload
@@ -87,6 +93,16 @@ class FakeQuery:
     def execute(self):
         table = self.store.tables.setdefault(self.table_name, [])
         if self.action == "insert":
+            row = {"id": str(uuid.uuid4()), **self.payload}
+            table.append(row)
+            return SimpleNamespace(data=[row])
+        if self.action == "upsert":
+            if self.ignore_duplicates and any(
+                str(r.get("approval_id")) == str(self.payload.get("approval_id"))
+                and str(r.get("recipient_id")) == str(self.payload.get("recipient_id"))
+                for r in table
+            ):
+                return SimpleNamespace(data=[])
             row = {"id": str(uuid.uuid4()), **self.payload}
             table.append(row)
             return SimpleNamespace(data=[row])

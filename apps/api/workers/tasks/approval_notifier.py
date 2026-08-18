@@ -300,7 +300,9 @@ async def notify_admin_approval(ctx: dict, approval_id: str) -> str:
                     "delivery_channel": channel,
                     "delivery_status": status_val
                 }
-                supabase.table("notification_events").insert(notif_event).execute()
+                supabase.table("notification_events").upsert(
+                    notif_event, ignore_duplicates=True
+                ).execute()
                 logger.info(
                     "Evento de notificación registrado en BD para el admin.",
                     admin_id=uid,
