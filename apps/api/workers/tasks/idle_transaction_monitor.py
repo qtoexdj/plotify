@@ -1,7 +1,7 @@
-"""T-CPU-02: Automated idle transaction monitoring via ARQ cron.
+"""T-CPU-02: Automated idle transaction monitoring and cleanup via ARQ cron.
 
-Calls the reusable detection logic from ``scripts/check_idle_transactions``
-every 10 minutes.  Detection-only — never terminates sessions automatically.
+Calls the reusable detection and termination logic from ``scripts/check_idle_transactions``
+every 10 minutes to prevent orphan zombie connections.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 
 async def check_idle_transactions_cron(ctx: dict) -> None:
-    """Detect idle-in-transaction sessions and log the result."""
+    """Detect and terminate idle-in-transaction sessions older than 120s."""
     settings = get_settings()
     db_url = settings.SUPABASE_DB_URL
 
@@ -27,7 +27,7 @@ async def check_idle_transactions_cron(ctx: dict) -> None:
 
     try:
         report = await asyncio.to_thread(
-            check_idle_transactions, db_url, max_age_seconds=300, terminate=False
+            check_idle_transactions, db_url, max_age_seconds=120, terminate=True
         )
     except Exception:
         logger.exception("idle_tx_monitor_error")
@@ -35,10 +35,12 @@ async def check_idle_transactions_cron(ctx: dict) -> None:
         raise
 
     zombie_count = report.get("zombie_count", 0)
+    terminated = report.get("terminated", [])
     if zombie_count > 0:
         logger.warning(
-            "idle_tx_zombies_detected",
+            "idle_tx_zombies_detected_and_terminated",
             zombie_count=zombie_count,
+            terminated=terminated,
             zombies=report["zombies"],
         )
     else:

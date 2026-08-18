@@ -103,28 +103,28 @@ class WorkerSettings:
         cron(
             reconcile_legal_document_ingestions,
             name="reconcile_legal_document_ingestions",
-            # Cada 2 minutos: minutos pares (0, 2, 4, ..., 58) en segundo 0.
-            minute=set(range(0, 60, 2)),
+            # Malla de seguridad para rescate de jobs: cada 30 minutos (minutos 0 y 30) en segundo 0.
+            minute={0, 30},
             second=0,
-            run_at_startup=True,
+            run_at_startup=False,
             unique=True,
             max_tries=1,
         ),
         cron(
             process_escritura_workflow_outbox,
             name="reconcile_escritura_workflow_outbox",
-            # Cada 1 minuto: cada minuto en segundo 0.
-            minute=None,
+            # Malla de seguridad para reintentos con backoff: cada 15 minutos en segundo 0.
+            minute={0, 15, 30, 45},
             second=0,
-            run_at_startup=True,
+            run_at_startup=False,
             unique=True,
             max_tries=1,
         ),
         cron(
             check_idle_transactions_cron,
             name="check_idle_transactions_monitor",
-            # Cada 10 minutos: minutos 0, 10, 20, 30, 40, 50 en segundo 0.
-            minute=set(range(0, 60, 10)),
+            # Auditoría secundaria de conexiones zombi: cada 30 minutos (minutos 15 y 45) en segundo 0.
+            minute={15, 45},
             second=0,
             run_at_startup=False,
             unique=True,
