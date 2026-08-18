@@ -14,16 +14,18 @@ Sin embargo, al ejecutar `supabase migration list --linked` desde `packages/data
 (cwd correcto), el drift real es **de historial, no de esquema**:
 
 ### 1.1 Historial alineado
+
 Hasta `20260721141742` → `local == remote` (43 versiones en remoto, coinciden 1:1).
 
 ### 1.2 Serie LLM: duplicada con timestamps distintos (MISMO DDL)
-| Repo local (sin historial remoto) | Remote-only (historial, sin archivo en repo) |
-| --- | --- |
-| `20260729021513_llm_control_plane` | `20260729023506` |
-| `20260729042648_llm_dynamic_model_catalog` | `20260729043333` |
-| `20260729044752_llm_current_provider_models` | `20260729043821` |
-| `20260729050000_llm_credential_rpc_lockdown` | `20260729044941` |
-| `20260730012229_llm_gemini_provider` | `20260730012841` |
+
+| Repo local (sin historial remoto)            | Remote-only (historial, sin archivo en repo) |
+| -------------------------------------------- | -------------------------------------------- |
+| `20260729021513_llm_control_plane`           | `20260729023506`                             |
+| `20260729042648_llm_dynamic_model_catalog`   | `20260729043333`                             |
+| `20260729044752_llm_current_provider_models` | `20260729043821`                             |
+| `20260729050000_llm_credential_rpc_lockdown` | `20260729044941`                             |
+| `20260730012229_llm_gemini_provider`         | `20260730012841`                             |
 
 **Evidencia de que es el mismo contenido**: las tablas `llm_provider_credentials`,
 `llm_task_configs`, `llm_configuration_events`, `llm_provider_models`,
@@ -31,7 +33,9 @@ Hasta `20260721141742` → `local == remote` (43 versiones en remoto, coinciden 
 `information_schema.tables` vía conexión directa read-only). El DDL ya está aplicado.
 
 ### 1.3 SDD019 `20260806000000`: DDL aplicado SIN registro en historial
+
 Las funciones de `20260806000000` **ya existen en la BD** (verificado por `pg_proc`):
+
 - `approve_sale(p_approval_id uuid, p_admin_user_id uuid, p_admin_phone text)` — firma nueva (len 8879)
 - `create_sale_request_db(...)`, `can_activate_project_sales(uuid)`,
   `activate_project_sales(uuid)`, `is_lot_operable(...)`, `is_project_vendible(uuid)`
@@ -51,6 +55,7 @@ Mi edición del camino corto **no está aplicada**. Y `escritura_relaxed_readine
 (la columna) **no existe** en la BD.
 
 ### 1.4 Resumen del drift
+
 - **7 versiones locales sin historial remoto**: 5 LLM + `20260806000000` + `20260807235200`.
 - **5 versiones remote-only**: las LLM (contenido equivalente ya aplicado).
 - **1 columna faltante**: `organizations.escritura_relaxed_readiness`.
@@ -71,6 +76,7 @@ DDL ya está aplicado, **sin re-ejecutar su SQL**. Esto corrige el historial
 para que `local == remote` en la serie LLM y en `20260806000000`.
 
 **Operación** (vía SQL directo, transaccional, por cada versión que ya está en BD):
+
 ```sql
 INSERT INTO supabase_migrations.schema_migrations (version, statements, name)
 VALUES ('20260729021513_llm_control_plane', '', '20260729021513_llm_control_plane'),
@@ -80,6 +86,7 @@ VALUES ('20260729021513_llm_control_plane', '', '20260729021513_llm_control_plan
        ('20260730012229_llm_gemini_provider', '', '...'),
        ('20260806000000_sdd019_fix_outbox_and_vendible_rpc', '', '...');
 ```
+
 > Nota: `statements=''` marca la versión como aplicada sin volver a correr DDL.
 > Preferiblemente respaldar la fila remote-only equivalente y marcarla como
 > histórica (no borrar sin evidencia).
@@ -109,6 +116,7 @@ estado (si existe) o se documentan en el reporte.
    > migración completa).
 
 ### Verificación post-reparación
+
 ```bash
 # desde packages/database/supabase
 supabase migration list --linked          # local == remote, sin missing/extra
@@ -120,13 +128,13 @@ pnpm --filter @plotify/database test:db:linked
 
 ## 3. Riesgos y mitigaciones
 
-| Riesgo | Mitigación |
-| --- | --- |
-| BD cloud sin backups recuperables | Solo mutaciones mínimas y reversibles; backup lógico JSON vía `psycopg` de `schema_migrations` y `organizations` antes de cada fase (`pg_dump` no disponible) |
-| Insertar versión falsa en historial | `statements=''` documentado; filas remote-only archivadas no borradas |
-| `is_project_vendible` con flag roto | La columna existe antes de la función; test en entorno descartable previo |
-| Alineación de serie LLM | No re-ejecutar DDL; solo registro de historial; verificar tablas siguen existiendo |
-| Rechazo de `db push` por drift | Se evita `db push`; reparación por SQL directo transaccional con reporte inmutable |
+| Riesgo                              | Mitigación                                                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BD cloud sin backups recuperables   | Solo mutaciones mínimas y reversibles; backup lógico JSON vía `psycopg` de `schema_migrations` y `organizations` antes de cada fase (`pg_dump` no disponible) |
+| Insertar versión falsa en historial | `statements=''` documentado; filas remote-only archivadas no borradas                                                                                         |
+| `is_project_vendible` con flag roto | La columna existe antes de la función; test en entorno descartable previo                                                                                     |
+| Alineación de serie LLM             | No re-ejecutar DDL; solo registro de historial; verificar tablas siguen existiendo                                                                            |
+| Rechazo de `db push` por drift      | Se evita `db push`; reparación por SQL directo transaccional con reporte inmutable                                                                            |
 
 ---
 
@@ -146,6 +154,7 @@ Autor: agente | Revisor: (admin responsable) | Fecha: 2026-08-07
 Todas las fases se ejecutaron y verificaron contra el proyecto linked.
 
 ### Fase 1 — Historial reconciliado
+
 - INSERT en `supabase_migrations.schema_migrations` de las 5 versiones locales LLM
   (`20260729021513`, `20260729042648`, `20260729044752`, `20260729050000`,
   `20260730012229`) con `statements=ARRAY[]` (DDL ya aplicado, sin re-ejecución).
@@ -157,18 +166,22 @@ Todas las fases se ejecutaron y verificaron contra el proyecto linked.
   `pg_proc`).
 
 ### Fase 2.1 — Columna creada
+
 `organizations.escritura_relaxed_readiness BOOLEAN NOT NULL DEFAULT false` (verificada en
 `information_schema.columns`).
 
 ### Fase 2.2 — Función relajada
+
 `is_project_vendible` re-aplicada con el flag `v_relaxed` (verificado: el body de la
 función contiene `escritura_relaxed_readiness`).
 
 ### Registro adicional
+
 `20260807235200` (`sdd019_relaxed_readiness`) registrada en historial con
 `statements=ARRAY[]` (su DDL se aplicó como Fase 2.1).
 
 ### Verificación final
+
 - `supabase migration list --linked` (desde `packages/database/supabase`):
   **45/45 `local == remote`**, 0 local-only, 0 remote-only.
 - `compare-migration-history.mjs --target linked`: **`ok: true, status: exact_parity`**,
@@ -176,15 +189,18 @@ función contiene `escritura_relaxed_readiness`).
 - Backup lógico previo: `migration-reconciliation-backup.json` (43 migraciones + 1 org).
 
 ### Fix incidental en tooling
+
 `compare-migration-history.mjs` tenía dos bugs que invalidaban el gate de parity:
+
 1. `inspectLinkedMigrationHistory` corría `supabase migration list` desde la raíz del
    monorepo (cwd `../..`), donde no existe `supabase/` → nunca veía migraciones locales.
    Corregido a `resolve(databaseRoot, 'supabase')`.
 2. `parseRemoteMigrationList` esperaba salida tabular con pipes, pero la CLI actual
    devuelve JSON. Corregido para parsear JSON (con fallback al formato legacy).
-Se añadieron 2 tests (`parseRemoteMigrationList` JSON + pipe): 6/6 verdes.
+   Se añadieron 2 tests (`parseRemoteMigrationList` JSON + pipe): 6/6 verdes.
 
 ### Nota operativa
+
 `scripts/assert-linked.mjs` rechaza explícitamente el proyecto legacy
 `swkrnjdpnlrgxgotmfxy` (`LEGACY_FREE_PROJECT_FORBIDDEN`); la reconciliación de este
 entorno se ejecutó por SQL directo auditado, no vía ese comando.

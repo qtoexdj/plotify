@@ -13,16 +13,16 @@ Esta nota conecta Obsidian con la estructura y stack verificable de Plotify. Las
 - `specs/`: artefactos Spec Kit por feature.
 - `plotify_memori/`: vault de Obsidian para producto, arquitectura, decisiones y handoffs.
 
-## Stack verificado — 2026-08-06
+## Stack verificado — 2026-08-18
 
 | Área | Tecnología | Versión/fuente |
 | --- | --- | --- |
 | Runtime JavaScript | Node.js | mínimo `>=22.13` en `package.json`; runtime observado `26.5.0` |
-| Gestor de paquetes | pnpm | `11.3.0` en `package.json` |
+| Gestor de paquetes | pnpm | `11.22.0` en `package.json` (brew) |
 | Web | Next.js | `16.2.6` en `apps/web/package.json` |
-| UI | React | `19.2.4` en `apps/web/package.json` |
+| UI | React | `19.2.8` en `apps/web/package.json` |
 | Tipado y estilos | TypeScript, Tailwind CSS, shadcn/ui | TypeScript 5, Tailwind 4, shadcn `4.8.0` |
-| Testing web | Vitest, Playwright | `4.0.17`, `1.61.1` |
+| Testing web | Vitest, Playwright | `4.1.10`, `1.61.1` |
 | API/worker | Python | runtime observado `3.13.13` |
 | API | FastAPI | `0.135.1` en `apps/api/requirements.txt` |
 | Agentes | LangGraph | `1.2.1` en `apps/api/requirements.txt` |

@@ -53,18 +53,20 @@ export async function checkContext(root) {
   }
 
   for (const retired of ['.agents/rules', '.agents/workflows']) {
-    if (await exists(join(root, retired))) issues.push(`Directorio retirado todavía existe: ${retired}`)
+    if (await exists(join(root, retired)))
+      issues.push(`Directorio retirado todavía existe: ${retired}`)
   }
 
   const home = await read(root, 'plotify_memori/00 - Home.md', issues)
-  if (home && !home.includes('Mapa Técnico')) issues.push('El Home de Obsidian no enlaza el mapa técnico')
+  if (home && !home.includes('Mapa Técnico'))
+    issues.push('El Home de Obsidian no enlaza el mapa técnico')
   await read(root, 'plotify_memori/30 - Arquitectura/Mapa Técnico Actual.md', issues)
 
   const rootPackage = await read(root, 'package.json', issues)
   const webPackage = await read(root, 'apps/web/package.json', issues)
   const requirements = await read(root, 'apps/api/requirements.txt', issues)
   for (const [content, expected, label] of [
-    [rootPackage, 'pnpm@11.3.0', 'pnpm 11.3.0'],
+    [rootPackage, 'pnpm@11.22.0', 'pnpm 11.22.0'],
     [rootPackage, '>=22.13', 'Node >=22.13'],
     [requirements, 'fastapi==0.135.1', 'FastAPI 0.135.1'],
     [requirements, 'langgraph==1.2.1', 'LangGraph 1.2.1'],
@@ -74,8 +76,8 @@ export async function checkContext(root) {
   if (webPackage && packageValue(webPackage, 'dependencies', 'next') !== '16.2.6') {
     issues.push('No coincide la fuente de Next 16.2.6')
   }
-  if (webPackage && packageValue(webPackage, 'dependencies', 'react') !== '19.2.4') {
-    issues.push('No coincide la fuente de React 19.2.4')
+  if (webPackage && packageValue(webPackage, 'dependencies', 'react') !== '19.2.8') {
+    issues.push('No coincide la fuente de React 19.2.8')
   }
   return issues
 }

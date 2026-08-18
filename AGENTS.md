@@ -15,15 +15,15 @@ El mapa técnico del vault está en [Mapa Técnico Actual](plotify_memori/30%20-
 
 ## Fuentes de verdad
 
-| Dominio | Fuente |
-| --- | --- |
-| Alcance e instrucciones | Sistema y usuario |
-| Procedimiento de agentes | Este archivo |
-| Principios de ingeniería | `.specify/memory/constitution.md` |
-| Intención y tarea actual | Feature activa en `specs/` |
-| Comportamiento y versiones reales | Código, manifiestos, lockfiles, migraciones y tests |
-| Producto, arquitectura e historial | `plotify_memori/` |
-| Estado y correcciones entre sesiones | `memory.md` |
+| Dominio                              | Fuente                                              |
+| ------------------------------------ | --------------------------------------------------- |
+| Alcance e instrucciones              | Sistema y usuario                                   |
+| Procedimiento de agentes             | Este archivo                                        |
+| Principios de ingeniería             | `.specify/memory/constitution.md`                   |
+| Intención y tarea actual             | Feature activa en `specs/`                          |
+| Comportamiento y versiones reales    | Código, manifiestos, lockfiles, migraciones y tests |
+| Producto, arquitectura e historial   | `plotify_memori/`                                   |
+| Estado y correcciones entre sesiones | `memory.md`                                         |
 
 No resuelvas conflictos en silencio: registra la discrepancia, contrástala con evidencia y pide decisión si afecta producto, seguridad o alcance. El código describe el comportamiento actual; el SDD, el esperado.
 

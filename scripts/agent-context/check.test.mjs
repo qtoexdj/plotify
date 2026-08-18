@@ -23,10 +23,22 @@ async function fixture() {
   await write(root, 'specs/019-hardening-produccion/spec.md', '# Spec\n')
   await write(root, 'specs/019-hardening-produccion/plan.md', '# Plan\n')
   await write(root, 'specs/019-hardening-produccion/tasks.md', '# Tasks\n')
-  await write(root, 'plotify_memori/00 - Home.md', '# Home\n\n[Mapa Técnico](30 - Arquitectura/Mapa Técnico Actual.md)\n')
+  await write(
+    root,
+    'plotify_memori/00 - Home.md',
+    '# Home\n\n[Mapa Técnico](30 - Arquitectura/Mapa Técnico Actual.md)\n'
+  )
   await write(root, 'plotify_memori/30 - Arquitectura/Mapa Técnico Actual.md', '# Mapa\n')
-  await write(root, 'package.json', '{"packageManager":"pnpm@11.3.0","engines":{"node":">=22.13"}}\n')
-  await write(root, 'apps/web/package.json', '{"dependencies":{"next":"16.2.6","react":"19.2.4"}}\n')
+  await write(
+    root,
+    'package.json',
+    '{"packageManager":"pnpm@11.22.0","engines":{"node":">=22.13"}}\n'
+  )
+  await write(
+    root,
+    'apps/web/package.json',
+    '{"dependencies":{"next":"16.2.6","react":"19.2.8"}}\n'
+  )
   await write(root, 'apps/api/requirements.txt', 'fastapi==0.135.1\nlanggraph==1.2.1\n')
   return root
 }

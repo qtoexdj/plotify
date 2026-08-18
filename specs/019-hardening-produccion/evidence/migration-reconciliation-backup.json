@@ -275,9 +275,5 @@
       "escritura_review_policy": "exceptions_only"
     }
   ],
-  "funcs_present": [
-    "approve_sale",
-    "create_sale_request_db",
-    "is_project_vendible"
-  ]
+  "funcs_present": ["approve_sale", "create_sale_request_db", "is_project_vendible"]
 }
