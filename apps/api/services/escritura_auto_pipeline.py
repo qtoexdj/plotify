@@ -755,6 +755,8 @@ async def _run_case_cascade(
             stage_operational=False,
             supabase=client,
         )
+        if relaxed_token_keys:
+            _inject_relaxed_placeholders(case_row, relaxed_token_keys)
     else:
         steps.append({"step": "legal_review", "action": "skipped", "detail": "already_approved"})
 

@@ -42,6 +42,7 @@ class WorkflowOutboxItem:
     lease_owner: str | None = None
     lease_expires_at: str | None = None
     heartbeat_at: str | None = None
+    event_type: str = "sale_approved"
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +128,7 @@ def _item_from_data(
         heartbeat_at=(
             str(row["heartbeat_at"]) if row.get("heartbeat_at") is not None else None
         ),
+        event_type=str(row.get("event_type") or "sale_approved"),
     )
 
 
@@ -135,6 +137,7 @@ def _placeholder_item(
     *,
     worker_id: str | None,
     status: OutboxStatus,
+    event_type: str = "sale_approved",
 ) -> WorkflowOutboxItem:
     """Keep lightweight client fakes useful without weakening production RPCs."""
     return WorkflowOutboxItem(
@@ -147,6 +150,7 @@ def _placeholder_item(
         status=status,
         attempt_count=0,
         lease_owner=worker_id,
+        event_type=event_type,
     )
 
 

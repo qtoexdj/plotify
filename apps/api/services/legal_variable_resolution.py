@@ -1314,7 +1314,7 @@ async def _ensure_authored_variable_gaps(
     by_key_project: dict[str, dict[str, Any]] = {}
     for row in _rows(existing_result):
         row_lot = row.get("lot_id")
-        by_key_scope[(row["variable_key"], str(row_lot) or "")] = row
+        by_key_scope[(row["variable_key"], str(row_lot) if row_lot else "")] = row
         if row_lot is None:
             by_key_project[row["variable_key"]] = row
 

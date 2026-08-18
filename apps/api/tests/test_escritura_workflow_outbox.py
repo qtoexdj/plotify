@@ -333,3 +333,30 @@ async def test_worker_persists_durable_retry_when_cascade_fails(monkeypatch):
 
     assert result["status"] == "retry_scheduled"
     repository.record_failure.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_worker_handles_sale_approved_event_type_without_attribute_error(monkeypatch):
+    """Event type attribute must exist on WorkflowOutboxItem and be accessible by worker."""
+    item = replace(_item(), payload={"lot_id": "lot-1"}, event_type="sale_approved")
+    repository = FakeWorkflowWorkerRepository(item)
+    monkeypatch.setattr(outbox_task, "_resolve_before_effect", AsyncMock(return_value=True))
+    
+    from services import escritura_sale_hook
+    hook_mock = AsyncMock(return_value=SimpleNamespace(escritura_case_id="case-from-hook"))
+    monkeypatch.setattr(escritura_sale_hook, "handle_sale_validated_for_escritura", hook_mock)
+
+    from services import escritura_auto_pipeline
+    cascade_mock = AsyncMock(return_value=SimpleNamespace(outcome="completed"))
+    monkeypatch.setattr(escritura_auto_pipeline, "run_case_cascade", cascade_mock)
+
+    result = await outbox_task.process_escritura_workflow_outbox(
+        {
+            "escritura_workflow_outbox_repository": repository,
+            "automatic_escritura_hard_off": False,
+        }
+    )
+
+    assert result["status"] == "completed"
+    hook_mock.assert_awaited_once()
+    cascade_mock.assert_awaited_once()

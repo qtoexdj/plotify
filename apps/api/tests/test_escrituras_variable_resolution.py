@@ -1234,3 +1234,83 @@ def test_resolve_document_variables_dispatches_hipoteca_gravamen_to_gp_extractor
     )
     assert len(result) == 1
     assert result[0].proposal.variable_key == "evidencia.certificado_gp_referencia"
+
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_ensure_authored_variable_gaps_handles_null_lot_id_without_duplicate_insert():
+    """Ensure that project-scoped authored variables (lot_id=None) are recognized as existing."""
+    from services.legal_variable_resolution import _ensure_authored_variable_gaps
+
+    inserted_payloads = []
+
+    class FakeQuery:
+        def __init__(self, data):
+            self._data = data
+
+        def select(self, *args, **kwargs):
+            return self
+
+        def eq(self, *args, **kwargs):
+            return self
+
+        def in_(self, *args, **kwargs):
+            return self
+
+        def neq(self, *args, **kwargs):
+            return self
+
+        def order(self, *args, **kwargs):
+            return self
+
+        def limit(self, *args, **kwargs):
+            return self
+
+        def execute(self):
+            from types import SimpleNamespace
+            return SimpleNamespace(data=self._data)
+
+    class FakeTable:
+        def __init__(self, name: str):
+            self.name = name
+
+        def select(self, *args, **kwargs):
+            if self.name == "escritura_templates":
+                return FakeQuery([{"id": "template-1", "organization_id": ORG_ID}])
+            elif self.name == "escritura_template_clauses":
+                return FakeQuery([
+                    {"content_json": [{"type": "variable", "attrs": {"key": "mandato.facultades"}}]}
+                ])
+            elif self.name == "variable_resolutions":
+                # Simulated existing row with lot_id=None
+                return FakeQuery([
+                    {
+                        "variable_key": "mandato.facultades",
+                        "state": "derived",
+                        "value_text": "facultades...",
+                        "source_ref": {},
+                        "lot_id": None,
+                    }
+                ])
+            return FakeQuery([])
+
+        def insert(self, payloads):
+            inserted_payloads.extend(payloads)
+            return FakeQuery(payloads)
+
+    class FakeSupabase:
+        def table(self, name: str):
+            return FakeTable(name)
+
+    client = FakeSupabase()
+    await _ensure_authored_variable_gaps(
+        supabase=client,
+        organization_id=ORG_ID,
+        project_id=PROJECT_ID,
+        lot_id=None,
+    )
+
+    # Should not insert anything because mandato.facultades already exists with lot_id=None!
+    assert len(inserted_payloads) == 0

@@ -170,6 +170,9 @@ class FakeSupabaseTable:
         self.filters[f"{column}__is"] = value
         return self
 
+    def or_(self, *_args, **_kwargs):
+        return self
+
     def limit(self, *_args):
         return self
 
@@ -440,10 +443,8 @@ def _clause_content(variable_key: str) -> dict[str, object]:
 
 
 async def test_get_project_variable_inventory_seeds_authored_gap_without_default():
-    """SDD 013 (alineacion LOTE 29): mandato.rectificacion_nombre es `authored`
-    sin default de catalogo; si el template publicado la referencia y el
-    proyecto no tiene fila, el inventario debe autosanar con un `missing`
-    antes de responder, para que deje de desaparecer de la mesa."""
+    """SDD 013 + A5 (bug 2026-08-13): authored variables sin default se siembran como `missing`;
+    authored variables con default se siembran como `derived`."""
     from services.legal_variable_resolution import get_project_variable_inventory
 
     fake = FakeSupabase(
@@ -452,7 +453,7 @@ async def test_get_project_variable_inventory_seeds_authored_gap_without_default
         template_clauses=[
             {"content_json": _clause_content("mandato.rectificacion_nombre")},
             {"content_json": _clause_content("mandato.rectificacion_rut")},
-            # authored CON default de catalogo: no debe sembrarse.
+            # authored CON default de catalogo: se siembra como derived.
             {"content_json": _clause_content("clausulas.gastos_cargo")},
             # extracted: no es responsabilidad de este seeding.
             {"content_json": _clause_content("vendedor.nombre")},
@@ -466,10 +467,12 @@ async def test_get_project_variable_inventory_seeds_authored_gap_without_default
     )
 
     seeded_keys = {row["variable_key"] for row in fake.inserted_variable_rows}
-    assert seeded_keys == {"mandato.rectificacion_nombre", "mandato.rectificacion_rut"}
+    assert seeded_keys == {"mandato.rectificacion_nombre", "mandato.rectificacion_rut", "clausulas.gastos_cargo"}
     for row in fake.inserted_variable_rows:
-        assert row["state"] == "missing"
-        assert row["variable_group"] == "mandato"
+        if row["variable_key"] == "clausulas.gastos_cargo":
+            assert row["state"] == "derived"
+        else:
+            assert row["state"] == "missing"
         assert row["project_id"] == PROJECT_ID
         assert row["lot_id"] is None
 
@@ -508,11 +511,27 @@ async def test_get_project_variable_inventory_does_not_reseed_existing_gap():
     assert fake.inserted_variable_rows == []
 
 
-async def test_get_project_variable_inventory_skips_seeding_for_lot_scope():
+async def test_get_project_variable_inventory_skips_seeding_for_lot_scope_when_project_has_value():
+    """A5-b: Si el proyecto ya tiene la variable resuelta/aprobada, no siembra en scope lote."""
     from services.legal_variable_resolution import get_project_variable_inventory
 
     fake = FakeSupabase(
-        variable_rows=[],
+        variable_rows=[
+            {
+                "id": VARIABLE_ID,
+                "organization_id": ORG_ID,
+                "project_id": PROJECT_ID,
+                "variable_key": "mandato.rectificacion_nombre",
+                "variable_group": "mandato",
+                "value_text": "Juan Pérez",
+                "state": "approved",
+                "source_type": "legal_review",
+                "source_ref": {},
+                "confidence": None,
+                "approval_required": False,
+                "lot_id": None,
+            }
+        ],
         templates=[{"id": "tmpl-1"}],
         template_clauses=[
             {"content_json": _clause_content("mandato.rectificacion_nombre")},
