@@ -18,7 +18,10 @@ test('parseRemoteMigrationList parses the JSON output of supabase migration list
 
 test('parseRemoteMigrationList still supports legacy pipe output', () => {
   const rows = parseRemoteMigrationList('20260713000100 | 20260713000100 | x\n')
-  assert.deepEqual(rows.map((row) => row.version), ['20260713000100'])
+  assert.deepEqual(
+    rows.map((row) => row.version),
+    ['20260713000100']
+  )
 })
 
 test('detects conflicting, missing and extra final-target migration history', () => {

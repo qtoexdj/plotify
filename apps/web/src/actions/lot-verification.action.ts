@@ -524,10 +524,9 @@ export async function makeProjectOperational(
     }
 
     // 5. Atomic RPC activation: activate_project_sales
-    const { data: rpcResult, error: rpcError } = await supabase.rpc(
-      'activate_project_sales',
-      { p_project_id: projectId }
-    )
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('activate_project_sales', {
+      p_project_id: projectId,
+    })
 
     if (rpcError || !rpcResult?.success) {
       const errorMsg =

@@ -508,11 +508,11 @@ describe('VariableMatrix', () => {
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ matriz: { id: 'matriz-1' } }),
+        json: async () => ({ matriz: { id: 'matriz-1', status: 'draft' } }),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ matriz: { id: 'matriz-1' } }),
+        json: async () => ({ matriz: { id: 'matriz-1', status: 'legal_review_pending' } }),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,

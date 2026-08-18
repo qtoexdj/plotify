@@ -2,7 +2,7 @@
   "name": "plotify-monorepo",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@11.3.0",
+  "packageManager": "pnpm@11.22.0",
   "engines": {
     "node": ">=22.13"
   },
@@ -34,6 +34,6 @@
   "devDependencies": {
     "ajv": "8.17.1",
     "ajv-formats": "3.0.1",
-    "prettier": "^3.8.3"
+    "prettier": "^3.9.6"
   }
 }
