@@ -1,6 +1,6 @@
 ---
 name: competitive-landscape
-description: This skill should be used when the user asks to "analyze competitors", "assess competitive landscape", "identify differentiation", "evaluate market positioning", "apply Porter's Five Forces", or requests competitive strategy analysis.
+description: Analyze competition, identify differentiation opportunities, and develop winning market positioning strategies using Porter's Five Forces, Blue Ocean Strategy, and positioning maps. Use this skill when evaluating competitors, assessing market positioning, identifying sustainable competitive advantages, or preparing competitive strategy analysis for a startup or investor pitch.
 version: 1.0.0
 ---
 
@@ -499,17 +499,6 @@ If "no" to any, it's not a sustainable advantage.
 - Major strategy reassessment
 - Market trends analysis
 
-## Additional Resources
-
-### Reference Files
-
-- **`references/frameworks-deep-dive.md`** - Detailed application of each framework with worksheets
-- **`references/intel-sources.md`** - Comprehensive list of competitive intelligence sources
-
-### Example Files
-
-- **`examples/competitor-analysis.md`** - Complete competitive analysis for a SaaS startup
-- **`examples/positioning-workshop.md`** - Step-by-step positioning development process
 
 ## Quick Start
 
@@ -523,5 +512,3 @@ To analyze competitive landscape:
 6. **Analyze pricing** - Where do you fit?
 7. **Assess advantages** - What's defensible?
 8. **Develop strategy** - How to win
-
-For detailed frameworks and examples, see `references/` and `examples/`.
