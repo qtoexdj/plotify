@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Tick02Icon as Check,
@@ -61,6 +61,7 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
   const [actionLoading, setActionLoading] = useState<string | null>(null) // ID de la solicitud procesándose
 
   const [supabase] = useState(() => createClient())
+  const lastFetchRef = useRef(0)
 
   // Cargar aprobaciones iniciales
   const fetchApprovals = useCallback(async () => {
@@ -84,6 +85,7 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
 
       if (error) throw error
       setApprovals((data as ApprovalRequest[]) || [])
+      lastFetchRef.current = Date.now()
     } catch (err) {
       console.error('Error al cargar aprobaciones:', err)
       toast.error('No se pudieron cargar las aprobaciones pendientes.')
@@ -102,7 +104,8 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
     }
     loadData()
 
-    // Suscripción Realtime para actualizaciones instantáneas
+    // Suscripción Realtime con throttle de 15s para evitar ráfagas de consultas a la base de datos
+    const FETCH_THROTTLE_MS = 15_000
     const channel = supabase
       .channel('approval-requests-realtime')
       .on(
@@ -114,9 +117,11 @@ export function PendingApprovalsPanel({ organizationId }: PendingApprovalsPanelP
           filter: `organization_id=eq.${organizationId}`,
         },
         () => {
-          if (active) {
-            fetchApprovals()
-          }
+          if (!active) return
+          const now = Date.now()
+          if (now - lastFetchRef.current < FETCH_THROTTLE_MS) return
+          lastFetchRef.current = now
+          fetchApprovals()
         }
       )
       .subscribe()

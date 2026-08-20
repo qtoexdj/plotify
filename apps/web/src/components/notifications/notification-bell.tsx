@@ -26,7 +26,6 @@ interface NotificationBellProps {
 }
 
 const PAGE_SIZE = 50
-const REFRESH_INTERVAL_MS = 60_000
 
 export function NotificationBell({ userId, organizationId, userRole }: NotificationBellProps) {
   const [items, setItems] = useState<NotificationItem[]>([])
@@ -84,6 +83,7 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
         }
         setCounts(result.counts)
         setError(null)
+        lastFetchRef.current = Date.now()
       } catch (err) {
         if (append) {
           // "Cargar más" falló: la lista actual se mantiene intacta.
@@ -107,6 +107,13 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
     [userId, organizationId]
   )
 
+  // Ref que limita la frecuencia de refrescos de fondo (Realtime / foco).
+  // El Realtime de Supabase ya entrega actualizaciones en tiempo real, por lo
+  // que el polling periódico es redundante y dispara consultas N+1 al backend.
+  // Aquí se mantiene solo el refresco por Realtime + foco con throttle para
+  // no bombardear la API (corrección del consumo de CPU en Supabase).
+  const lastFetchRef = useRef(0)
+
   useEffect(() => {
     let active = true
 
@@ -117,7 +124,11 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
     }
     loadData()
 
-    // Suscripción Realtime para actualizar la campana en tiempo real
+    // Suscripción Realtime para actualizar la campana en tiempo real.
+    // Se aplica throttle: ignora eventos si el último refresco fue hace menos
+    // de FETCH_THROTTLE_MS, evando ráfagas de eventos (ej. read-all masivo
+    // que genera muchos INSERT/UPDATE seguidos).
+    const FETCH_THROTTLE_MS = 15_000
     const channel = supabase
       .channel('notification-events-realtime')
       .on(
@@ -129,33 +140,30 @@ export function NotificationBell({ userId, organizationId, userRole }: Notificat
           filter: `organization_id=eq.${organizationId}`,
         },
         () => {
-          if (active) {
-            fetchNotifications(0, false, { silent: true })
-          }
+          if (!active) return
+          const now = Date.now()
+          if (now - lastFetchRef.current < FETCH_THROTTLE_MS) return
+          lastFetchRef.current = now
+          fetchNotifications(0, false, { silent: true })
         }
       )
       .subscribe()
 
+    // Refresco al recuperar el foco de la pestaña (con el mismo throttle).
+    const onFocus = () => {
+      const now = Date.now()
+      if (now - lastFetchRef.current < FETCH_THROTTLE_MS) return
+      lastFetchRef.current = now
+      fetchNotifications(0, false, { silent: true })
+    }
+    window.addEventListener('focus', onFocus)
+
     return () => {
       active = false
+      window.removeEventListener('focus', onFocus)
       supabase.removeChannel(channel)
     }
   }, [organizationId, fetchNotifications, supabase])
-
-  // Refresco proactivo: al volver al foco de la pestaña y cada 60 s.
-  // Fallos silenciosos: con sesión inactiva/red caída no se rompe la campana.
-  useEffect(() => {
-    const onFocus = () => fetchNotifications(0, false, { silent: true })
-    window.addEventListener('focus', onFocus)
-    const intervalId = window.setInterval(
-      () => fetchNotifications(0, false, { silent: true }),
-      REFRESH_INTERVAL_MS
-    )
-    return () => {
-      window.removeEventListener('focus', onFocus)
-      window.clearInterval(intervalId)
-    }
-  }, [fetchNotifications])
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)

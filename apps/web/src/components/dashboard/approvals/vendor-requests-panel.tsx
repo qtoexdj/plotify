@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ClipboardIcon as ClipboardList,
@@ -31,6 +31,7 @@ export function VendorRequestsPanel({ userId, organizationId }: VendorRequestsPa
   const [requests, setRequests] = useState<RecentRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [supabase] = useState(() => createClient())
+  const lastFetchRef = useRef(0)
 
   const fetchRecentRequests = useCallback(async () => {
     try {
@@ -94,6 +95,7 @@ export function VendorRequestsPanel({ userId, organizationId }: VendorRequestsPa
       })
 
       setRequests(mapped)
+      lastFetchRef.current = Date.now()
     } catch (err) {
       console.error('Error al cargar solicitudes de vendedor:', err)
     } finally {
@@ -111,7 +113,8 @@ export function VendorRequestsPanel({ userId, organizationId }: VendorRequestsPa
     }
     loadData()
 
-    // Suscripción en tiempo real a las notificaciones recibidas por el vendedor
+    // Suscripción en tiempo real con throttle de 15s para mitigar tormentas de consultas
+    const FETCH_THROTTLE_MS = 15_000
     const channel = supabase
       .channel('vendor-notifications-realtime')
       .on(
@@ -123,9 +126,11 @@ export function VendorRequestsPanel({ userId, organizationId }: VendorRequestsPa
           filter: `recipient_id=eq.${userId}`,
         },
         () => {
-          if (active) {
-            fetchRecentRequests()
-          }
+          if (!active) return
+          const now = Date.now()
+          if (now - lastFetchRef.current < FETCH_THROTTLE_MS) return
+          lastFetchRef.current = now
+          fetchRecentRequests()
         }
       )
       .subscribe()
