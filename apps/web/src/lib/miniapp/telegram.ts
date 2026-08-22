@@ -56,6 +56,11 @@ export interface TelegramWebApp {
   }
   onEvent(eventType: 'themeChanged' | 'backButtonClicked', callback: () => void): void
   offEvent(eventType: 'themeChanged' | 'backButtonClicked', callback: () => void): void
+  HapticFeedback?: {
+    impactOccurred(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'): void
+    notificationOccurred(type: 'error' | 'success' | 'warning'): void
+    selectionChanged(): void
+  }
   enableClosingConfirmation(): void
   disableClosingConfirmation(): void
 }
@@ -120,6 +125,30 @@ export function useTelegram() {
 
   const startParam = webApp?.initDataUnsafe?.start_param || null
 
+  const haptic = {
+    impact: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light') => {
+      try {
+        webApp?.HapticFeedback?.impactOccurred(style)
+      } catch {
+        // safe fallback
+      }
+    },
+    notification: (type: 'error' | 'success' | 'warning') => {
+      try {
+        webApp?.HapticFeedback?.notificationOccurred(type)
+      } catch {
+        // safe fallback
+      }
+    },
+    selection: () => {
+      try {
+        webApp?.HapticFeedback?.selectionChanged()
+      } catch {
+        // safe fallback
+      }
+    },
+  }
+
   return {
     webApp,
     isAvailable,
@@ -130,6 +159,7 @@ export function useTelegram() {
     expand,
     close,
     themeParams,
+    haptic,
   }
 }
 

@@ -697,6 +697,88 @@ def test_sdd019_miniapp_evidence_never_projects_storage_urls_or_paths():
 
 
 @patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_proyectos_vendedor_solo_asignados(mock_supabase_client):
+    """El vendedor solo ve los proyectos que tiene asignados en vendor_projects."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    project_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+
+    assignments = MagicMock()
+    assignments.eq.return_value = assignments
+    assignments.execute.return_value = MagicMock(
+        data=[{"project_id": project_ids[0]}]
+    )
+
+    projects_query = MagicMock()
+    projects_query.eq.return_value = projects_query
+    projects_query.in_.return_value = projects_query
+    projects_query.execute.return_value = MagicMock(
+        data=[{"id": project_ids[0], "name": "Teno 2"}]
+    )
+
+    def table(name):
+        query = MagicMock()
+        if name == "vendor_projects":
+            query.select.return_value = assignments
+        elif name == "projects":
+            query.select.return_value = projects_query
+        return query
+
+    mock_supabase.table.side_effect = table
+
+    client = TestClient(app)
+    response = client.get("/api/v1/miniapp/proyectos", headers=_obtener_headers_vendedor())
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data == [{"id": project_ids[0], "name": "Teno 2"}]
+    projects_query.in_.assert_called_once_with("id", [project_ids[0]])
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_proyectos_vendedor_sin_asignaciones_retorna_vacio(mock_supabase_client):
+    """Un vendedor sin vendor_projects recibe una lista vacía, no un error."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    assignments = MagicMock()
+    assignments.eq.return_value = assignments
+    assignments.execute.return_value = MagicMock(data=[])
+
+    mock_supabase.table.return_value.select.return_value = assignments
+
+    client = TestClient(app)
+    response = client.get("/api/v1/miniapp/proyectos", headers=_obtener_headers_vendedor())
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+def test_get_proyectos_admin_todos_los_de_la_org(mock_supabase_client):
+    """El admin recibe todos los proyectos de su organización sin filtro por asignación."""
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+
+    project_id = str(uuid.uuid4())
+
+    projects_query = MagicMock()
+    projects_query.eq.return_value = projects_query
+    projects_query.execute.return_value = MagicMock(
+        data=[{"id": project_id, "name": "Lomas de Frutillar"}]
+    )
+
+    mock_supabase.table.return_value.select.return_value = projects_query
+
+    client = TestClient(app)
+    response = client.get("/api/v1/miniapp/proyectos", headers=_obtener_headers_admin())
+
+    assert response.status_code == 200
+    assert response.json() == [{"id": project_id, "name": "Lomas de Frutillar"}]
+
+
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
 def test_lote_no_expone_ficha_a_vendedor_sin_proyecto_asignado(mock_supabase_client):
     """Un vendedor solo puede abrir fichas de lotes de proyectos asignados."""
     mock_supabase = MagicMock()

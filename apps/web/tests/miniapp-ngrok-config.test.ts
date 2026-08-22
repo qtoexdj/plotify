@@ -7,7 +7,7 @@ describe('Mini App local ngrok gateway', () => {
     const config = readFileSync(resolve(process.cwd(), 'next.config.ts'), 'utf8')
 
     expect(config).toContain("source: '/api/v1/:path*'")
-    expect(config).toContain("destination: 'http://127.0.0.1:8005/api/v1/:path*'")
+    expect(config).toContain("destination: `${chatBaseUrl}/api/v1/:path*`")
     expect(config).toContain("allowedDevOrigins: ['*.ngrok-free.app']")
   })
 })

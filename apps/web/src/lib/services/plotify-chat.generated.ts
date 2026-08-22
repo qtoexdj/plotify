@@ -606,6 +606,7 @@ export interface components {
       "org_id": string
     }
     "MiniappSessionResponse": {
+      "bot_username"?: string | null
       "expires_in": number
       "role": string
       "token": string
@@ -1583,6 +1584,12 @@ export interface operations {
   "get_lote_detalle_api_v1_miniapp_lotes__lot_id__get": {
     method: "GET"
     path: "/api/v1/miniapp/lotes/{lot_id}"
+    requestBody: never
+    response: void
+  }
+  "get_proyectos_api_v1_miniapp_proyectos_get": {
+    method: "GET"
+    path: "/api/v1/miniapp/proyectos"
     requestBody: never
     response: void
   }

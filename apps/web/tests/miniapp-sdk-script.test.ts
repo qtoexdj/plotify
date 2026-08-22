@@ -8,10 +8,16 @@ describe('Telegram Mini App SDK bootstrap', () => {
     const miniLayout = readFileSync(resolve(process.cwd(), 'src/app/mini/layout.tsx'), 'utf8')
 
     expect(rootLayout).not.toContain('https://telegram.org/js/telegram-web-app.js')
-    expect(miniLayout).toContain("import Script from 'next/script'")
     expect(miniLayout).toContain('src="https://telegram.org/js/telegram-web-app.js"')
-    expect(miniLayout).toContain('strategy="beforeInteractive"')
     expect(miniLayout).toContain('nonce={nonce')
+  })
+
+  it('usa script plano del server (next/script client component causa hydration mismatch por nonce)', () => {
+    const miniLayout = readFileSync(resolve(process.cwd(), 'src/app/mini/layout.tsx'), 'utf8')
+
+    expect(miniLayout).not.toContain("import Script from 'next/script'")
+    expect(miniLayout).not.toContain('strategy="beforeInteractive"')
+    expect(miniLayout).toMatch(/<script\s+src="https:\/\/telegram\.org\/js\/telegram-web-app\.js"/)
   })
 
   it('mounts the Mini App shell directly instead of leaving a dynamic fallback mounted', () => {

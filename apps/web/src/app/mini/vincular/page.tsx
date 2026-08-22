@@ -10,7 +10,7 @@ import { miniAppOrgId, miniAppUrl } from '@/lib/miniapp/routes'
 function VincularContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { webApp } = useTelegram()
+  const { webApp, haptic } = useTelegram()
 
   const qOrgId = miniAppOrgId(searchParams)
   const qChatId = searchParams.get('chat_id')
@@ -35,6 +35,7 @@ function VincularContent() {
 
     setLoading(true)
     setError(null)
+    haptic.impact('medium')
 
     try {
       const res = await fetch('/api/miniapp/vincular/solicitar', {
@@ -48,6 +49,7 @@ function VincularContent() {
       })
 
       if (!res.ok) {
+        haptic.notification('error')
         const detail = await res.json()
         setError(
           detail.error === 'email_not_registered'
@@ -58,9 +60,11 @@ function VincularContent() {
         return
       }
 
+      haptic.notification('success')
       setStep(2)
     } catch (err) {
       console.error('Error al solicitar OTP:', err)
+      haptic.notification('error')
       setError('Fallo de conexión de red con el servidor.')
     } finally {
       setLoading(false)
@@ -76,6 +80,7 @@ function VincularContent() {
 
     setLoading(true)
     setError(null)
+    haptic.impact('medium')
 
     try {
       const res = await fetch('/api/miniapp/vincular/confirmar', {
@@ -90,6 +95,7 @@ function VincularContent() {
       })
 
       if (!res.ok) {
+        haptic.notification('error')
         const detail = await res.json()
         setError(
           detail.error === 'otp_invalid'
@@ -102,12 +108,14 @@ function VincularContent() {
         return
       }
 
+      haptic.notification('success')
       setSuccess(true)
       setTimeout(() => {
         router.push(miniAppUrl('/mini', orgId))
-      }, 2000)
+      }, 1800)
     } catch (err) {
       console.error('Error al confirmar OTP:', err)
+      haptic.notification('error')
       setError('Fallo de conexión de red con el servidor.')
     } finally {
       setLoading(false)
@@ -116,15 +124,15 @@ function VincularContent() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#17212b] p-6 text-center text-white font-sans animate-fadeIn">
-        <div className="rounded-full bg-emerald-950/50 p-6 text-emerald-400 mb-6 border border-emerald-800/30 animate-pulse">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#121212] p-6 text-center text-white font-sans">
+        <div className="rounded-2xl bg-emerald-950/60 p-6 text-emerald-400 mb-4 border border-emerald-500/30 shadow-2xl animate-fade-in-up">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            strokeWidth={2}
+            strokeWidth={2.5}
             stroke="currentColor"
-            className="h-16 w-16"
+            className="h-12 w-12"
           >
             <path
               strokeLinecap="round"
@@ -133,26 +141,25 @@ function VincularContent() {
             />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold mb-2">¡Vinculación Exitosa!</h1>
-        <p className="text-gray-400 text-sm max-w-xs leading-relaxed">
-          Tu cuenta de Telegram ha sido enlazada correctamente con tu perfil de Plotify.
-          Redirigiéndote...
+        <h1 className="text-xl font-bold text-white mb-2">¡Vinculación Exitosa!</h1>
+        <p className="text-zinc-400 text-xs max-w-xs leading-relaxed">
+          Tu cuenta de Telegram ha sido enlazada correctamente con tu perfil de Plotify. Redirigiéndote a la aplicación...
         </p>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#17212b] p-6 text-white font-sans">
-      <div className="w-full max-w-sm rounded-2xl border border-zinc-800/80 bg-[#0e1621] p-6 shadow-2xl backdrop-blur-md">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#121212] p-6 text-white font-sans">
+      <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-[#181818] p-6 shadow-2xl backdrop-blur-xl">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#2481cc]/10 text-[#2481cc] mb-3">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-3 shadow-inner">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              strokeWidth={1.5}
+              strokeWidth={2}
               stroke="currentColor"
               className="h-6 w-6"
             >
@@ -163,23 +170,23 @@ function VincularContent() {
               />
             </svg>
           </div>
-          <h1 className="text-xl font-bold">Vincular con Plotify</h1>
-          <p className="text-xs text-gray-400 mt-1">
+          <h1 className="text-lg font-bold text-white">Vincular con Plotify</h1>
+          <p className="text-xs text-zinc-400 mt-1">
             Conecta tu cuenta de Telegram para operar en ruta
           </p>
         </div>
 
         {/* Alertas de error */}
         {error && (
-          <div className="mb-4 rounded-lg bg-red-950/30 border border-red-800/30 p-3 text-xs text-red-400 leading-relaxed">
+          <div className="mb-4 rounded-xl bg-rose-950/40 border border-rose-800/30 p-3 text-xs text-rose-300 leading-relaxed font-medium">
             {error}
           </div>
         )}
 
         {step === 1 ? (
           <form onSubmit={handleSolicitar} className="space-y-4">
-            <div className="space-y-1">
-              <label htmlFor="email" className="text-xs font-medium text-gray-400">
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-[11px] font-medium text-zinc-400">
                 Correo Electrónico
               </label>
               <Input
@@ -189,29 +196,28 @@ function VincularContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-                className="bg-[#17212b] border-zinc-800 text-white placeholder-gray-500 focus-visible:ring-[#2481cc] focus-visible:border-transparent"
+                className="bg-[#121212] border-white/[0.08] text-white placeholder-zinc-500 focus-visible:ring-emerald-500 rounded-xl text-xs h-11"
                 required
               />
             </div>
 
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Ingresa el correo electrónico con el que estás registrado en Plotify para verificar tu
-              cuenta y enviarte un código.
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Ingresa el correo con el que estás registrado en Plotify para recibir tu código OTP de confirmación vía Telegram.
             </p>
 
             <Button
               type="submit"
               disabled={loading || !email.trim()}
-              className="w-full bg-[#2481cc] hover:bg-[#2072b3] text-white font-medium"
+              className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/50 transition-all active:scale-[0.98]"
             >
-              {loading ? 'Solicitando...' : 'Solicitar Código de Acceso'}
+              {loading ? 'Solicitando código...' : 'Solicitar Código de Acceso'}
             </Button>
           </form>
         ) : (
           <form onSubmit={handleConfirmar} className="space-y-4">
-            <div className="space-y-1">
-              <label htmlFor="code" className="text-xs font-medium text-gray-400">
-                Código OTP
+            <div className="space-y-1.5">
+              <label htmlFor="code" className="text-[11px] font-medium text-zinc-400 text-center block">
+                Código OTP de 6 Dígitos
               </label>
               <Input
                 id="code"
@@ -221,20 +227,19 @@ function VincularContent() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 disabled={loading}
-                className="bg-[#17212b] border-zinc-800 text-white placeholder-gray-500 text-center tracking-widest text-lg font-bold focus-visible:ring-[#2481cc] focus-visible:border-transparent"
+                className="bg-[#121212] border-white/[0.08] text-white placeholder-zinc-600 text-center tracking-widest text-lg font-mono font-bold focus-visible:ring-emerald-500 rounded-xl h-12"
                 required
               />
             </div>
 
-            <p className="text-[11px] text-gray-400 leading-relaxed text-center">
-              Hemos enviado un mensaje con tu código de seguridad OTP al chat de Telegram desde el
-              bot oficial de Plotify.
+            <p className="text-[11px] text-zinc-400 leading-relaxed text-center">
+              Revisa el chat de este bot: te hemos enviado el código de 6 dígitos para autorizar el acceso.
             </p>
 
             <Button
               type="submit"
               disabled={loading || code.trim().length !== 6}
-              className="w-full bg-[#2481cc] hover:bg-[#2072b3] text-white font-medium"
+              className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/50 transition-all active:scale-[0.98]"
             >
               {loading ? 'Confirmando...' : 'Vincular Cuenta'}
             </Button>
@@ -244,7 +249,7 @@ function VincularContent() {
                 type="button"
                 onClick={() => setStep(1)}
                 disabled={loading}
-                className="text-xs text-gray-400 hover:text-white underline underline-offset-4"
+                className="text-xs text-zinc-400 hover:text-white underline underline-offset-4"
               >
                 Volver a ingresar correo
               </button>
@@ -253,9 +258,9 @@ function VincularContent() {
         )}
 
         {/* Footer info */}
-        <div className="mt-6 border-t border-zinc-800/80 pt-4 text-center">
-          <p className="text-[10px] text-gray-500">
-            ID Chat: <span className="font-mono">{chatId || 'no detectado'}</span>
+        <div className="mt-6 border-t border-white/[0.06] pt-3 text-center">
+          <p className="text-[10px] text-zinc-500 font-mono">
+            Chat ID: {chatId || 'no detectado'}
           </p>
         </div>
       </div>
@@ -267,9 +272,8 @@ export default function VincularPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-          <p className="mt-4 text-sm text-gray-400">Cargando vinculación...</p>
+        <div className="flex min-h-screen flex-col items-center justify-center bg-[#121212] text-white">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
         </div>
       }
     >

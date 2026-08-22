@@ -25,6 +25,7 @@ class MiniappSessionResponse(BaseModel):
     expires_in: int
     role: str
     user: MiniappUserDetail
+    bot_username: Optional[str] = None
 
 
 class MiniappVincularSolicitarRequest(BaseModel):

@@ -10,7 +10,9 @@ import {
   isSessionExpired,
   MiniappSession,
 } from '@/lib/miniapp/session'
-import { miniAppOrgId, miniAppUrl } from '@/lib/miniapp/routes'
+import { miniAppOrgId, miniAppUrl, resolveMiniAppOrgId } from '@/lib/miniapp/routes'
+
+import { MiniAppNav } from '@/lib/miniapp/mini-app-nav'
 
 const SESSION_REQUEST_TIMEOUT_MS = 15_000
 
@@ -47,11 +49,13 @@ function MiniAppContent({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const queryOrgId = miniAppOrgId(searchParams)
   const bypass = searchParams.get('bypass') === 'true'
-  const tgOrgId = webApp?.initDataUnsafe
+  const startParam = webApp?.initDataUnsafe
     ? (webApp.initDataUnsafe as { start_param?: string }).start_param
     : null
   const telegramChatId = webApp?.initDataUnsafe?.user?.id || ''
-  const orgId = queryOrgId || tgOrgId || null
+  // start_param puede ser el org_id de la org O un deep link de lote (lot_<id>).
+  // En este último caso nunca debe usarse como org: la sesión guardada provee la org.
+  const orgId = resolveMiniAppOrgId(queryOrgId, startParam || null)
 
   useEffect(() => {
     // Recuperar sesión persistida
@@ -192,13 +196,16 @@ function MiniAppContent({ children }: { children: React.ReactNode }) {
       }}
     >
       {loading ? (
-        <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#17212b] text-white">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-          <p className="mt-4 text-sm text-gray-400">Verificando sesión segura...</p>
+        <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#121212] text-white">
+          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] border border-white/[0.08] shadow-2xl">
+            <div className="absolute inset-0 rounded-2xl border border-emerald-500/30 animate-ping opacity-25"></div>
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+          </div>
+          <p className="mt-4 text-xs font-medium text-zinc-400">Verificando sesión segura...</p>
         </div>
       ) : error ? (
-        <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#17212b] p-6 text-center text-white">
-          <div className="rounded-full bg-red-950/50 p-4 text-red-500">
+        <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#121212] p-6 text-center text-white">
+          <div className="rounded-2xl bg-rose-950/40 border border-rose-800/30 p-4 text-rose-400">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -214,11 +221,14 @@ function MiniAppContent({ children }: { children: React.ReactNode }) {
               />
             </svg>
           </div>
-          <h2 className="mt-4 text-lg font-semibold">Error de Acceso</h2>
-          <p className="mt-2 text-sm text-gray-400 max-w-xs">{error}</p>
+          <h2 className="mt-4 text-base font-bold">Acceso no autorizado</h2>
+          <p className="mt-2 text-xs text-zinc-400 max-w-xs leading-relaxed">{error}</p>
         </div>
       ) : (
-        children
+        <div className="min-h-screen bg-[#121212] text-white flex flex-col justify-between">
+          <div className="flex-1 pb-16">{children}</div>
+          <MiniAppNav />
+        </div>
       )}
     </MiniAppContext.Provider>
   )

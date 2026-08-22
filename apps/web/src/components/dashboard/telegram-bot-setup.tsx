@@ -54,7 +54,7 @@ export function TelegramBotSetup({
   const fetchStatus = useCallback(async () => {
     try {
       setIsLoading(true)
-      const res = await fetch(`http://localhost:8005/api/v1/bots/${organizationId}`)
+      const res = await fetch(`/api/v1/bots/${organizationId}`)
       if (res.ok) {
         const data = await res.json()
         if (data && data.bot_username) {
@@ -87,7 +87,7 @@ export function TelegramBotSetup({
     if (!token.trim()) return
     setIsSubmitting(true)
     try {
-      const res = await fetch(`http://localhost:8005/api/v1/bots/register`, {
+      const res = await fetch(`/api/v1/bots/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bot_token: token, organization_id: organizationId }),
@@ -109,7 +109,7 @@ export function TelegramBotSetup({
   const handleDelete = async () => {
     setIsSubmitting(true)
     try {
-      const res = await fetch(`http://localhost:8005/api/v1/bots/${organizationId}`, {
+      const res = await fetch(`/api/v1/bots/${organizationId}`, {
         method: 'DELETE',
       })
       if (!res.ok) throw new Error('Error al eliminar')

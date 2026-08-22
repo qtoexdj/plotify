@@ -3,26 +3,40 @@
 import React, { useEffect, useState, use, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useMiniApp } from '@/lib/miniapp/mini-app-shell'
+import { useTelegram } from '@/lib/miniapp/telegram'
+import { formatCLP, formatRelativeTime } from '@/lib/miniapp/format'
 
-interface ConflictItem {
-  campo: string
-  valor_db: string
-  valor_minuta: string
+interface DetalleLote {
+  numero?: string
+  precio?: number
+  proyecto?: string
+}
+
+interface Comprador {
+  nombre?: string
+  rut?: string
+  email?: string
+  telefono?: string
+}
+
+interface Discrepancia {
+  nombre: string
+  valor_certificado: string
+  valor_vendedor: string
+  diferencia_detectada: string
 }
 
 interface DetalleBandeja {
   id: string
   tipo: 'reserva' | 'venta' | 'excepcion'
   titulo: string
-  proyecto: string
-  numero_lote: string
-  vendedor: string
-  comprador?: string
-  fecha: string
-  monto?: number
-  // Para excepciones de cascada
-  conflictos?: ConflictItem[]
-  evidence_url?: string
+  estado: string
+  causa: string
+  antiguedad_segundos: number
+  detalles_lote?: DetalleLote
+  comprador?: Comprador
+  conflictos?: Discrepancia[]
+  evidence_file_id?: string
 }
 
 function DetalleBandejaContent({ id }: { id: string }) {
@@ -30,6 +44,7 @@ function DetalleBandejaContent({ id }: { id: string }) {
   const searchParams = useSearchParams()
   const tipo = searchParams.get('tipo') || 'reserva'
   const { session, loading: sessionLoading, error: sessionError } = useMiniApp()
+  const { haptic } = useTelegram()
 
   const [detalle, setDetalle] = useState<DetalleBandeja | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,6 +99,7 @@ function DetalleBandejaContent({ id }: { id: string }) {
 
   const handleDecision = async (decision: 'approve' | 'reject') => {
     if (!session || submitting) return
+    haptic.impact('medium')
     try {
       setError(null)
       setSubmitting(true)
@@ -103,9 +119,10 @@ function DetalleBandejaContent({ id }: { id: string }) {
         throw new Error(data.error || 'Ocurrió un error al procesar tu decisión.')
       }
 
+      haptic.notification('success')
       setSuccessMessage(
         decision === 'approve'
-          ? '¡Solicitud aprobada con éxito!'
+          ? '¡Solicitud aprobada! Cascada legal iniciada.'
           : '¡Solicitud rechazada con éxito!'
       )
 
@@ -113,6 +130,7 @@ function DetalleBandejaContent({ id }: { id: string }) {
         router.replace('/mini/bandeja')
       }, 1500)
     } catch (err: unknown) {
+      haptic.notification('error')
       const errorMsg = err instanceof Error ? err.message : 'Error al procesar la decisión.'
       setError(errorMsg)
       setSubmitting(false)
@@ -121,6 +139,7 @@ function DetalleBandejaContent({ id }: { id: string }) {
 
   const handleReintentarCascada = async () => {
     if (!session || submitting) return
+    haptic.impact('medium')
     try {
       setError(null)
       setSubmitting(true)
@@ -138,12 +157,14 @@ function DetalleBandejaContent({ id }: { id: string }) {
         throw new Error(data.error || 'Ocurrió un error al reintentar la cascada.')
       }
 
-      setSuccessMessage('¡Se ha iniciado el reintento de la cascada legal!')
+      haptic.notification('success')
+      setSuccessMessage('¡Se ha iniciado el reintento del pipeline legal!')
 
       setTimeout(() => {
         router.replace('/mini/bandeja')
       }, 1500)
     } catch (err: unknown) {
+      haptic.notification('error')
       const errorMsg = err instanceof Error ? err.message : 'Error al reintentar la cascada.'
       setError(errorMsg)
       setSubmitting(false)
@@ -152,17 +173,18 @@ function DetalleBandejaContent({ id }: { id: string }) {
 
   if (sessionLoading || loading) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-        <p className="mt-4 text-sm text-gray-400">Cargando detalles...</p>
+      <div className="min-h-screen bg-[#121212] text-white p-4 space-y-4">
+        <div className="h-8 w-24 animate-pulse bg-white/[0.04] rounded-lg"></div>
+        <div className="h-36 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
+        <div className="h-44 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
       </div>
     )
   }
 
   if (error && !detalle) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] p-6 text-center text-white">
-        <div className="rounded-full bg-red-950/50 p-4 text-red-500 mb-4">
+      <div className="min-h-screen bg-[#121212] p-6 text-center text-white flex flex-col items-center justify-center">
+        <div className="rounded-2xl bg-rose-950/40 border border-rose-800/30 p-4 text-rose-400 mb-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -178,13 +200,16 @@ function DetalleBandejaContent({ id }: { id: string }) {
             />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold">Error</h2>
-        <p className="mt-2 text-sm text-gray-400 max-w-xs">{error}</p>
+        <h2 className="text-base font-bold">Error</h2>
+        <p className="mt-2 text-xs text-zinc-400 max-w-xs">{error}</p>
         <button
-          onClick={() => router.push('/mini/bandeja')}
-          className="mt-6 rounded-lg bg-[#2481cc] px-5 py-2 text-xs font-semibold hover:bg-[#2072b3]"
+          onClick={() => {
+            haptic.impact('light')
+            router.push('/mini/bandeja')
+          }}
+          className="mt-6 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] px-5 py-2.5 text-xs font-semibold text-white active:scale-95 transition-all"
         >
-          Volver a la bandeja
+          Volver a Aprobaciones
         </button>
       </div>
     )
@@ -192,62 +217,79 @@ function DetalleBandejaContent({ id }: { id: string }) {
 
   if (successMessage) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-center text-white px-6">
-        <div className="rounded-full bg-emerald-950/50 p-4 text-emerald-400 mb-4 animate-bounce">
+      <div className="min-h-screen bg-[#121212] flex flex-col items-center justify-center text-center text-white px-6">
+        <div className="rounded-2xl bg-emerald-950/60 border border-emerald-500/30 p-5 text-emerald-400 mb-4 shadow-xl">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            strokeWidth={2.0}
+            strokeWidth={2.5}
             stroke="currentColor"
-            className="h-8 w-8"
+            className="h-10 w-10"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-emerald-400">{successMessage}</h2>
-        <p className="mt-2 text-xs text-gray-400">Redirigiendo a tu bandeja...</p>
+        <h2 className="text-lg font-bold text-white tracking-tight">{successMessage}</h2>
+        <p className="mt-2 text-xs text-zinc-400">Actualizando lista de decisiones...</p>
       </div>
     )
   }
 
   if (!detalle) return null
 
+  const lote = detalle.detalles_lote
+  const comprador = detalle.comprador
+  const esExcepcion = detalle.tipo === 'excepcion'
+
   return (
-    <div className="min-h-screen bg-[#0e1621] text-white pb-24">
-      {/* Navbar Premium */}
-      <header className="sticky top-0 z-10 bg-[#17212b] px-4 py-3 shadow-md border-b border-[#242f3d] flex items-center gap-3">
-        <button
-          onClick={() => router.push('/mini/bandeja')}
-          disabled={submitting}
-          className="rounded-lg p-1.5 hover:bg-[#242f3d] transition-all disabled:opacity-50"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2.0}
-            stroke="currentColor"
-            className="h-5 w-5"
+    <div className="min-h-screen bg-[#121212] text-white pb-28">
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-[#121212]/95 backdrop-blur-md border-b border-white/[0.08] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              haptic.impact('light')
+              router.push('/mini/bandeja')
+            }}
+            disabled={submitting}
+            className="rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] p-2 text-zinc-300 transition-all active:scale-90 disabled:opacity-50"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-            />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-sm font-bold truncate max-w-[220px]">
-            {detalle.tipo === 'excepcion' ? 'Conflicto de Cascada' : 'Detalle de Aprobación'}
-          </h1>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider">{detalle.tipo}</p>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2.0}
+              stroke="currentColor"
+              className="h-4 w-4"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-sm font-bold truncate max-w-[220px]">
+              {esExcepcion ? 'Excepción de Cascada' : 'Revisión Ejecutiva'}
+            </h1>
+            <p className="text-[10px] text-zinc-400 font-mono uppercase tracking-wider">
+              {detalle.tipo}
+            </p>
+          </div>
         </div>
+
+        <span
+          className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold border ${
+            esExcepcion
+              ? 'bg-amber-950/60 text-amber-300 border-amber-500/30'
+              : 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30'
+          }`}
+        >
+          {esExcepcion ? 'Excepción' : 'Pendiente'}
+        </span>
       </header>
 
       {/* Alerta de Error no Crítico */}
       {error && (
-        <div className="mx-4 mt-4 rounded-lg bg-red-950/40 border border-red-500/20 p-3 flex items-start gap-2.5 text-red-400">
+        <div className="mx-4 mt-4 rounded-xl bg-rose-950/40 border border-rose-800/30 p-3 flex items-start gap-2.5 text-rose-300 text-xs">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -262,62 +304,98 @@ function DetalleBandejaContent({ id }: { id: string }) {
               d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
             />
           </svg>
-          <span className="text-xs">{error}</span>
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Contenido Detalle */}
+      {/* Contenido Principal */}
       <main className="px-4 mt-4 space-y-4">
-        {/* Tarjeta de Ficha Básica */}
-        <section className="rounded-xl bg-[#17212b] border border-[#242f3d] p-4 space-y-3">
-          <div className="flex items-center justify-between border-b border-[#242f3d] pb-2">
+        {/* Ficha Resumen de la Operación */}
+        <section className="rounded-2xl bg-[#181818] border border-white/[0.08] p-4 space-y-3.5 shadow-md">
+          <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
             <div>
-              <h3 className="text-xs text-gray-400">Lote</h3>
-              <p className="text-sm font-bold text-white mt-0.5">N° {detalle.numero_lote}</p>
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                Parcela
+              </span>
+              <h2 className="text-base font-black text-white mt-0.5">
+                Lote N° {lote?.numero ?? '—'}
+              </h2>
             </div>
             <div className="text-right">
-              <h3 className="text-xs text-gray-400">Proyecto</h3>
-              <p className="text-sm font-bold text-[#2481cc] mt-0.5">{detalle.proyecto}</p>
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                Proyecto
+              </span>
+              <p className="text-sm font-bold text-rose-400 mt-0.5">
+                {lote?.proyecto ?? 'Desconocido'}
+              </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <div>
-              <span className="text-gray-400 block">Vendedor:</span>
-              <span className="font-semibold text-gray-200 block mt-0.5">{detalle.vendedor}</span>
+            <div className="bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.04]">
+              <span className="text-zinc-400 text-[10px] block font-medium">Motivo:</span>
+              <span className="font-semibold text-zinc-200 block mt-0.5">{detalle.causa}</span>
             </div>
-            <div>
-              <span className="text-gray-400 block">Fecha Solicitud:</span>
-              <span className="font-semibold text-gray-200 block mt-0.5">{detalle.fecha}</span>
+            <div className="bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.04]">
+              <span className="text-zinc-400 text-[10px] block font-medium">Antigüedad:</span>
+              <span className="font-semibold text-zinc-200 block mt-0.5 font-mono">
+                {formatRelativeTime(detalle.antiguedad_segundos)}
+              </span>
             </div>
-            {detalle.comprador && (
-              <div className="col-span-2">
-                <span className="text-gray-400 block">Comprador:</span>
-                <span className="font-semibold text-gray-100 block mt-0.5 text-sm">
-                  {detalle.comprador}
-                </span>
-              </div>
-            )}
-            {detalle.monto && (
-              <div className="col-span-2 pt-1 border-t border-[#242f3d]">
-                <span className="text-gray-400 block">Monto Transacción:</span>
-                <span className="font-bold text-emerald-400 block mt-0.5 text-base">
-                  ${detalle.monto.toLocaleString('es-CL')}
-                </span>
-              </div>
-            )}
           </div>
+
+          {typeof lote?.precio === 'number' && (
+            <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between">
+              <span className="text-xs text-zinc-400 font-medium">Monto Transacción:</span>
+              <span className="text-base font-black text-emerald-400 tracking-tight">
+                {formatCLP(lote.precio)}
+              </span>
+            </div>
+          )}
         </section>
 
+        {/* Ficha del Comprador */}
+        {comprador && (
+          <section className="rounded-2xl bg-[#181818] border border-white/[0.08] p-4 space-y-3 shadow-md">
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+              Datos del Comprador
+            </h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between items-center border-b border-white/[0.04] pb-2">
+                <span className="text-zinc-400">Nombre:</span>
+                <span className="font-bold text-white text-sm">{comprador.nombre ?? '—'}</span>
+              </div>
+              {comprador.rut && (
+                <div className="flex justify-between items-center border-b border-white/[0.04] pb-2">
+                  <span className="text-zinc-400">RUT:</span>
+                  <span className="font-mono font-bold text-zinc-200">{comprador.rut}</span>
+                </div>
+              )}
+              {comprador.email && (
+                <div className="flex justify-between items-center border-b border-white/[0.04] pb-2">
+                  <span className="text-zinc-400">Email:</span>
+                  <span className="text-zinc-200">{comprador.email}</span>
+                </div>
+              )}
+              {comprador.telefono && (
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400">Teléfono:</span>
+                  <span className="text-zinc-200">{comprador.telefono}</span>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* Sección de Excepción / Discrepancias Legales */}
-        {detalle.tipo === 'excepcion' && (
+        {esExcepcion && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Discrepancias Minuta vs DB
-              </h2>
-              <span className="rounded-full bg-amber-900/40 border border-amber-500/20 px-2 py-0.5 text-[10px] text-amber-400">
-                Bloqueado
+              <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Discrepancias Minuta vs Base de Datos
+              </h3>
+              <span className="rounded-lg bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                Intervención Requerida
               </span>
             </div>
 
@@ -326,109 +404,90 @@ function DetalleBandejaContent({ id }: { id: string }) {
                 {detalle.conflictos.map((conf, index) => (
                   <div
                     key={index}
-                    className="rounded-xl bg-[#17212b] border border-[#242f3d] p-3 space-y-2 relative overflow-hidden"
+                    className="rounded-2xl bg-[#181818] border border-white/[0.08] p-3.5 space-y-2.5 shadow-md"
                   >
-                    {/* Campo */}
-                    <div className="border-b border-[#242f3d] pb-1.5 flex items-center justify-between">
-                      <span className="text-xs font-bold text-gray-300 capitalize">
-                        {conf.campo.replace(/_/g, ' ')}
+                    <div className="border-b border-white/[0.06] pb-2 flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-200 capitalize">
+                        {conf.nombre.replace(/_/g, ' ')}
                       </span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-950/30 text-red-400 border border-red-500/10">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-rose-950/50 text-rose-300 border border-rose-700/30">
                         Discrepancia
                       </span>
                     </div>
 
-                    {/* Comparación side-by-side */}
-                    <div className="grid grid-cols-2 gap-3 text-xs pt-0.5">
-                      <div className="rounded-lg bg-emerald-950/20 border border-emerald-500/10 p-2">
+                    <div className="grid grid-cols-2 gap-2.5 text-xs">
+                      <div className="rounded-xl bg-emerald-950/20 border border-emerald-500/20 p-2.5">
                         <span className="text-[10px] text-emerald-400 font-bold block mb-1">
                           Base de Datos
                         </span>
-                        <span className="text-gray-300 font-semibold break-all leading-normal block">
-                          {conf.valor_db || '—'}
+                        <span className="text-zinc-200 font-semibold break-all leading-normal block">
+                          {conf.valor_certificado || '—'}
                         </span>
                       </div>
-                      <div className="rounded-lg bg-red-950/20 border border-red-500/10 p-2">
-                        <span className="text-[10px] text-red-400 font-bold block mb-1">
+                      <div className="rounded-xl bg-rose-950/20 border border-rose-500/20 p-2.5">
+                        <span className="text-[10px] text-rose-400 font-bold block mb-1">
                           Minuta Borrador
                         </span>
-                        <span className="text-gray-300 font-semibold break-all leading-normal block">
-                          {conf.valor_minuta || '—'}
+                        <span className="text-zinc-200 font-semibold break-all leading-normal block">
+                          {conf.valor_vendedor || '—'}
                         </span>
                       </div>
                     </div>
+
+                    {conf.diferencia_detectada && (
+                      <p className="text-[10px] text-zinc-400 leading-relaxed pt-1 font-medium">
+                        {conf.diferencia_detectada}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl bg-[#17212b] border border-[#242f3d] p-4 text-center">
-                <span className="text-xs text-gray-500">
-                  Sin discrepancias de variables registradas.
+              <div className="rounded-2xl bg-[#181818] border border-white/[0.08] p-4 text-center">
+                <span className="text-xs text-zinc-400">
+                  Sin discrepancias de variables registradas en este caso.
                 </span>
               </div>
             )}
 
-            {/* Enlace de evidencia documental */}
-            {detalle.evidence_url && (
-              <a
-                href={detalle.evidence_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-xl bg-blue-950/30 border border-blue-500/20 p-4 hover:bg-blue-950/40 transition-all cursor-pointer mt-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-blue-900/50 p-2 text-blue-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2.0}
-                      stroke="currentColor"
-                      className="h-5 w-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-gray-200">Ver Minuta Borrador</h4>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      Abrir archivo PDF de evidencia
-                    </p>
-                  </div>
-                </div>
-                <div className="text-blue-400">
+            {/* Referencia documental */}
+            {detalle.evidence_file_id && (
+              <div className="flex items-center gap-3 rounded-2xl bg-zinc-900 border border-white/[0.08] p-3.5">
+                <div className="rounded-xl bg-rose-950/50 p-2 text-rose-400 border border-rose-800/30">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                     strokeWidth={2.0}
                     stroke="currentColor"
-                    className="h-4 w-4"
+                    className="h-5 w-5"
                   >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                      d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
                     />
                   </svg>
                 </div>
-              </a>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-zinc-200">Expediente Registrado</h4>
+                  <p className="text-[10px] text-zinc-400 font-mono mt-0.5 truncate">
+                    Ref. #{detalle.evidence_file_id.slice(0, 8)} (Auditable en consola web)
+                  </p>
+                </div>
+              </div>
             )}
           </section>
         )}
       </main>
 
       {/* Barra de Acciones Fija Inferior */}
-      <footer className="fixed bottom-0 left-0 right-0 z-10 bg-[#17212b] border-t border-[#242f3d] px-4 py-4 flex gap-3 shadow-lg">
-        {detalle.tipo === 'excepcion' ? (
+      <footer className="fixed bottom-0 left-0 right-0 z-20 bg-[#121212]/98 backdrop-blur-xl border-t border-white/[0.1] px-4 py-3.5 flex gap-3 shadow-2xl safe-area-pb">
+        {esExcepcion ? (
           <button
             onClick={handleReintentarCascada}
             disabled={submitting}
-            className="flex-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 text-sm transition-all active:scale-[0.98] shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 h-12 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all active:scale-[0.98] shadow-lg shadow-amber-950/50 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {submitting ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
@@ -448,7 +507,7 @@ function DetalleBandejaContent({ id }: { id: string }) {
                     d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
                   />
                 </svg>
-                Reintentar Cascada
+                Reintentar Pipeline Legal
               </>
             )}
           </button>
@@ -457,19 +516,19 @@ function DetalleBandejaContent({ id }: { id: string }) {
             <button
               onClick={() => handleDecision('reject')}
               disabled={submitting}
-              className="flex-1 rounded-xl border border-red-500/30 bg-red-950/20 hover:bg-red-950/30 text-red-400 font-bold py-3 text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 h-12 rounded-2xl border border-rose-500/30 bg-rose-950/30 hover:bg-rose-950/50 text-rose-300 font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              Rechazar
+              Rechazar Solicitud
             </button>
             <button
               onClick={() => handleDecision('approve')}
               disabled={submitting}
-              className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 text-sm transition-all active:scale-[0.98] shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all active:scale-[0.98] shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
               ) : (
-                'Aprobar'
+                'Aprobar y Emitir'
               )}
             </button>
           </>
@@ -484,9 +543,9 @@ export default function DetalleBandejaPage({ params }: { params: Promise<{ id: s
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-          <p className="mt-4 text-sm text-gray-400">Cargando detalles...</p>
+        <div className="min-h-screen bg-[#121212] text-white p-4 space-y-4">
+          <div className="h-8 w-24 animate-pulse bg-white/[0.04] rounded-lg"></div>
+          <div className="h-36 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
         </div>
       }
     >

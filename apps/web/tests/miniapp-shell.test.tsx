@@ -13,6 +13,7 @@ const webApp = {
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
   useSearchParams: () => new URLSearchParams('org=org-1'),
+  usePathname: () => '/mini',
 }))
 
 vi.mock('@/lib/miniapp/telegram', () => ({

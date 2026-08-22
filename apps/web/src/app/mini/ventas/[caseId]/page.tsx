@@ -3,6 +3,7 @@
 import React, { useEffect, useState, use, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMiniApp } from '@/lib/miniapp/mini-app-shell'
+import { useTelegram } from '@/lib/miniapp/telegram'
 
 interface DetalleVenta {
   id: string
@@ -22,29 +23,45 @@ function getEtapaPaso(etapa: string): number {
   return idx !== -1 ? idx + 1 : 1
 }
 
-function getEtapaNombre(etapa: string): string {
-  const nombres: Record<string, string> = {
-    venta: 'Venta',
-    validacion: 'Validación',
-    revision: 'Revisión Jurídica',
-    minuta: 'Minuta Lista',
+function getEtapaInfo(etapa: string): { title: string; desc: string; detail: string } {
+  switch (etapa.toLowerCase()) {
+    case 'venta':
+      return {
+        title: 'Venta Registrada',
+        desc: 'Ingreso inicial del acuerdo comercial.',
+        detail: 'La solicitud fue ingresada y recibida por el sistema para validación de antecedentes.',
+      }
+    case 'validacion':
+      return {
+        title: 'Validación de Antecedentes',
+        desc: 'Comprobación de consistencia y datos del comprador.',
+        detail: 'Los datos del comprador y la parcela están siendo procesados de forma automatizada.',
+      }
+    case 'revision':
+      return {
+        title: 'Revisión Legal',
+        desc: 'Mesa jurídica preparando matriz y cláusulas notariales.',
+        detail: 'El expediente se encuentra en validación jurídica para estructurar el borrador oficial.',
+      }
+    case 'minuta':
+      return {
+        title: 'Minuta Lista para Entrega',
+        desc: 'Borrador de escritura generado exitosamente.',
+        detail: 'El documento final está generado y listo para ser entregado o descargado por las partes.',
+      }
+    default:
+      return {
+        title: 'En Tramitación',
+        desc: 'Expediente en curso.',
+        detail: 'El trámite avanza a través del flujo de escrituración.',
+      }
   }
-  return nombres[etapa.toLowerCase()] || etapa
-}
-
-function getEtapaDescripcion(etapa: string): string {
-  const descripciones: Record<string, string> = {
-    venta: 'Carga inicial del acuerdo de venta y datos primarios.',
-    validacion: 'Validación automatizada de consistencia y datos del comprador.',
-    revision: 'Verificación legal y de firmas de contratos en mesa.',
-    minuta: 'Minuta borrador generada y lista para entrega.',
-  }
-  return descripciones[etapa.toLowerCase()] || ''
 }
 
 function VentaDetalleContent({ caseId }: { caseId: string }) {
   const router = useRouter()
   const { session, loading: sessionLoading, error: sessionError } = useMiniApp()
+  const { haptic } = useTelegram()
 
   const [venta, setVenta] = useState<DetalleVenta | null>(null)
   const [loading, setLoading] = useState(true)
@@ -97,17 +114,18 @@ function VentaDetalleContent({ caseId }: { caseId: string }) {
 
   if (sessionLoading || loading) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-        <p className="mt-4 text-sm text-gray-400">Cargando detalles de venta...</p>
+      <div className="min-h-screen bg-[#121212] text-white p-4 space-y-4">
+        <div className="h-8 w-24 animate-pulse bg-white/[0.04] rounded-lg"></div>
+        <div className="h-32 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
+        <div className="h-40 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
       </div>
     )
   }
 
   if (error && !venta) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] p-6 text-center text-white">
-        <div className="rounded-full bg-red-950/50 p-4 text-red-500 mb-4">
+      <div className="min-h-screen bg-[#121212] p-6 text-center text-white flex flex-col items-center justify-center">
+        <div className="rounded-2xl bg-rose-950/40 border border-rose-800/30 p-4 text-rose-400 mb-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -123,13 +141,16 @@ function VentaDetalleContent({ caseId }: { caseId: string }) {
             />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold">Error</h2>
-        <p className="mt-2 text-sm text-gray-400 max-w-xs">{error}</p>
+        <h2 className="text-base font-bold">Error</h2>
+        <p className="mt-2 text-xs text-zinc-400 max-w-xs">{error}</p>
         <button
-          onClick={() => router.push('/mini/ventas')}
-          className="mt-6 rounded-lg bg-[#2481cc] px-5 py-2 text-xs font-semibold hover:bg-[#2072b3]"
+          onClick={() => {
+            haptic.impact('light')
+            router.push('/mini/ventas')
+          }}
+          className="mt-6 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] px-5 py-2.5 text-xs font-semibold text-white active:scale-95 transition-all"
         >
-          Volver a mis ventas
+          Volver a Mis Ventas
         </button>
       </div>
     )
@@ -137,98 +158,126 @@ function VentaDetalleContent({ caseId }: { caseId: string }) {
 
   if (!venta) return null
 
-  const hasBlockers = venta.blockers && venta.blockers.length > 0
   const activeStep = getEtapaPaso(venta.etapa)
+  const isReady = venta.etapa === 'minuta'
+  const etapaInfo = getEtapaInfo(venta.etapa)
 
   return (
-    <div className="min-h-screen bg-[#0e1621] text-white pb-12">
-      {/* Navbar Premium */}
-      <header className="sticky top-0 z-10 bg-[#17212b] px-4 py-3 shadow-md border-b border-[#242f3d] flex items-center gap-3">
-        <button
-          onClick={() => router.push('/mini/ventas')}
-          className="rounded-lg p-1.5 hover:bg-[#242f3d] transition-all"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2.0}
-            stroke="currentColor"
-            className="h-5 w-5"
+    <div className="min-h-screen bg-[#121212] text-white pb-12">
+      {/* Header con botón Atrás */}
+      <header className="sticky top-0 z-20 bg-[#121212]/95 backdrop-blur-md border-b border-white/[0.08] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              haptic.impact('light')
+              router.push('/mini/ventas')
+            }}
+            className="rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] p-2 text-zinc-300 transition-all active:scale-90"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-            />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-sm font-bold truncate">Lote N° {venta.numero_lote}</h1>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider">{venta.proyecto}</p>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2.0}
+              stroke="currentColor"
+              className="h-4 w-4"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-sm font-bold text-white">Lote N° {venta.numero_lote}</h1>
+            <p className="text-[11px] text-zinc-400 font-medium">{venta.proyecto}</p>
+          </div>
         </div>
+
+        <span
+          className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold border ${
+            isReady
+              ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30'
+              : 'bg-zinc-800/80 text-zinc-300 border-zinc-700/40'
+          }`}
+        >
+          {isReady ? 'Minuta Lista' : 'En Trámite'}
+        </span>
       </header>
 
       {/* Contenido Principal */}
-      <main className="px-4 mt-4 space-y-5">
-        {/* Ficha Básica */}
-        <section className="rounded-xl bg-[#17212b] border border-[#242f3d] p-4 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-gray-500 block uppercase tracking-wider">
-              Estado de Trámite
-            </span>
-            <span className="text-sm font-bold text-gray-200 block mt-0.5 capitalize">
-              {venta.status.replace(/_/g, ' ')}
+      <main className="px-4 mt-4 space-y-4">
+        {/* Ficha Resumen */}
+        <section className="rounded-2xl bg-[#181818] border border-white/[0.08] p-4 space-y-3 shadow-md">
+          <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+            <div>
+              <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider block">
+                Estado Actual
+              </span>
+              <h2 className="text-base font-bold text-white mt-0.5">{etapaInfo.title}</h2>
+            </div>
+            <span className="text-xs font-mono text-zinc-400 bg-white/[0.04] border border-white/[0.06] px-2 py-1 rounded-lg">
+              Fase {activeStep}/4
             </span>
           </div>
-          {hasBlockers ? (
-            <span className="rounded-full bg-amber-900/40 border border-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-400">
-              Trabas Pendientes
-            </span>
-          ) : (
-            <span className="rounded-full bg-emerald-900/40 border border-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-400">
-              Sin Blockers
-            </span>
+
+          <p className="text-xs text-zinc-300 leading-relaxed font-normal">{etapaInfo.detail}</p>
+
+          {isReady && (
+            <button
+              onClick={() => {
+                haptic.impact('medium')
+                router.push('/mini/documentos')
+              }}
+              className="w-full mt-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 active:scale-[0.98] transition-all"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+                />
+              </svg>
+              Ver Minuta en Archivador
+            </button>
           )}
         </section>
 
-        {/* Stepper Pipeline (Horizontal / Premium) */}
-        <section className="rounded-xl bg-[#17212b] border border-[#242f3d] p-4 space-y-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            Flujo de Escrituración
-          </h2>
+        {/* Flujo Visual Paso a Paso */}
+        <section className="rounded-2xl bg-[#181818] border border-white/[0.08] p-4 space-y-4 shadow-md">
+          <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+            Flujo de Tramitación Plotify
+          </h3>
 
-          <div className="relative flex items-center justify-between w-full mt-2">
-            {/* Línea de Fondo del Stepper */}
-            <div className="absolute left-0 right-0 h-0.5 bg-[#242f3d] -z-0"></div>
-
-            {/* Línea de Progreso Activa */}
-            <div
-              className={`absolute left-0 h-0.5 -z-0 transition-all ${
-                hasBlockers ? 'bg-amber-500' : 'bg-emerald-500'
-              }`}
-              style={{
-                width: `${((activeStep - 1) / (ETAPAS_ORDENADAS.length - 1)) * 100}%`,
-              }}
-            ></div>
-
-            {/* Pasos */}
+          <div className="space-y-3">
             {ETAPAS_ORDENADAS.map((et, index) => {
               const stepNum = index + 1
               const isCompleted = stepNum < activeStep
-              const isActive = stepNum === activeStep
+              const isCurrent = stepNum === activeStep
+              const info = getEtapaInfo(et)
 
               return (
-                <div key={et} className="relative z-10 flex flex-col items-center">
+                <div
+                  key={et}
+                  className={`flex items-start gap-3 rounded-xl p-3 border transition-all ${
+                    isCurrent
+                      ? 'bg-white/[0.06] border-emerald-500/30'
+                      : isCompleted
+                        ? 'bg-white/[0.02] border-white/[0.06] opacity-80'
+                        : 'bg-transparent border-white/[0.04] opacity-40'
+                  }`}
+                >
                   <div
-                    className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold transition-all border ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       isCompleted
-                        ? 'bg-emerald-600 border-emerald-500 text-white'
-                        : isActive
-                          ? hasBlockers
-                            ? 'bg-amber-600 border-amber-500 text-white animate-pulse'
-                            : 'bg-emerald-600 border-emerald-500 text-white animate-pulse'
-                          : 'bg-[#17212b] border-[#242f3d] text-gray-500'
+                        ? 'bg-emerald-600 text-white'
+                        : isCurrent
+                          ? 'bg-emerald-500 text-black font-black'
+                          : 'bg-zinc-800 text-zinc-500'
                     }`}
                   >
                     {isCompleted ? (
@@ -236,113 +285,41 @@ function VentaDetalleContent({ caseId }: { caseId: string }) {
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
-                        strokeWidth={2.5}
+                        strokeWidth={3}
                         stroke="currentColor"
-                        className="h-4 w-4"
+                        className="h-3.5 w-3.5"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="m4.5 12.75 6 6 9-13.5"
-                        />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                       </svg>
                     ) : (
                       stepNum
                     )}
                   </div>
-                  <span
-                    className={`text-[9px] font-semibold mt-1.5 absolute top-7 whitespace-nowrap ${
-                      isActive
-                        ? hasBlockers
-                          ? 'text-amber-400 font-bold'
-                          : 'text-emerald-400 font-bold'
-                        : 'text-gray-500'
-                    }`}
-                  >
-                    {getEtapaNombre(et)}
-                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4
+                        className={`text-xs font-bold ${
+                          isCurrent ? 'text-emerald-400' : 'text-zinc-200'
+                        }`}
+                      >
+                        {info.title}
+                      </h4>
+                      {isCompleted && (
+                        <span className="text-[10px] text-emerald-400 font-semibold">Listo</span>
+                      )}
+                      {isCurrent && (
+                        <span className="text-[10px] text-emerald-400 font-bold animate-pulse">
+                          En curso
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug">{info.desc}</p>
+                  </div>
                 </div>
               )
             })}
           </div>
-
-          <div className="pt-6 text-xs text-gray-400 leading-relaxed border-t border-[#242f3d] mt-2">
-            <span className="font-bold text-gray-300 block mb-0.5">
-              Etapa Actual: {getEtapaNombre(venta.etapa)}
-            </span>
-            <p>{getEtapaDescripcion(venta.etapa)}</p>
-          </div>
-        </section>
-
-        {/* Bloqueadores / Tareas Requeridas */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            Estado de Requisitos
-          </h2>
-
-          {hasBlockers ? (
-            <div className="space-y-2">
-              {venta.blockers_humanizados.map((bl, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-xl border border-amber-500/20 bg-amber-950/10 p-3.5 flex items-start gap-3"
-                >
-                  <div className="rounded-lg bg-amber-900/40 p-2 text-amber-400 shrink-0">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2.0}
-                      stroke="currentColor"
-                      className="h-4 w-4"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                      Acción Requerida
-                    </h4>
-                    <p className="text-sm font-semibold text-gray-200 mt-0.5 leading-relaxed">
-                      {bl}
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Por favor, regulariza este campo con el comprador o mesa jurídica para avanzar
-                      de etapa.
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-4 flex items-start gap-3">
-              <div className="rounded-lg bg-emerald-900/40 p-2 text-emerald-400 shrink-0">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.0}
-                  stroke="currentColor"
-                  className="h-4 w-4"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  Venta Libre de Trabas
-                </h4>
-                <p className="text-sm font-semibold text-gray-200 mt-0.5 leading-relaxed">
-                  Todo está al día para esta venta. El pipeline de validaciones se completó con
-                  éxito.
-                </p>
-              </div>
-            </div>
-          )}
         </section>
       </main>
     </div>
@@ -354,9 +331,9 @@ export default function VentaDetallePage({ params }: { params: Promise<{ caseId:
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-          <p className="mt-4 text-sm text-gray-400">Cargando detalles de venta...</p>
+        <div className="min-h-screen bg-[#121212] text-white p-4 space-y-4">
+          <div className="h-8 w-24 animate-pulse bg-white/[0.04] rounded-lg"></div>
+          <div className="h-32 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
         </div>
       }
     >

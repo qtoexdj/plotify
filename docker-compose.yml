@@ -1,0 +1,99 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - plotify_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8005:8005"
+    environment:
+      - ENVIRONMENT=production
+      - API_PORT=8005
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - API_PUBLIC_URL=${API_PUBLIC_URL:-http://localhost:8005}
+      - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET:-}
+      - TELEGRAM_MINI_APP_URL=${TELEGRAM_MINI_APP_URL:-${FRONTEND_URL}}
+      - MINIAPP_SESSION_SECRET=${MINIAPP_SESSION_SECRET}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - plotify_net
+
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command: python -c "from arq.cli import cli; raise SystemExit(cli())" workers.main_worker.WorkerSettings
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=production
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET:-}
+      - TELEGRAM_MINI_APP_URL=${TELEGRAM_MINI_APP_URL:-${FRONTEND_URL}}
+      - MINIAPP_SESSION_SECRET=${MINIAPP_SESSION_SECRET}
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - plotify_net
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - NEXT_PUBLIC_TELEGRAM_BOT_USER=${NEXT_PUBLIC_TELEGRAM_BOT_USER:-plotify_chat_bot}
+        - PLOTIFY_CHAT_BASE_URL=${PLOTIFY_CHAT_BASE_URL:-http://api:8005}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_TELEGRAM_BOT_USER=${NEXT_PUBLIC_TELEGRAM_BOT_USER:-plotify_chat_bot}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - PLOTIFY_CHAT_BASE_URL=${PLOTIFY_CHAT_BASE_URL:-http://api:8005}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+    depends_on:
+      - api
+    networks:
+      - plotify_net
+
+volumes:
+  redis_data:
+
+networks:
+  plotify_net:
+    driver: bridge

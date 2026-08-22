@@ -21,7 +21,7 @@ export function buildContentSecurityPolicy({
     "style-src-attr 'unsafe-inline'",
     "img-src 'self' blob: data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://demotiles.maplibre.org",
     "media-src 'self' blob: data:",
     "worker-src 'self' blob:",
     "object-src 'none'",

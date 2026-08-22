@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useMiniApp } from '@/lib/miniapp/mini-app-shell'
+import { useTelegram } from '@/lib/miniapp/telegram'
 
 interface LotDetail {
   id: string
@@ -22,7 +24,7 @@ interface LotSheetProps {
 }
 
 function formatCLP(value: number | null): string {
-  if (value === null || value === undefined) return 'No definido'
+  if (value === null || value === undefined) return 'A consultar'
   return new Intl.NumberFormat('es-CL', {
     style: 'currency',
     currency: 'CLP',
@@ -31,10 +33,13 @@ function formatCLP(value: number | null): string {
 }
 
 export function LotSheet({ lotId, token, onClose, onStartReservation }: LotSheetProps) {
+  const { session } = useMiniApp()
+  const { haptic } = useTelegram()
   const [lot, setLot] = useState<LotDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -76,45 +81,70 @@ export function LotSheet({ lotId, token, onClose, onStartReservation }: LotSheet
   }, [lotId, token])
 
   const handleShare = () => {
-    // Generar el deep link de la Mini App con startapp
-    // El bot lee este start_param para abrir el visor en este lote directamente
-    const botUsername = 'PlotifyBot' // Bot por defecto o recuperado dinámicamente
+    haptic.impact('light')
+    const botUsername = session?.bot_username
+    if (!botUsername) {
+      setShareError('No se pudo determinar el bot para compartir.')
+      return
+    }
     const deepLink = `https://t.me/${botUsername}/app?startapp=lot_${lotId}`
 
-    // Intentar compartir vía Clipboard
     navigator.clipboard
       .writeText(deepLink)
       .then(() => {
+        haptic.notification('success')
+        setShareError(null)
         setShareCopied(true)
         setTimeout(() => setShareCopied(false), 2000)
       })
       .catch((err) => {
         console.error('Error al copiar link:', err)
+        setShareError('No se pudo copiar el enlace en este dispositivo.')
       })
   }
 
-  return (
-    <div className="absolute bottom-0 left-0 right-0 z-20 rounded-t-2xl bg-[#17212b] border-t border-[#242f3d] shadow-2xl p-5 animate-slide-up max-h-[85vh] overflow-y-auto">
-      {/* Indicador de arrastre visual */}
-      <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-gray-600/50" />
+  const isAvailable = lot?.status === 'disponible'
 
-      {/* Cerrar / Cabecera */}
+  return (
+    <div className="absolute bottom-0 left-0 right-0 z-20 rounded-t-3xl bg-[#161616]/98 backdrop-blur-2xl border-t border-white/[0.12] shadow-2xl p-5 animate-slide-up max-h-[85vh] overflow-y-auto safe-area-pb">
+      {/* Tirador de arrastre */}
+      <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-white/[0.15]" />
+
+      {/* Cabecera */}
       <div className="flex items-start justify-between">
         <div>
           {loading ? (
-            <div className="h-6 w-32 animate-pulse bg-gray-800 rounded"></div>
+            <div className="h-6 w-32 animate-pulse bg-white/[0.06] rounded-lg"></div>
           ) : lot ? (
             <>
-              <h2 className="text-lg font-bold text-white">Lote {lot.numero_lote}</h2>
-              <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wider">
-                {lot.proyecto_nombre}
-              </p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-white tracking-tight">Lote {lot.numero_lote}</h2>
+                <span
+                  className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold border ${
+                    lot.status === 'disponible'
+                      ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30'
+                      : lot.status === 'reservado'
+                        ? 'bg-amber-950/60 text-amber-300 border-amber-500/30'
+                        : 'bg-zinc-800 text-zinc-400 border-zinc-700/40'
+                  }`}
+                >
+                  {lot.status === 'disponible'
+                    ? 'Disponible'
+                    : lot.status === 'reservado'
+                      ? 'Reservado'
+                      : 'Vendido'}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400 mt-0.5 font-medium">{lot.proyecto_nombre}</p>
             </>
           ) : null}
         </div>
         <button
-          onClick={onClose}
-          className="rounded-full bg-gray-800/60 p-1.5 text-gray-400 hover:text-white transition-all active:scale-90"
+          onClick={() => {
+            haptic.impact('light')
+            onClose()
+          }}
+          className="rounded-full bg-white/[0.06] hover:bg-white/[0.12] p-2 text-zinc-400 hover:text-white transition-all active:scale-90"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -130,79 +160,63 @@ export function LotSheet({ lotId, token, onClose, onStartReservation }: LotSheet
       </div>
 
       {loading ? (
-        <div className="mt-6 space-y-4">
-          <div className="h-10 w-full animate-pulse bg-gray-800 rounded-lg"></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="h-14 animate-pulse bg-gray-800 rounded-lg"></div>
-            <div className="h-14 animate-pulse bg-gray-800 rounded-lg"></div>
+        <div className="mt-5 space-y-3">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="h-16 animate-pulse bg-white/[0.04] rounded-2xl"></div>
+            <div className="h-16 animate-pulse bg-white/[0.04] rounded-2xl"></div>
           </div>
-          <div className="h-16 w-full animate-pulse bg-gray-800 rounded-lg"></div>
+          <div className="h-20 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
         </div>
       ) : error ? (
-        <div className="mt-6 text-center text-red-400 py-4 text-xs font-medium">{error}</div>
+        <div className="mt-5 text-center text-rose-400 py-4 text-xs font-medium bg-rose-950/20 rounded-xl border border-rose-800/30">
+          {error}
+        </div>
       ) : lot ? (
-        <div className="mt-5 space-y-5">
-          {/* Badge Estado */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">Disponibilidad:</span>
-            {lot.status === 'disponible' ? (
-              <span className="rounded-full bg-emerald-950/40 border border-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Disponible
-              </span>
-            ) : lot.status === 'reservado' ? (
-              <span className="rounded-full bg-amber-950/40 border border-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-400 flex items-center gap-1.5">
-                Reservado
-              </span>
-            ) : (
-              <span className="rounded-full bg-gray-800/40 border border-gray-700/20 px-3 py-1 text-xs font-semibold text-gray-500">
-                Vendido
-              </span>
-            )}
-          </div>
-
-          {/* Grid Técnico */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-[#0e1621]/50 border border-[#242f3d]/60 p-3">
-              <span className="text-[9px] text-gray-500 block uppercase tracking-wider font-semibold">
+        <div className="mt-4 space-y-4">
+          {/* Métricas Principales */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-3.5 space-y-1">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
                 Superficie
               </span>
-              <span className="text-sm font-bold text-white mt-1 block">
-                {lot.superficie ? `${lot.superficie} m²` : 'No definida'}
+              <span className="text-base font-black text-white tracking-tight block">
+                {lot.superficie ? `${lot.superficie.toLocaleString('es-CL')} m²` : 'Por definir'}
               </span>
             </div>
-            <div className="rounded-xl bg-[#0e1621]/50 border border-[#242f3d]/60 p-3">
-              <span className="text-[9px] text-gray-500 block uppercase tracking-wider font-semibold">
-                Precio Lote
+            <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-3.5 space-y-1">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                Precio Lista
               </span>
-              <span className="text-sm font-bold text-white mt-1 block">
+              <span className="text-base font-black text-emerald-400 tracking-tight block">
                 {formatCLP(lot.precio)}
               </span>
             </div>
           </div>
 
-          {/* Detalles e Info Fina */}
-          <div className="space-y-3 bg-[#0e1621]/40 border border-[#242f3d]/40 rounded-xl p-3.5 text-xs">
-            <div className="flex justify-between border-b border-[#242f3d]/40 pb-2">
-              <span className="text-gray-400">Rol de Avalúo:</span>
-              <span className="font-bold text-gray-200">{lot.numero_rol || 'No asignado'}</span>
+          {/* Ficha Legal / Deslindes */}
+          <div className="space-y-2.5 bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 text-xs">
+            <div className="flex justify-between items-center border-b border-white/[0.06] pb-2.5">
+              <span className="text-zinc-400 font-medium">Rol de Avalúo SII:</span>
+              <span className="font-mono font-bold text-zinc-200">
+                {lot.numero_rol || 'En trámite / No asignado'}
+              </span>
             </div>
             <div className="space-y-1 pt-1">
-              <span className="text-gray-400 block">Límites y Deslindes:</span>
-              <p className="text-gray-300 leading-normal italic font-medium">
-                {lot.deslindes || 'No se han ingresado los deslindes técnicos para este lote.'}
+              <span className="text-zinc-400 font-medium block text-[11px]">Deslindes Técnicos:</span>
+              <p className="text-zinc-300 leading-relaxed font-normal text-xs">
+                {lot.deslindes || 'Deslindes oficiales cargados en el expediente de loteo.'}
               </p>
             </div>
           </div>
 
           {/* Botones de Acción */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-2.5 pt-1">
             <button
               onClick={handleShare}
-              className={`flex-1 rounded-xl py-3 text-xs font-bold transition-all border flex items-center justify-center gap-1.5 active:scale-95 ${
+              className={`flex-1 rounded-2xl py-3 text-xs font-bold transition-all border flex items-center justify-center gap-1.5 active:scale-95 ${
                 shareCopied
-                  ? 'bg-emerald-600 border-emerald-500 text-white'
-                  : 'bg-transparent border-[#242f3d] text-gray-300 hover:bg-gray-800/40'
+                  ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-950/50'
+                  : 'bg-white/[0.06] hover:bg-white/[0.1] border-white/[0.1] text-zinc-200'
               }`}
             >
               {shareCopied ? (
@@ -227,7 +241,7 @@ export function LotSheet({ lotId, token, onClose, onStartReservation }: LotSheet
                     viewBox="0 0 24 24"
                     strokeWidth={2.0}
                     stroke="currentColor"
-                    className="h-4 w-4 text-[#2481cc]"
+                    className="h-4 w-4 text-emerald-400"
                   >
                     <path
                       strokeLinecap="round"
@@ -240,10 +254,13 @@ export function LotSheet({ lotId, token, onClose, onStartReservation }: LotSheet
               )}
             </button>
 
-            {lot.status === 'disponible' ? (
+            {isAvailable ? (
               <button
-                onClick={() => onStartReservation(lot.id)}
-                className="flex-[2] rounded-xl bg-[#2481cc] py-3 text-xs font-bold text-white shadow-md hover:bg-[#2072b3] transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                onClick={() => {
+                  haptic.impact('medium')
+                  onStartReservation(lot.id)
+                }}
+                className="flex-[2] rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-950/60 transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -255,17 +272,19 @@ export function LotSheet({ lotId, token, onClose, onStartReservation }: LotSheet
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                Iniciar Reserva
+                Reservar Parcela
               </button>
             ) : (
               <button
                 disabled
-                className="flex-[2] rounded-xl bg-gray-800 text-gray-500 py-3 text-xs font-bold cursor-not-allowed border border-gray-700/20 text-center"
+                className="flex-[2] rounded-2xl bg-zinc-800/60 text-zinc-500 py-3 text-xs font-bold cursor-not-allowed border border-white/[0.04] text-center"
               >
-                No Disponible
+                Parcela {lot.status}
               </button>
             )}
           </div>
+
+          {shareError && <p className="text-[11px] text-rose-400 text-center">{shareError}</p>}
         </div>
       ) : null}
     </div>

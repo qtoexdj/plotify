@@ -28,6 +28,7 @@ Esta nota conecta Obsidian con la estructura y stack verificable de Plotify. Las
 | Agentes | LangGraph | `1.2.1` en `apps/api/requirements.txt` |
 | Cola | ARQ | `0.27.0` en `apps/api/requirements.txt` |
 | Datos | Supabase PostgreSQL | cloud-only; proyecto `swkrnjdpnlrgxgotmfxy` |
+| Despliegue | GitHub → Coolify (self-hosted) | Servidor local con túnel y dominio propio; Docker Compose (`web`, `api`, `worker`, `redis`) |
 
 PostgreSQL 17 está declarado por SDD019. Confírmalo mediante Supabase MCP antes de usarlo como estado del servicio.
 

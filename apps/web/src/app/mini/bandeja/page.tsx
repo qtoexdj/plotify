@@ -3,6 +3,9 @@
 import React, { useEffect, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMiniApp } from '@/lib/miniapp/mini-app-shell'
+import { MiniAppHeader } from '@/lib/miniapp/mini-app-header'
+import { useTelegram } from '@/lib/miniapp/telegram'
+import { formatRelativeTime } from '@/lib/miniapp/format'
 
 interface BandejaItem {
   id: string
@@ -13,19 +16,10 @@ interface BandejaItem {
   estado: string
 }
 
-function formatRelativeTime(seconds: number): string {
-  if (seconds < 60) return 'Hace instantes'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `Hace ${minutes} min`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `Hace ${hours} h`
-  const days = Math.floor(hours / 24)
-  return `Hace ${days} d`
-}
-
 function BandejaInboxContent() {
   const router = useRouter()
   const { session, loading: sessionLoading, error: sessionError } = useMiniApp()
+  const { haptic } = useTelegram()
 
   const [items, setItems] = useState<BandejaItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,7 +43,6 @@ function BandejaInboxContent() {
       return
     }
 
-    // Solo admins acceden a esta bandeja
     const role = session.role.toLowerCase()
     if (role !== 'admin' && role !== 'superadmin') {
       Promise.resolve().then(() => {
@@ -71,10 +64,10 @@ function BandejaInboxContent() {
         })
 
         if (!targetRes.ok) {
-          throw new Error('Fallo al obtener los elementos de la bandeja.')
+          throw new Error('Fallo al obtener las solicitudes de la organización.')
         }
 
-        const data = await targetRes.json()
+        const data = await resJson(targetRes)
         setItems(data)
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : 'Error al conectar con el servidor.'
@@ -87,6 +80,13 @@ function BandejaInboxContent() {
     fetchBandeja()
   }, [session, sessionLoading, sessionError])
 
+  async function resJson(res: Response) {
+    return res.json()
+  }
+
+  const approvalsCount = items.filter((i) => i.tipo === 'reserva' || i.tipo === 'venta').length
+  const exceptionsCount = items.filter((i) => i.tipo === 'excepcion').length
+
   const filteredItems = items.filter((item) => {
     if (filter === 'approvals') return item.tipo === 'reserva' || item.tipo === 'venta'
     if (filter === 'exceptions') return item.tipo === 'excepcion'
@@ -95,97 +95,211 @@ function BandejaInboxContent() {
 
   if (sessionLoading || loading) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-        <p className="mt-4 text-sm text-gray-400">Actualizando bandeja de entrada...</p>
+      <div className="min-h-screen bg-[#121212] text-white">
+        <MiniAppHeader title="Centro de Mando" subtitle="Cargando solicitudes..." />
+        <div className="p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-20 animate-pulse bg-white/[0.04] rounded-2xl"></div>
+            <div className="h-20 animate-pulse bg-white/[0.04] rounded-2xl"></div>
+          </div>
+          <div className="h-28 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
+          <div className="h-28 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] p-6 text-center text-white">
-        <div className="rounded-full bg-red-950/50 p-4 text-red-500 mb-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="h-8 w-8"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z"
-            />
-          </svg>
+      <div className="min-h-screen bg-[#121212] text-white">
+        <MiniAppHeader title="Centro de Mando" />
+        <div className="flex flex-col items-center justify-center p-6 text-center mt-12">
+          <div className="rounded-2xl bg-rose-950/40 border border-rose-800/30 p-4 text-rose-400 mb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-8 w-8"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-base font-bold">Error</h2>
+          <p className="mt-2 text-xs text-zinc-400 max-w-xs">{error}</p>
         </div>
-        <h2 className="text-lg font-semibold">Error</h2>
-        <p className="mt-2 text-sm text-gray-400 max-w-xs">{error}</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0e1621] text-white pb-6">
-      {/* Header Fijo */}
-      <header className="sticky top-0 z-10 bg-[#17212b] px-4 py-4 shadow-md border-b border-[#242f3d]">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-bold">Bandeja de Entrada</h1>
-            <p className="text-xs text-gray-400 mt-0.5">{session?.user.org_nombre}</p>
-          </div>
-          <span className="rounded-full bg-[#2481cc]/20 px-2.5 py-1 text-xs font-semibold text-[#2481cc]">
-            {filteredItems.length} pendientes
-          </span>
-        </div>
+    <div className="min-h-screen bg-[#121212] text-white pb-6">
+      {/* Header Unificado */}
+      <MiniAppHeader
+        title="Centro de Control"
+        subtitle={`${items.length} decisiones pendientes`}
+        rightElement={
+          <button
+            onClick={() => {
+              haptic.impact('light')
+              router.push('/mini/mapa')
+            }}
+            className="flex items-center gap-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] px-3 py-1.5 text-xs font-semibold text-zinc-200 active:scale-95 transition-all shadow-sm"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="h-3.5 w-3.5 text-rose-400"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689A1.125 1.125 0 0 0 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"
+              />
+            </svg>
+            Masterplan
+          </button>
+        }
+      />
 
-        {/* Filtros Horizontales Premium */}
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={() => setFilter('all')}
-            className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-all ${
-              filter === 'all'
-                ? 'bg-[#2481cc] text-white shadow-md'
-                : 'bg-[#242f3d] text-gray-400 hover:bg-[#2c3b4d]'
-            }`}
-          >
-            Todos
-          </button>
-          <button
-            onClick={() => setFilter('approvals')}
-            className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-all ${
-              filter === 'approvals'
-                ? 'bg-[#2481cc] text-white shadow-md'
-                : 'bg-[#242f3d] text-gray-400 hover:bg-[#2c3b4d]'
-            }`}
-          >
-            Aprobaciones
-          </button>
-          <button
-            onClick={() => setFilter('exceptions')}
-            className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-all ${
-              filter === 'exceptions'
-                ? 'bg-[#2481cc] text-white shadow-md'
-                : 'bg-[#242f3d] text-gray-400 hover:bg-[#2c3b4d]'
-            }`}
-          >
-            Excepciones
-          </button>
-        </div>
-      </header>
-
-      {/* Lista de Items */}
-      <main className="px-4 mt-4 space-y-3">
-        {filteredItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="rounded-full bg-[#17212b] p-4 text-gray-500 mb-3">
+      {/* Tarjetas de Métricas Ejecutivas */}
+      <div className="px-4 mt-4 grid grid-cols-2 gap-3">
+        <div
+          onClick={() => {
+            haptic.selection()
+            setFilter('approvals')
+          }}
+          className={`rounded-2xl p-4 border transition-all cursor-pointer shadow-md ${
+            filter === 'approvals'
+              ? 'bg-gradient-to-br from-emerald-950/50 to-zinc-900 border-emerald-500/40 shadow-emerald-950/30'
+              : 'bg-[#181818] border-white/[0.08] hover:border-white/[0.15]'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+              Aprobaciones
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                strokeWidth={1.5}
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="h-4 w-4"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-white tracking-tight">{approvalsCount}</span>
+            <span className="text-[11px] text-zinc-400 font-medium">por revisar</span>
+          </div>
+        </div>
+
+        <div
+          onClick={() => {
+            haptic.selection()
+            setFilter('exceptions')
+          }}
+          className={`rounded-2xl p-4 border transition-all cursor-pointer shadow-md ${
+            filter === 'exceptions'
+              ? 'bg-gradient-to-br from-amber-950/50 to-zinc-900 border-amber-500/40 shadow-amber-950/30'
+              : 'bg-[#181818] border-white/[0.08] hover:border-white/[0.15]'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+              Excepciones
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.008v.008H12v-.008Z"
+                />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-black text-white tracking-tight">{exceptionsCount}</span>
+            <span className="text-[11px] text-zinc-400 font-medium">intervenciones</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Pestañas de Filtro */}
+      <div className="px-4 mt-4">
+        <div className="flex rounded-xl bg-zinc-900/80 p-1 border border-white/[0.06]">
+          <button
+            onClick={() => {
+              haptic.selection()
+              setFilter('all')
+            }}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
+              filter === 'all'
+                ? 'bg-white/[0.12] text-white shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            Todas ({items.length})
+          </button>
+          <button
+            onClick={() => {
+              haptic.selection()
+              setFilter('approvals')
+            }}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
+              filter === 'approvals'
+                ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            Aprobaciones ({approvalsCount})
+          </button>
+          <button
+            onClick={() => {
+              haptic.selection()
+              setFilter('exceptions')
+            }}
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
+              filter === 'exceptions'
+                ? 'bg-amber-950/60 text-amber-300 border border-amber-500/30 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            Excepciones ({exceptionsCount})
+          </button>
+        </div>
+      </div>
+
+      {/* Lista de Solicitudes y Excepciones */}
+      <main className="px-4 mt-4 space-y-3">
+        {filteredItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.02] p-6">
+            <div className="rounded-2xl bg-emerald-950/30 border border-emerald-500/20 p-4 text-emerald-400 mb-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
                 stroke="currentColor"
                 className="h-7 w-7"
               >
@@ -196,117 +310,79 @@ function BandejaInboxContent() {
                 />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold text-gray-300">¡Bandeja al día!</h3>
-            <p className="text-xs text-gray-500 mt-1 max-w-xs">
-              No tienes tareas pendientes por aprobar o excepciones legales por resolver.
+            <h3 className="text-sm font-bold text-zinc-200">¡Todo al día en la organización!</h3>
+            <p className="text-xs text-zinc-400 mt-1 max-w-xs leading-relaxed">
+              No hay solicitudes comerciales ni excepciones pendientes de revisión en este momento.
             </p>
           </div>
         ) : (
-          filteredItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => router.push(`/mini/bandeja/${item.id}?tipo=${item.tipo}`)}
-              className="flex items-start gap-3 rounded-xl bg-[#17212b] p-4 border border-[#242f3d] active:bg-[#1a2734] transition-all cursor-pointer shadow-sm relative overflow-hidden"
-            >
-              {/* Indicador de Tipo */}
-              <div
-                className={`mt-0.5 rounded-lg p-2 text-white ${
-                  item.tipo === 'reserva'
-                    ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/30'
-                    : item.tipo === 'venta'
-                      ? 'bg-blue-900/50 text-blue-400 border border-blue-500/30'
-                      : 'bg-amber-900/50 text-amber-400 border border-amber-500/30'
-                }`}
-              >
-                {item.tipo === 'reserva' && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.0}
-                    stroke="currentColor"
-                    className="h-4 w-4"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                    />
-                  </svg>
-                )}
-                {item.tipo === 'venta' && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.0}
-                    stroke="currentColor"
-                    className="h-4 w-4"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-                    />
-                  </svg>
-                )}
-                {item.tipo === 'excepcion' && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.0}
-                    stroke="currentColor"
-                    className="h-4 w-4"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-                    />
-                  </svg>
-                )}
-              </div>
+          filteredItems.map((item) => {
+            const isReserva = item.tipo === 'reserva'
+            const isVenta = item.tipo === 'venta'
+            const isExcepcion = item.tipo === 'excepcion'
 
-              {/* Contenido */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                    {item.tipo === 'reserva'
-                      ? 'Reserva'
-                      : item.tipo === 'venta'
-                        ? 'Venta'
-                        : 'Bloqueo Cascada'}
-                  </h4>
-                  <span className="text-[10px] text-gray-500 whitespace-nowrap">
-                    {formatRelativeTime(item.antiguedad_segundos)}
+            return (
+              <div
+                key={item.id}
+                onClick={() => {
+                  haptic.impact('light')
+                  router.push(`/mini/bandeja/${item.id}?tipo=${item.tipo}`)
+                }}
+                className="group flex flex-col rounded-2xl bg-[#181818] p-4 border border-white/[0.08] hover:border-white/[0.15] active:scale-[0.99] transition-all cursor-pointer shadow-md space-y-2.5"
+              >
+                {/* Cabecera Item */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
+                        isReserva
+                          ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30'
+                          : isVenta
+                            ? 'bg-sky-950/60 text-sky-300 border-sky-500/30'
+                            : 'bg-amber-950/60 text-amber-300 border-amber-500/30'
+                      }`}
+                    >
+                      {isReserva ? 'Reserva' : isVenta ? 'Venta' : 'Excepción Legal'}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      {formatRelativeTime(item.antiguedad_segundos)}
+                    </span>
+                  </div>
+
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                    className="h-4 w-4 text-zinc-500 group-hover:text-zinc-300 transition-colors"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+
+                {/* Título y Causa */}
+                <div>
+                  <h3 className="text-sm font-bold text-white group-hover:text-rose-400 transition-colors">
+                    {item.titulo}
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
+                    {item.causa}
+                  </p>
+                </div>
+
+                {/* Footer de Acción */}
+                <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px]">
+                  <span className="text-zinc-400">
+                    {isExcepcion ? 'Requiere reintento o resolución' : 'Requiere decisión de firma'}
+                  </span>
+                  <span className="font-semibold text-rose-400 group-hover:underline">
+                    Revisar caso →
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-white mt-0.5 truncate">{item.titulo}</h3>
-                <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
-                  {item.causa}
-                </p>
               </div>
-
-              {/* Indicador flecha derecha */}
-              <div className="self-center text-gray-500">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.0}
-                  stroke="currentColor"
-                  className="h-4 w-4"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="m8.25 4.5 7.5 7.5-7.5 7.5"
-                  />
-                </svg>
-              </div>
-            </div>
-          ))
+            )
+          })
         )}
       </main>
     </div>
@@ -317,9 +393,9 @@ export default function BandejaInboxPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-          <p className="mt-4 text-sm text-gray-400">Cargando bandeja de entrada...</p>
+        <div className="min-h-screen bg-[#121212] text-white p-4 space-y-3">
+          <div className="h-10 w-full animate-pulse bg-white/[0.04] rounded-xl"></div>
+          <div className="h-32 w-full animate-pulse bg-white/[0.04] rounded-2xl"></div>
         </div>
       }
     >

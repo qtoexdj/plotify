@@ -4099,6 +4099,17 @@
       "MiniappSessionResponse": {
         "description": "Respuesta con token firmado de sesión.",
         "properties": {
+          "bot_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Username"
+          },
           "expires_in": {
             "title": "Expires In",
             "type": "integer"
@@ -12164,6 +12175,32 @@
           }
         ],
         "summary": "Get Lote Detalle",
+        "tags": [
+          "miniapp",
+          "miniapp"
+        ]
+      }
+    },
+    "/api/v1/miniapp/proyectos": {
+      "get": {
+        "description": "Lista los proyectos visibles para la sesión Mini App.\nVendedor: solo proyectos asignados en vendor_projects.\nAdmin: todos los proyectos de la organización.",
+        "operationId": "get_proyectos_api_v1_miniapp_proyectos_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Proyectos",
         "tags": [
           "miniapp",
           "miniapp"

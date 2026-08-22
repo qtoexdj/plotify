@@ -127,6 +127,23 @@ async def create_session(payload: MiniappSessionRequest):
         chat_id=chat_id,
         vendor_id=user_detail.get("vendor_id")
     )
+
+    # 6. Resolver bot_username de la org para deep links de compartir (t.me/<bot>/app)
+    supabase = get_supabase_client()
+    bot_username: Optional[str] = None
+    try:
+        bot_res = (
+            supabase.table("telegram_bots")
+            .select("bot_username")
+            .eq("organization_id", str(payload.org_id))
+            .eq("is_active", True)
+            .limit(1)
+            .execute()
+        )
+        if bot_res.data:
+            bot_username = bot_res.data[0].get("bot_username")
+    except Exception as e:
+        logger.warning(f"No se pudo resolver bot_username para org {payload.org_id}: {e}")
     
     settings = get_settings()
     logger.info(f"Sesión Mini App creada exitosamente para user: {user_detail['user_id']} ({user_detail['role']})")
@@ -149,7 +166,8 @@ async def create_session(payload: MiniappSessionRequest):
             nombre=user_detail["nombre"],
             org_id=user_detail["org_id"],
             org_nombre=user_detail["org_nombre"]
-        )
+        ),
+        bot_username=bot_username
     )
 
 
@@ -943,6 +961,47 @@ async def require_miniapp_project_access(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proyecto no encontrado")
 
 
+@router.get("/proyectos", tags=["miniapp"])
+async def get_proyectos(
+    context: MiniappUserContext = Depends(verify_miniapp_session)
+):
+    """
+    Lista los proyectos visibles para la sesión Mini App.
+    Vendedor: solo proyectos asignados en vendor_projects.
+    Admin: todos los proyectos de la organización.
+    """
+    logger.info(f"Usuario {context.user_id} consultando proyectos para org: {context.org_id}")
+    supabase = get_supabase_client()
+
+    role_lower = context.role.lower()
+    if role_lower in {"vendor", "vendedor"}:
+        vendor_id_val = context.vendor_id or context.user_id
+        assignments = (
+            supabase.table("vendor_projects")
+            .select("project_id")
+            .eq("vendor_id", str(vendor_id_val))
+            .execute()
+        )
+        project_ids = [row["project_id"] for row in (assignments.data or [])]
+        if not project_ids:
+            return []
+        query = (
+            supabase.table("projects")
+            .select("id, name")
+            .eq("organization_id", str(context.org_id))
+            .in_("id", project_ids)
+        )
+    else:
+        query = (
+            supabase.table("projects")
+            .select("id, name")
+            .eq("organization_id", str(context.org_id))
+        )
+
+    res = query.execute()
+    return [{"id": row["id"], "name": row["name"]} for row in (res.data or [])]
+
+
 @router.get("/proyectos/{project_id}/mapa", tags=["miniapp"])
 async def get_proyecto_mapa(
     project_id: str,
@@ -981,8 +1040,10 @@ async def get_proyecto_mapa(
             "id": lot.get("id"),
             "geometry": geom,
             "properties": {
-                "numero_lote": lot.get("numero_lote"),
-                "status": lot.get("estado")
+                "id": lot.get("id"),
+                "lot_id": lot.get("id"),
+                "numero_lote": str(lot.get("numero_lote") or ""),
+                "status": lot.get("estado") or "disponible",
             }
         })
 

@@ -278,6 +278,56 @@ def test_endpoint_session_exito(mock_resolve, mock_get_client):
     assert res_data["user"]["org_id"] == org_id
 
 
+@patch("api.v1.endpoints.miniapp.get_supabase_client")
+@patch("api.v1.endpoints.miniapp.get_telegram_client_for_org", create=True)
+@patch("api.v1.endpoints.miniapp.resolve_miniapp_user", create=True)
+def test_endpoint_session_incluye_bot_username(mock_resolve, mock_get_client, mock_supabase_client):
+    """La sesión incluye bot_username de telegram_bots para armar deep links de compartir."""
+    from fastapi.testclient import TestClient
+    from main import app
+    from integrations.telegram_client import TelegramClient
+
+    mock_client = MagicMock(spec=TelegramClient)
+    mock_client.bot_token = BOT_TOKEN_PRUEBA
+    mock_get_client.return_value = mock_client
+
+    user_id = str(uuid.uuid4())
+    org_id = str(uuid.uuid4())
+    mock_resolve.return_value = (None, {
+        "user_id": user_id,
+        "nombre": "Juan Pérez",
+        "org_id": org_id,
+        "org_nombre": "Inmobiliaria Norte",
+        "role": "admin"
+    })
+
+    mock_supabase = MagicMock()
+    mock_supabase_client.return_value = mock_supabase
+    bots_query = MagicMock()
+    bots_query.eq.return_value = bots_query
+    bots_query.limit.return_value = bots_query
+    bots_query.execute.return_value = MagicMock(
+        data=[{"bot_username": "plotify_chat_bot"}]
+    )
+    mock_supabase.table.return_value.select.return_value = bots_query
+
+    init_params = {
+        "auth_date": str(int(time.time())),
+        "query_id": "12345",
+        "user": json.dumps({"id": 12345, "first_name": "Juan"})
+    }
+    init_data_qs = _generar_init_data(init_params, BOT_TOKEN_PRUEBA)
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/miniapp/session",
+        json={"org_id": org_id, "init_data": init_data_qs}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["bot_username"] == "plotify_chat_bot"
+
+
 @patch("api.v1.endpoints.miniapp.get_telegram_client_for_org", create=True)
 @patch("api.v1.endpoints.miniapp.resolve_miniapp_user", create=True)
 def test_endpoint_session_no_vinculado(mock_resolve, mock_get_client):

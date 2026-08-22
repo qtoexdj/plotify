@@ -9,6 +9,7 @@ export interface MiniappSession {
   token: string
   role: string
   user: MiniappUser
+  bot_username?: string | null
 }
 
 const SESSION_KEY = 'plotify_miniapp_session'

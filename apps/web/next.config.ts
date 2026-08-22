@@ -10,13 +10,14 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: '260mb',
   },
   async rewrites() {
+    const chatBaseUrl = process.env.PLOTIFY_CHAT_BASE_URL || 'http://127.0.0.1:8005'
     return [
       {
         // Un único túnel ngrok apunta a Next.js (:3000). Los webhooks y
         // demás rutas públicas de FastAPI conservan su URL /api/v1/* y se
-        // reenvían internamente al API local (:8005).
+        // reenvían internamente al API local (:8005) o al servicio Docker (http://api:8005).
         source: '/api/v1/:path*',
-        destination: 'http://127.0.0.1:8005/api/v1/:path*',
+        destination: `${chatBaseUrl}/api/v1/:path*`,
       },
     ]
   },

@@ -24,6 +24,17 @@ interface LotSummary {
   proyecto_nombre: string
 }
 
+interface Proyecto {
+  id: string
+  name: string
+}
+
+interface AvailableLot {
+  id: string
+  numero_lote: string
+  status: string
+}
+
 type SubmitState = 'idle' | 'submitting' | 'success' | 'lot_unavailable' | 'error'
 
 function formatCLP(value: number | null): string {
@@ -36,14 +47,20 @@ function formatCLP(value: number | null): string {
 }
 
 const inputClass =
-  'bg-[#17212b] border-[#242f3d] text-white placeholder-gray-500 focus-visible:ring-[#2481cc] focus-visible:border-transparent'
+  'bg-[#181818] border-white/[0.08] text-white placeholder-zinc-500 focus-visible:ring-emerald-500 focus-visible:border-transparent rounded-xl h-11 text-xs'
 
 function ReservaContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const lotId = searchParams.get('lot_id') || ''
+  const lotIdParam = searchParams.get('lot_id') || ''
   const { session, loading: sessionLoading, error: sessionError, isTelegram } = useMiniApp()
-  const { webApp } = useTelegram()
+  const { webApp, haptic } = useTelegram()
+
+  const [currentLotId, setCurrentLotId] = useState<string>(lotIdParam)
+  const [proyectos, setProyectos] = useState<Proyecto[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const [availableLots, setAvailableLots] = useState<AvailableLot[]>([])
+  const [loadingLots, setLoadingLots] = useState(false)
 
   const idempotencyKeyRef = useRef<string>('')
   useEffect(() => {
@@ -53,7 +70,7 @@ function ReservaContent() {
   }, [])
 
   const [lot, setLot] = useState<LotSummary | null>(null)
-  const [lotLoading, setLotLoading] = useState(true)
+  const [lotLoading, setLotLoading] = useState(false)
   const [lotError, setLotError] = useState<string | null>(null)
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -62,21 +79,72 @@ function ReservaContent() {
   const {
     register,
     handleSubmit,
+    setValue,
     watch,
     formState: { errors, isDirty, isValid },
   } = useForm<ReservaMiniappInput>({
     resolver: zodResolver(reservaMiniappSchema),
     mode: 'onChange',
-    defaultValues: { lot_id: lotId, payment_method: 'transfer' },
+    defaultValues: { lot_id: currentLotId, payment_method: 'transfer' },
   })
 
   const rutValue = watch('buyer_rut')
   const rutIsValid = !!rutValue && !errors.buyer_rut
 
-  // Cargar la ficha del lote para confirmar que sigue disponible y mostrar contexto
+  // Cargar proyectos si no viene un lot_id específico
   useEffect(() => {
-    if (sessionLoading || !session || !lotId) {
-      if (!lotId) setLotLoading(false)
+    if (!session || sessionLoading) return
+    const fetchProjs = async () => {
+      try {
+        const res = await fetch('/api/miniapp/proyectos', {
+          headers: { Authorization: `Bearer ${session.token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setProyectos(data)
+          if (data.length > 0 && !selectedProjectId) {
+            setSelectedProjectId(data[0].id)
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando proyectos para reserva:', err)
+      }
+    }
+    fetchProjs()
+  }, [session, sessionLoading, selectedProjectId])
+
+  // Cargar lotes disponibles cuando se selecciona un proyecto
+  useEffect(() => {
+    if (!selectedProjectId || !session || currentLotId) return
+    const fetchLotsOfProj = async () => {
+      try {
+        setLoadingLots(true)
+        const res = await fetch(`/api/miniapp/proyectos/${selectedProjectId}/mapa`, {
+          headers: { Authorization: `Bearer ${session.token}` },
+        })
+        if (res.ok) {
+          const geojson = await res.json()
+          const lotsList: AvailableLot[] = (geojson.features || [])
+            .map((f: { id: string; properties: { numero_lote: string; status: string } }) => ({
+              id: String(f.id),
+              numero_lote: String(f.properties?.numero_lote || 'S/N'),
+              status: f.properties?.status || 'disponible',
+            }))
+            .filter((l: AvailableLot) => l.status === 'disponible')
+          setAvailableLots(lotsList)
+        }
+      } catch (err) {
+        console.error('Error cargando lotes del proyecto:', err)
+      } finally {
+        setLoadingLots(false)
+      }
+    }
+    fetchLotsOfProj()
+  }, [selectedProjectId, session, currentLotId])
+
+  // Cargar ficha del lote seleccionado
+  useEffect(() => {
+    if (sessionLoading || !session || !currentLotId) {
       return
     }
     let active = true
@@ -84,13 +152,14 @@ function ReservaContent() {
       try {
         setLotLoading(true)
         setLotError(null)
-        const res = await fetch(`/api/miniapp/lotes/${lotId}`, {
+        const res = await fetch(`/api/miniapp/lotes/${currentLotId}`, {
           headers: { Authorization: `Bearer ${session.token}` },
         })
         if (!res.ok) throw new Error('No se pudo cargar la ficha del lote.')
         const data = await res.json()
         if (!active) return
         setLot(data)
+        setValue('lot_id', currentLotId, { shouldValidate: true })
         if (data.status !== 'disponible') {
           setSubmitState('lot_unavailable')
         }
@@ -105,9 +174,9 @@ function ReservaContent() {
     return () => {
       active = false
     }
-  }, [lotId, session, sessionLoading])
+  }, [currentLotId, session, sessionLoading, setValue])
 
-  // enableClosingConfirmation mientras haya datos sin enviar (evita perder la reserva a mitad de tipeo)
+  // Confirmación de cierre en Telegram
   useEffect(() => {
     if (!webApp) return
     if (isDirty && submitState !== 'success') {
@@ -121,7 +190,8 @@ function ReservaContent() {
   }, [webApp, isDirty, submitState])
 
   const onSubmit = async (values: ReservaMiniappInput) => {
-    if (!session || !lotId) return
+    if (!session || !values.lot_id) return
+    haptic.impact('medium')
     setSubmitState('submitting')
     setSubmitError(null)
     try {
@@ -133,7 +203,7 @@ function ReservaContent() {
           'X-Idempotency-Key': idempotencyKeyRef.current,
         },
         body: JSON.stringify({
-          lot_id: lotId,
+          lot_id: values.lot_id,
           buyer_name: values.buyer_name,
           buyer_rut: values.buyer_rut,
           buyer_email: values.buyer_email,
@@ -147,6 +217,7 @@ function ReservaContent() {
       const data = await res.json().catch(() => ({}))
 
       if (res.status === 409) {
+        haptic.notification('warning')
         setSubmitState('lot_unavailable')
         setSubmitError(
           typeof data.error === 'string' ? data.error : 'Este lote acaba de reservarse.'
@@ -155,6 +226,7 @@ function ReservaContent() {
       }
 
       if (!res.ok) {
+        haptic.notification('error')
         setSubmitState('error')
         setSubmitError(
           typeof data.error === 'string' ? data.error : 'No se pudo enviar la solicitud.'
@@ -162,15 +234,17 @@ function ReservaContent() {
         return
       }
 
+      haptic.notification('success')
       setApprovalId(data.approval_id || null)
       setSubmitState('success')
     } catch {
+      haptic.notification('error')
       setSubmitState('error')
       setSubmitError('Fallo de conexión de red. Puedes reintentar sin duplicar la solicitud.')
     }
   }
 
-  // MainButton nativo de Telegram como submit principal (fuera de Telegram se usa el botón de página)
+  // MainButton nativo de Telegram como submit principal
   useEffect(() => {
     if (!webApp) return
 
@@ -179,7 +253,7 @@ function ReservaContent() {
       return
     }
 
-    webApp.MainButton.setText(submitState === 'submitting' ? 'Enviando...' : 'Enviar a aprobación')
+    webApp.MainButton.setText(submitState === 'submitting' ? 'Enviando solicitud...' : 'Enviar Solicitud a Aprobación')
     webApp.MainButton.show()
     if (isValid && submitState !== 'submitting') {
       webApp.MainButton.enable()
@@ -202,61 +276,58 @@ function ReservaContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (sessionLoading || lotLoading) {
+  if (sessionLoading) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-        <p className="mt-4 text-sm text-gray-400">Cargando ficha del lote...</p>
+      <div className="min-h-screen bg-[#121212] flex flex-col items-center justify-center text-white">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+        <p className="mt-3 text-xs text-zinc-400">Cargando...</p>
       </div>
     )
   }
 
-  if (sessionError || !lotId || lotError) {
+  if (sessionError) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] p-6 text-center text-white">
-        <h2 className="text-lg font-semibold">Error</h2>
-        <p className="mt-2 text-sm text-gray-400 max-w-xs">
-          {sessionError || lotError || 'Falta el lote a reservar.'}
-        </p>
-        <button
-          onClick={() => router.push('/mini/mapa')}
-          className="mt-6 rounded-lg bg-[#2481cc] px-5 py-2 text-xs font-semibold hover:bg-[#2072b3]"
-        >
-          Volver al mapa
-        </button>
+      <div className="min-h-screen bg-[#121212] p-6 text-center text-white flex flex-col items-center justify-center">
+        <h2 className="text-base font-bold">Error</h2>
+        <p className="mt-2 text-xs text-zinc-400 max-w-xs">{sessionError}</p>
       </div>
     )
   }
 
   if (submitState === 'success') {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-center text-white px-6">
-        <div className="rounded-full bg-emerald-950/50 p-4 text-emerald-400 mb-4">
+      <div className="min-h-screen bg-[#121212] flex flex-col items-center justify-center text-center text-white px-6">
+        <div className="rounded-2xl bg-emerald-950/60 border border-emerald-500/30 p-5 text-emerald-400 mb-4 shadow-xl">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            strokeWidth={2.0}
+            strokeWidth={2.5}
             stroke="currentColor"
-            className="h-8 w-8"
+            className="h-10 w-10"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-emerald-400">
-          Solicitud enviada al administrador
+        <h2 className="text-lg font-bold text-white tracking-tight">
+          ¡Reserva Ingresada con Éxito!
         </h2>
         {approvalId && (
-          <p className="mt-2 text-xs text-gray-500 font-mono">Caso {approvalId.slice(0, 8)}</p>
+          <p className="mt-2 text-xs text-zinc-400 font-mono bg-white/[0.04] px-3 py-1 rounded-lg border border-white/[0.06]">
+            Expediente #{approvalId.slice(0, 8)}
+          </p>
         )}
-        <p className="mt-2 text-sm text-gray-400 max-w-xs">
-          Te avisaremos por Telegram cuando quede aprobada.
+        <p className="mt-3 text-xs text-zinc-400 max-w-xs leading-relaxed">
+          La solicitud fue enviada al administrador. Recibirás una notificación por Telegram cuando sea aprobada.
         </p>
         <button
-          onClick={() => router.push('/mini/ventas')}
-          className="mt-6 rounded-lg bg-[#2481cc] px-5 py-2 text-xs font-semibold hover:bg-[#2072b3]"
+          onClick={() => {
+            haptic.impact('light')
+            router.push('/mini/ventas')
+          }}
+          className="mt-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-6 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-950/50 active:scale-95 transition-all"
         >
-          Ver mis ventas
+          Ver Mis Ventas
         </button>
       </div>
     )
@@ -264,8 +335,8 @@ function ReservaContent() {
 
   if (submitState === 'lot_unavailable') {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] p-6 text-center text-white">
-        <div className="rounded-full bg-amber-950/50 p-4 text-amber-400 mb-4">
+      <div className="min-h-screen bg-[#121212] flex flex-col items-center justify-center p-6 text-center text-white">
+        <div className="rounded-2xl bg-amber-950/50 border border-amber-500/30 p-4 text-amber-400 mb-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -281,182 +352,276 @@ function ReservaContent() {
             />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-amber-400">Lote no disponible</h2>
-        <p className="mt-2 text-sm text-gray-400 max-w-xs">
-          {submitError || 'Este lote acaba de reservarse. Vuelve al mapa para ver otro.'}
+        <h2 className="text-base font-bold text-amber-400">Parcela no disponible</h2>
+        <p className="mt-2 text-xs text-zinc-400 max-w-xs">
+          {submitError || 'Esta parcela acaba de ser reservada o vendida. Por favor, selecciona otra en el mapa.'}
         </p>
         <button
-          onClick={() => router.push('/mini/mapa')}
-          className="mt-6 rounded-lg bg-[#2481cc] px-5 py-2 text-xs font-semibold hover:bg-[#2072b3]"
+          onClick={() => {
+            haptic.impact('light')
+            router.push('/mini/mapa')
+          }}
+          className="mt-6 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] px-5 py-2.5 text-xs font-semibold text-white active:scale-95 transition-all"
         >
-          Volver al mapa
+          Explorar en el Mapa
         </button>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0e1621] text-white pb-28">
-      <header className="sticky top-0 z-10 bg-[#17212b] px-4 py-3 shadow-md border-b border-[#242f3d] flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="rounded-lg p-1.5 hover:bg-[#242f3d] transition-all"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2.0}
-            stroke="currentColor"
-            className="h-5 w-5"
+    <div className="min-h-screen bg-[#121212] text-white pb-28">
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-[#121212]/95 backdrop-blur-md border-b border-white/[0.08] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              haptic.impact('light')
+              router.back()
+            }}
+            className="rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] p-2 text-zinc-300 transition-all active:scale-90"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-            />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-sm font-bold">Nueva reserva</h1>
-          {lot && (
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-              Lote {lot.numero_lote} · {lot.proyecto_nombre}
-              {lot.precio ? ` · ${formatCLP(lot.precio)}` : ''}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2.0}
+              stroke="currentColor"
+              className="h-4 w-4"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-sm font-bold text-white">Nueva Reserva</h1>
+            <p className="text-[11px] text-zinc-400">
+              {lot ? `Lote ${lot.numero_lote} · ${lot.proyecto_nombre}` : 'Selecciona parcela y comprador'}
             </p>
-          )}
+          </div>
         </div>
       </header>
 
+      {/* Formulario */}
       <form onSubmit={handleSubmit(onSubmit)} className="px-4 mt-4 space-y-4">
-        {submitError && submitState === 'error' && (
-          <div className="rounded-lg bg-red-950/40 border border-red-500/20 p-3 text-xs text-red-400">
+        {/* Selector de Lote si no viene por parámetro */}
+        {!lotIdParam && (
+          <div className="rounded-2xl bg-[#181818] border border-white/[0.08] p-4 space-y-3 shadow-md">
+            <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+              1. Selección de Parcela
+            </h3>
+            
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-zinc-400">Proyecto</label>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => {
+                  haptic.selection()
+                  setSelectedProjectId(e.target.value)
+                  setCurrentLotId('')
+                  setValue('lot_id', '', { shouldValidate: true })
+                }}
+                className="w-full rounded-xl bg-[#121212] border border-white/[0.08] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                {proyectos.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[#181818]">
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-zinc-400">Lote Disponible</label>
+              {loadingLots ? (
+                <div className="h-10 animate-pulse bg-white/[0.04] rounded-xl"></div>
+              ) : availableLots.length > 0 ? (
+                <select
+                  value={currentLotId}
+                  onChange={(e) => {
+                    haptic.selection()
+                    setCurrentLotId(e.target.value)
+                    setValue('lot_id', e.target.value, { shouldValidate: true })
+                  }}
+                  className="w-full rounded-xl bg-[#121212] border border-white/[0.08] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">-- Elige un lote --</option>
+                  {availableLots.map((l) => (
+                    <option key={l.id} value={l.id} className="bg-[#181818]">
+                      Lote N° {l.numero_lote} (Disponible)
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-amber-400 py-1 font-medium">
+                  No hay lotes disponibles en este proyecto o están todos reservados.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Ficha Resumen del Lote */}
+        {lot && (
+          <div className="rounded-2xl bg-gradient-to-r from-emerald-950/30 to-zinc-900 border border-emerald-500/20 p-4 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">
+                Parcela Seleccionada
+              </span>
+              <h2 className="text-base font-black text-white mt-0.5">
+                Lote N° {lot.numero_lote}
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">{lot.proyecto_nombre}</p>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] text-zinc-400 font-semibold block uppercase tracking-wider">
+                Precio
+              </span>
+              <span className="text-sm font-black text-emerald-400 block mt-0.5">
+                {formatCLP(lot.precio)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Datos del Comprador */}
+        <div className="rounded-2xl bg-[#181818] border border-white/[0.08] p-4 space-y-3.5 shadow-md">
+          <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+            2. Datos del Comprador
+          </h3>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-zinc-400">Nombre Completo</label>
+            <Input {...register('buyer_name')} placeholder="Juan Soto Pérez" className={inputClass} />
+            {errors.buyer_name && (
+              <p className="text-[10px] text-rose-400 font-medium">{errors.buyer_name.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-zinc-400">RUT Comprador</label>
+            <div className="relative">
+              <Input
+                {...register('buyer_rut', {
+                  onBlur: (e) => {
+                    e.target.value = formatRut(e.target.value)
+                  },
+                })}
+                placeholder="12.345.678-9"
+                className={`${inputClass} pr-10`}
+              />
+              {rutValue && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {rutIsValid ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2.5}
+                      stroke="currentColor"
+                      className="h-4 w-4 text-emerald-400"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2.5}
+                      stroke="currentColor"
+                      className="h-4 w-4 text-rose-400"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </span>
+              )}
+            </div>
+            {errors.buyer_rut && (
+              <p className="text-[10px] text-rose-400 font-medium">{errors.buyer_rut.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-zinc-400">Correo Electrónico</label>
+              <Input
+                {...register('buyer_email')}
+                type="email"
+                placeholder="juan@correo.cl"
+                className={inputClass}
+              />
+              {errors.buyer_email && (
+                <p className="text-[10px] text-rose-400 font-medium">{errors.buyer_email.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-zinc-400">Teléfono</label>
+              <Input {...register('buyer_phone')} placeholder="+56912345678" className={inputClass} />
+              {errors.buyer_phone && (
+                <p className="text-[10px] text-rose-400 font-medium">{errors.buyer_phone.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Pago y Observaciones */}
+        <div className="rounded-2xl bg-[#181818] border border-white/[0.08] p-4 space-y-3.5 shadow-md">
+          <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+            3. Modalidad de Pago & Notas
+          </h3>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-zinc-400">Medio de Pago</label>
+            <select
+              {...register('payment_method')}
+              className="w-full rounded-xl bg-[#121212] border border-white/[0.08] px-3 py-2.5 text-xs text-white outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m.value} value={m.value} className="bg-[#181818]">
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-zinc-400">Comprobante de Pago (Enlace)</label>
+            <Input
+              {...register('payment_evidence_url')}
+              placeholder="https://drive.google.com/..."
+              className={inputClass}
+            />
+            {errors.payment_evidence_url && (
+              <p className="text-[10px] text-rose-400 font-medium">{errors.payment_evidence_url.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-zinc-400">Notas para el Administrador</label>
+            <Textarea
+              {...register('observation')}
+              placeholder="Observaciones sobre la reserva o cliente..."
+              className="bg-[#121212] border-white/[0.08] text-white placeholder-zinc-500 focus-visible:ring-emerald-500 rounded-xl text-xs min-h-16"
+            />
+          </div>
+        </div>
+
+        {submitError && (
+          <div className="rounded-xl bg-rose-950/40 border border-rose-800/30 p-3 text-xs text-rose-400 font-medium">
             {submitError}
           </div>
         )}
 
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-400">Nombre del comprador</label>
-          <Input {...register('buyer_name')} placeholder="Juan Soto Pérez" className={inputClass} />
-          {errors.buyer_name && (
-            <p className="text-[11px] text-red-400">{errors.buyer_name.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-400">RUT</label>
-          <div className="relative">
-            <Input
-              {...register('buyer_rut', {
-                onBlur: (e) => {
-                  e.target.value = formatRut(e.target.value)
-                },
-              })}
-              placeholder="12.345.678-9"
-              className={`${inputClass} pr-9`}
-            />
-            {rutValue && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                {rutIsValid ? (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.5}
-                    stroke="currentColor"
-                    className="h-4 w-4 text-emerald-400"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.5}
-                    stroke="currentColor"
-                    className="h-4 w-4 text-red-400"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                  </svg>
-                )}
-              </span>
-            )}
-          </div>
-          {errors.buyer_rut && (
-            <p className="text-[11px] text-red-400">{errors.buyer_rut.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-400">Correo electrónico</label>
-          <Input
-            {...register('buyer_email')}
-            type="email"
-            placeholder="juan@correo.cl"
-            className={inputClass}
-          />
-          {errors.buyer_email && (
-            <p className="text-[11px] text-red-400">{errors.buyer_email.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-400">Teléfono</label>
-          <Input {...register('buyer_phone')} placeholder="+56912345678" className={inputClass} />
-          {errors.buyer_phone && (
-            <p className="text-[11px] text-red-400">{errors.buyer_phone.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-400">Método de pago</label>
-          <select
-            {...register('payment_method')}
-            className="w-full rounded-md bg-[#17212b] border border-[#242f3d] px-3 py-2 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-[#2481cc]"
-          >
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-400">
-            Comprobante de pago (opcional, enlace)
-          </label>
-          <Input
-            {...register('payment_evidence_url')}
-            placeholder="https://..."
-            className={inputClass}
-          />
-          {errors.payment_evidence_url && (
-            <p className="text-[11px] text-red-400">{errors.payment_evidence_url.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-400">Observación (opcional)</label>
-          <Textarea
-            {...register('observation')}
-            placeholder="Notas cortas para el administrador"
-            className={`${inputClass} min-h-20`}
-          />
-          {errors.observation && (
-            <p className="text-[11px] text-red-400">{errors.observation.message}</p>
-          )}
-        </div>
-
-        {/* Botón de página: visible fuera de Telegram, donde no existe MainButton nativo */}
+        {/* Botón de página (visible fuera de Telegram o como alternativa) */}
         {!isTelegram && (
           <Button
             type="submit"
             disabled={!isValid || submitState === 'submitting'}
-            className="w-full bg-[#2481cc] hover:bg-[#2072b3] text-white font-medium"
+            className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/50 transition-all active:scale-[0.98]"
           >
-            {submitState === 'submitting' ? 'Enviando...' : 'Enviar a aprobación'}
+            {submitState === 'submitting' ? 'Enviando...' : 'Enviar Solicitud a Aprobación'}
           </Button>
         )}
       </form>
@@ -468,9 +633,8 @@ export default function ReservaPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen flex-col items-center justify-center bg-[#17212b] text-white">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#2481cc] border-t-transparent"></div>
-          <p className="mt-4 text-sm text-gray-400">Cargando...</p>
+        <div className="min-h-screen bg-[#121212] flex flex-col items-center justify-center text-white">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
         </div>
       }
     >

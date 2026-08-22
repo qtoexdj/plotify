@@ -1,29 +1,21 @@
 # ==============================================================================
-# Plotify API Dockerignore (context: apps/api)
+# Plotify Web Dockerignore (context: apps/web)
 # ==============================================================================
 
-# Python Bytecode, Environments & Caches
-.venv/
-venv/
-env/
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-
-# Coverage & Tests
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
-tests/
+# Dependencies & Build Outputs
+node_modules/
+.next/
+.next-e2e/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
 
 # Environment & Secrets
 .env
 .env.*
+.env*.local
 !.env.example
 *.pem
 *.key
@@ -42,8 +34,13 @@ codex-e2e/
 .idea/
 skills-lock.json
 
+# Tests & Artifacts
+tests/
+coverage/
+playwright-report/
+test-results/
+
 # Documentation
-docs/
 README.md
 
 # Operating System & Logs

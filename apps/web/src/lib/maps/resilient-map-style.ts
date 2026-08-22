@@ -13,6 +13,7 @@ export function createResilientMapStyle(theme: MapTheme): StyleSpecification {
   return {
     version: 8,
     name: `Plotify ${theme} basemap`,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
     sources: {
       'plotify-basemap': {
         type: 'raster',
