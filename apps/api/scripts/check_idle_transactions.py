@@ -22,11 +22,20 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import psycopg
-from dotenv import dotenv_values
-
-WORKSPACE = Path(__file__).resolve().parents[3]
-environment = dotenv_values(WORKSPACE / "apps" / "api" / ".env")
-DATABASE_URL = os.environ.get("SUPABASE_DB_URL") or environment.get("SUPABASE_DB_URL")
+DATABASE_URL = os.environ.get("SUPABASE_DB_URL")
+if not DATABASE_URL:
+    try:
+        for parent_dir in Path(__file__).resolve().parents:
+            env_api = parent_dir / "apps" / "api" / ".env"
+            if env_api.is_file():
+                DATABASE_URL = dotenv_values(env_api).get("SUPABASE_DB_URL")
+                break
+            env_local = parent_dir / ".env"
+            if env_local.is_file():
+                DATABASE_URL = dotenv_values(env_local).get("SUPABASE_DB_URL")
+                break
+    except Exception:
+        DATABASE_URL = None
 
 ZOMBIE_STATES = ("idle in transaction", "idle in transaction (aborted)")
 

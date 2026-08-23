@@ -18,16 +18,17 @@ from psycopg import sql
 from psycopg.rows import dict_row
 
 
-WORKSPACE = Path(__file__).resolve().parents[3]
-
-
-def _digest(value: str) -> str:
-    return f"sha256:{hashlib.sha256(value.encode()).hexdigest()}"
-
-
 def _database_url() -> tuple[str, str]:
-    environment = dotenv_values(WORKSPACE / "apps" / "api" / ".env")
-    database_url = os.environ.get("SUPABASE_DB_URL") or environment.get("SUPABASE_DB_URL")
+    database_url = os.environ.get("SUPABASE_DB_URL")
+    if not database_url:
+        try:
+            for parent_dir in Path(__file__).resolve().parents:
+                env_api = parent_dir / "apps" / "api" / ".env"
+                if env_api.is_file():
+                    database_url = dotenv_values(env_api).get("SUPABASE_DB_URL")
+                    break
+        except Exception:
+            database_url = None
     if not database_url:
         raise RuntimeError("SUPABASE_DB_URL is required")
     project_ref_path = (
