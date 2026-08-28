@@ -31,4 +31,15 @@ export const projectPatchSchema = z
   .strict()
   .refine((value) => Object.keys(value).length > 0, 'EMPTY_PATCH')
 
+/**
+ * Confirmación de borrado. `acknowledgedExport` es literal `true`: un `false`
+ * explícito se rechaza igual que su ausencia.
+ */
+export const projectDeleteSchema = z
+  .object({
+    confirmedName: z.string().min(1).max(160),
+    acknowledgedExport: z.literal(true),
+  })
+  .strict()
+
 export type CreateProjectInput = z.infer<typeof createProjectSchema>

@@ -8,16 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { StatusBadge, type statusBadgeVariants } from '@/components/ui/status-badge'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+  DeleteProjectDialog,
+  type DeleteProjectConfirmation,
+} from '@/components/projects/DeleteProjectDialog'
 import {
   Avatar,
   AvatarFallback,
@@ -51,7 +44,7 @@ interface ProjectCardProps extends VariantProps<typeof projectCardVariants> {
   project: ProjectWithMetrics
   isAdmin: boolean
   deletingId: string | null
-  onDelete: (id: string) => void
+  onDelete: (id: string, confirmation: DeleteProjectConfirmation) => void
   projectHref: string
   statusLabel?: string
   statusVariant?: StatusVariant
@@ -104,37 +97,22 @@ export function ProjectCard({
   const renderDeleteButton = () => {
     if (!isAdmin) return null
     return (
-      <AlertDialog>
-        <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative z-20 min-h-11 min-w-11 shrink-0 text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive"
-            disabled={deletingId === project.id}
-            aria-label={`Eliminar proyecto ${project.name}`}
-          >
-            <HugeiconsIcon icon={Delete02Icon} className="w-4 h-4" />
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar proyecto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminarán todos los datos asociados al proyecto
-              &quot;{project.name}&quot;.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
-              onClick={() => onDelete(project.id)}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteProjectDialog
+        project={project}
+        isDeleting={deletingId === project.id}
+        onConfirm={onDelete}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative z-20 min-h-11 min-w-11 shrink-0 text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive"
+          disabled={deletingId === project.id}
+          aria-label={`Eliminar proyecto ${project.name}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <HugeiconsIcon icon={Delete02Icon} className="w-4 h-4" />
+        </Button>
+      </DeleteProjectDialog>
     )
   }
 

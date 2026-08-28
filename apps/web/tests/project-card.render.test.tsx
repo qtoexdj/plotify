@@ -91,8 +91,26 @@ describe('ProjectCard', () => {
     expect(await screen.findByRole('alertdialog')).toBeTruthy()
     expect(onDelete).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }))
-    expect(onDelete).toHaveBeenCalledWith('project-1')
+    // Capa 1: el botón nace deshabilitado, aunque el diálogo esté abierto.
+    const confirmButton = screen.getByRole('button', { name: 'Eliminar definitivamente' })
+    expect(confirmButton.hasAttribute('disabled')).toBe(true)
+
+    // Capa 2: reconocer el respaldo habilita el campo del nombre, no el borrado.
+    fireEvent.click(screen.getByRole('checkbox'))
+    expect(confirmButton.hasAttribute('disabled')).toBe(true)
+
+    // Capa 3: un nombre que no calza sigue bloqueando.
+    const nameInput = screen.getByLabelText(/para confirmar/i)
+    fireEvent.change(nameInput, { target: { value: 'Teno mal escrito' } })
+    expect(confirmButton.hasAttribute('disabled')).toBe(true)
+    expect(onDelete).not.toHaveBeenCalled()
+
+    fireEvent.change(nameInput, { target: { value: 'Teno' } })
+    fireEvent.click(confirmButton)
+    expect(onDelete).toHaveBeenCalledWith('project-1', {
+      confirmedName: 'Teno',
+      acknowledgedExport: true,
+    })
   })
 
   it('loads a private project image through its opaque file route', () => {

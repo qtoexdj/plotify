@@ -1,9 +1,16 @@
 import { createRouteHandlerClient } from '@/lib/supabase/server'
-import { getProjectById, deleteProject, updateProject } from '@/lib/services/projects.service'
+import {
+  getProjectById,
+  deleteProject,
+  updateProject,
+  ProjectHasDependenciesError,
+  ProjectDeleteConfirmationError,
+  ProjectNotFoundError,
+} from '@/lib/services/projects.service'
 import { getProjectVendors } from '@/lib/services/vendors.service'
 import { NextRequest } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { projectPatchSchema } from '@/lib/validations/project.schema'
+import { projectPatchSchema, projectDeleteSchema } from '@/lib/validations/project.schema'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,10 +61,31 @@ export async function DELETE(
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await deleteProject(id, user.id)
+    const body = await request.json().catch(() => null)
+    const parsed = projectDeleteSchema.safeParse(body)
+    if (!parsed.success) {
+      return Response.json(
+        { error: 'Falta la confirmación para eliminar el proyecto.', code: 'CONFIRMATION_REQUIRED' },
+        { status: 400 }
+      )
+    }
+
+    const result = await deleteProject(id, user.id, {
+      confirmedName: parsed.data.confirmedName,
+      acknowledgedExport: parsed.data.acknowledgedExport,
+    })
     revalidatePath('/projects')
-    return Response.json({ message: 'Proyecto eliminado' })
+    return Response.json({ message: 'Proyecto eliminado', ...result })
   } catch (error) {
+    if (error instanceof ProjectNotFoundError) {
+      return Response.json({ error: error.message, code: error.code }, { status: 404 })
+    }
+    if (error instanceof ProjectDeleteConfirmationError) {
+      return Response.json({ error: error.message, code: error.code }, { status: 400 })
+    }
+    if (error instanceof ProjectHasDependenciesError) {
+      return Response.json({ error: error.message, code: error.code }, { status: 409 })
+    }
     console.error('Error in DELETE /api/projects/[id]:', error)
     return Response.json({ error: 'Error al eliminar proyecto' }, { status: 500 })
   }

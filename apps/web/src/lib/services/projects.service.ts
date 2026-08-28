@@ -291,27 +291,111 @@ export async function createProject(
   return result
 }
 
-export async function deleteProject(projectId: string, userId: string): Promise<void> {
+/**
+ * Las importaciones de geometría, los archivos fuente y las aprobaciones son
+ * evidencia retenida (FK `on delete restrict` en SDD019): una vez que el
+ * proyecto las tiene, borrarlo deja de ser posible por diseño.
+ */
+export class ProjectHasDependenciesError extends Error {
+  readonly code = 'PROJECT_HAS_DEPENDENCIES'
+
+  constructor() {
+    super(
+      'El proyecto tiene registros que se conservan como evidencia (geometría importada, archivos fuente o aprobaciones) y por eso ya no puede eliminarse.'
+    )
+    this.name = 'ProjectHasDependenciesError'
+  }
+}
+
+export class ProjectDeleteConfirmationError extends Error {
+  readonly code = 'PROJECT_NAME_MISMATCH'
+
+  constructor() {
+    super('El nombre escrito no coincide con el del proyecto.')
+    this.name = 'ProjectDeleteConfirmationError'
+  }
+}
+
+export class ProjectNotFoundError extends Error {
+  readonly code = 'PROJECT_NOT_FOUND'
+
+  constructor() {
+    super('El proyecto no existe o no pertenece a tu organización.')
+    this.name = 'ProjectNotFoundError'
+  }
+}
+
+export interface DeleteProjectConfirmation {
+  /** Nombre tipeado por la persona; debe calzar exacto con el del proyecto. */
+  confirmedName: string
+  /** Reconocimiento explícito de haber respaldado documentación y escrituras. */
+  acknowledgedExport: boolean
+}
+
+export interface DeleteProjectResult {
+  projectId: string
+  name: string
+  removed: Record<string, number>
+}
+
+/**
+ * Borra el proyecto y toda su evidencia. Las tres capas de confirmación se
+ * verifican aquí, no solo en la UI: sin `acknowledgedExport` y sin el nombre
+ * exacto la operación no llega siquiera a tocar la base.
+ */
+export async function deleteProject(
+  projectId: string,
+  userId: string,
+  confirmation: DeleteProjectConfirmation
+): Promise<DeleteProjectResult> {
   const supabase = await createClient()
   const membership = await getOrganizationMembership(supabase, userId)
 
-  let deleteQuery = supabase.from('projects').delete().eq('id', projectId)
-
-  if (membership) {
-    deleteQuery = deleteQuery.eq('organization_id', membership.organization_id)
+  if (!membership || membership.role !== 'admin') {
+    throw new ProjectNotFoundError()
+  }
+  if (confirmation.acknowledgedExport !== true) {
+    throw new ProjectDeleteConfirmationError()
   }
 
-  const { error } = await deleteQuery
+  const service = createServiceClient()
+  const { data, error } = await service.rpc('delete_project_cascade', {
+    p_project_id: projectId,
+    p_organization_id: membership.organization_id,
+    p_actor_user_id: userId,
+    p_confirmed_name: confirmation.confirmedName,
+    p_reason: null,
+  })
 
   if (error) {
+    if (error.message.includes('PROJECT_NAME_MISMATCH')) throw new ProjectDeleteConfirmationError()
+    if (error.message.includes('PROJECT_NOT_FOUND')) throw new ProjectNotFoundError()
     console.error('Error deleting project:', error)
-    if (error.code === '23503') {
-      throw new Error(
-        'El proyecto tiene registros relacionados (por ejemplo aprobaciones o documentos generados) que todavía bloquean su eliminación.'
-      )
-    }
+    if (error.code === '23503') throw new ProjectHasDependenciesError()
     throw new Error('Error al eliminar proyecto')
   }
+
+  const result = data as {
+    projectId: string
+    name: string
+    removed: Record<string, number>
+    storageObjects: Array<{ bucket: string; path: string }>
+  }
+
+  // Los blobs viven fuera de Postgres: la transacción ya se confirmó, así que un
+  // fallo aquí deja archivos huérfanos pero no revierte el borrado.
+  const byBucket = new Map<string, string[]>()
+  for (const object of result.storageObjects ?? []) {
+    byBucket.set(object.bucket, [...(byBucket.get(object.bucket) ?? []), object.path])
+  }
+  for (const [bucket, paths] of byBucket) {
+    const { error: storageError } = await service.storage.from(bucket).remove(paths)
+    if (storageError) {
+      console.error(`Proyecto ${projectId} borrado, pero quedaron blobs en ${bucket}:`, storageError)
+    }
+  }
+
+  return { projectId: result.projectId, name: result.name, removed: result.removed }
 }
 
 export async function updateProject(

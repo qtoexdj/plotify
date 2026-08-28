@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { PlusSignIcon, Folder02Icon } from '@hugeicons/core-free-icons'
@@ -53,15 +54,28 @@ export default function ProjectsPage() {
     return () => window.clearTimeout(timeoutId)
   }, [loadProjects])
 
-  const handleDelete = async (projectId: string) => {
+  const handleDelete = async (
+    projectId: string,
+    confirmation: { confirmedName: string; acknowledgedExport: boolean }
+  ) => {
     setDeletingId(projectId)
     try {
-      const response = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(confirmation),
+      })
+      const body = await response.json().catch(() => null)
+
       if (response.ok) {
         setProjects((prev) => prev.filter((p) => p.id !== projectId))
+        toast.success(`Proyecto "${body?.name ?? ''}" eliminado`)
+        return
       }
+      toast.error(body?.error ?? 'No se pudo eliminar el proyecto')
     } catch (error) {
       console.error('Error deleting project:', error)
+      toast.error('No se pudo eliminar el proyecto')
     } finally {
       setDeletingId(null)
     }
