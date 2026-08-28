@@ -86,6 +86,10 @@ services:
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - PLOTIFY_CHAT_BASE_URL=${PLOTIFY_CHAT_BASE_URL:-http://api:8005}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      # SDD019 hard-off lock: debe ser el string exacto "false" para operar; sin valor = hard-off
+      - PLOTIFY_HARD_OFF_CANONICAL_GEOMETRY_IMPORT=${PLOTIFY_HARD_OFF_CANONICAL_GEOMETRY_IMPORT}
+      # Basemap CARTO (solo server-side, en /api/map-tiles)
+      - CARTO_API_KEY=${CARTO_API_KEY}
     depends_on:
       - api
     networks:
