@@ -88,7 +88,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       geometry: feature.geometry,
       properties: feature.properties ?? {},
       geometryType: feature.geometryType,
-      name: feature.properties?.name ?? feature.properties?.layer ?? `Feature ${index + 1}`,
+      // El parser deja `name: ''` cuando el KML no trae nombre, y `??` no
+      // atrapa la cadena vacía: sin esto cada figura llega sin rótulo y son
+      // indistinguibles en el mapa.
+      name: String(feature.properties?.name ?? '').trim() || `Figura ${index + 1}`,
     }))
     if (!features.some((feature) => feature.geometryType === 'lot'))
       return fail(400, 'LOT_FEATURE_REQUIRED')

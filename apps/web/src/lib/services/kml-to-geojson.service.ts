@@ -76,6 +76,38 @@ export interface ClassifiedFeature extends GeoJSONFeature {
   geometryType: GeometryType
 }
 
+/** Un anillo válido de polígono cierra sobre sí mismo y tiene al menos 4 posiciones. */
+function isClosedRing(ring: unknown): ring is number[][] {
+  if (!Array.isArray(ring) || ring.length < 4) return false
+  const first = ring[0]
+  const last = ring[ring.length - 1]
+  return Array.isArray(first) && Array.isArray(last) && first[0] === last[0] && first[1] === last[1]
+}
+
+/**
+ * Los perímetros dibujados en CAD o Google Earth llegan como LineString
+ * cerrada (primer punto == último), no como Polygon. Sin convertirlos el
+ * motor los toma por caminos: `computeM2FromGeoJSON` devuelve null y
+ * `calculateLotServitude` los rechaza, así que el lote queda sin superficie
+ * y su deslinde sale en blanco. Las líneas abiertas sí son caminos y se
+ * dejan intactas; un MultiLineString de varias líneas es ambiguo (contorno
+ * vs. islas interiores) y tampoco se toca.
+ */
+function closedLineToPolygon(geometry: GeoJSONFeature['geometry']): GeoJSONFeature['geometry'] {
+  if (geometry.type === 'LineString' && isClosedRing(geometry.coordinates)) {
+    return { ...geometry, type: 'Polygon', coordinates: [geometry.coordinates as number[][]] }
+  }
+
+  if (geometry.type === 'MultiLineString') {
+    const lines = geometry.coordinates as unknown[]
+    if (lines.length === 1 && isClosedRing(lines[0])) {
+      return { ...geometry, type: 'Polygon', coordinates: [lines[0] as number[][]] }
+    }
+  }
+
+  return geometry
+}
+
 /**
  * Normaliza FeatureCollection para extraer geometrías válidas
  * Incluye: Polygon, MultiPolygon, LineString, MultiLineString
@@ -126,10 +158,12 @@ export function normalizeGeoJSON(geojson: GeoJSONFeatureCollection): ClassifiedF
 
     // Aceptar tipos válidos directamente
     if (validTypes.includes(geomType)) {
+      const geometry = closedLineToPolygon(feature.geometry)
       validFeatures.push({
         ...feature,
+        geometry,
         properties: enrichedProperties,
-        geometryType: detectGeometryType(feature, geomType),
+        geometryType: detectGeometryType(feature, geometry.type),
       })
     } else if (geomType === 'GeometryCollection') {
       // Extraer geometrías de GeometryCollection
@@ -138,11 +172,12 @@ export function normalizeGeoJSON(geojson: GeoJSONFeatureCollection): ClassifiedF
 
       for (const geom of geometries) {
         if (validTypes.includes(geom.type)) {
+          const geometry = closedLineToPolygon(geom)
           validFeatures.push({
             type: 'Feature',
-            geometry: geom,
+            geometry,
             properties: enrichedProperties,
-            geometryType: detectGeometryType(feature, geom.type),
+            geometryType: detectGeometryType(feature, geometry.type),
           })
         }
       }

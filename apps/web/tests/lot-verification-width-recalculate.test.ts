@@ -156,7 +156,7 @@ describe('lot verification width recalculation', () => {
     )
   })
 
-  it('rejects width changes when the lot has no canonical road segment source', async () => {
+  it('guarda el ancho como valor oficial cuando el lote no tiene ninguna fuente de servidumbre', async () => {
     const { supabase, lotUpdate } = buildSupabaseMock()
     vi.mocked(createClient).mockResolvedValue({
       ...supabase,
@@ -193,11 +193,12 @@ describe('lot verification width recalculation', () => {
       servidumbre_ancho_m: 5,
     })
 
-    expect(result).toEqual({
-      success: false,
-      error: 'El ancho se edita desde un tramo de camino canónico',
-    })
-    expect(lotUpdate).not.toHaveBeenCalled()
+    // Sin fuente no hay geometría que recalcular: el ancho es el del plano
+    // oficial y se persiste tal cual, incluida la etiqueta que lee la minuta.
+    expect(result.success).toBe(true)
+    expect(lotUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ servidumbre_ancho_m: 5, servidumbre_ancho_label: '5 m' })
+    )
     expect(updateRoadSegmentWidthAndRecalculateServidumbres).not.toHaveBeenCalled()
   })
 })

@@ -27,10 +27,7 @@ export async function authorizeGeometryOperation(request: NextRequest, projectId
 export async function claimGeometryOperation(
   context: NonNullable<Awaited<ReturnType<typeof authorizeGeometryOperation>>>,
   operationType:
-    | 'geometry.assign'
-    | 'geometry.unassign'
-    | 'geometry.derive'
-    | 'geometry.recalculate',
+    'geometry.assign' | 'geometry.unassign' | 'geometry.derive' | 'geometry.recalculate',
   idempotencyKey: string,
   payload: unknown
 ) {
@@ -46,7 +43,18 @@ export async function claimGeometryOperation(
     p_source_kind: 'web',
     p_provider_event_key: null,
   })
-  if (error || !data) throw new Error('IDEMPOTENCY_CONFLICT')
+  if (error || !data) {
+    // Un conflicto real de idempotencia es 23505 (misma clave, payload distinto).
+    // Cualquier otro fallo del claim —FK, timeout, permisos— se reportaba también
+    // como conflicto, devolvía un 409 engañoso y borraba la causa real.
+    console.error('[Geometría] claim_idempotency_operation falló:', error ?? 'sin datos')
+    const isConflict = error?.code === '23505' || /IDEMPOTENCY_CONFLICT/.test(error?.message ?? '')
+    throw new Error(
+      isConflict
+        ? 'IDEMPOTENCY_CONFLICT'
+        : `OPERATION_CLAIM_FAILED: ${error?.message ?? 'sin datos'}`
+    )
+  }
   return { operation: data, requestHash }
 }
 

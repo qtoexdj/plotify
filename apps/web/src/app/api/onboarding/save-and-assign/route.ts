@@ -9,6 +9,14 @@ import {
 
 export const dynamic = 'force-dynamic'
 
+/** Los errores del RPC son precondiciones de negocio, no fallas del servidor. */
+function assignmentErrorStatus(message: string): number {
+  if (/CONFLICT/.test(message)) return 409
+  if (/RESOURCE_NOT_FOUND/.test(message)) return 404
+  if (/GEOMETRY_NOT_ASSIGNABLE/.test(message)) return 422
+  return 500
+}
+
 export async function POST(request: NextRequest) {
   try {
     const parsed = assignGeometrySchema.safeParse(await request.json().catch(() => null))
@@ -43,10 +51,11 @@ export async function POST(request: NextRequest) {
     )
     return Response.json(response)
   } catch (error) {
-    console.error('Error in POST /api/onboarding/save-and-assign:', error)
-    return Response.json(
-      { error: error instanceof Error ? error.message : 'Error al asignar geometría' },
-      { status: error instanceof Error && /CONFLICT/.test(error.message) ? 409 : 500 }
-    )
+    const message = error instanceof Error ? error.message : 'Error al asignar geometría'
+    const status = assignmentErrorStatus(message)
+    // Un 500 solo cuando la culpa es nuestra: lo demás es una precondición
+    // que la persona puede corregir, y merece decirlo en vez de "falló el servidor".
+    if (status === 500) console.error('Error in POST /api/onboarding/save-and-assign:', error)
+    return Response.json({ error: message, code: message }, { status })
   }
 }

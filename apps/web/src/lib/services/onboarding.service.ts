@@ -539,7 +539,44 @@ export async function saveAndAssignGeometry(
     p_actor_user_id: context.actorUserId,
   })
   if (error || !data) throw new Error(error?.message ?? 'LOT_GEOMETRY_CONFLICT')
+
+  await persistAssignedLotArea(supabaseClient, payload.lotId, payload.geometryId)
+
   return data as unknown as Geometry
+}
+
+/**
+ * El RPC deja `lots.m2` en null y encola un job de enriquecimiento, pero ese
+ * worker hoy solo marca el job como listo sin calcular nada. Sin esta escritura
+ * la superficie nunca se puebla y el texto de deslinde sale con la superficie
+ * en blanco. Se calcula con la misma función que produjo los datos históricos.
+ *
+ * Va fuera de la transacción del RPC a propósito: la asignación ya quedó
+ * confirmada y un fallo aquí solo deja el m2 pendiente de recálculo, nunca
+ * revierte el vínculo lote↔geometría.
+ */
+async function persistAssignedLotArea(
+  supabaseClient: SupabaseClient,
+  lotId: string,
+  geometryId: string | null
+): Promise<void> {
+  if (!geometryId) return
+
+  try {
+    const { data: geometry } = await supabaseClient
+      .from('geometries')
+      .select('geometry')
+      .eq('id', geometryId)
+      .maybeSingle()
+    if (!geometry?.geometry) return
+
+    const m2 = computeM2FromGeoJSON(geometry.geometry as GeoJSONGeometry)
+    if (m2 === null) return
+
+    await supabaseClient.from('lots').update({ m2 }).eq('id', lotId)
+  } catch (areaError) {
+    console.error(`[Geometría] No se pudo calcular m2 del lote ${lotId}:`, areaError)
+  }
 }
 
 export async function saveInfrastructure(

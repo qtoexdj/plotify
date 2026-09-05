@@ -367,6 +367,16 @@ export function LotVerificationPanel({
   const hasMultipleServitudeWidths = calculatedServitudeWidths.length > 1
   const canEditSingleServitudeWidth =
     servitudeSegmentWidthRows.length === 1 && !hasMultipleServitudeWidths
+  /**
+   * Sin ninguna fuente de servidumbre no hay geometría que recalcular, pero el
+   * ancho igual va a la escritura y debe calzar con el plano oficial: se edita
+   * a mano. Si existe una fuente —aunque sea heredada— el m² se calculó a
+   * partir de ella y el ancho se ajusta desde ahí, no por escrito libre.
+   */
+  const hasNoCanonicalSegment =
+    servitudeSegmentWidthRows.length === 0 &&
+    !(Array.isArray(lotDetails.servidumbre_sources) && lotDetails.servidumbre_sources.length > 0)
+  const canEditServitudeWidth = canEditSingleServitudeWidth || hasNoCanonicalSegment
 
   const servitudeWidthLabel = useMemo(() => {
     if (lotDetails.servidumbre_ancho_label) return lotDetails.servidumbre_ancho_label
@@ -375,10 +385,10 @@ export function LotVerificationPanel({
   }, [calculatedServitudeWidths, lotDetails.servidumbre_ancho_label])
 
   const getSingleServitudeWidthInput = useCallback(() => {
-    if (!canEditSingleServitudeWidth) return undefined
+    if (!canEditServitudeWidth) return undefined
     const width = parseFloat(servidumbreAncho)
     return Number.isFinite(width) && width > 0 ? width : undefined
-  }, [canEditSingleServitudeWidth, servidumbreAncho])
+  }, [canEditServitudeWidth, servidumbreAncho])
 
   const singleServitudeWidthInput = getSingleServitudeWidthInput()
   const displayedServitudeWidthLabel =
@@ -386,6 +396,28 @@ export function LotVerificationPanel({
     (singleServitudeWidthInput !== undefined
       ? formatServitudeWidth(singleServitudeWidthInput)
       : null)
+
+  /**
+   * Referencia editable cuando no hay tramo de camino: el ancho se estima con
+   * los datos que ya existen —superficie de servidumbre repartida en el largo
+   * de los deslindes que la tocan—. Es solo una referencia: el valor que manda
+   * es el del plano oficial, por eso el campo queda siempre editable.
+   */
+  const derivedServitudeWidth = useMemo(() => {
+    if (!hasNoCanonicalSegment) return null
+    const area = lotDetails.servidumbre_m2
+    if (!area || area <= 0) return null
+    const length = boundaries.reduce(
+      (total, boundary) => (boundary.es_servidumbre ? total + (boundary.distance ?? 0) : total),
+      0
+    )
+    if (length <= 0) return null
+    return area / length
+  }, [boundaries, hasNoCanonicalSegment, lotDetails.servidumbre_m2])
+
+  const servitudeWidthReference =
+    displayedServitudeWidthLabel ??
+    (derivedServitudeWidth !== null ? formatServitudeWidth(derivedServitudeWidth) : null)
 
   /** Calculates the percentage difference between official and calculated */
   const areaDiff = useMemo(() => {
@@ -448,7 +480,7 @@ export function LotVerificationPanel({
   }, [servitudeSegmentWidthRows])
 
   useEffect(() => {
-    if (!canEditSingleServitudeWidth) return
+    if (!canEditServitudeWidth) return
 
     const width = getSingleServitudeWidthInput()
     if (width === undefined || lastPersistedWidthRef.current === width) return
@@ -484,7 +516,7 @@ export function LotVerificationPanel({
         clearTimeout(widthAutoSaveTimerRef.current)
       }
     }
-  }, [canEditSingleServitudeWidth, getSingleServitudeWidthInput, lotDetails.id, projectId])
+  }, [canEditServitudeWidth, getSingleServitudeWidthInput, lotDetails.id, projectId])
 
   useEffect(() => {
     if (servitudeSegmentWidthRows.length <= 1) return
@@ -820,10 +852,10 @@ export function LotVerificationPanel({
           <div className="grid grid-cols-[1fr_70px_100px_60px] gap-0 items-center px-3 py-2.5 border-t border-border">
             <span className="text-xs font-medium text-foreground/70">Ancho Serv.</span>
             <span className="text-[11px] text-muted-foreground text-right font-mono">
-              {displayedServitudeWidthLabel ?? '—'}
+              {servitudeWidthReference ?? '—'}
             </span>
             <div className="px-1 relative flex items-center">
-              {!canEditSingleServitudeWidth ? (
+              {!canEditServitudeWidth ? (
                 <Input
                   type="text"
                   value={displayedServitudeWidthLabel ?? ''}
@@ -837,7 +869,9 @@ export function LotVerificationPanel({
                   step="0.1"
                   value={servidumbreAncho}
                   onChange={(e) => setServidumbreAncho(e.target.value)}
-                  placeholder="0.0"
+                  placeholder={
+                    derivedServitudeWidth !== null ? derivedServitudeWidth.toFixed(1) : '0.0'
+                  }
                   className="h-7 text-xs text-center pr-4 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               )}
@@ -852,7 +886,9 @@ export function LotVerificationPanel({
                   ? 'tramos'
                   : canEditSingleServitudeWidth
                     ? 'tramo'
-                    : 'calc.'}
+                    : hasNoCanonicalSegment
+                      ? 'plano'
+                      : 'calc.'}
             </span>
           </div>
 

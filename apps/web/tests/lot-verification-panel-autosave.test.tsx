@@ -154,7 +154,7 @@ describe('LotVerificationPanel servitude width autosave', () => {
     expect(onLotUpdated).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps a single width read-only when it has no canonical road segment source', async () => {
+  it('deja editar el ancho a mano cuando el lote no tiene ninguna fuente de servidumbre', async () => {
     vi.useFakeTimers()
 
     render(
@@ -167,16 +167,22 @@ describe('LotVerificationPanel servitude width autosave', () => {
       />
     )
 
-    const singleWidthInput = screen.getByDisplayValue('6') as HTMLInputElement
-    expect(singleWidthInput.readOnly).toBe(true)
-    expect(singleWidthInput.disabled).toBe(true)
+    // Sin fuente no hay geometría que recalcular, pero el ancho va a la
+    // escritura y debe poder calzar con el plano oficial.
+    const widthInput = screen.getByDisplayValue('6') as HTMLInputElement
+    expect(widthInput.readOnly).toBe(false)
+    expect(widthInput.disabled).toBe(false)
+
+    fireEvent.change(widthInput, { target: { value: '8' } })
 
     await act(async () => {
       vi.advanceTimersByTime(1_000)
       await Promise.resolve()
     })
 
-    expect(saveOfficialOverride).not.toHaveBeenCalled()
+    expect(saveOfficialOverride).toHaveBeenCalledWith(
+      expect.objectContaining({ lotId: 'lot-1', servidumbre_ancho_m: 8 })
+    )
   })
 
   it('keeps a stale non-canonical width source read-only', async () => {

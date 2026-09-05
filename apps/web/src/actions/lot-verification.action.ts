@@ -30,6 +30,16 @@ function isCanonicalRoadSegmentId(segmentId: string) {
   )
 }
 
+/**
+ * Etiqueta del ancho tal como la lee el puente a la escritura
+ * (`servidumbre.ancho_label`). Sin ella la minuta se quedaría sin el ancho.
+ */
+function formatOfficialServitudeWidth(widthM: number | undefined): string | null {
+  if (widthM === undefined || !Number.isFinite(widthM) || widthM <= 0) return null
+  const rounded = Number.isInteger(widthM) ? widthM.toString() : widthM.toFixed(2)
+  return `${rounded} m`
+}
+
 function getCanonicalRoadSegmentWidthTarget(
   sources: ServidumbreSource[] | null | undefined,
   requestedSegmentId?: string
@@ -251,11 +261,19 @@ export async function saveOfficialOverride(
       updatePayload.verified_by = null
     }
 
+    // Con un tramo canónico el ancho sigue siendo derivado: editarlo recalcula la
+    // geometría. Sin tramo no hay nada que recalcular, pero la escritura igual
+    // necesita el ancho, y manda el plano oficial: se guarda como valor oficial.
+    const hasCanonicalSource = Array.isArray(currentSources) && currentSources.length > 0
     if (widthChanged && !widthTarget) {
-      return {
-        success: false,
-        error: 'El ancho se edita desde un tramo de camino canónico',
+      if (hasCanonicalSource) {
+        return {
+          success: false,
+          error: 'El ancho se edita desde el tramo de camino correspondiente',
+        }
       }
+      updatePayload.servidumbre_ancho_m = servidumbre_ancho_m
+      updatePayload.servidumbre_ancho_label = formatOfficialServitudeWidth(servidumbre_ancho_m)
     }
 
     // 5. Update lot
