@@ -1,3 +1,4 @@
+-- Data fix: dedupe notification_events keeping earliest record (preserves read_at and dismissed_at metadata)
 DELETE FROM public.notification_events
 WHERE id IN (
   SELECT id FROM (
