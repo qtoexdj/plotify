@@ -1,0 +1,373 @@
+/*
+ * Presentación comercial — layout de escenario.
+ *
+ * Dos modos:
+ *  - "stage": en pantallas anchas la diapositiva es un lienzo fijo de 1280x720
+ *    escalado con transform para calzar exactamente en el espacio disponible.
+ *    Nada se desborda ni se corta nunca, y no hace falta la cascada de reglas
+ *    !important que necesitaba la versión HTML anterior.
+ *  - "flow": en móvil y en vertical la diapositiva vuelve a ser un documento
+ *    normal que fluye y se desplaza, con tipografía fluida.
+ */
+
+.deck {
+  position: relative;
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ---------- Modo escenario ---------- */
+
+.stageViewport {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.stage {
+  width: 1280px;
+  height: 720px;
+  flex-shrink: 0;
+  transform-origin: center center;
+}
+
+/* ---------- Modo flujo (móvil / vertical) ---------- */
+
+.flowViewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.flow {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- Diapositiva ---------- */
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 44px 60px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition:
+    opacity 300ms ease,
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 300ms;
+}
+
+.flow .slide {
+  padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  justify-content: flex-start;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.slideActive {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Entrada escalonada de los bloques de contenido. El retraso lo fija cada
+   bloque con --stagger-index, así no hay que enumerar :nth-child por layout. */
+.stagger {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slideActive .stagger {
+  opacity: 1;
+  transform: translateY(0);
+  /* Escalonado corto a propósito: en una reunión se pasa de lámina hablando y
+     una cascada de más de medio segundo se lee como lentitud de la página. */
+  transition-delay: calc(40ms + var(--stagger-index, 0) * 38ms);
+}
+
+/* Haz de luz que recorre el conector del ciclo de venta. */
+.beam {
+  animation: beamFlow 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes beamFlow {
+  0% {
+    left: -30%;
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: 105%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide,
+  .stagger {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .beam {
+    display: none !important;
+  }
+}
+
+/* ---------- Impresión / exportar a PDF ----------
+ * La versión anterior no se podía imprimir: las diapositivas estaban
+ * superpuestas en absoluto y salía una sola página. Aquí se apilan, una por
+ * hoja horizontal, y se fuerza la paleta clara sin tocar el tema de la app
+ * (las utilidades de Tailwind v4 leen estas variables por @theme inline). */
+
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  /* El Toaster vive en el layout raíz, fuera de este árbol: si no se oculta
+     aquí, un toast abierto se imprime en las 12 páginas. */
+  .chrome,
+  :global([data-sonner-toaster]),
+  :global(nextjs-portal) {
+    display: none !important;
+  }
+
+  :global(html),
+  :global(body) {
+    background: #ffffff !important;
+  }
+
+  .root {
+    --background: #ffffff;
+    --foreground: #111111;
+    --card: #ffffff;
+    --card-foreground: #111111;
+    --muted: #f2f2f2;
+    --muted-foreground: #4b5563;
+    --secondary: #f2f2f2;
+    --secondary-foreground: #111111;
+    --accent: #ececec;
+    --accent-foreground: #111111;
+    --border: #d4d4d4;
+    --primary: #a93439;
+    --primary-foreground: #ffffff;
+    --success: #15803d;
+    --warning: #b45309;
+    --destructive: #b91c1c;
+    --info: #1d4ed8;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    background: #ffffff !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .deck,
+  .stageViewport,
+  .flowViewport {
+    position: static !important;
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .stage {
+    width: 100% !important;
+    height: auto !important;
+    transform: none !important;
+  }
+
+  .slide {
+    position: static !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    height: 180mm;
+    padding: 6mm 6mm;
+    break-after: page;
+    break-inside: avoid;
+    overflow: hidden !important;
+  }
+
+  .slide:last-child {
+    break-after: auto;
+  }
+
+  .stagger {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .noPrint {
+    display: none !important;
+  }
+}
+
+/* ---------- Primitivas de layout ----------
+ * Estas clases NO usan breakpoints de viewport a propósito: en modo escenario
+ * la diapositiva siempre mide 1280x720 aunque la pantalla mida otra cosa, así
+ * que un `lg:` de Tailwind mentiría. El layout responde al modo del deck. */
+
+.split {
+  display: grid;
+  grid-template-columns: 1.02fr 1fr;
+  gap: 34px;
+  align-items: center;
+  width: 100%;
+}
+
+.splitReverse {
+  composes: split;
+  grid-template-columns: 1fr 1.02fr;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.grid5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  width: 100%;
+}
+
+.flow .split,
+.flow .splitReverse {
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.flow .splitReverse > *:first-child {
+  order: 2;
+}
+
+.flow .splitReverse > *:last-child {
+  order: 1;
+}
+
+.flow .grid3,
+.flow .grid2,
+.flow .grid5 {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* Tipografía del deck. En escenario son medidas fijas (el lienzo escala);
+   en flujo son fluidas contra el ancho real del teléfono. */
+
+/*
+ * Acento para texto chico sobre el fondo de la lámina.
+ *
+ * En modo oscuro `--primary` (#c24444) sobre `--background` (#161616) da 3,62:1
+ * y AA pide 4,5:1 para texto normal, así que ahí se usa el carmesí claro que el
+ * sistema ya define para superficies oscuras (--sidebar-primary, #e06565 → 5,4:1).
+ */
+.root {
+  --acento-en-lamina: var(--primary);
+}
+
+:global(.dark) .root {
+  --acento-en-lamina: var(--sidebar-primary);
+}
+
+.eyebrow {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.headline {
+  font-size: 47px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.headlineSm {
+  composes: headline;
+  font-size: 39px;
+}
+
+.lead {
+  font-size: 18.5px;
+  line-height: 1.5;
+  max-width: 92ch;
+}
+
+.flow .eyebrow {
+  font-size: 12px;
+}
+
+.flow .headline,
+.flow .headlineSm {
+  font-size: clamp(21px, 5.6vw, 27px);
+  line-height: 1.2;
+}
+
+.flow .lead {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/*
+ * Texto corrido dentro de tarjetas y beneficios.
+ *
+ * En escenario mide 15px sobre un lienzo de 1280 que después se escala; en
+ * flujo se renderiza a tamaño real en el teléfono, y ahí sube a 16px, el piso
+ * de legibilidad para texto de cuerpo en móvil.
+ */
+.flow .cuerpo {
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+/* En impresión el lienzo se re-escala a la hoja: se reduce la tipografía para
+   que quepa el mismo contenido sin recortes. */
+@media print {
+  .headline {
+    font-size: 26px;
+  }
+  .headlineSm {
+    font-size: 22px;
+  }
+  .lead {
+    font-size: 12px;
+  }
+  .eyebrow {
+    font-size: 9px;
+  }
+  .split,
+  .splitReverse {
+    gap: 18px;
+  }
+}

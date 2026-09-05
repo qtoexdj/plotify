@@ -1,0 +1,6184 @@
+{
+  "_origen": {
+    "proyecto": "Teno 2",
+    "comuna": "Teno",
+    "region": "Maule",
+    "exportado": "2026-09-05",
+    "nota": "Solo geometría y medidas. Estado y precio son sintéticos; no hay datos de clientes, vendedores ni precios reales."
+  },
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008185, -34.888985, 0],
+            [-71.007853, -34.889387, 0],
+            [-71.006861, -34.88904, 0],
+            [-71.007175, -34.88866, 0],
+            [-71.008185, -34.888985, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-1",
+        "lot_id": "lote-1",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "1",
+        "estado": "disponible",
+        "precio": 53000000,
+        "m2": 5062.13,
+        "servidumbre_m2": 700,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4362,
+        "area_official_m2": 5062.13,
+        "perimeter_official_m": 302.38,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 19",
+            "distance": 54.01,
+            "description": "Surponiente en 54.01 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 19", "is_partial": true }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 2",
+            "distance": 98.47,
+            "description": "Suroriente en 98.47 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 2", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 51.03,
+            "description": "Nororiente en 51.03 m",
+            "es_servidumbre": true,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norte",
+            "colinda": "vecinos numero 2",
+            "distance": 98.99,
+            "description": "Norte en 98.99 m",
+            "es_servidumbre": true,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.008097, -34.889045],
+              [-71.008097, -34.889046],
+              [-71.008096, -34.889048],
+              [-71.008096, -34.889049],
+              [-71.008096, -34.889049],
+              [-71.008096, -34.889051],
+              [-71.008095, -34.889053],
+              [-71.008095, -34.889053],
+              [-71.008095, -34.889053],
+              [-71.008094, -34.889055],
+              [-71.008092, -34.889057],
+              [-71.008092, -34.889057],
+              [-71.008092, -34.889057],
+              [-71.007828, -34.889378],
+              [-71.007776, -34.88936],
+              [-71.008027, -34.889055],
+              [-71.007102, -34.888758],
+              [-71.007097, -34.888756],
+              [-71.007097, -34.888755],
+              [-71.007128, -34.888718],
+              [-71.008079, -34.889023],
+              [-71.00808, -34.889024],
+              [-71.00808, -34.889024],
+              [-71.008082, -34.889025],
+              [-71.008084, -34.889025],
+              [-71.008084, -34.889026],
+              [-71.008085, -34.889026],
+              [-71.008087, -34.889027],
+              [-71.008088, -34.889028],
+              [-71.008089, -34.889028],
+              [-71.008089, -34.889029],
+              [-71.00809, -34.88903],
+              [-71.008092, -34.889032],
+              [-71.008092, -34.889032],
+              [-71.008092, -34.889032],
+              [-71.008093, -34.889034],
+              [-71.008095, -34.889035],
+              [-71.008095, -34.889036],
+              [-71.008095, -34.889036],
+              [-71.008095, -34.889038],
+              [-71.008096, -34.88904],
+              [-71.008096, -34.88904],
+              [-71.008096, -34.88904],
+              [-71.008097, -34.889042],
+              [-71.008097, -34.889044],
+              [-71.008097, -34.889044],
+              [-71.008097, -34.889045]
+            ]
+          ],
+          [
+            [
+              [-71.007284, -34.888695],
+              [-71.007282, -34.888699],
+              [-71.007278, -34.888703],
+              [-71.007274, -34.888706],
+              [-71.007269, -34.888708],
+              [-71.007264, -34.888709],
+              [-71.007259, -34.88871],
+              [-71.007254, -34.888709],
+              [-71.007248, -34.888708],
+              [-71.007244, -34.888706],
+              [-71.007239, -34.888703],
+              [-71.007236, -34.8887],
+              [-71.007233, -34.888696],
+              [-71.007232, -34.888692],
+              [-71.007231, -34.888688],
+              [-71.007231, -34.888683],
+              [-71.007233, -34.888679],
+              [-71.007284, -34.888695]
+            ]
+          ],
+          [
+            [
+              [-71.007201, -34.888669],
+              [-71.007198, -34.888673],
+              [-71.007195, -34.888676],
+              [-71.007191, -34.888679],
+              [-71.007186, -34.888681],
+              [-71.007181, -34.888682],
+              [-71.007176, -34.888683],
+              [-71.00717, -34.888683],
+              [-71.007165, -34.888681],
+              [-71.00716, -34.888679],
+              [-71.00716, -34.888679],
+              [-71.007175, -34.88866],
+              [-71.007201, -34.888669]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-1",
+        "lot_id": "lote-1",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 1",
+        "numero_lote": "1",
+        "estado": "disponible",
+        "servidumbre_m2": 700,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4362
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007538, -34.88977, 0],
+            [-71.006533, -34.889437, 0],
+            [-71.006861, -34.88904, 0],
+            [-71.007853, -34.889387, 0],
+            [-71.007538, -34.88977, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-2",
+        "lot_id": "lote-2",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "2",
+        "estado": "vendido",
+        "precio": 60000000,
+        "m2": 5062.22,
+        "servidumbre_m2": 258,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4804,
+        "area_official_m2": 5062.22,
+        "perimeter_official_m": 302.26,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "lote 3",
+            "distance": 98.97,
+            "description": "Sur en 98.97 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 3", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 53.46,
+            "description": "Nororiente en 53.46 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 1",
+            "distance": 98.47,
+            "description": "Norponiente en 98.47 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 1", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 19",
+            "distance": 51.47,
+            "description": "Surponiente en 51.47 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 19", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007828, -34.889378],
+            [-71.007515, -34.889757],
+            [-71.007512, -34.889761],
+            [-71.00746, -34.889744],
+            [-71.00747, -34.889732],
+            [-71.007776, -34.88936],
+            [-71.007828, -34.889378]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-2",
+        "lot_id": "lote-2",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 2",
+        "numero_lote": "2",
+        "estado": "vendido",
+        "servidumbre_m2": 258,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4804
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007211, -34.890167, 0],
+            [-71.006216, -34.88982, 0],
+            [-71.006533, -34.889437, 0],
+            [-71.007538, -34.88977, 0],
+            [-71.007211, -34.890167, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-3",
+        "lot_id": "lote-3",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "3",
+        "estado": "vendido",
+        "precio": 63000000,
+        "m2": 5062.2,
+        "servidumbre_m2": 266,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4796,
+        "area_official_m2": 5062.2,
+        "perimeter_official_m": 302.38,
+        "boundaries_official": [
+          {
+            "label": "Suroriente",
+            "colinda": "lote 4",
+            "distance": 98.7,
+            "description": "Suroriente en 98.70 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 4", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 51.49,
+            "description": "Nororiente en 51.49 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 2",
+            "distance": 98.97,
+            "description": "Norte en 98.97 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 2", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 18",
+            "distance": 53.33,
+            "description": "Surponiente en 53.33 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 18", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007512, -34.889761],
+            [-71.007185, -34.890158],
+            [-71.007134, -34.89014],
+            [-71.00746, -34.889744],
+            [-71.007512, -34.889761]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-3",
+        "lot_id": "lote-3",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 3",
+        "numero_lote": "3",
+        "estado": "vendido",
+        "servidumbre_m2": 266,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4796
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006896, -34.890549, 0],
+            [-71.005888, -34.890216, 0],
+            [-71.006216, -34.88982, 0],
+            [-71.007211, -34.890167, 0],
+            [-71.006896, -34.890549, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-4",
+        "lot_id": "lote-4",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "4",
+        "estado": "disponible",
+        "precio": 70000000,
+        "m2": 5062.11,
+        "servidumbre_m2": 257,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4805,
+        "area_official_m2": 5062.11,
+        "perimeter_official_m": 302.49,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "lote 5",
+            "distance": 99.2,
+            "description": "Sur en 99.20 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 5", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "",
+            "distance": 53.33,
+            "description": "Nororiente en 53.33 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 3",
+            "distance": 98.7,
+            "description": "Norponiente en 98.70 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 3", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 17",
+            "distance": 51.38,
+            "description": "Surponiente en 51.38 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 17", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007185, -34.890158],
+            [-71.00687, -34.89054],
+            [-71.006818, -34.890523],
+            [-71.007134, -34.89014],
+            [-71.007185, -34.890158]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-4",
+        "lot_id": "lote-4",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 4",
+        "numero_lote": "4",
+        "estado": "disponible",
+        "servidumbre_m2": 257,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4805
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006569, -34.890945, 0],
+            [-71.005572, -34.890598, 0],
+            [-71.005888, -34.890216, 0],
+            [-71.006896, -34.890549, 0],
+            [-71.006569, -34.890945, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-5",
+        "lot_id": "lote-5",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "5",
+        "estado": "disponible",
+        "precio": 51000000,
+        "m2": 5062.11,
+        "servidumbre_m2": 265,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4797,
+        "area_official_m2": 5062.11,
+        "perimeter_official_m": 302.62,
+        "boundaries_official": [
+          {
+            "label": "Suroriente",
+            "colinda": "lote 6",
+            "distance": 98.94,
+            "description": "Suroriente en 98.94 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 6", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 51.42,
+            "description": "Nororiente en 51.42 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 4",
+            "distance": 99.2,
+            "description": "Norte en 99.20 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 4", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 16",
+            "distance": 53.18,
+            "description": "Surponiente en 53.18 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 16", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.00687, -34.89054],
+            [-71.006544, -34.890936],
+            [-71.006492, -34.890918],
+            [-71.006818, -34.890523],
+            [-71.00687, -34.89054]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-5",
+        "lot_id": "lote-5",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 5",
+        "numero_lote": "5",
+        "estado": "disponible",
+        "servidumbre_m2": 265,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4797
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006255, -34.891327, 0],
+            [-71.005245, -34.890993, 0],
+            [-71.005572, -34.890598, 0],
+            [-71.006569, -34.890945, 0],
+            [-71.006255, -34.891327, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-6",
+        "lot_id": "lote-6",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "6",
+        "estado": "disponible",
+        "precio": 58000000,
+        "m2": 5062.14,
+        "servidumbre_m2": 257,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4805,
+        "area_official_m2": 5062.14,
+        "perimeter_official_m": 302.73,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "lote 7",
+            "distance": 99.42,
+            "description": "Sur en 99.42 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 7", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 53.17,
+            "description": "Nororiente en 53.17 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 5",
+            "distance": 98.94,
+            "description": "Norponiente en 98.94 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 5", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 15",
+            "distance": 51.31,
+            "description": "Surponiente en 51.31 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 15", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006544, -34.890936],
+            [-71.006229, -34.891318],
+            [-71.006177, -34.891301],
+            [-71.006492, -34.890918],
+            [-71.006544, -34.890936]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-6",
+        "lot_id": "lote-6",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 6",
+        "numero_lote": "6",
+        "estado": "disponible",
+        "servidumbre_m2": 257,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4805
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.005929, -34.891721, 0],
+            [-71.004929, -34.891375, 0],
+            [-71.005245, -34.890993, 0],
+            [-71.006255, -34.891327, 0],
+            [-71.005929, -34.891721, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-7",
+        "lot_id": "lote-7",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "7",
+        "estado": "disponible",
+        "precio": 65000000,
+        "m2": 5062.21,
+        "servidumbre_m2": 264,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4798,
+        "area_official_m2": 5062.21,
+        "perimeter_official_m": 302.85,
+        "boundaries_official": [
+          {
+            "label": "Suroriente",
+            "colinda": "lote 8",
+            "distance": 99.17,
+            "description": "Suroriente en 99.17 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 8", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 51.33,
+            "description": "Nororiente en 51.33 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 6",
+            "distance": 99.42,
+            "description": "Norte en 99.42 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 6", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 14",
+            "distance": 53.04,
+            "description": "Surponiente en 53.04 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 14", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006229, -34.891318],
+            [-71.005904, -34.891713],
+            [-71.005852, -34.891695],
+            [-71.006177, -34.891301],
+            [-71.006229, -34.891318]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-7",
+        "lot_id": "lote-7",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 7",
+        "numero_lote": "7",
+        "estado": "disponible",
+        "servidumbre_m2": 264,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4798
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.005615, -34.892102, 0],
+            [-71.004602, -34.891769, 0],
+            [-71.004929, -34.891375, 0],
+            [-71.005929, -34.891721, 0],
+            [-71.005615, -34.892102, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-8",
+        "lot_id": "lote-8",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "8",
+        "estado": "vendido",
+        "precio": 50000000,
+        "m2": 5062.12,
+        "servidumbre_m2": 256,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4806,
+        "area_official_m2": 5062.12,
+        "perimeter_official_m": 302.97,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "lote 9",
+            "distance": 99.65,
+            "description": "Sur en 99.65 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 9", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 53.06,
+            "description": "Nororiente en 53.06 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 7",
+            "distance": 99.17,
+            "description": "Norponiente en 99.17 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 7", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 13",
+            "distance": 51.2,
+            "description": "Surponiente en 51.20 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 13", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.005904, -34.891713],
+            [-71.005624, -34.892052],
+            [-71.005589, -34.892094],
+            [-71.005537, -34.892077],
+            [-71.005579, -34.892027],
+            [-71.005852, -34.891695],
+            [-71.005904, -34.891713]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-8",
+        "lot_id": "lote-8",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 8",
+        "numero_lote": "8",
+        "estado": "vendido",
+        "servidumbre_m2": 256,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4806
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.005307, -34.892476, 0],
+            [-71.004271, -34.89217, 0],
+            [-71.004602, -34.891769, 0],
+            [-71.005615, -34.892102, 0],
+            [-71.005307, -34.892476, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-9",
+        "lot_id": "lote-9",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "9",
+        "estado": "reservado",
+        "precio": 53000000,
+        "m2": 5062.28,
+        "servidumbre_m2": 252,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4810,
+        "area_official_m2": 5062.28,
+        "perimeter_official_m": 304.32,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "lote 10",
+            "distance": 100.6,
+            "description": "Sur en 100.60 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 10", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 53.93,
+            "description": "Nororiente en 53.93 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 8",
+            "distance": 99.65,
+            "description": "Norte en 99.65 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 8", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 11",
+            "distance": 50.23,
+            "description": "Surponiente en 50.23 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 11", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.005589, -34.892094],
+            [-71.005281, -34.892468],
+            [-71.005228, -34.892453],
+            [-71.005229, -34.892452],
+            [-71.005231, -34.892448],
+            [-71.005537, -34.892077],
+            [-71.005589, -34.892094]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-9",
+        "lot_id": "lote-9",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 9",
+        "numero_lote": "9",
+        "estado": "reservado",
+        "servidumbre_m2": 252,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4810
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.005, -34.89285, 0],
+            [-71.003939, -34.892571, 0],
+            [-71.004271, -34.89217, 0],
+            [-71.005307, -34.892476, 0],
+            [-71.005, -34.89285, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-10",
+        "lot_id": "lote-10",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "10",
+        "estado": "vendido",
+        "precio": 47000000,
+        "m2": 5062.2,
+        "servidumbre_m2": 10,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 5052,
+        "area_official_m2": 5062.2,
+        "perimeter_official_m": 306.25,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "campo de al lado 2",
+            "distance": 101.67,
+            "description": "Sur en 101.67 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "campo de al lado 1",
+            "distance": 53.86,
+            "description": "Nororiente en 53.86 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 9",
+            "distance": 100.6,
+            "description": "Norte en 100.60 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 9", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 11",
+            "distance": 50.19,
+            "description": "Surponiente en 50.19 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 11", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.005281, -34.892468],
+            [-71.005277, -34.892473],
+            [-71.005273, -34.892477],
+            [-71.005269, -34.892479],
+            [-71.005265, -34.892481],
+            [-71.005259, -34.892483],
+            [-71.005254, -34.892483],
+            [-71.005249, -34.892483],
+            [-71.005244, -34.892481],
+            [-71.005239, -34.892479],
+            [-71.005235, -34.892476],
+            [-71.005231, -34.892473],
+            [-71.005229, -34.892469],
+            [-71.005227, -34.892465],
+            [-71.005227, -34.89246],
+            [-71.005227, -34.892456],
+            [-71.005228, -34.892453],
+            [-71.005281, -34.892468]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-10",
+        "lot_id": "lote-10",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 10",
+        "numero_lote": "10",
+        "estado": "vendido",
+        "servidumbre_m2": 10,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 5052
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006119, -34.892275, 0],
+            [-71.005592, -34.893006, 0],
+            [-71.005, -34.89285, 0],
+            [-71.005307, -34.892476, 0],
+            [-71.005615, -34.892102, 0],
+            [-71.006119, -34.892275, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-11",
+        "lot_id": "lote-11",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "11",
+        "estado": "vendido",
+        "precio": 66000000,
+        "m2": 5062.14,
+        "servidumbre_m2": 458,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4604,
+        "area_official_m2": 5062.14,
+        "perimeter_official_m": 301.28,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 12",
+            "distance": 94.5,
+            "description": "Surponiente en 94.50 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 12", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "campo de al lado 2",
+            "distance": 56.85,
+            "description": "Sur en 56.85 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 10 y lote 9",
+            "distance": 100.42,
+            "description": "Nororiente en 100.42 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 10", "is_partial": false },
+              { "name": "lote 9", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 13",
+            "distance": 49.86,
+            "description": "Norponiente en 49.86 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 13", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006105, -34.892295],
+            [-71.006077, -34.892334],
+            [-71.005646, -34.892186],
+            [-71.005383, -34.892504],
+            [-71.00538, -34.892508],
+            [-71.005376, -34.89251],
+            [-71.005371, -34.892513],
+            [-71.005366, -34.892514],
+            [-71.005361, -34.892514],
+            [-71.005355, -34.892514],
+            [-71.00535, -34.892512],
+            [-71.005345, -34.89251],
+            [-71.005341, -34.892508],
+            [-71.005338, -34.892504],
+            [-71.005335, -34.8925],
+            [-71.005334, -34.892496],
+            [-71.005333, -34.892492],
+            [-71.005334, -34.892487],
+            [-71.005336, -34.892483],
+            [-71.005338, -34.892479],
+            [-71.005613, -34.892146],
+            [-71.005615, -34.892144],
+            [-71.005616, -34.892142],
+            [-71.005616, -34.892142],
+            [-71.005616, -34.892142],
+            [-71.005618, -34.892141],
+            [-71.00562, -34.892139],
+            [-71.00562, -34.892139],
+            [-71.005621, -34.892139],
+            [-71.005623, -34.892138],
+            [-71.005625, -34.892137],
+            [-71.005625, -34.892137],
+            [-71.005625, -34.892137],
+            [-71.005628, -34.892137],
+            [-71.00563, -34.892136],
+            [-71.00563, -34.892136],
+            [-71.00563, -34.892136],
+            [-71.005633, -34.892136],
+            [-71.005636, -34.892136],
+            [-71.005636, -34.892136],
+            [-71.005636, -34.892136],
+            [-71.005638, -34.892136],
+            [-71.005641, -34.892136],
+            [-71.005641, -34.892136],
+            [-71.005641, -34.892136],
+            [-71.005644, -34.892137],
+            [-71.005646, -34.892137],
+            [-71.006105, -34.892295]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-11",
+        "lot_id": "lote-11",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 11",
+        "numero_lote": "11",
+        "estado": "vendido",
+        "servidumbre_m2": 458,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4604
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006119, -34.892275, 0],
+            [-71.006617, -34.892446, 0],
+            [-71.006677, -34.892467, 0],
+            [-71.006186, -34.893162, 0],
+            [-71.005592, -34.893006, 0],
+            [-71.006119, -34.892275, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-12",
+        "lot_id": "lote-12",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "12",
+        "estado": "disponible",
+        "precio": 61000000,
+        "m2": 5062.23,
+        "servidumbre_m2": 276,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4786,
+        "area_official_m2": 5062.23,
+        "perimeter_official_m": 295.79,
+        "boundaries_official": [
+          {
+            "label": "Norponiente",
+            "colinda": "lote 13 y lote 28",
+            "distance": 55.21,
+            "description": "Norponiente en 55.21 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 13", "is_partial": true },
+              { "name": "lote 28", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 29",
+            "distance": 89.47,
+            "description": "Surponiente en 89.47 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 29", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 49",
+            "distance": 56.96,
+            "description": "Sur en 56.96 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 11",
+            "distance": 94.5,
+            "description": "Nororiente en 94.50 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 11", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006663, -34.892486],
+            [-71.006635, -34.892526],
+            [-71.006085, -34.892337],
+            [-71.006077, -34.892334],
+            [-71.006105, -34.892295],
+            [-71.006106, -34.892295],
+            [-71.00666, -34.892485],
+            [-71.006663, -34.892486]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-12",
+        "lot_id": "lote-12",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 12",
+        "numero_lote": "12",
+        "estado": "disponible",
+        "servidumbre_m2": 276,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4786
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006943, -34.89205, 0],
+            [-71.006617, -34.892446, 0],
+            [-71.006119, -34.892275, 0],
+            [-71.005615, -34.892102, 0],
+            [-71.005929, -34.891721, 0],
+            [-71.006943, -34.89205, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-13",
+        "lot_id": "lote-13",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "13",
+        "estado": "disponible",
+        "precio": 54000000,
+        "m2": 5062.11,
+        "servidumbre_m2": 911,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4151,
+        "area_official_m2": 5062.11,
+        "perimeter_official_m": 302.99,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 28",
+            "distance": 53.18,
+            "description": "Surponiente en 53.18 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 28", "is_partial": false }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 11 y lote 12",
+            "distance": 99.16,
+            "description": "Suroriente en 99.16 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 11", "is_partial": false },
+              { "name": "lote 12", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 8",
+            "distance": 51.2,
+            "description": "Nororiente en 51.20 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 8", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 14",
+            "distance": 99.57,
+            "description": "Norte en 99.57 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 14", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006917, -34.892042],
+            [-71.006914, -34.892046],
+            [-71.00662, -34.892403],
+            [-71.006616, -34.892406],
+            [-71.006612, -34.892409],
+            [-71.006608, -34.892411],
+            [-71.006602, -34.892413],
+            [-71.006597, -34.892413],
+            [-71.006592, -34.892412],
+            [-71.006587, -34.892411],
+            [-71.005688, -34.892103],
+            [-71.005688, -34.892103],
+            [-71.005688, -34.892103],
+            [-71.005685, -34.892102],
+            [-71.005683, -34.892101],
+            [-71.005683, -34.892101],
+            [-71.005683, -34.892101],
+            [-71.005681, -34.892099],
+            [-71.005679, -34.892098],
+            [-71.005679, -34.892098],
+            [-71.005679, -34.892098],
+            [-71.005677, -34.892096],
+            [-71.005675, -34.892095],
+            [-71.005675, -34.892095],
+            [-71.005675, -34.892094],
+            [-71.005674, -34.892093],
+            [-71.005673, -34.892091],
+            [-71.005673, -34.892091],
+            [-71.005673, -34.892091],
+            [-71.005672, -34.892088],
+            [-71.005671, -34.892086],
+            [-71.005671, -34.892086],
+            [-71.005671, -34.892086],
+            [-71.005671, -34.892084],
+            [-71.005671, -34.892082],
+            [-71.005671, -34.892082],
+            [-71.005671, -34.892082],
+            [-71.005671, -34.89208],
+            [-71.005671, -34.892078],
+            [-71.005671, -34.892078],
+            [-71.005671, -34.892078],
+            [-71.005672, -34.892076],
+            [-71.005673, -34.892073],
+            [-71.005673, -34.892073],
+            [-71.005673, -34.892073],
+            [-71.005674, -34.892071],
+            [-71.005676, -34.89207],
+            [-71.005676, -34.89207],
+            [-71.005676, -34.89207],
+            [-71.005956, -34.89173],
+            [-71.006008, -34.891747],
+            [-71.00574, -34.892072],
+            [-71.006587, -34.892363],
+            [-71.006865, -34.892025],
+            [-71.006917, -34.892042]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-13",
+        "lot_id": "lote-13",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 13",
+        "numero_lote": "13",
+        "estado": "disponible",
+        "servidumbre_m2": 911,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4151
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007258, -34.891668, 0],
+            [-71.006943, -34.89205, 0],
+            [-71.005929, -34.891721, 0],
+            [-71.006255, -34.891327, 0],
+            [-71.007258, -34.891668, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-14",
+        "lot_id": "lote-14",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "14",
+        "estado": "disponible",
+        "precio": 49000000,
+        "m2": 5062.17,
+        "servidumbre_m2": 521,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4541,
+        "area_official_m2": 5062.17,
+        "perimeter_official_m": 303.04,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 27",
+            "distance": 51.34,
+            "description": "Surponiente en 51.34 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 27", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 13",
+            "distance": 99.57,
+            "description": "Sur en 99.57 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 13", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 7",
+            "distance": 53.04,
+            "description": "Nororiente en 53.04 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 7", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 15",
+            "distance": 99.2,
+            "description": "Norponiente en 99.20 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 15", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.007232, -34.891659],
+              [-71.007229, -34.891663],
+              [-71.006917, -34.892042],
+              [-71.006865, -34.892025],
+              [-71.006869, -34.892021],
+              [-71.007181, -34.891642],
+              [-71.007232, -34.891659]
+            ]
+          ],
+          [
+            [
+              [-71.006332, -34.891353],
+              [-71.006008, -34.891747],
+              [-71.005956, -34.89173],
+              [-71.006281, -34.891335],
+              [-71.006332, -34.891353]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-14",
+        "lot_id": "lote-14",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 14",
+        "numero_lote": "14",
+        "estado": "disponible",
+        "servidumbre_m2": 521,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4541
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007584, -34.891273, 0],
+            [-71.007258, -34.891668, 0],
+            [-71.006255, -34.891327, 0],
+            [-71.006569, -34.890945, 0],
+            [-71.007584, -34.891273, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-15",
+        "lot_id": "lote-15",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "15",
+        "estado": "reservado",
+        "precio": 68000000,
+        "m2": 5062.12,
+        "servidumbre_m2": 521,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4541,
+        "area_official_m2": 5062.12,
+        "perimeter_official_m": 303.05,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 26",
+            "distance": 53.09,
+            "description": "Surponiente en 53.09 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 26", "is_partial": false }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 14",
+            "distance": 99.2,
+            "description": "Suroriente en 99.20 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 14", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 6",
+            "distance": 51.31,
+            "description": "Nororiente en 51.31 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 6", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 16",
+            "distance": 99.57,
+            "description": "Norte en 99.57 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 16", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.007558, -34.891265],
+              [-71.007554, -34.891269],
+              [-71.007554, -34.891269],
+              [-71.007232, -34.891659],
+              [-71.007181, -34.891642],
+              [-71.007184, -34.891638],
+              [-71.007506, -34.891248],
+              [-71.007558, -34.891265]
+            ]
+          ],
+          [
+            [
+              [-71.006648, -34.89097],
+              [-71.006332, -34.891353],
+              [-71.006281, -34.891335],
+              [-71.006596, -34.890953],
+              [-71.006648, -34.89097]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-15",
+        "lot_id": "lote-15",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 15",
+        "numero_lote": "15",
+        "estado": "reservado",
+        "servidumbre_m2": 521,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4541
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007896, -34.89089, 0],
+            [-71.007584, -34.891273, 0],
+            [-71.006569, -34.890945, 0],
+            [-71.006896, -34.890549, 0],
+            [-71.007896, -34.89089, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-16",
+        "lot_id": "lote-16",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "16",
+        "estado": "disponible",
+        "precio": 59000000,
+        "m2": 5062.12,
+        "servidumbre_m2": 522,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4540,
+        "area_official_m2": 5062.12,
+        "perimeter_official_m": 302.87,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 25",
+            "distance": 51.31,
+            "description": "Surponiente en 51.31 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 25", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 15",
+            "distance": 99.57,
+            "description": "Sur en 99.57 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 15", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 5",
+            "distance": 53.18,
+            "description": "Nororiente en 53.18 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 5", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 17",
+            "distance": 98.93,
+            "description": "Norponiente en 98.93 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 17", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.00787, -34.890881],
+              [-71.007867, -34.890885],
+              [-71.007558, -34.891265],
+              [-71.007506, -34.891248],
+              [-71.007509, -34.891244],
+              [-71.007819, -34.890864],
+              [-71.00787, -34.890881]
+            ]
+          ],
+          [
+            [
+              [-71.006973, -34.890575],
+              [-71.006648, -34.89097],
+              [-71.006596, -34.890953],
+              [-71.006921, -34.890558],
+              [-71.006973, -34.890575]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-16",
+        "lot_id": "lote-16",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 16",
+        "numero_lote": "16",
+        "estado": "disponible",
+        "servidumbre_m2": 522,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4540
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008222, -34.890492, 0],
+            [-71.007896, -34.89089, 0],
+            [-71.006896, -34.890549, 0],
+            [-71.007211, -34.890167, 0],
+            [-71.008222, -34.890492, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-17",
+        "lot_id": "lote-17",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "17",
+        "estado": "disponible",
+        "precio": 56000000,
+        "m2": 5062.07,
+        "servidumbre_m2": 523,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4539,
+        "area_official_m2": 5062.07,
+        "perimeter_official_m": 302.72,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 24",
+            "distance": 53.35,
+            "description": "Surponiente en 53.35 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 24", "is_partial": false }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 16",
+            "distance": 98.93,
+            "description": "Suroriente en 98.93 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 16", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 4",
+            "distance": 51.38,
+            "description": "Nororiente en 51.38 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 4", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 18",
+            "distance": 99.17,
+            "description": "Norte en 99.17 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 18", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.008196, -34.890484],
+              [-71.008193, -34.890487],
+              [-71.008192, -34.890488],
+              [-71.00787, -34.890881],
+              [-71.007819, -34.890864],
+              [-71.007822, -34.89086],
+              [-71.007822, -34.89086],
+              [-71.008143, -34.890467],
+              [-71.008196, -34.890484]
+            ]
+          ],
+          [
+            [
+              [-71.007289, -34.890192],
+              [-71.006973, -34.890575],
+              [-71.006921, -34.890558],
+              [-71.007237, -34.890175],
+              [-71.007289, -34.890192]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-17",
+        "lot_id": "lote-17",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 17",
+        "numero_lote": "17",
+        "estado": "disponible",
+        "servidumbre_m2": 523,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4539
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007538, -34.88977, 0],
+            [-71.008035, -34.889934, 0],
+            [-71.008527, -34.890097, 0],
+            [-71.008222, -34.890492, 0],
+            [-71.007211, -34.890167, 0],
+            [-71.007538, -34.88977, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-18",
+        "lot_id": "lote-18",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "18",
+        "estado": "disponible",
+        "precio": 51000000,
+        "m2": 5062.14,
+        "servidumbre_m2": 526,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4536,
+        "area_official_m2": 5062.14,
+        "perimeter_official_m": 301.85,
+        "boundaries_official": [
+          {
+            "label": "Norte",
+            "colinda": "lote 19 y lote 20",
+            "distance": 97.42,
+            "description": "Norte en 97.42 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 19", "is_partial": false },
+              { "name": "lote 20", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 23",
+            "distance": 52.05,
+            "description": "Surponiente en 52.05 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 23", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 17",
+            "distance": 99.17,
+            "description": "Sur en 99.17 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 17", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 3",
+            "distance": 53.33,
+            "description": "Nororiente en 53.33 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 3", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.008503, -34.890089],
+              [-71.0085, -34.890093],
+              [-71.008196, -34.890484],
+              [-71.008143, -34.890467],
+              [-71.008147, -34.890463],
+              [-71.008452, -34.890072],
+              [-71.008503, -34.890089]
+            ]
+          ],
+          [
+            [
+              [-71.007616, -34.889796],
+              [-71.007581, -34.889838],
+              [-71.007289, -34.890192],
+              [-71.007237, -34.890175],
+              [-71.007536, -34.889812],
+              [-71.007536, -34.889812],
+              [-71.007536, -34.889812],
+              [-71.007564, -34.889778],
+              [-71.007616, -34.889796]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-18",
+        "lot_id": "lote-18",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 18",
+        "numero_lote": "18",
+        "estado": "disponible",
+        "servidumbre_m2": 526,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4536
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008688, -34.889146, 0],
+            [-71.008035, -34.889934, 0],
+            [-71.007538, -34.88977, 0],
+            [-71.007853, -34.889387, 0],
+            [-71.008185, -34.888985, 0],
+            [-71.008688, -34.889146, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-19",
+        "lot_id": "lote-19",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "19",
+        "estado": "disponible",
+        "precio": 70000000,
+        "m2": 5062.11,
+        "servidumbre_m2": 695,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4367,
+        "area_official_m2": 5062.11,
+        "perimeter_official_m": 309.41,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 20",
+            "distance": 106.05,
+            "description": "Surponiente en 106.05 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 20", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 18",
+            "distance": 48.95,
+            "description": "Sur en 48.95 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 18", "is_partial": true }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 1 y lote 2",
+            "distance": 105.48,
+            "description": "Nororiente en 105.48 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 1", "is_partial": false },
+              { "name": "lote 2", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 49.31,
+            "description": "Norte en 49.31 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.00864, -34.889204],
+            [-71.008608, -34.889242],
+            [-71.008184, -34.889105],
+            [-71.007616, -34.889796],
+            [-71.007564, -34.889778],
+            [-71.008151, -34.889065],
+            [-71.008153, -34.889064],
+            [-71.008154, -34.889062],
+            [-71.008154, -34.889062],
+            [-71.008155, -34.889062],
+            [-71.008156, -34.889061],
+            [-71.008158, -34.88906],
+            [-71.008159, -34.889059],
+            [-71.008159, -34.889059],
+            [-71.008161, -34.889058],
+            [-71.008163, -34.889057],
+            [-71.008163, -34.889057],
+            [-71.008164, -34.889057],
+            [-71.008166, -34.889057],
+            [-71.008168, -34.889056],
+            [-71.008168, -34.889056],
+            [-71.008169, -34.889056],
+            [-71.008171, -34.889056],
+            [-71.008173, -34.889055],
+            [-71.008174, -34.889056],
+            [-71.008174, -34.889055],
+            [-71.008176, -34.889056],
+            [-71.008179, -34.889056],
+            [-71.008179, -34.889056],
+            [-71.008179, -34.889056],
+            [-71.008182, -34.889057],
+            [-71.008184, -34.889057],
+            [-71.008634, -34.889202],
+            [-71.008634, -34.889202],
+            [-71.008634, -34.889202],
+            [-71.00864, -34.889204]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-19",
+        "lot_id": "lote-19",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 19",
+        "numero_lote": "19",
+        "estado": "disponible",
+        "servidumbre_m2": 695,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4367
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.00919, -34.889308, 0],
+            [-71.008527, -34.890097, 0],
+            [-71.008035, -34.889934, 0],
+            [-71.008688, -34.889146, 0],
+            [-71.00919, -34.889308, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-20",
+        "lot_id": "lote-20",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "20",
+        "estado": "vendido",
+        "precio": 66000000,
+        "m2": 5062.12,
+        "servidumbre_m2": 699,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4363,
+        "area_official_m2": 5062.12,
+        "perimeter_official_m": 310.18,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 21",
+            "distance": 106.72,
+            "description": "Surponiente en 106.72 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 21", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 18",
+            "distance": 48.47,
+            "description": "Sur en 48.47 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 18", "is_partial": true }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 19",
+            "distance": 106.05,
+            "description": "Nororiente en 106.05 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 19", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 49.31,
+            "description": "Norte en 49.31 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009101, -34.889367],
+            [-71.009101, -34.889369],
+            [-71.009101, -34.889371],
+            [-71.009101, -34.889371],
+            [-71.009101, -34.889372],
+            [-71.0091, -34.889374],
+            [-71.0091, -34.889375],
+            [-71.009099, -34.889376],
+            [-71.009099, -34.889376],
+            [-71.009098, -34.889378],
+            [-71.009097, -34.889379],
+            [-71.009097, -34.88938],
+            [-71.009097, -34.88938],
+            [-71.008503, -34.890089],
+            [-71.008452, -34.890072],
+            [-71.008454, -34.890069],
+            [-71.008455, -34.890068],
+            [-71.008455, -34.890068],
+            [-71.009032, -34.889378],
+            [-71.008614, -34.889244],
+            [-71.008608, -34.889242],
+            [-71.00864, -34.889204],
+            [-71.009084, -34.889346],
+            [-71.009084, -34.889346],
+            [-71.009085, -34.889346],
+            [-71.009087, -34.889347],
+            [-71.009089, -34.889348],
+            [-71.009089, -34.889348],
+            [-71.00909, -34.889349],
+            [-71.009091, -34.88935],
+            [-71.009093, -34.889351],
+            [-71.009093, -34.889351],
+            [-71.009094, -34.889351],
+            [-71.009095, -34.889353],
+            [-71.009097, -34.889354],
+            [-71.009097, -34.889355],
+            [-71.009097, -34.889355],
+            [-71.009098, -34.889356],
+            [-71.009099, -34.889358],
+            [-71.009099, -34.889358],
+            [-71.0091, -34.889359],
+            [-71.0091, -34.889361],
+            [-71.009101, -34.889362],
+            [-71.009101, -34.889363],
+            [-71.009101, -34.889363],
+            [-71.009101, -34.889365],
+            [-71.009101, -34.889367],
+            [-71.009101, -34.889367],
+            [-71.009101, -34.889367]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-20",
+        "lot_id": "lote-20",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 20",
+        "numero_lote": "20",
+        "estado": "vendido",
+        "servidumbre_m2": 699,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4363
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009696, -34.88947, 0],
+            [-71.009012, -34.890257, 0],
+            [-71.008527, -34.890097, 0],
+            [-71.00919, -34.889308, 0],
+            [-71.009696, -34.88947, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-21",
+        "lot_id": "lote-21",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "21",
+        "estado": "disponible",
+        "precio": 47000000,
+        "m2": 5062.18,
+        "servidumbre_m2": 702,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4360,
+        "area_official_m2": 5062.18,
+        "perimeter_official_m": 311.32,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 22",
+            "distance": 107.64,
+            "description": "Surponiente en 107.64 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 22", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 23",
+            "distance": 47.7,
+            "description": "Sur en 47.70 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 23", "is_partial": true }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 20",
+            "distance": 106.72,
+            "description": "Nororiente en 106.72 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 20", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 49.61,
+            "description": "Norte en 49.61 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009647, -34.889527],
+            [-71.009614, -34.889565],
+            [-71.009189, -34.889428],
+            [-71.008605, -34.890123],
+            [-71.008553, -34.890106],
+            [-71.008556, -34.890102],
+            [-71.008559, -34.890099],
+            [-71.008559, -34.890099],
+            [-71.009156, -34.889388],
+            [-71.009158, -34.889387],
+            [-71.009159, -34.889385],
+            [-71.009159, -34.889385],
+            [-71.00916, -34.889385],
+            [-71.009161, -34.889383],
+            [-71.009163, -34.889382],
+            [-71.009163, -34.889382],
+            [-71.009164, -34.889382],
+            [-71.009166, -34.889381],
+            [-71.009168, -34.88938],
+            [-71.009168, -34.88938],
+            [-71.009169, -34.88938],
+            [-71.009171, -34.889379],
+            [-71.009173, -34.889379],
+            [-71.009173, -34.889379],
+            [-71.009174, -34.889379],
+            [-71.009176, -34.889378],
+            [-71.009178, -34.889378],
+            [-71.009179, -34.889378],
+            [-71.009179, -34.889378],
+            [-71.009181, -34.889378],
+            [-71.009184, -34.889379],
+            [-71.009184, -34.889379],
+            [-71.009184, -34.889379],
+            [-71.009187, -34.889379],
+            [-71.009189, -34.88938],
+            [-71.009647, -34.889527]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-21",
+        "lot_id": "lote-21",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 21",
+        "numero_lote": "21",
+        "estado": "disponible",
+        "servidumbre_m2": 702,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4360
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010202, -34.889633, 0],
+            [-71.009492, -34.890416, 0],
+            [-71.009012, -34.890257, 0],
+            [-71.009696, -34.88947, 0],
+            [-71.010202, -34.889633, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-22",
+        "lot_id": "lote-22",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "22",
+        "estado": "disponible",
+        "precio": 50000000,
+        "m2": 5062.17,
+        "servidumbre_m2": 247,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4815,
+        "area_official_m2": 5062.17,
+        "perimeter_official_m": 312.86,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 38",
+            "distance": 108.71,
+            "description": "Surponiente en 108.71 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 38", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 23",
+            "distance": 47.24,
+            "description": "Sur en 47.24 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 23", "is_partial": true }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 21",
+            "distance": 107.64,
+            "description": "Nororiente en 107.64 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 21", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 49.61,
+            "description": "Norte en 49.61 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010151, -34.889689],
+            [-71.010117, -34.889726],
+            [-71.009614, -34.889565],
+            [-71.009647, -34.889527],
+            [-71.010151, -34.889689]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-22",
+        "lot_id": "lote-22",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 22",
+        "numero_lote": "22",
+        "estado": "disponible",
+        "servidumbre_m2": 247,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4815
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009517, -34.890425, 0],
+            [-71.009212, -34.89081, 0],
+            [-71.009193, -34.890834, 0],
+            [-71.008222, -34.890492, 0],
+            [-71.008527, -34.890097, 0],
+            [-71.009012, -34.890257, 0],
+            [-71.009492, -34.890416, 0],
+            [-71.009517, -34.890425, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-23",
+        "lot_id": "lote-23",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "23",
+        "estado": "disponible",
+        "precio": 57000000,
+        "m2": 5062.06,
+        "servidumbre_m2": 261,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4801,
+        "area_official_m2": 5062.06,
+        "perimeter_official_m": 300.09,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 36 y lote 37",
+            "distance": 54.27,
+            "description": "Surponiente en 54.27 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 36", "is_partial": true },
+              { "name": "lote 37", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 24",
+            "distance": 96.49,
+            "description": "Suroriente en 96.49 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 24", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 18",
+            "distance": 52.05,
+            "description": "Nororiente en 52.05 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 18", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 21, lote 22 y lote 38",
+            "distance": 97.42,
+            "description": "Norte en 97.42 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 21", "is_partial": false },
+              { "name": "lote 22", "is_partial": false },
+              { "name": "lote 38", "is_partial": true }
+            ]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008605, -34.890123],
+            [-71.008596, -34.890134],
+            [-71.008298, -34.890519],
+            [-71.008247, -34.890501],
+            [-71.00825, -34.890498],
+            [-71.008549, -34.89011],
+            [-71.00855, -34.89011],
+            [-71.00855, -34.89011],
+            [-71.008553, -34.890106],
+            [-71.008605, -34.890123]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-23",
+        "lot_id": "lote-23",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 23",
+        "numero_lote": "23",
+        "estado": "disponible",
+        "servidumbre_m2": 261,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4801
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009193, -34.890834, 0],
+            [-71.008905, -34.891197, 0],
+            [-71.008877, -34.891233, 0],
+            [-71.007896, -34.89089, 0],
+            [-71.008222, -34.890492, 0],
+            [-71.009193, -34.890834, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-24",
+        "lot_id": "lote-24",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "24",
+        "estado": "disponible",
+        "precio": 64000000,
+        "m2": 5061.96,
+        "servidumbre_m2": 266,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4796,
+        "area_official_m2": 5061.96,
+        "perimeter_official_m": 300.11,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 35 y lote 36",
+            "distance": 53.05,
+            "description": "Surponiente en 53.05 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 35", "is_partial": true },
+              { "name": "lote 36", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 25",
+            "distance": 97.35,
+            "description": "Suroriente en 97.35 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 25", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 17",
+            "distance": 53.35,
+            "description": "Nororiente en 53.35 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 17", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 23",
+            "distance": 96.49,
+            "description": "Norponiente en 96.49 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 23", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008298, -34.890519],
+            [-71.008296, -34.890522],
+            [-71.008296, -34.890522],
+            [-71.007973, -34.890917],
+            [-71.007922, -34.890899],
+            [-71.007925, -34.890895],
+            [-71.007925, -34.890895],
+            [-71.008247, -34.890501],
+            [-71.008298, -34.890519]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-24",
+        "lot_id": "lote-24",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 24",
+        "numero_lote": "24",
+        "estado": "disponible",
+        "servidumbre_m2": 266,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4796
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008877, -34.891233, 0],
+            [-71.00859, -34.891595, 0],
+            [-71.008554, -34.891642, 0],
+            [-71.007584, -34.891273, 0],
+            [-71.007896, -34.89089, 0],
+            [-71.008877, -34.891233, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-25",
+        "lot_id": "lote-25",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "25",
+        "estado": "vendido",
+        "precio": 45000000,
+        "m2": 5062.1,
+        "servidumbre_m2": 257,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4805,
+        "area_official_m2": 5062.1,
+        "perimeter_official_m": 300.33,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 34 y lote 35",
+            "distance": 54.22,
+            "description": "Surponiente en 54.22 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 34", "is_partial": true },
+              { "name": "lote 35", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 26",
+            "distance": 97.59,
+            "description": "Suroriente en 97.59 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 26", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 16",
+            "distance": 51.31,
+            "description": "Nororiente en 51.31 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 16", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 24",
+            "distance": 97.35,
+            "description": "Norponiente en 97.35 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 24", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007973, -34.890917],
+            [-71.00797, -34.89092],
+            [-71.007659, -34.891302],
+            [-71.007609, -34.891283],
+            [-71.007611, -34.89128],
+            [-71.007922, -34.890899],
+            [-71.007973, -34.890917]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-25",
+        "lot_id": "lote-25",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 25",
+        "numero_lote": "25",
+        "estado": "vendido",
+        "servidumbre_m2": 257,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4805
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008554, -34.891642, 0],
+            [-71.008276, -34.891993, 0],
+            [-71.008246, -34.89203, 0],
+            [-71.007258, -34.891668, 0],
+            [-71.007584, -34.891273, 0],
+            [-71.008554, -34.891642, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-26",
+        "lot_id": "lote-26",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "26",
+        "estado": "reservado",
+        "precio": 52000000,
+        "m2": 5062.13,
+        "servidumbre_m2": 265,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4797,
+        "area_official_m2": 5062.13,
+        "perimeter_official_m": 300.9,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 33 y lote 34",
+            "distance": 51.56,
+            "description": "Surponiente en 51.56 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 33", "is_partial": true },
+              { "name": "lote 34", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 27",
+            "distance": 98.8,
+            "description": "Suroriente en 98.80 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 27", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 15",
+            "distance": 53.09,
+            "description": "Nororiente en 53.09 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 15", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 25",
+            "distance": 97.59,
+            "description": "Norponiente en 97.59 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 25", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007659, -34.891302],
+            [-71.007657, -34.891305],
+            [-71.007657, -34.891305],
+            [-71.007334, -34.891696],
+            [-71.007284, -34.891677],
+            [-71.007286, -34.891674],
+            [-71.007609, -34.891283],
+            [-71.007659, -34.891302]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-26",
+        "lot_id": "lote-26",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 26",
+        "numero_lote": "26",
+        "estado": "reservado",
+        "servidumbre_m2": 265,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4797
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008246, -34.89203, 0],
+            [-71.007959, -34.892393, 0],
+            [-71.007934, -34.892424, 0],
+            [-71.006943, -34.89205, 0],
+            [-71.007258, -34.891668, 0],
+            [-71.008246, -34.89203, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-27",
+        "lot_id": "lote-27",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "27",
+        "estado": "disponible",
+        "precio": 55000000,
+        "m2": 5062.13,
+        "servidumbre_m2": 257,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4805,
+        "area_official_m2": 5062.13,
+        "perimeter_official_m": 301.86,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 32 y lote 33",
+            "distance": 52.27,
+            "description": "Surponiente en 52.27 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 32", "is_partial": true },
+              { "name": "lote 33", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 28",
+            "distance": 99.59,
+            "description": "Suroriente en 99.59 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 28", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 14",
+            "distance": 51.34,
+            "description": "Nororiente en 51.34 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 14", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 26",
+            "distance": 98.8,
+            "description": "Norponiente en 98.80 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 26", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007334, -34.891696],
+            [-71.007332, -34.891699],
+            [-71.007019, -34.892079],
+            [-71.006969, -34.89206],
+            [-71.006971, -34.892057],
+            [-71.007284, -34.891677],
+            [-71.007334, -34.891696]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-27",
+        "lot_id": "lote-27",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 27",
+        "numero_lote": "27",
+        "estado": "disponible",
+        "servidumbre_m2": 257,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4805
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.00764, -34.892797, 0],
+            [-71.007305, -34.892682, 0],
+            [-71.006677, -34.892467, 0],
+            [-71.006617, -34.892446, 0],
+            [-71.006943, -34.89205, 0],
+            [-71.007934, -34.892424, 0],
+            [-71.00764, -34.892797, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-28",
+        "lot_id": "lote-28",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "28",
+        "estado": "disponible",
+        "precio": 62000000,
+        "m2": 5062.5,
+        "servidumbre_m2": 716,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4346,
+        "area_official_m2": 5062.5,
+        "perimeter_official_m": 303.26,
+        "boundaries_official": [
+          {
+            "label": "Suroriente",
+            "colinda": "lote 12, lote 29 y lote 30",
+            "distance": 101.17,
+            "description": "Suroriente en 101.17 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 12", "is_partial": true },
+              { "name": "lote 29", "is_partial": false },
+              { "name": "lote 30", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 13",
+            "distance": 53.18,
+            "description": "Nororiente en 53.18 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 13", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 27",
+            "distance": 99.59,
+            "description": "Norponiente en 99.59 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 27", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 32",
+            "distance": 49.45,
+            "description": "Surponiente en 49.45 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 32", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007685, -34.892739],
+            [-71.007655, -34.892778],
+            [-71.00669, -34.892447],
+            [-71.006685, -34.892444],
+            [-71.006681, -34.892442],
+            [-71.006677, -34.892438],
+            [-71.006675, -34.892434],
+            [-71.006673, -34.89243],
+            [-71.006673, -34.892426],
+            [-71.006673, -34.892421],
+            [-71.006675, -34.892417],
+            [-71.006678, -34.892413],
+            [-71.006969, -34.89206],
+            [-71.007019, -34.892079],
+            [-71.007017, -34.892082],
+            [-71.006742, -34.892416],
+            [-71.007681, -34.892738],
+            [-71.007685, -34.892739]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-28",
+        "lot_id": "lote-28",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 28",
+        "numero_lote": "28",
+        "estado": "disponible",
+        "servidumbre_m2": 716,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4346
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.006775, -34.893317, 0],
+            [-71.006186, -34.893162, 0],
+            [-71.006677, -34.892467, 0],
+            [-71.007305, -34.892682, 0],
+            [-71.006775, -34.893317, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-29",
+        "lot_id": "lote-29",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "29",
+        "estado": "disponible",
+        "precio": 69000000,
+        "m2": 5062.05,
+        "servidumbre_m2": 308,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4754,
+        "area_official_m2": 5062.05,
+        "perimeter_official_m": 293.42,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "campo de al lado 2",
+            "distance": 56.42,
+            "description": "Sur en 56.42 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 12",
+            "distance": 89.47,
+            "description": "Nororiente en 89.47 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 12", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 28",
+            "distance": 62.13,
+            "description": "Norponiente en 62.13 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 28", "is_partial": true }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 30",
+            "distance": 85.7,
+            "description": "Surponiente en 85.70 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 30", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007289, -34.892701],
+            [-71.007257, -34.892739],
+            [-71.006639, -34.892527],
+            [-71.006635, -34.892526],
+            [-71.006663, -34.892486],
+            [-71.007284, -34.892699],
+            [-71.007289, -34.892701]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-29",
+        "lot_id": "lote-29",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 29",
+        "numero_lote": "29",
+        "estado": "disponible",
+        "servidumbre_m2": 308,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4754
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007932, -34.892897, 0],
+            [-71.007445, -34.893494, 0],
+            [-71.006775, -34.893317, 0],
+            [-71.007305, -34.892682, 0],
+            [-71.00764, -34.892797, 0],
+            [-71.00764, -34.892797, 0],
+            [-71.007932, -34.892897, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-30",
+        "lot_id": "lote-30",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "30",
+        "estado": "reservado",
+        "precio": 57000000,
+        "m2": 5062.2,
+        "servidumbre_m2": 310,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4752,
+        "area_official_m2": 5062.2,
+        "perimeter_official_m": 291.73,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 31",
+            "distance": 79.94,
+            "description": "Surponiente en 79.94 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 31", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "campo de al lado 2",
+            "distance": 64.26,
+            "description": "Sur en 64.26 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 29",
+            "distance": 85.7,
+            "description": "Nororiente en 85.70 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 29", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 28 y lote 32",
+            "distance": 62.08,
+            "description": "Norponiente en 62.08 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 28", "is_partial": true },
+              { "name": "lote 32", "is_partial": true }
+            ]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.007916, -34.892916],
+            [-71.007885, -34.892954],
+            [-71.007263, -34.892741],
+            [-71.007257, -34.892739],
+            [-71.007289, -34.892701],
+            [-71.007912, -34.892915],
+            [-71.007916, -34.892916]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-30",
+        "lot_id": "lote-30",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 30",
+        "numero_lote": "30",
+        "estado": "reservado",
+        "servidumbre_m2": 310,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4752
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008155, -34.893681, 0],
+            [-71.007445, -34.893494, 0],
+            [-71.007932, -34.892897, 0],
+            [-71.008615, -34.893131, 0],
+            [-71.008155, -34.893681, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-31",
+        "lot_id": "lote-31",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "31",
+        "estado": "vendido",
+        "precio": 50000000,
+        "m2": 5059.75,
+        "servidumbre_m2": 337,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4723,
+        "area_official_m2": 5059.75,
+        "perimeter_official_m": 289.61,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "campo de al lado 2",
+            "distance": 68.12,
+            "description": "Sur en 68.12 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 30",
+            "distance": 79.94,
+            "description": "Nororiente en 79.94 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 30", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 32",
+            "distance": 67.58,
+            "description": "Norponiente en 67.58 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 32", "is_partial": true }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 53",
+            "distance": 74.19,
+            "description": "Surponiente en 74.19 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 53", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008599, -34.89315],
+            [-71.008567, -34.893188],
+            [-71.00789, -34.892956],
+            [-71.007885, -34.892954],
+            [-71.007916, -34.892916],
+            [-71.008594, -34.893149],
+            [-71.008599, -34.89315]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-31",
+        "lot_id": "lote-31",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 31",
+        "numero_lote": "31",
+        "estado": "vendido",
+        "servidumbre_m2": 337,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4723
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008936, -34.892735, 0],
+            [-71.008648, -34.893092, 0],
+            [-71.008648, -34.893092, 0],
+            [-71.008615, -34.893131, 0],
+            [-71.007932, -34.892897, 0],
+            [-71.00764, -34.892797, 0],
+            [-71.007934, -34.892424, 0],
+            [-71.007959, -34.892393, 0],
+            [-71.008936, -34.892735, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-32",
+        "lot_id": "lote-32",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "32",
+        "estado": "disponible",
+        "precio": 69000000,
+        "m2": 5061.78,
+        "servidumbre_m2": 695,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4367,
+        "area_official_m2": 5061.78,
+        "perimeter_official_m": 299.93,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 52 y lote 53",
+            "distance": 52.91,
+            "description": "Surponiente en 52.91 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 52", "is_partial": true },
+              { "name": "lote 53", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 30 y lote 31",
+            "distance": 96.53,
+            "description": "Suroriente en 96.53 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 30", "is_partial": true },
+              { "name": "lote 31", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 27 y lote 28",
+            "distance": 53.66,
+            "description": "Nororiente en 53.66 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 27", "is_partial": true },
+              { "name": "lote 28", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 33",
+            "distance": 96.96,
+            "description": "Norponiente en 96.96 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 33", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.00891, -34.892727],
+            [-71.008907, -34.89273],
+            [-71.008618, -34.893088],
+            [-71.008615, -34.893092],
+            [-71.008611, -34.893095],
+            [-71.008606, -34.893097],
+            [-71.008601, -34.893098],
+            [-71.008595, -34.893098],
+            [-71.00859, -34.893098],
+            [-71.008585, -34.893097],
+            [-71.007659, -34.892779],
+            [-71.007655, -34.892778],
+            [-71.007685, -34.892739],
+            [-71.008585, -34.893048],
+            [-71.008859, -34.892709],
+            [-71.00891, -34.892727]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-32",
+        "lot_id": "lote-32",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 32",
+        "numero_lote": "32",
+        "estado": "disponible",
+        "servidumbre_m2": 695,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4367
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009256, -34.892338, 0],
+            [-71.008978, -34.892683, 0],
+            [-71.008936, -34.892735, 0],
+            [-71.007959, -34.892393, 0],
+            [-71.008246, -34.89203, 0],
+            [-71.008276, -34.891993, 0],
+            [-71.009256, -34.892338, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-33",
+        "lot_id": "lote-33",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "33",
+        "estado": "disponible",
+        "precio": 62000000,
+        "m2": 5062.11,
+        "servidumbre_m2": 265,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4797,
+        "area_official_m2": 5062.11,
+        "perimeter_official_m": 300.29,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 51 y lote 52",
+            "distance": 53.02,
+            "description": "Surponiente en 53.02 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 51", "is_partial": true },
+              { "name": "lote 52", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 32",
+            "distance": 96.96,
+            "description": "Suroriente en 96.96 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 32", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 26 y lote 27",
+            "distance": 53,
+            "description": "Nororiente en 53.00 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 26", "is_partial": true },
+              { "name": "lote 27", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 34",
+            "distance": 97.44,
+            "description": "Norponiente en 97.44 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 34", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009231, -34.892329],
+            [-71.009228, -34.892333],
+            [-71.00891, -34.892727],
+            [-71.008859, -34.892709],
+            [-71.008862, -34.892705],
+            [-71.009179, -34.892311],
+            [-71.009231, -34.892329]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-33",
+        "lot_id": "lote-33",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 33",
+        "numero_lote": "33",
+        "estado": "disponible",
+        "servidumbre_m2": 265,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4797
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009575, -34.891944, 0],
+            [-71.009517, -34.892016, 0],
+            [-71.009517, -34.892016, 0],
+            [-71.009516, -34.892016, 0],
+            [-71.009517, -34.892016, 0],
+            [-71.009517, -34.892016, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.008276, -34.891993, 0],
+            [-71.008554, -34.891642, 0],
+            [-71.00859, -34.891595, 0],
+            [-71.009575, -34.891944, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-34",
+        "lot_id": "lote-34",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "34",
+        "estado": "vendido",
+        "precio": 55000000,
+        "m2": 5062.26,
+        "servidumbre_m2": 263,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4799,
+        "area_official_m2": 5062.26,
+        "perimeter_official_m": 300.77,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 49",
+            "distance": 9.58,
+            "description": "Surponiente en 9.58 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 49", "is_partial": true }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 50",
+            "distance": 43.08,
+            "description": "Surponiente en 43.08 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 50", "is_partial": false }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 33",
+            "distance": 97.44,
+            "description": "Suroriente en 97.44 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 33", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 25 y lote 26",
+            "distance": 52.82,
+            "description": "Nororiente en 52.82 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 25", "is_partial": true },
+              { "name": "lote 26", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 35",
+            "distance": 97.88,
+            "description": "Norponiente en 97.88 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 35", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009549, -34.891935],
+            [-71.009546, -34.891938],
+            [-71.009231, -34.892329],
+            [-71.009179, -34.892311],
+            [-71.009182, -34.892308],
+            [-71.009498, -34.891917],
+            [-71.009549, -34.891935]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-34",
+        "lot_id": "lote-34",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 34",
+        "numero_lote": "34",
+        "estado": "vendido",
+        "servidumbre_m2": 263,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4799
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.00989, -34.891553, 0],
+            [-71.009763, -34.89171, 0],
+            [-71.009763, -34.89171, 0],
+            [-71.009763, -34.89171, 0],
+            [-71.009763, -34.89171, 0],
+            [-71.009763, -34.891711, 0],
+            [-71.009575, -34.891944, 0],
+            [-71.00859, -34.891595, 0],
+            [-71.008877, -34.891233, 0],
+            [-71.008905, -34.891197, 0],
+            [-71.00989, -34.891553, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-35",
+        "lot_id": "lote-35",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "35",
+        "estado": "disponible",
+        "precio": 48000000,
+        "m2": 5062.19,
+        "servidumbre_m2": 261,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4801,
+        "area_official_m2": 5062.19,
+        "perimeter_official_m": 301,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 48 y lote 49",
+            "distance": 52.15,
+            "description": "Surponiente en 52.15 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 48", "is_partial": true }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 34",
+            "distance": 97.88,
+            "description": "Suroriente en 97.88 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 34", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 24 y lote 25",
+            "distance": 52.82,
+            "description": "Nororiente en 52.82 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 24", "is_partial": true },
+              { "name": "lote 25", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 36",
+            "distance": 98.24,
+            "description": "Norponiente en 98.24 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 36", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009864, -34.891544],
+            [-71.009862, -34.891547],
+            [-71.009549, -34.891935],
+            [-71.009498, -34.891917],
+            [-71.009501, -34.891913],
+            [-71.009814, -34.891526],
+            [-71.009864, -34.891544]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-35",
+        "lot_id": "lote-35",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 35",
+        "numero_lote": "35",
+        "estado": "disponible",
+        "servidumbre_m2": 261,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4801
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.01021, -34.891156, 0],
+            [-71.009978, -34.891444, 0],
+            [-71.00989, -34.891553, 0],
+            [-71.008905, -34.891197, 0],
+            [-71.009193, -34.890834, 0],
+            [-71.009212, -34.89081, 0],
+            [-71.01021, -34.891156, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-36",
+        "lot_id": "lote-36",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "36",
+        "estado": "disponible",
+        "precio": 67000000,
+        "m2": 5062.02,
+        "servidumbre_m2": 264,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4798,
+        "area_official_m2": 5062.02,
+        "perimeter_official_m": 301.54,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 47 y lote 48",
+            "distance": 53.03,
+            "description": "Surponiente en 53.03 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 47", "is_partial": true },
+              { "name": "lote 48", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 35",
+            "distance": 98.24,
+            "description": "Suroriente en 98.24 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 35", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 23 y lote 24",
+            "distance": 51.43,
+            "description": "Nororiente en 51.43 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 23", "is_partial": true },
+              { "name": "lote 24", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 37",
+            "distance": 98.98,
+            "description": "Norponiente en 98.98 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 37", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010185, -34.891147],
+            [-71.010182, -34.891151],
+            [-71.009864, -34.891544],
+            [-71.009814, -34.891526],
+            [-71.009816, -34.891522],
+            [-71.010133, -34.891129],
+            [-71.010185, -34.891147]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-36",
+        "lot_id": "lote-36",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 36",
+        "numero_lote": "36",
+        "estado": "disponible",
+        "servidumbre_m2": 264,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4798
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009517, -34.890425, 0],
+            [-71.009967, -34.890574, 0],
+            [-71.010437, -34.890729, 0],
+            [-71.01053, -34.89076, 0],
+            [-71.01021, -34.891156, 0],
+            [-71.009212, -34.89081, 0],
+            [-71.009517, -34.890425, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-37",
+        "lot_id": "lote-37",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "37",
+        "estado": "disponible",
+        "precio": 60000000,
+        "m2": 5062.12,
+        "servidumbre_m2": 309,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4753,
+        "area_official_m2": 5062.12,
+        "perimeter_official_m": 302.59,
+        "boundaries_official": [
+          {
+            "label": "Norte",
+            "colinda": "lote 38, lote 39 y lote 40",
+            "distance": 99.78,
+            "description": "Norte en 99.78 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 38", "is_partial": true },
+              { "name": "lote 39", "is_partial": false },
+              { "name": "lote 40", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 47",
+            "distance": 52.87,
+            "description": "Surponiente en 52.87 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 47", "is_partial": true }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 36",
+            "distance": 98.98,
+            "description": "Suroriente en 98.98 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 36", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 23",
+            "distance": 51.09,
+            "description": "Nororiente en 51.09 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 23", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010475, -34.890781],
+            [-71.010474, -34.890785],
+            [-71.010473, -34.89079],
+            [-71.01047, -34.890793],
+            [-71.010185, -34.891147],
+            [-71.010133, -34.891129],
+            [-71.010136, -34.891126],
+            [-71.010406, -34.890792],
+            [-71.010337, -34.890769],
+            [-71.010336, -34.890768],
+            [-71.010334, -34.890768],
+            [-71.010334, -34.890767],
+            [-71.010332, -34.890767],
+            [-71.010331, -34.890766],
+            [-71.01033, -34.890765],
+            [-71.010329, -34.890765],
+            [-71.010328, -34.890764],
+            [-71.010327, -34.890763],
+            [-71.010326, -34.890762],
+            [-71.010326, -34.890761],
+            [-71.010325, -34.890761],
+            [-71.010324, -34.89076],
+            [-71.010323, -34.890759],
+            [-71.010323, -34.890758],
+            [-71.010322, -34.890757],
+            [-71.010322, -34.890756],
+            [-71.010321, -34.890755],
+            [-71.010321, -34.890754],
+            [-71.010321, -34.890753],
+            [-71.01032, -34.890751],
+            [-71.01032, -34.89075],
+            [-71.01032, -34.890749],
+            [-71.01032, -34.890748],
+            [-71.01032, -34.890747],
+            [-71.01032, -34.890746],
+            [-71.01032, -34.890745],
+            [-71.010321, -34.890744],
+            [-71.010321, -34.890743],
+            [-71.010321, -34.890741],
+            [-71.010322, -34.890741],
+            [-71.010322, -34.89074],
+            [-71.010323, -34.890739],
+            [-71.010323, -34.890737],
+            [-71.010324, -34.890737],
+            [-71.010325, -34.890736],
+            [-71.010325, -34.890735],
+            [-71.010326, -34.890734],
+            [-71.010357, -34.890703],
+            [-71.010411, -34.89072],
+            [-71.010392, -34.890739],
+            [-71.010457, -34.89076],
+            [-71.010462, -34.890762],
+            [-71.010466, -34.890765],
+            [-71.01047, -34.890768],
+            [-71.010472, -34.890772],
+            [-71.010474, -34.890777],
+            [-71.010475, -34.890781]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-37",
+        "lot_id": "lote-37",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 37",
+        "numero_lote": "37",
+        "estado": "disponible",
+        "servidumbre_m2": 309,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4753
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010708, -34.889795, 0],
+            [-71.009967, -34.890574, 0],
+            [-71.009517, -34.890425, 0],
+            [-71.009492, -34.890416, 0],
+            [-71.010202, -34.889633, 0],
+            [-71.010708, -34.889795, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-38",
+        "lot_id": "lote-38",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "38",
+        "estado": "disponible",
+        "precio": 53000000,
+        "m2": 5062.06,
+        "servidumbre_m2": 246,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4816,
+        "area_official_m2": 5062.06,
+        "perimeter_official_m": 314.73,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 39",
+            "distance": 109.95,
+            "description": "Surponiente en 109.95 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 39", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 23 y lote 37",
+            "distance": 46.79,
+            "description": "Sur en 46.79 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 23", "is_partial": true },
+              { "name": "lote 37", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 22",
+            "distance": 108.71,
+            "description": "Nororiente en 108.71 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 22", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 49.61,
+            "description": "Norte en 49.61 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010655, -34.889851],
+            [-71.01062, -34.889888],
+            [-71.010117, -34.889726],
+            [-71.010151, -34.889689],
+            [-71.010655, -34.889851]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-38",
+        "lot_id": "lote-38",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 38",
+        "numero_lote": "38",
+        "estado": "disponible",
+        "servidumbre_m2": 246,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4816
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011214, -34.889958, 0],
+            [-71.010437, -34.890729, 0],
+            [-71.009967, -34.890574, 0],
+            [-71.010708, -34.889795, 0],
+            [-71.011214, -34.889958, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-39",
+        "lot_id": "lote-39",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "39",
+        "estado": "disponible",
+        "precio": 46000000,
+        "m2": 5062.18,
+        "servidumbre_m2": 720,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4342,
+        "area_official_m2": 5062.18,
+        "perimeter_official_m": 316.97,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 40",
+            "distance": 111.38,
+            "description": "Surponiente en 111.38 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 40", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 37",
+            "distance": 46.35,
+            "description": "Sur en 46.35 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 37", "is_partial": true }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 38",
+            "distance": 109.95,
+            "description": "Nororiente en 109.95 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 38", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 13",
+            "distance": 49.61,
+            "description": "Norte en 49.61 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011114, -34.890013],
+            [-71.011114, -34.890015],
+            [-71.011114, -34.890016],
+            [-71.011114, -34.890017],
+            [-71.011114, -34.890018],
+            [-71.011113, -34.890019],
+            [-71.011113, -34.89002],
+            [-71.011113, -34.890021],
+            [-71.011112, -34.890022],
+            [-71.011112, -34.890023],
+            [-71.011111, -34.890024],
+            [-71.01111, -34.890025],
+            [-71.01111, -34.890026],
+            [-71.011109, -34.890027],
+            [-71.011108, -34.890028],
+            [-71.010411, -34.89072],
+            [-71.010357, -34.890703],
+            [-71.011042, -34.890023],
+            [-71.01062, -34.889888],
+            [-71.010655, -34.889851],
+            [-71.011097, -34.889993],
+            [-71.011098, -34.889993],
+            [-71.0111, -34.889994],
+            [-71.011101, -34.889994],
+            [-71.011102, -34.889995],
+            [-71.011103, -34.889996],
+            [-71.011104, -34.889996],
+            [-71.011105, -34.889997],
+            [-71.011106, -34.889997],
+            [-71.011107, -34.889998],
+            [-71.011108, -34.889999],
+            [-71.011109, -34.89],
+            [-71.011109, -34.890001],
+            [-71.01111, -34.890002],
+            [-71.011111, -34.890003],
+            [-71.011111, -34.890004],
+            [-71.011112, -34.890005],
+            [-71.011112, -34.890006],
+            [-71.011113, -34.890007],
+            [-71.011113, -34.890008],
+            [-71.011114, -34.890009],
+            [-71.011114, -34.89001],
+            [-71.011114, -34.890012],
+            [-71.011114, -34.890012],
+            [-71.011114, -34.890013]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-39",
+        "lot_id": "lote-39",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 39",
+        "numero_lote": "39",
+        "estado": "disponible",
+        "servidumbre_m2": 720,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4342
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.01172, -34.89012, 0],
+            [-71.010904, -34.890884, 0],
+            [-71.01053, -34.89076, 0],
+            [-71.010437, -34.890729, 0],
+            [-71.011214, -34.889958, 0],
+            [-71.01172, -34.89012, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-40",
+        "lot_id": "lote-40",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "40",
+        "estado": "disponible",
+        "precio": 48000000,
+        "m2": 5062.07,
+        "servidumbre_m2": 898,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4164,
+        "area_official_m2": 5062.07,
+        "perimeter_official_m": 319.63,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 41",
+            "distance": 113.03,
+            "description": "Surponiente en 113.03 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 41", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 37 y lote 47",
+            "distance": 45.9,
+            "description": "Sur en 45.90 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 37", "is_partial": true },
+              { "name": "lote 47", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 39",
+            "distance": 111.38,
+            "description": "Nororiente en 111.38 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 39", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 49.61,
+            "description": "Norte en 49.61 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011662, -34.890174],
+            [-71.011624, -34.89021],
+            [-71.011203, -34.890075],
+            [-71.010572, -34.890701],
+            [-71.010961, -34.89083],
+            [-71.010923, -34.890866],
+            [-71.010517, -34.890731],
+            [-71.010516, -34.890731],
+            [-71.010514, -34.89073],
+            [-71.010513, -34.89073],
+            [-71.010512, -34.890729],
+            [-71.010511, -34.890729],
+            [-71.01051, -34.890728],
+            [-71.010509, -34.890727],
+            [-71.010508, -34.890727],
+            [-71.010507, -34.890726],
+            [-71.010506, -34.890725],
+            [-71.010506, -34.890724],
+            [-71.010505, -34.890723],
+            [-71.010504, -34.890722],
+            [-71.010503, -34.890721],
+            [-71.010503, -34.89072],
+            [-71.010502, -34.890719],
+            [-71.010502, -34.890718],
+            [-71.010501, -34.890717],
+            [-71.010501, -34.890716],
+            [-71.010501, -34.890715],
+            [-71.0105, -34.890714],
+            [-71.0105, -34.890713],
+            [-71.0105, -34.890712],
+            [-71.0105, -34.890711],
+            [-71.0105, -34.890709],
+            [-71.0105, -34.890708],
+            [-71.0105, -34.890707],
+            [-71.010501, -34.890706],
+            [-71.010501, -34.890705],
+            [-71.010501, -34.890704],
+            [-71.010502, -34.890703],
+            [-71.010502, -34.890702],
+            [-71.010503, -34.890701],
+            [-71.010503, -34.8907],
+            [-71.010504, -34.890699],
+            [-71.010505, -34.890698],
+            [-71.010505, -34.890697],
+            [-71.010506, -34.890696],
+            [-71.011173, -34.890034],
+            [-71.011174, -34.890033],
+            [-71.011174, -34.890033],
+            [-71.011176, -34.890032],
+            [-71.011177, -34.890031],
+            [-71.011178, -34.89003],
+            [-71.011179, -34.89003],
+            [-71.01118, -34.890029],
+            [-71.011181, -34.890028],
+            [-71.011182, -34.890028],
+            [-71.011183, -34.890028],
+            [-71.011185, -34.890027],
+            [-71.011186, -34.890027],
+            [-71.011187, -34.890026],
+            [-71.011188, -34.890026],
+            [-71.01119, -34.890026],
+            [-71.011192, -34.890026],
+            [-71.011193, -34.890026],
+            [-71.011194, -34.890026],
+            [-71.011195, -34.890026],
+            [-71.011197, -34.890026],
+            [-71.011198, -34.890026],
+            [-71.011199, -34.890026],
+            [-71.011201, -34.890026],
+            [-71.011202, -34.890027],
+            [-71.011203, -34.890027],
+            [-71.011204, -34.890027],
+            [-71.011662, -34.890174]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-40",
+        "lot_id": "lote-40",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 40",
+        "numero_lote": "40",
+        "estado": "disponible",
+        "servidumbre_m2": 898,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4164
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.012226, -34.890283, 0],
+            [-71.011365, -34.891036, 0],
+            [-71.011094, -34.890947, 0],
+            [-71.010904, -34.890884, 0],
+            [-71.01172, -34.89012, 0],
+            [-71.012226, -34.890283, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-41",
+        "lot_id": "lote-41",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "41",
+        "estado": "disponible",
+        "precio": 51000000,
+        "m2": 5062.11,
+        "servidumbre_m2": 474,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4588,
+        "area_official_m2": 5062.11,
+        "perimeter_official_m": 322.78,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 42",
+            "distance": 114.94,
+            "description": "Surponiente en 114.94 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 42", "is_partial": false }]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 46 y lote 47",
+            "distance": 45.47,
+            "description": "Sur en 45.47 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 46", "is_partial": true },
+              { "name": "lote 47", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 40",
+            "distance": 113.03,
+            "description": "Nororiente en 113.03 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 40", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 49.61,
+            "description": "Norte en 49.61 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.012165, -34.890336],
+              [-71.012125, -34.890371],
+              [-71.011624, -34.89021],
+              [-71.011662, -34.890174],
+              [-71.012165, -34.890336]
+            ]
+          ],
+          [
+            [
+              [-71.011426, -34.890984],
+              [-71.011386, -34.891019],
+              [-71.010923, -34.890866],
+              [-71.010961, -34.89083],
+              [-71.011426, -34.890984]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-41",
+        "lot_id": "lote-41",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 41",
+        "numero_lote": "41",
+        "estado": "disponible",
+        "servidumbre_m2": 474,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4588
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.012732, -34.890445, 0],
+            [-71.012186, -34.890891, 0],
+            [-71.011823, -34.891188, 0],
+            [-71.011584, -34.891109, 0],
+            [-71.011365, -34.891036, 0],
+            [-71.012226, -34.890283, 0],
+            [-71.012732, -34.890445, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-42",
+        "lot_id": "lote-42",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "42",
+        "estado": "reservado",
+        "precio": 60000000,
+        "m2": 5062.14,
+        "servidumbre_m2": 472,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4590,
+        "area_official_m2": 5062.14,
+        "perimeter_official_m": 326.48,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "lote 43 y lote 44",
+            "distance": 117.13,
+            "description": "Surponiente en 117.13 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 43", "is_partial": false },
+              { "name": "lote 44", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Sur",
+            "colinda": "lote 45 y lote 46",
+            "distance": 45.04,
+            "description": "Sur en 45.04 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 45", "is_partial": false },
+              { "name": "lote 46", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 41",
+            "distance": 114.94,
+            "description": "Nororiente en 114.94 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 41", "is_partial": false }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 49.61,
+            "description": "Norte en 49.61 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.012666, -34.890499],
+              [-71.012626, -34.890532],
+              [-71.012125, -34.890371],
+              [-71.012165, -34.890336],
+              [-71.012657, -34.890494],
+              [-71.012662, -34.890496],
+              [-71.012666, -34.890499],
+              [-71.012666, -34.890499]
+            ]
+          ],
+          [
+            [
+              [-71.011885, -34.891137],
+              [-71.011844, -34.89117],
+              [-71.011386, -34.891019],
+              [-71.011426, -34.890984],
+              [-71.011876, -34.891132],
+              [-71.01188, -34.891134],
+              [-71.011884, -34.891137],
+              [-71.011885, -34.891137]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-42",
+        "lot_id": "lote-42",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 42",
+        "numero_lote": "42",
+        "estado": "reservado",
+        "servidumbre_m2": 472,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4590
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.012186, -34.890891, 0],
+            [-71.012732, -34.890445, 0],
+            [-71.013527, -34.890701, 0],
+            [-71.012817, -34.891178, 0],
+            [-71.012186, -34.890891, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-43",
+        "lot_id": "lote-43",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "43",
+        "estado": "disponible",
+        "precio": 67000000,
+        "m2": 5062.31,
+        "servidumbre_m2": 10,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 5052,
+        "area_official_m2": 5062.31,
+        "perimeter_official_m": 297.88,
+        "boundaries_official": [
+          {
+            "label": "Nororiente",
+            "colinda": "lote 42",
+            "distance": 70.33,
+            "description": "Nororiente en 70.33 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 42", "is_partial": true }]
+          },
+          {
+            "label": "Norte",
+            "colinda": "campo de al lado 3",
+            "distance": 77.99,
+            "description": "Norte en 77.99 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 83.83,
+            "description": "Surponiente en 83.83 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 44",
+            "distance": 65.83,
+            "description": "Suroriente en 65.83 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 44", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.012674, -34.890514],
+            [-71.012674, -34.890519],
+            [-71.012672, -34.890523],
+            [-71.01267, -34.890527],
+            [-71.012667, -34.89053],
+            [-71.012663, -34.890533],
+            [-71.012658, -34.890535],
+            [-71.012653, -34.890537],
+            [-71.012647, -34.890537],
+            [-71.012642, -34.890537],
+            [-71.012637, -34.890536],
+            [-71.012626, -34.890532],
+            [-71.012666, -34.890499],
+            [-71.012669, -34.890502],
+            [-71.012672, -34.890506],
+            [-71.012674, -34.89051],
+            [-71.012674, -34.890514]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-43",
+        "lot_id": "lote-43",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 43",
+        "numero_lote": "43",
+        "estado": "disponible",
+        "servidumbre_m2": 10,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 5052
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.012013, -34.891718, 0],
+            [-71.011561, -34.8914, 0],
+            [-71.011823, -34.891188, 0],
+            [-71.012186, -34.890891, 0],
+            [-71.012817, -34.891178, 0],
+            [-71.012013, -34.891718, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-44",
+        "lot_id": "lote-44",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "44",
+        "estado": "disponible",
+        "precio": 46000000,
+        "m2": 5062.1,
+        "servidumbre_m2": 20,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 5042,
+        "area_official_m2": 5062.1,
+        "perimeter_official_m": 295.19,
+        "boundaries_official": [
+          {
+            "label": "Suroriente",
+            "colinda": "lote 45",
+            "distance": 54.31,
+            "description": "Suroriente en 54.31 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 45", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 42 y lote 45",
+            "distance": 80.38,
+            "description": "Nororiente en 80.38 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 42", "is_partial": true },
+              { "name": "lote 45", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 43",
+            "distance": 65.83,
+            "description": "Norponiente en 65.83 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 43", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 94.87,
+            "description": "Surponiente en 94.87 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-71.011893, -34.891153],
+              [-71.011892, -34.891157],
+              [-71.011891, -34.891162],
+              [-71.011888, -34.891166],
+              [-71.011885, -34.891169],
+              [-71.011881, -34.891172],
+              [-71.011876, -34.891174],
+              [-71.011871, -34.891175],
+              [-71.011866, -34.891176],
+              [-71.01186, -34.891175],
+              [-71.011855, -34.891174],
+              [-71.011844, -34.89117],
+              [-71.011885, -34.891137],
+              [-71.011888, -34.891141],
+              [-71.011891, -34.891144],
+              [-71.011892, -34.891149],
+              [-71.011893, -34.891153]
+            ]
+          ],
+          [
+            [
+              [-71.011808, -34.891222],
+              [-71.011807, -34.891226],
+              [-71.011806, -34.891231],
+              [-71.011803, -34.891235],
+              [-71.0118, -34.891238],
+              [-71.011796, -34.891241],
+              [-71.011791, -34.891243],
+              [-71.011786, -34.891244],
+              [-71.011781, -34.891245],
+              [-71.011775, -34.891244],
+              [-71.01177, -34.891243],
+              [-71.011759, -34.891239],
+              [-71.0118, -34.891206],
+              [-71.011803, -34.89121],
+              [-71.011806, -34.891213],
+              [-71.011807, -34.891218],
+              [-71.011808, -34.891222]
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-44",
+        "lot_id": "lote-44",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 44",
+        "numero_lote": "44",
+        "estado": "disponible",
+        "servidumbre_m2": 20,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 5042
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011584, -34.891109, 0],
+            [-71.011823, -34.891188, 0],
+            [-71.011561, -34.8914, 0],
+            [-71.012013, -34.891718, 0],
+            [-71.011386, -34.892138, 0],
+            [-71.01094, -34.891918, 0],
+            [-71.011584, -34.891109, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-45",
+        "lot_id": "lote-45",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "45",
+        "estado": "vendido",
+        "precio": 53000000,
+        "m2": 5058.27,
+        "servidumbre_m2": 112,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4946,
+        "area_official_m2": 5058.27,
+        "perimeter_official_m": 340.14,
+        "boundaries_official": [
+          {
+            "label": "Norte",
+            "colinda": "lote 42",
+            "distance": 23.53,
+            "description": "Norte en 23.53 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 42", "is_partial": true }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 44",
+            "distance": 33.58,
+            "description": "Nororiente en 33.58 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 44", "is_partial": true }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 44",
+            "distance": 54.31,
+            "description": "Norponiente en 54.31 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 44", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 73.92,
+            "description": "Surponiente en 73.92 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 48",
+            "distance": 47.57,
+            "description": "Suroriente en 47.57 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 48", "is_partial": true }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 46",
+            "distance": 107.58,
+            "description": "Nororiente en 107.58 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 46", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.0118, -34.891206],
+            [-71.011759, -34.891239],
+            [-71.011543, -34.891168],
+            [-71.011538, -34.891166],
+            [-71.011569, -34.891128],
+            [-71.011791, -34.891201],
+            [-71.011795, -34.891203],
+            [-71.0118, -34.891206],
+            [-71.0118, -34.891206]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-45",
+        "lot_id": "lote-45",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 45",
+        "numero_lote": "45",
+        "estado": "vendido",
+        "servidumbre_m2": 112,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4946
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011094, -34.890947, 0],
+            [-71.011365, -34.891036, 0],
+            [-71.011584, -34.891109, 0],
+            [-71.011584, -34.891109, 0],
+            [-71.01094, -34.891918, 0],
+            [-71.010465, -34.891683, 0],
+            [-71.011094, -34.890947, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-46",
+        "lot_id": "lote-46",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "46",
+        "estado": "disponible",
+        "precio": 62000000,
+        "m2": 5062.13,
+        "servidumbre_m2": 242,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4820,
+        "area_official_m2": 5062.13,
+        "perimeter_official_m": 306.2,
+        "boundaries_official": [
+          {
+            "label": "Norte",
+            "colinda": "lote 41 y lote 42",
+            "distance": 48.2,
+            "description": "Norte en 48.20 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 41", "is_partial": true },
+              { "name": "lote 42", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 45",
+            "distance": 107.58,
+            "description": "Surponiente en 107.58 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 45", "is_partial": false }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 48",
+            "distance": 50.64,
+            "description": "Suroriente en 50.64 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 48", "is_partial": true }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 47",
+            "distance": 100.17,
+            "description": "Nororiente en 100.17 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 47", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011569, -34.891128],
+            [-71.011538, -34.891166],
+            [-71.011054, -34.891006],
+            [-71.011046, -34.891003],
+            [-71.011078, -34.890966],
+            [-71.011564, -34.891126],
+            [-71.011569, -34.891128]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-46",
+        "lot_id": "lote-46",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 46",
+        "numero_lote": "46",
+        "estado": "disponible",
+        "servidumbre_m2": 242,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4820
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009978, -34.891444, 0],
+            [-71.01021, -34.891156, 0],
+            [-71.01053, -34.89076, 0],
+            [-71.010904, -34.890884, 0],
+            [-71.011094, -34.890947, 0],
+            [-71.010465, -34.891683, 0],
+            [-71.009978, -34.891444, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-47",
+        "lot_id": "lote-47",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "47",
+        "estado": "disponible",
+        "precio": 65000000,
+        "m2": 5062.06,
+        "servidumbre_m2": 685,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4377,
+        "area_official_m2": 5062.06,
+        "perimeter_official_m": 298.47,
+        "boundaries_official": [
+          {
+            "label": "Nororiente",
+            "colinda": "lote 36 y lote 37",
+            "distance": 91.27,
+            "description": "Nororiente en 91.27 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 36", "is_partial": true },
+              { "name": "lote 37", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Norte",
+            "colinda": "lote 40 y lote 41",
+            "distance": 55.57,
+            "description": "Norte en 55.57 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 40", "is_partial": true },
+              { "name": "lote 41", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "lote 46",
+            "distance": 100.17,
+            "description": "Surponiente en 100.17 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 46", "is_partial": false }]
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 48",
+            "distance": 51.82,
+            "description": "Suroriente en 51.82 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 48", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011078, -34.890966],
+            [-71.011046, -34.891003],
+            [-71.010561, -34.890843],
+            [-71.010049, -34.891478],
+            [-71.010002, -34.891455],
+            [-71.010002, -34.891454],
+            [-71.010528, -34.890803],
+            [-71.010531, -34.8908],
+            [-71.010536, -34.890797],
+            [-71.01054, -34.890795],
+            [-71.010545, -34.890793],
+            [-71.010551, -34.890793],
+            [-71.010556, -34.890793],
+            [-71.010561, -34.890795],
+            [-71.011074, -34.890964],
+            [-71.011078, -34.890966]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-47",
+        "lot_id": "lote-47",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 47",
+        "numero_lote": "47",
+        "estado": "disponible",
+        "servidumbre_m2": 685,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4377
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011075, -34.892347, 0],
+            [-71.009763, -34.89171, 0],
+            [-71.009763, -34.89171, 0],
+            [-71.00989, -34.891553, 0],
+            [-71.009978, -34.891444, 0],
+            [-71.010465, -34.891683, 0],
+            [-71.01094, -34.891918, 0],
+            [-71.011386, -34.892138, 0],
+            [-71.011075, -34.892347, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-48",
+        "lot_id": "lote-48",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "48",
+        "estado": "reservado",
+        "precio": 70000000,
+        "m2": 5062.04,
+        "servidumbre_m2": 178,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4884,
+        "area_official_m2": 5062.04,
+        "perimeter_official_m": 361.48,
+        "boundaries_official": [
+          {
+            "label": "Suroriente",
+            "colinda": "lote 49",
+            "distance": 139.18,
+            "description": "Suroriente en 139.18 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 49", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 35 y lote 36",
+            "distance": 35.63,
+            "description": "Nororiente en 35.63 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 35", "is_partial": true },
+              { "name": "lote 36", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 45, lote 46 y lote 47",
+            "distance": 150.02,
+            "description": "Norponiente en 150.02 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 45", "is_partial": false },
+              { "name": "lote 46", "is_partial": false },
+              { "name": "lote 47", "is_partial": false }
+            ]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 36.78,
+            "description": "Surponiente en 36.78 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010049, -34.891478],
+            [-71.010048, -34.891479],
+            [-71.009834, -34.891745],
+            [-71.009786, -34.891722],
+            [-71.009787, -34.891721],
+            [-71.010002, -34.891455],
+            [-71.010049, -34.891478]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-48",
+        "lot_id": "lote-48",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 48",
+        "numero_lote": "48",
+        "estado": "reservado",
+        "servidumbre_m2": 178,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4884
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.011075, -34.892347, 0],
+            [-71.010754, -34.892562, 0],
+            [-71.009517, -34.892016, 0],
+            [-71.009517, -34.892016, 0],
+            [-71.009575, -34.891944, 0],
+            [-71.009763, -34.891711, 0],
+            [-71.011075, -34.892347, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-49",
+        "lot_id": "lote-49",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "49",
+        "estado": "disponible",
+        "precio": 51000000,
+        "m2": 5062.07,
+        "servidumbre_m2": 202,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4860,
+        "area_official_m2": 5062.07,
+        "perimeter_official_m": 345.96,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 37.81,
+            "description": "Surponiente en 37.81 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 50",
+            "distance": 128.35,
+            "description": "Suroriente en 128.35 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 50", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 34 y lote 35",
+            "distance": 40.72,
+            "description": "Nororiente en 40.72 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 34", "is_partial": true },
+              { "name": "lote 35", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 48",
+            "distance": 139.18,
+            "description": "Norponiente en 139.18 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 48", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009834, -34.891745],
+            [-71.009833, -34.891746],
+            [-71.009589, -34.892048],
+            [-71.009541, -34.892026],
+            [-71.009542, -34.892025],
+            [-71.009786, -34.891722],
+            [-71.009834, -34.891745]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-49",
+        "lot_id": "lote-49",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 49",
+        "numero_lote": "49",
+        "estado": "disponible",
+        "servidumbre_m2": 202,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4860
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010754, -34.892562, 0],
+            [-71.010383, -34.892812, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.009517, -34.892016, 0],
+            [-71.010754, -34.892562, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-50",
+        "lot_id": "lote-50",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "50",
+        "estado": "disponible",
+        "precio": 61000000,
+        "m2": 5062.02,
+        "servidumbre_m2": 215,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4847,
+        "area_official_m2": 5062.02,
+        "perimeter_official_m": 330.74,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 43.82,
+            "description": "Surponiente en 43.82 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 51",
+            "distance": 115.58,
+            "description": "Suroriente en 115.58 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 51", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 34",
+            "distance": 43.06,
+            "description": "Nororiente en 43.06 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 34", "is_partial": true }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 49",
+            "distance": 128.35,
+            "description": "Norponiente en 128.35 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 49", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009589, -34.892048],
+            [-71.009588, -34.892049],
+            [-71.00933, -34.892369],
+            [-71.009281, -34.892349],
+            [-71.009282, -34.892346],
+            [-71.009541, -34.892026],
+            [-71.009589, -34.892048]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-50",
+        "lot_id": "lote-50",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 50",
+        "numero_lote": "50",
+        "estado": "disponible",
+        "servidumbre_m2": 215,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4847
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.010383, -34.892812, 0],
+            [-71.009936, -34.893112, 0],
+            [-71.008979, -34.892683, 0],
+            [-71.009936, -34.893112, 0],
+            [-71.008978, -34.892683, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.008979, -34.892683, 0],
+            [-71.009256, -34.892338, 0],
+            [-71.010383, -34.892812, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-51",
+        "lot_id": "lote-51",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "51",
+        "estado": "disponible",
+        "precio": 58000000,
+        "m2": 5063.59,
+        "servidumbre_m2": 230,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4834,
+        "area_official_m2": 5063.59,
+        "perimeter_official_m": 604.71,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 52.76,
+            "description": "Surponiente en 52.76 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 52",
+            "distance": 298.82,
+            "description": "Suroriente en 298.82 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 52", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 33",
+            "distance": 137.83,
+            "description": "Nororiente en 137.83 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 33", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 50",
+            "distance": 115.58,
+            "description": "Norponiente en 115.58 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 50", "is_partial": false }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.00933, -34.892369],
+            [-71.009328, -34.892371],
+            [-71.009051, -34.892715],
+            [-71.009051, -34.892715],
+            [-71.009002, -34.892693],
+            [-71.009003, -34.892693],
+            [-71.009004, -34.892692],
+            [-71.009281, -34.892349],
+            [-71.00933, -34.892369]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-51",
+        "lot_id": "lote-51",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 51",
+        "numero_lote": "51",
+        "estado": "disponible",
+        "servidumbre_m2": 230,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4834
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009936, -34.893112, 0],
+            [-71.00941, -34.893465, 0],
+            [-71.008648, -34.893092, 0],
+            [-71.008936, -34.892735, 0],
+            [-71.008978, -34.892683, 0],
+            [-71.009936, -34.893112, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-52",
+        "lot_id": "lote-52",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "52",
+        "estado": "vendido",
+        "precio": 49000000,
+        "m2": 5065.5,
+        "servidumbre_m2": 274,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4791,
+        "area_official_m2": 5065.5,
+        "perimeter_official_m": 297.2,
+        "boundaries_official": [
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 62.06,
+            "description": "Surponiente en 62.06 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Suroriente",
+            "colinda": "lote 53",
+            "distance": 81,
+            "description": "Suroriente en 81.00 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 53", "is_partial": false }]
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 32 y lote 33",
+            "distance": 54.66,
+            "description": "Nororiente en 54.66 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [
+              { "name": "lote 32", "is_partial": true },
+              { "name": "lote 33", "is_partial": true }
+            ]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 51",
+            "distance": 99.62,
+            "description": "Norponiente en 99.62 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 51", "is_partial": true }]
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.009051, -34.892715],
+            [-71.009049, -34.892717],
+            [-71.008719, -34.893127],
+            [-71.008671, -34.893104],
+            [-71.008672, -34.893103],
+            [-71.009002, -34.892693],
+            [-71.009051, -34.892715]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-52",
+        "lot_id": "lote-52",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 52",
+        "numero_lote": "52",
+        "estado": "vendido",
+        "servidumbre_m2": 274,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4791
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008825, -34.893857, 0],
+            [-71.008155, -34.893681, 0],
+            [-71.008616, -34.893132, 0],
+            [-71.008616, -34.893132, 0],
+            [-71.008648, -34.893092, 0],
+            [-71.008648, -34.893092, 0],
+            [-71.008616, -34.893132, 0],
+            [-71.008648, -34.893092, 0],
+            [-71.00941, -34.893465, 0],
+            [-71.008825, -34.893857, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "lote-53",
+        "lot_id": "lote-53",
+        "geometry_type": "lot",
+        "source_type": "kmz",
+        "numero_lote": "53",
+        "estado": "vendido",
+        "precio": 68000000,
+        "m2": 5059.45,
+        "servidumbre_m2": 73,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_widths_m": [5],
+        "servidumbre_ancho_label": "5",
+        "servidumbre_calculation_status": "calculated",
+        "superficie_neta_m2": 4986,
+        "area_official_m2": 5059.45,
+        "perimeter_official_m": 304.16,
+        "boundaries_official": [
+          {
+            "label": "Sur",
+            "colinda": "campo de al lado 2",
+            "distance": 64.27,
+            "description": "Sur en 64.27 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 31 y lote 32 ",
+            "distance": 100,
+            "description": "Nororiente en 100 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 31", "is_partial": false }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "campo de al lado 4",
+            "distance": 0.02,
+            "description": "Norponiente en 0.02 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          },
+          {
+            "label": "Nororiente",
+            "colinda": "lote 32",
+            "distance": 15.89,
+            "description": "Nororiente en 15.89 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 32", "is_partial": true }]
+          },
+          {
+            "label": "Norponiente",
+            "colinda": "lote 52",
+            "distance": 81,
+            "description": "Norponiente en 81.00 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": [{ "name": "lote 52", "is_partial": false }]
+          },
+          {
+            "label": "Surponiente",
+            "colinda": "campo de al lado 1",
+            "distance": 68.95,
+            "description": "Surponiente en 68.95 m",
+            "es_servidumbre": false,
+            "neighbors_metadata": []
+          }
+        ],
+        "verified_status": "verified_exact"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-71.008719, -34.893127],
+            [-71.008718, -34.893128],
+            [-71.008659, -34.8932],
+            [-71.008656, -34.893203],
+            [-71.008652, -34.893206],
+            [-71.008647, -34.893208],
+            [-71.008642, -34.89321],
+            [-71.008636, -34.89321],
+            [-71.008631, -34.89321],
+            [-71.008626, -34.893208],
+            [-71.008573, -34.89319],
+            [-71.008568, -34.893188],
+            [-71.0086, -34.893151],
+            [-71.008626, -34.89316],
+            [-71.008671, -34.893104],
+            [-71.008719, -34.893127]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "serv-53",
+        "lot_id": "lote-53",
+        "geometry_type": "servitude",
+        "source_type": "kmz",
+        "name": "Servidumbre Lote 53",
+        "numero_lote": "53",
+        "estado": "vendido",
+        "servidumbre_m2": 73,
+        "servidumbre_ancho_m": 5,
+        "servidumbre_ancho_label": "5",
+        "superficie_neta_m2": 4986
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [
+            [-71.007175, -34.88866, 12.078],
+            [-71.007341, -34.888448, 12.078],
+            [-71.007565, -34.888205, 12.078],
+            [-71.00783, -34.88788, 12.078],
+            [-71.008008, -34.887666, 12.078],
+            [-71.008223, -34.887414, 12.078],
+            [-71.008475, -34.887112, 12.078],
+            [-71.0087, -34.886839, 12.078],
+            [-71.008865, -34.886627, 12.078],
+            [-71.009164, -34.88628, 12.078],
+            [-71.009413, -34.885989, 12.078],
+            [-71.009628, -34.885727, 12.078],
+            [-71.009859, -34.885455, 12.078],
+            [-71.010099, -34.88517, 12.078],
+            [-71.010424, -34.884765, 12.078],
+            [-71.010736, -34.884394, 12.078]
+          ],
+          [
+            [-71.007258, -34.888687, 12.078],
+            [-71.007413, -34.888489, 12.078],
+            [-71.007636, -34.888247, 12.078],
+            [-71.007902, -34.887921, 12.078],
+            [-71.00808, -34.887707, 12.078],
+            [-71.008295, -34.887455, 12.078],
+            [-71.008547, -34.887153, 12.078],
+            [-71.008773, -34.886878, 12.078],
+            [-71.008937, -34.886667, 12.078],
+            [-71.009236, -34.886321, 12.078],
+            [-71.009485, -34.88603, 12.078],
+            [-71.0097, -34.885768, 12.078],
+            [-71.00993, -34.885496, 12.078],
+            [-71.010171, -34.88521, 12.078],
+            [-71.010496, -34.884805, 12.078],
+            [-71.010808, -34.884435, 12.078]
+          ],
+          [
+            [-71.008624, -34.889223, 0],
+            [-71.009074, -34.889367, 0]
+          ],
+          [
+            [-71.007558, -34.889825, 0],
+            [-71.008174, -34.889078, 0]
+          ],
+          [
+            [-71.005254, -34.892461, 0],
+            [-71.005602, -34.892039, 0],
+            [-71.007493, -34.889744, 0],
+            [-71.008069, -34.889044, 0]
+          ],
+          [
+            [-71.007112, -34.888737, 381.893],
+            [-71.008069, -34.889044, 381.893]
+          ],
+          [
+            [-71.008477, -34.890081, 0],
+            [-71.009074, -34.889367, 0]
+          ],
+          [
+            [-71.008624, -34.889223, 0],
+            [-71.008174, -34.889078, 0]
+          ],
+          [
+            [-71.005636, -34.892158, 0],
+            [-71.006095, -34.892316, 0],
+            [-71.006649, -34.892506, 0],
+            [-71.007273, -34.89272, 0],
+            [-71.007901, -34.892935, 0],
+            [-71.008584, -34.89317, 0],
+            [-71.008636, -34.893188, 0],
+            [-71.008695, -34.893115, 0],
+            [-71.009027, -34.892704, 0],
+            [-71.009305, -34.892359, 0],
+            [-71.009565, -34.892037, 0],
+            [-71.00981, -34.891733, 0],
+            [-71.010025, -34.891467, 0],
+            [-71.010551, -34.890815, 0],
+            [-71.011064, -34.890985, 0],
+            [-71.011553, -34.891147, 0],
+            [-71.01178, -34.891222, 0]
+          ],
+          [
+            [-71.008579, -34.890114, 0],
+            [-71.008273, -34.89051, 0],
+            [-71.007947, -34.890908, 0],
+            [-71.007634, -34.891292, 0],
+            [-71.007309, -34.891687, 0],
+            [-71.006994, -34.892069, 0],
+            [-71.0067, -34.892426, 0],
+            [-71.00767, -34.892758, 0],
+            [-71.008595, -34.893076, 0],
+            [-71.008884, -34.892718, 0],
+            [-71.009205, -34.89232, 0],
+            [-71.009523, -34.891926, 0],
+            [-71.009839, -34.891535, 0],
+            [-71.010159, -34.891138, 0],
+            [-71.010447, -34.890781, 0],
+            [-71.010347, -34.890748, 0]
+          ],
+          [
+            [-71.008477, -34.890081, 0],
+            [-71.00817, -34.890475, 0],
+            [-71.007845, -34.890872, 0],
+            [-71.007532, -34.891256, 0],
+            [-71.007207, -34.891651, 0],
+            [-71.006891, -34.892033, 0],
+            [-71.006597, -34.89239, 0],
+            [-71.005698, -34.892082, 0]
+          ],
+          [
+            [-71.011865, -34.891153, 0],
+            [-71.010527, -34.89071, 0]
+          ],
+          [
+            [-71.009179, -34.889401, 0],
+            [-71.011087, -34.890014, 0]
+          ],
+          [
+            [-71.011194, -34.890048, 0],
+            [-71.012647, -34.890515, 0]
+          ],
+          [
+            [-71.005361, -34.892492, 0],
+            [-71.005636, -34.892158, 0]
+          ],
+          [
+            [-71.005698, -34.892082, 0],
+            [-71.007558, -34.889825, 0]
+          ],
+          [
+            [-71.010527, -34.89071, 0],
+            [-71.011194, -34.890048, 0]
+          ],
+          [
+            [-71.010347, -34.890748, 0],
+            [-71.011087, -34.890014, 0]
+          ],
+          [
+            [-71.008572, -34.890123, 0],
+            [-71.009179, -34.889401, 0]
+          ]
+        ]
+      },
+      "properties": {
+        "geometry_id": "infra-1",
+        "geometry_type": "road",
+        "source_type": "kmz",
+        "name": "Camino",
+        "estado": "sin_asignar"
+      }
+    }
+  ]
+}

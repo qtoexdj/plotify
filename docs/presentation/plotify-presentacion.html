@@ -1,0 +1,3281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plotify — Presentación para Dueños y Desarrolladores de Loteos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #0b0c0f;
+      --bg-surface: #12141a;
+      --bg-card: #181b22;
+      --bg-card-hover: #1f232d;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(22, 163, 74, 0.4);
+      --text-main: #f9fafb;
+      --text-muted: #cbd5e1;
+      --text-dim: #94a3b8;
+      --brand-green: #16a34a;
+      --brand-green-hover: #22c55e;
+      --brand-green-glow: rgba(22, 163, 74, 0.25);
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --font-display: 'Bricolage Grotesque', sans-serif;
+      --font-body: 'Onest', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Ambient Glow */
+    .ambient-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(22, 163, 74, 0.09) 0%, transparent 45%),
+        radial-gradient(circle at 90% 80%, rgba(22, 163, 74, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(18, 20, 26, 0.7) 0%, transparent 100%);
+    }
+
+    /* Header */
+    header {
+      position: relative;
+      z-index: 20;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 40px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(11, 12, 15, 0.9);
+      backdrop-filter: blur(16px);
+    }
+
+    .progress-bar-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 9%;
+      background: linear-gradient(90deg, var(--brand-green), var(--brand-green-hover));
+      box-shadow: 0 0 12px var(--brand-green-glow);
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .logo-mark {
+      width: 30px;
+      height: 30px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(22, 163, 74, 0.15);
+      color: var(--brand-green-hover);
+      border: 1px solid rgba(22, 163, 74, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .shortcut-hints {
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kbd-tag {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .btn-fullscreen {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-fullscreen:hover {
+      background: var(--bg-card-hover);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Deck Container — Flex bounds and viewport handling */
+    .deck {
+      position: relative;
+      flex: 1 1 0%;
+      min-height: 0;
+      width: 100%;
+      z-index: 10;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .slide {
+      position: absolute;
+      aspect-ratio: 16 / 9;
+      width: min(100%, 1400px);
+      height: auto;
+      max-height: min(90vh, calc(100% - 10px));
+      padding: 24px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px) scale(0.99);
+      transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.35s;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    /* 1. Animación escalonada de elementos (Staggered Animation) */
+    .slide .eyebrow,
+    .slide .headline,
+    .slide .subheadline {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide.active .eyebrow {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.04s;
+    }
+
+    .slide.active .headline {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.1s;
+    }
+
+    .slide.active .subheadline {
+      opacity: 1;
+      transform: translateY(0);
+      transition-delay: 0.16s;
+    }
+
+    .slide .card,
+    .slide .benefit-item,
+    .slide .lifecycle-step,
+    .slide .media-frame,
+    .slide .phone-container,
+    .slide .parcel-sheet-mockup,
+    .slide .compare-table,
+    .slide .lifecycle-track-container {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                  background-color 0.2s ease,
+                  border-color 0.2s ease,
+                  box-shadow 0.2s ease;
+    }
+
+    .slide.active .card,
+    .slide.active .benefit-item,
+    .slide.active .lifecycle-step,
+    .slide.active .media-frame,
+    .slide.active .phone-container,
+    .slide.active .parcel-sheet-mockup,
+    .slide.active .compare-table,
+    .slide.active .lifecycle-track-container {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Delays escalonados para listas, tarjetas y diagramas */
+    .slide.active .benefit-item:nth-child(1) { transition-delay: 0.18s; }
+    .slide.active .benefit-item:nth-child(2) { transition-delay: 0.26s; }
+    .slide.active .benefit-item:nth-child(3) { transition-delay: 0.34s; }
+    .slide.active .benefit-item:nth-child(4) { transition-delay: 0.42s; }
+
+    .slide.active .grid-3 .card:nth-child(1),
+    .slide.active .grid-2 .card:nth-child(1) { transition-delay: 0.20s; }
+    .slide.active .grid-3 .card:nth-child(2),
+    .slide.active .grid-2 .card:nth-child(2) { transition-delay: 0.28s; }
+    .slide.active .grid-3 .card:nth-child(3) { transition-delay: 0.36s; }
+
+    .slide.active .media-frame,
+    .slide.active .phone-container,
+    .slide.active .parcel-sheet-mockup,
+    .slide.active .compare-table {
+      transition-delay: 0.24s;
+    }
+
+    .slide.active .lifecycle-track-container { transition-delay: 0.16s; }
+    .slide.active .lifecycle-step:nth-child(1) { transition-delay: 0.20s; }
+    .slide.active .lifecycle-step:nth-child(2) { transition-delay: 0.28s; }
+    .slide.active .lifecycle-step:nth-child(3) { transition-delay: 0.36s; }
+    .slide.active .lifecycle-step:nth-child(4) { transition-delay: 0.44s; }
+    .slide.active .lifecycle-step:nth-child(5) { transition-delay: 0.52s; }
+
+    .slide.active .card:hover,
+    .slide.active .lifecycle-step:hover {
+      transform: translateY(-3px);
+    }
+
+    /* Typography */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--brand-green-hover);
+      margin-bottom: 8px;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brand-green-hover);
+      box-shadow: 0 0 8px var(--brand-green);
+    }
+
+    .headline {
+      font-family: var(--font-display);
+      font-size: 38px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .subheadline {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      max-width: 880px;
+      margin-bottom: 20px;
+    }
+
+    /* Split Screen Layout */
+    .split-layout {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 32px;
+      align-items: center;
+      width: 100%;
+    }
+
+    .split-layout.reverse {
+      grid-template-columns: 1fr 1.05fr;
+    }
+
+    /* Media Frames */
+    .media-frame {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.65), 0 0 24px rgba(22, 163, 74, 0.15);
+      background: #000;
+    }
+
+    .media-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+    }
+
+    .media-caption {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 10px 16px;
+      background: linear-gradient(180deg, transparent 0%, rgba(10, 12, 16, 0.95) 100%);
+      font-size: 12px;
+      font-weight: 500;
+      color: #d1d5db;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .tag-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--brand-green-hover);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tag-live::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brand-green-hover);
+      box-shadow: 0 0 6px var(--brand-green);
+    }
+
+    /* Mobile Phone Frame Mockup */
+    .phone-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .phone-bezel {
+      width: 295px;
+      height: 500px;
+      border-radius: 36px;
+      background: #0f1117;
+      border: 4px solid #282c37;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(22, 163, 74, 0.22);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .phone-notch {
+      height: 20px;
+      background: #0f1117;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 10;
+    }
+
+    .phone-speaker {
+      width: 44px;
+      height: 4px;
+      background: #232733;
+      border-radius: 4px;
+    }
+
+    /* Telegram Top Bar */
+    .tg-header {
+      background: #17212b;
+      padding: 6px 14px 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      z-index: 10;
+    }
+
+    .tg-back {
+      font-size: 11.5px;
+      color: #64b5f6;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .tg-title-box {
+      text-align: center;
+    }
+
+    .tg-app-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.15;
+    }
+
+    .tg-app-sub {
+      font-size: 9px;
+      color: #708499;
+    }
+
+    .tg-more {
+      color: #708499;
+      font-size: 13px;
+    }
+
+    /* Mini App Screen */
+    .miniapp-screen {
+      position: relative;
+      flex: 1;
+      background: #0d0f14;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px;
+      overflow: hidden;
+    }
+
+    .miniapp-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .miniapp-project-name {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .miniapp-badge-live {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: #4ade80;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    /* Parcel Card */
+    .miniapp-lot-card {
+      background: #151821;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .miniapp-lot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+
+    .miniapp-lot-id {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .miniapp-lot-sqm {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .miniapp-status-pill {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 5px;
+      transition: all 0.3s;
+    }
+
+    .miniapp-status-pill.available {
+      background: rgba(34, 197, 94, 0.18);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.4);
+    }
+
+    .miniapp-status-pill.reserved {
+      background: rgba(239, 68, 68, 0.18);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .miniapp-lot-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .miniapp-mini-stat {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .miniapp-mini-stat .lbl {
+      font-size: 8px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .miniapp-mini-stat .val {
+      font-size: 10.5px;
+      color: #e5e7eb;
+      font-weight: 700;
+    }
+
+    .miniapp-mini-stat .val.highlight {
+      color: var(--brand-green-hover);
+    }
+
+    /* Form in Mini App */
+    .miniapp-form {
+      background: #151821;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-bottom: auto;
+    }
+
+    .miniapp-form-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #9ca3af;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .miniapp-input-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+
+    .miniapp-input-box:last-child {
+      margin-bottom: 0;
+    }
+
+    .input-tag {
+      font-size: 8.5px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      width: 44px;
+      flex-shrink: 0;
+    }
+
+    .input-val {
+      font-size: 11px;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Action button */
+    .miniapp-action-area {
+      padding-top: 8px;
+    }
+
+    .tg-main-button {
+      width: 100%;
+      background: linear-gradient(180deg, #2ea6ff 0%, #1c7cd6 100%);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      padding: 11px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: var(--font-body);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(33, 137, 226, 0.4);
+      transition: all 0.2s;
+    }
+
+    .tg-main-button:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .tg-main-button:active {
+      transform: scale(0.98);
+    }
+
+    .tg-main-button.loading {
+      opacity: 0.9;
+      pointer-events: none;
+      background: #1c7cd6;
+    }
+
+    .miniapp-hint {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: 5px;
+    }
+
+    .mini-spinner {
+      width: 13px;
+      height: 13px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Success Overlay */
+    .miniapp-success-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(11, 14, 20, 0.96);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      text-align: center;
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .miniapp-success-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .success-icon-wrap {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 10px;
+    }
+
+    .success-svg {
+      width: 48px;
+      height: 48px;
+      border-radius: 48px;
+      display: block;
+      stroke-width: 3.5;
+      stroke: #22c55e;
+      stroke-miterlimit: 10;
+    }
+
+    .success-circle {
+      stroke-dasharray: 166;
+      stroke-dashoffset: 166;
+      stroke-width: 3.5;
+      stroke-miterlimit: 10;
+      stroke: #22c55e;
+      fill: none;
+      animation: strokeCircle 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+    }
+
+    .success-check {
+      transform-origin: 50% 50%;
+      stroke-dasharray: 48;
+      stroke-dashoffset: 48;
+      stroke: #22c55e;
+      stroke-width: 3.5;
+      animation: strokeCheck 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.4s forwards;
+    }
+
+    @keyframes strokeCircle {
+      100% { stroke-dashoffset: 0; }
+    }
+
+    @keyframes strokeCheck {
+      100% { stroke-dashoffset: 0; }
+    }
+
+    .success-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .success-desc {
+      font-size: 10.5px;
+      color: #9ca3af;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    .success-desc strong {
+      color: #4ade80;
+    }
+
+    .success-meta {
+      display: flex;
+      gap: 6px;
+      font-size: 9px;
+      font-family: var(--font-mono);
+      color: #9ca3af;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 8px;
+      border-radius: 5px;
+      margin-bottom: 12px;
+    }
+
+    .btn-reset-demo {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-reset-demo:hover {
+      background: var(--bg-card-hover);
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+
+    /* Cards & Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--brand-green-hover) !important;
+      outline-offset: 2px !important;
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(22, 163, 74, 0.12);
+      border: 1px solid rgba(22, 163, 74, 0.28);
+      color: var(--brand-green-hover);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .card-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .card-icon.icon-red {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: var(--accent-red);
+    }
+
+    .card-icon.icon-amber {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: var(--accent-amber);
+    }
+
+    .card-icon.icon-blue {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 17.5px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .card-body {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .card-highlight {
+      border-color: var(--border-accent);
+      background: linear-gradient(180deg, rgba(22, 163, 74, 0.08) 0%, rgba(24, 27, 34, 0.95) 100%);
+    }
+
+    /* Benefit Callouts */
+    .benefit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      margin-top: 6px;
+    }
+
+    .benefit-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 12px 15px;
+      border-radius: 12px;
+    }
+
+    .benefit-bullet {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(22, 163, 74, 0.14);
+      border: 1px solid rgba(22, 163, 74, 0.28);
+      color: var(--brand-green-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .benefit-bullet svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    /* Switcher de Vistas (Slide 3) */
+    .view-switcher {
+      display: inline-flex;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      padding: 3px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      gap: 4px;
+    }
+
+    .view-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .view-tab:hover {
+      color: #fff;
+    }
+
+    .view-tab.active {
+      background: var(--bg-card);
+      color: var(--brand-green-hover);
+      border: 1px solid rgba(22, 163, 74, 0.35);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .view-tab svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Botón Copiar Chip (Slide 4) */
+    .btn-copy-chip {
+      background: rgba(22, 163, 74, 0.15);
+      border: 1px solid rgba(22, 163, 74, 0.35);
+      color: #4ade80;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      transition: all 0.2s;
+    }
+
+    .btn-copy-chip:hover {
+      background: rgba(22, 163, 74, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-copy-chip svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    /* Global Toast Notification */
+    .plotify-toast {
+      position: fixed;
+      bottom: 74px;
+      right: 24px;
+      background: #141820;
+      border: 1px solid var(--brand-green-hover);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 24px var(--brand-green-glow);
+      border-radius: 12px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(16px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .plotify-toast.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .toast-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .toast-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Speaker Notes Drawer */
+    .speaker-notes-drawer {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      width: min(92%, 800px);
+      background: rgba(18, 20, 26, 0.97);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(22, 163, 74, 0.4);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(22, 163, 74, 0.15);
+      z-index: 999;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 18px 24px;
+    }
+
+    .speaker-notes-drawer.open {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .speaker-notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 12px;
+    }
+
+    .btn-close-notes {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-close-notes:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .speaker-notes-body {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #e2e8f0;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .speaker-notes-body strong {
+      color: #4ade80;
+    }
+
+    .speaker-notes-body ul {
+      margin-left: 18px;
+      margin-top: 6px;
+    }
+
+    .speaker-notes-body li {
+      margin-bottom: 4px;
+    }
+
+    /* Prefers Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .lifecycle-beam {
+        display: none !important;
+      }
+    }
+
+    .benefit-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .benefit-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Technical Parcel Card Mockup */
+    .parcel-sheet-mockup {
+      background: #15181f;
+      border: 1px solid rgba(22, 163, 74, 0.35);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+    }
+
+    .parcel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 12px;
+    }
+
+    .parcel-tag-available {
+      background: rgba(22, 163, 74, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(22, 163, 74, 0.3);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .parcel-stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .parcel-stat-item {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .parcel-stat-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .parcel-stat-value {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .deslindes-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #d1d5db;
+      margin-bottom: 12px;
+    }
+
+    /* Comparison Table */
+    .compare-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      margin-top: 10px;
+    }
+
+    .compare-table th {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 13.5px;
+      font-family: var(--font-display);
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .compare-table th.highlight-col {
+      background: rgba(22, 163, 74, 0.12);
+      color: #fff;
+      border-left: 1px solid rgba(22, 163, 74, 0.3);
+      border-right: 1px solid rgba(22, 163, 74, 0.3);
+    }
+
+    .compare-table td {
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+
+    .compare-table td.highlight-col {
+      background: rgba(22, 163, 74, 0.05);
+      color: #fff;
+      font-weight: 500;
+      border-left: 1px solid rgba(22, 163, 74, 0.3);
+      border-right: 1px solid rgba(22, 163, 74, 0.3);
+    }
+
+    .check-yes {
+      color: var(--brand-green-hover);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    .check-no {
+      color: var(--accent-red);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.8;
+    }
+
+    /* Comprehensive End-to-End Cycle Diagram & Animated Connector Track */
+    .lifecycle-track-container {
+      position: relative;
+      width: 100%;
+      margin: 10px 0 12px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lifecycle-track-line {
+      position: absolute;
+      top: 50%;
+      left: 7%;
+      right: 7%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-50%);
+      border-radius: 4px;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .lifecycle-beam {
+      position: absolute;
+      top: 0;
+      left: -25%;
+      width: 30%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.3), #22c55e, #ffffff, #22c55e, transparent);
+      box-shadow: 0 0 16px #22c55e, 0 0 28px rgba(74, 222, 128, 0.9);
+      border-radius: 4px;
+      animation: beamFlow 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes beamFlow {
+      0% {
+        left: -30%;
+        opacity: 0;
+      }
+      15% {
+        opacity: 1;
+      }
+      85% {
+        opacity: 1;
+      }
+      100% {
+        left: 105%;
+        opacity: 0;
+      }
+    }
+
+    .lifecycle-nodes {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      width: 90%;
+      z-index: 2;
+    }
+
+    .lifecycle-node {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #0f1219;
+      border: 2px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      transition: all 0.3s;
+    }
+
+    .lifecycle-node.active {
+      border-color: var(--brand-green-hover);
+      color: #fff;
+      background: #0f2417;
+      box-shadow: 0 0 12px var(--brand-green-glow);
+    }
+
+    .lifecycle-diagram {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      width: 100%;
+      margin: 8px 0 14px 0;
+      position: relative;
+    }
+
+    .lifecycle-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .lifecycle-step.active {
+      border-color: rgba(22, 163, 74, 0.45);
+      background: linear-gradient(180deg, rgba(22, 163, 74, 0.1) 0%, rgba(24, 27, 34, 0.95) 100%);
+    }
+
+    .lifecycle-step::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--brand-green-hover), transparent);
+      opacity: 0.7;
+    }
+
+    .lifecycle-badge {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--brand-green-hover);
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .lifecycle-title {
+      font-family: var(--font-display);
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 5px;
+      line-height: 1.25;
+    }
+
+    .lifecycle-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .lifecycle-icon {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 20;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 40px;
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(11, 12, 15, 0.9);
+      backdrop-filter: blur(16px);
+    }
+
+    .slide-counter {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .slide-counter span {
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .dots-nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    .nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .nav-dot.active {
+      background: var(--brand-green);
+      width: 24px;
+      border-radius: 4px;
+      box-shadow: 0 0 8px var(--brand-green);
+    }
+
+    .nav-buttons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-action {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover:not(:disabled) {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn-action.btn-primary {
+      background: var(--brand-green);
+      border-color: var(--brand-green-hover);
+      color: #fff;
+      box-shadow: 0 0 16px var(--brand-green-glow);
+    }
+
+    .btn-action.btn-primary:hover {
+      background: var(--brand-green-hover);
+    }
+
+    /* ============================================================
+       SISTEMA RESPONSIVO MULTI-DISPOSITIVO
+       (Móvil, Tablet Vertical, Tablet Horizontal, Laptop, Desktop)
+       ============================================================ */
+
+    /* Scrollbar personalizada sutil para diapositivas con scroll */
+    .slide::-webkit-scrollbar {
+      width: 5px;
+    }
+    .slide::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .slide::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.16);
+      border-radius: 4px;
+    }
+    .slide::-webkit-scrollbar-thumb:hover {
+      background: var(--brand-green);
+    }
+
+    /* Envoltura para scroll horizontal en tablas comparativas */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+      margin-top: 10px;
+    }
+
+    .table-scroll-hint {
+      display: none;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: right;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    /* Laptops y Pantallas medianas (<= 1200px) */
+    @media (max-width: 1200px) {
+      .shortcut-hints {
+        display: none !important;
+      }
+      header {
+        padding: 12px 24px;
+      }
+      .slide {
+        padding: 22px 36px;
+      }
+      .headline {
+        font-size: 32px !important;
+      }
+      .subheadline {
+        font-size: 14.5px !important;
+        margin-bottom: 14px !important;
+      }
+      .split-layout {
+        gap: 24px;
+      }
+      .card {
+        padding: 16px;
+      }
+    }
+
+    /* Tablets y Pantallas Verticales (<= 1024px, ej: iPad Portrait 810px / 834px) */
+    @media (max-width: 1024px) {
+      .shortcut-hints {
+        display: none !important;
+      }
+      header {
+        padding: 12px 20px;
+        gap: 12px;
+      }
+      .header-actions {
+        gap: 8px;
+      }
+      .btn-fullscreen {
+        padding: 6px 12px;
+        font-size: 11.5px;
+      }
+      .deck {
+        padding: 12px 16px;
+        flex: 1 1 0%;
+        min-height: 0;
+        height: auto !important;
+      }
+      .slide {
+        aspect-ratio: auto !important;
+        inset: 0 !important;
+        width: 100% !important;
+        max-width: 960px !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        padding: 24px 32px 48px 32px !important;
+        justify-content: flex-start !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+      }
+      /* Centrado vertical equilibrado en pantallas altas de tablet cuando el contenido no desborda */
+      .slide > *:first-child {
+        margin-top: auto !important;
+      }
+      .slide > *:last-child {
+        margin-bottom: auto !important;
+      }
+
+      .headline {
+        font-size: 30px !important;
+        line-height: 1.25 !important;
+      }
+      .subheadline {
+        font-size: 14.5px !important;
+        margin-bottom: 16px !important;
+      }
+
+      /* Slide 8 en Tablet */
+      .lifecycle-diagram {
+        gap: 8px;
+      }
+      .lifecycle-step {
+        padding: 12px 8px;
+      }
+      .lifecycle-title {
+        font-size: 13px;
+      }
+      .lifecycle-desc {
+        font-size: 11px;
+        line-height: 1.35;
+      }
+      .lifecycle-track-container {
+        margin: 12px 0 16px 0;
+      }
+    }
+
+    /* Tablets angostas (<= 880px) */
+    @media (max-width: 880px) {
+      .brand-badge {
+        display: none !important;
+      }
+      .split-layout,
+      .split-layout.reverse {
+        grid-template-columns: 1fr !important;
+        gap: 20px;
+      }
+      .split-layout.reverse > *:first-child {
+        order: 2;
+      }
+      .split-layout.reverse > *:last-child {
+        order: 1;
+      }
+      .media-frame {
+        max-height: 340px;
+      }
+      .media-frame img {
+        max-height: 300px;
+        object-fit: cover;
+      }
+      .phone-container {
+        margin: 14px auto;
+      }
+    }
+
+    /* Smartphones y Tablets Verticales (<= 768px) */
+    @media (max-width: 768px) {
+      body {
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Header móvil compacto */
+      header {
+        flex-shrink: 0;
+        padding: 10px 14px;
+      }
+      .brand-title {
+        font-size: 17px;
+      }
+      .brand-badge {
+        display: none !important;
+      }
+      .shortcut-hints {
+        display: none !important;
+      }
+      .btn-fullscreen span {
+        display: none !important;
+      }
+      .btn-fullscreen {
+        padding: 7px 9px;
+        border-radius: 8px;
+      }
+
+      /* Footer móvil compacto */
+      footer {
+        flex-shrink: 0;
+        padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)) 14px;
+      }
+      .slide-counter {
+        font-size: 11.5px;
+      }
+      .dots-nav {
+        display: none;
+      }
+      .btn-action {
+        padding: 6px 11px;
+        font-size: 12px;
+        gap: 4px;
+      }
+
+      /* Deck y Diapositivas en móvil */
+      .deck {
+        padding: 0;
+        flex: 1 1 0%;
+        min-height: 0;
+        height: auto !important;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .slide {
+        aspect-ratio: auto !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        /* Padding inferior generoso para que ninguna tarjeta o botón quede tapado por el footer */
+        padding: 14px 14px calc(76px + env(safe-area-inset-bottom, 14px)) 14px !important;
+        justify-content: flex-start !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+      }
+      /* En móvil el contenido parte desde arriba para flujo natural con scroll */
+      .slide > *:first-child {
+        margin-top: 0 !important;
+      }
+      .slide > *:last-child {
+        margin-bottom: 0 !important;
+      }
+
+      /* Tipografía responsive */
+      .eyebrow {
+        font-size: 11px !important;
+        margin-bottom: 4px !important;
+      }
+
+      .headline {
+        font-size: clamp(20px, 5.2vw, 24px) !important;
+        line-height: 1.22 !important;
+        margin-bottom: 6px !important;
+      }
+
+      .subheadline {
+        font-size: 12.5px !important;
+        line-height: 1.4 !important;
+        margin-bottom: 12px !important;
+      }
+
+      /* Grillas en móvil a 1 columna fluida */
+      .grid-3,
+      .grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+      }
+
+      .card {
+        padding: 11px 13px !important;
+        border-radius: 12px !important;
+      }
+      .card-icon {
+        width: 28px !important;
+        height: 28px !important;
+        margin-bottom: 6px !important;
+      }
+      .card-title {
+        font-size: 14px !important;
+        margin-bottom: 2px !important;
+      }
+      .card-body {
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
+      }
+
+      /* Listas de beneficios */
+      .benefit-list {
+        gap: 6px !important;
+        margin-top: 2px !important;
+        margin-bottom: 10px !important;
+      }
+      .benefit-item {
+        padding: 8px 10px !important;
+        gap: 8px !important;
+        border-radius: 8px !important;
+      }
+      .benefit-bullet {
+        width: 20px !important;
+        height: 20px !important;
+        border-radius: 6px !important;
+      }
+      .benefit-title {
+        font-size: 13px !important;
+      }
+      .benefit-desc {
+        font-size: 11.5px !important;
+        line-height: 1.3 !important;
+      }
+
+      /* Slide 4: Ficha de Parcela en móvil */
+      .parcel-sheet-mockup {
+        padding: 12px 12px !important;
+        border-radius: 12px !important;
+        margin-top: 4px !important;
+      }
+      .parcel-header {
+        margin-bottom: 8px !important;
+      }
+      .parcel-stat-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px !important;
+        margin-bottom: 8px !important;
+      }
+      .parcel-stat-row .parcel-stat-item:last-child {
+        grid-column: span 2;
+      }
+      .deslindes-box {
+        font-size: 9.5px !important;
+        line-height: 1.35 !important;
+        padding: 6px 8px !important;
+        margin-bottom: 8px !important;
+      }
+      .btn-copy-chip {
+        padding: 8px 12px !important;
+        font-size: 11.5px !important;
+        width: 100% !important;
+        justify-content: center !important;
+      }
+
+      /* Slide 6: Mini App en móvil */
+      .phone-container {
+        width: 100% !important;
+        margin: 8px 0 !important;
+      }
+      .phone-bezel {
+        width: 100% !important;
+        max-width: 290px !important;
+        height: 440px !important;
+        border-radius: 28px !important;
+        margin: 0 auto;
+      }
+      .miniapp-screen {
+        padding: 8px !important;
+      }
+
+      /* Slide 8: Ciclo de Venta en móvil */
+      .lifecycle-track-container {
+        margin: 6px 0 10px 0 !important;
+      }
+      .lifecycle-track-line {
+        left: 4%;
+        right: 4%;
+      }
+      .lifecycle-nodes {
+        width: 92%;
+      }
+      .lifecycle-node {
+        width: 22px;
+        height: 22px;
+        font-size: 9.5px;
+      }
+      .lifecycle-diagram {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+        margin: 6px 0 12px 0 !important;
+      }
+      .lifecycle-step {
+        padding: 10px 12px !important;
+      }
+      .lifecycle-title {
+        font-size: 13.5px !important;
+        margin-bottom: 2px !important;
+      }
+      .lifecycle-desc {
+        font-size: 11px !important;
+        line-height: 1.35 !important;
+      }
+
+      /* Slide 10: Tabla Comparativa swipeable */
+      .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 8px 0;
+      }
+      .table-scroll-hint {
+        display: block;
+      }
+      .compare-table {
+        min-width: 480px;
+        margin-top: 0;
+        font-size: 11px;
+      }
+      .compare-table th,
+      .compare-table td {
+        padding: 7px 8px;
+      }
+
+      /* Slide 3: View Switcher */
+      .view-switcher {
+        margin-bottom: 10px;
+        width: 100%;
+      }
+      .view-tab {
+        flex: 1;
+        font-size: 11px;
+        padding: 6px 8px;
+        justify-content: center;
+      }
+
+      /* Speaker Notes Drawer en móvil */
+      .speaker-notes-drawer {
+        bottom: 50px !important;
+        width: 100% !important;
+        border-radius: 16px 16px 0 0 !important;
+        padding: 14px 16px !important;
+        max-height: 65vh !important;
+        overflow-y: auto !important;
+      }
+    }
+
+    /* Smartphones pequeños (<= 400px) */
+    @media (max-width: 400px) {
+      .headline {
+        font-size: 19px !important;
+      }
+      .slide {
+        padding: 12px 10px calc(76px + env(safe-area-inset-bottom, 12px)) 10px !important;
+      }
+      .phone-bezel {
+        max-width: 270px !important;
+        height: 420px !important;
+      }
+      .btn-action {
+        padding: 5px 9px;
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <!-- Top Header -->
+  <header>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+
+    <div class="brand-box" onclick="goToSlide(0)">
+      <svg class="logo-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g transform="matrix(0.1425 0 0 0.1425 -18.07 -14.68)">
+          <path fill="#16A34A" d="M375.355408,339.425415 C368.531372,343.325348 361.943176,346.911438 355.565674,350.839630 C352.393219,352.793762 349.837372,353.000061 346.464996,351.039978 C321.987305,336.813171 297.327698,322.899353 272.850586,308.671570 C242.470978,291.012878 212.204514,273.159424 181.903854,255.365112 C169.268661,247.944992 156.651520,240.493607 144.064804,232.991592 C137.554764,229.111404 137.611069,227.770950 144.375763,223.808182 C187.911926,198.304657 231.481430,172.857971 274.994476,147.315094 C298.260040,133.657806 321.529480,120.001472 344.573792,105.977646 C349.432037,103.021118 352.863251,103.253677 357.625031,106.090164 C397.402496,129.784668 437.327576,153.231842 477.247375,176.686783 C504.094360,192.460739 531.005737,208.125153 557.886902,223.840912 C564.417175,227.658768 564.458130,229.139481 557.793457,233.063751 C534.402954,246.836441 510.988098,260.567902 487.549622,274.258698 C458.218658,291.391449 428.861237,308.478882 399.501770,325.562775 C391.585602,330.169067 383.620697,334.691650 375.355408,339.425415 M285.873810,297.586639 C304.776733,308.472198 323.834320,319.102112 342.492889,330.391541 C348.468018,334.006805 352.817383,334.268463 359.035004,330.585938 C415.333191,297.242188 471.866211,264.294952 528.306885,231.191406 C529.628906,230.416000 531.494141,230.030640 531.820007,227.858871 C528.720093,225.903259 525.687378,223.864105 522.539062,222.022598 C467.479767,189.817703 412.366302,157.704895 357.407379,125.329758 C352.710297,122.562798 349.309204,122.593948 344.734100,125.275810 C293.736176,155.169983 242.606110,184.838699 191.586334,214.695801 C184.024338,219.121124 176.092728,223.006104 168.360428,228.973373 C207.690155,251.941940 246.461014,274.584106 285.873810,297.586639 z"/>
+          <g fill="#FFFFFF">
+            <path d="M258.687500,486.804565 C260.546265,483.935211 262.405792,484.279205 264.818604,485.673828 C290.329681,500.419098 316.008636,514.878479 341.365631,529.882690 C347.900421,533.749390 352.762909,534.357117 359.734009,530.121765 C386.331696,513.962036 413.437408,498.637665 440.386627,483.058807 C442.736115,481.700623 445.406219,479.278351 448.085449,481.811707 C451.178894,484.736786 452.666748,488.853760 452.785492,493.013519 C452.848419,495.217377 449.932892,496.064148 448.124847,497.125793 C435.493164,504.542419 422.817230,511.884125 410.126984,519.200378 C392.389099,529.426758 374.568115,539.510925 356.916351,549.883484 C352.643860,552.394043 348.997009,552.309204 344.835663,549.913513 C315.701660,533.140747 286.524353,516.442993 257.330322,499.774902 C253.620834,497.656952 252.779465,495.229553 255.546448,491.740814 C256.677765,490.314392 257.519043,488.657990 258.687500,486.804565 z"/>
+            <path d="M399.504883,406.567505 C404.055969,403.245667 406.051788,404.873230 407.689636,409.421906 C410.243195,416.513580 410.114563,418.213593 403.751984,421.998962 C387.755829,431.515686 371.641754,440.833984 355.618256,450.305084 C352.647278,452.061157 350.112244,452.316833 346.876404,450.504822 C332.228485,442.302460 317.527618,434.201080 303.246307,425.361969 C300.304108,423.540955 299.443237,421.721313 301.675018,418.521759 C306.994904,410.894989 308.516815,410.397522 316.568634,415.087921 C325.902466,420.525177 335.294525,425.871948 344.477417,431.555084 C349.301117,434.540375 353.076813,434.138092 357.966400,431.053894 C371.453857,422.546387 385.410950,414.783325 399.504883,406.567505 z"/>
+          </g>
+        </g>
+      </svg>
+      <span class="brand-title">Plotify</span>
+      <span class="brand-badge">Sistema Integral para Loteos</span>
+    </div>
+
+    <div class="header-actions">
+      <div class="shortcut-hints">
+        <span>Navegación:</span>
+        <span class="kbd-tag">←</span>
+        <span class="kbd-tag">→</span>
+        <span>o Espacio</span>
+      </div>
+      <button class="btn-fullscreen" id="btnNotesToggle" onclick="toggleSpeakerNotes()" title="Notas de discurso comercial para la reunión (Tecla P)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Notas (P)</span>
+      </button>
+      <button class="btn-fullscreen" onclick="toggleFullscreen()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        <span>Pantalla Completa</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Slide Deck -->
+  <main class="deck" id="deck">
+
+    <!-- SLIDE 1: PORTADA -->
+    <section class="slide active" data-slide="0">
+      <div class="eyebrow">La Solución Integral de Gestión y Ventas</div>
+      <h1 class="headline" style="font-size: 48px; max-width: 980px;">
+        Vende más rápido, controla tu inventario en tiempo real y <span style="color: var(--brand-green-hover);">automatiza tus contratos legales</span>.
+      </h1>
+      <p class="subheadline" style="font-size: 18px;">
+        Plotify es la plataforma diseñada exclusivamente para dueños, administradores y desarrolladores de parcelaciones en Chile: conecta tus planos KMZ y tu Estudio de Título con tus vendedores en terreno, generando promesas y escrituras al instante.
+      </p>
+
+      <div class="grid-3" style="margin-top: 8px;">
+        <div class="card card-highlight">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+          </div>
+          <div class="card-title">Masterplan Satelital en Vivo</div>
+          <div class="card-body">Tus clientes y vendedores ven qué parcelas están libres o reservadas en tiempo real sobre el mapa satelital.</div>
+        </div>
+        <div class="card card-highlight">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+          </div>
+          <div class="card-title">Ventas en Terreno (Telegram)</div>
+          <div class="card-body">Tus ejecutivos reservan parcelas con RUT en 30 segundos directo en su celular con el Estudio de Título a mano.</div>
+        </div>
+        <div class="card card-highlight">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+          </div>
+          <div class="card-title">Escrituración en 2 Minutos</div>
+          <div class="card-body">Generación automática de minutas y promesas en Word (.docx) con estudio de título y deslindes matemáticos.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: EL DOLOR DEL NEGOCIO -->
+    <section class="slide" data-slide="1">
+      <div class="eyebrow" style="color: var(--accent-red);">La Realidad del Mercado</div>
+      <h2 class="headline">Las 3 grandes fugas de dinero y tiempo en un loteo</h2>
+      <p class="subheadline">
+        La gestión tradicional con planillas Excel, grupos de WhatsApp y redacción manual de contratos frena las ventas y genera costos millonarios.
+      </p>
+
+      <div class="grid-3">
+        <div class="card" style="border-top: 4px solid var(--accent-red);">
+          <div class="card-icon icon-red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="card-title">Ventas a Ciegas y Doble Venta</div>
+          <div class="card-body">
+            Vendedores llamando o enviando WhatsApp: <em>"¿sigue libre el lote 14?"</em> mientras están con un cliente interesado. La falta de certeza hace perder cierres o provoca la peor pesadilla comercial: <strong>vender la misma parcela dos veces</strong>.
+          </div>
+        </div>
+
+        <div class="card" style="border-top: 4px solid var(--accent-amber);">
+          <div class="card-icon icon-amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+          </div>
+          <div class="card-title">Rechazos en Notaría y CBR</div>
+          <div class="card-body">
+            Los deslindes y medidas se transcriben a mano. Un error en un punto cardinal (Norte vs Sur) o una discrepancia de centímetros con el plano del SAG hace rebotar la inscripción en el Conservador, congelando los pagos de los compradores.
+          </div>
+        </div>
+
+        <div class="card" style="border-top: 4px solid #3b82f6;">
+          <div class="card-icon icon-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="card-title">Semanas de Espera con Abogados</div>
+          <div class="card-body">
+            Redactar cada promesa toma semanas de tipeo repetitivo. Para cuando el contrato está listo, el comprador se enfrió o surgieron dudas. Cada venta cerrada debería formalizarse de inmediato.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: VISOR KMZ SATELITAL (VENDEDOR VS ADMINISTRADOR) -->
+    <section class="slide" data-slide="2">
+      <div class="split-layout">
+        <div>
+          <div class="eyebrow">Visualización y Geometría</div>
+          <h2 class="headline" style="font-size: 33px;">El Mapa Interactivo para Vendedores y Administradores</h2>
+          <p class="subheadline" style="font-size: 15px;">
+            Plotify transforma tu archivo KMZ en un visor satelital interactivo adaptado a cada rol del equipo. Certeza total desde el computador o en el terreno.
+          </p>
+
+          <div class="view-switcher" role="tablist" aria-label="Perspectiva de usuario">
+            <button class="view-tab active" id="tabVendorView" onclick="switchMapView('vendor')" role="tab" aria-selected="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+              <span>Vista Vendedor (Terreno)</span>
+            </button>
+            <button class="view-tab" id="tabAdminView" onclick="switchMapView('admin')" role="tab" aria-selected="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="12" x="3" y="4" rx="2" ry="2"/><line x1="2" x2="22" y1="20" y2="20"/></svg>
+              <span>Vista Dueño / Admin (Consola)</span>
+            </button>
+          </div>
+
+          <div class="benefit-list">
+            <div class="benefit-item" id="cardVendorRole">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Para el Vendedor (Terreno / Celular)</div>
+                <div class="benefit-desc">Mapa satelital ágil y ligero. Ve disponibilidad en tiempo real (verde/ámbar/gris), medidas, servidumbres y reserva con 1 toque.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item" id="cardAdminRole">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="12" x="3" y="4" rx="2" ry="2"/><line x1="2" x2="22" y1="20" y2="20"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Para el Administrador y Dueño (Oficina / Panel Web)</div>
+                <div class="benefit-desc">Control total: fija precios por etapa, asigna parcelas exclusivas a corredores, supervisa quién tiene reservado cada lote y audita ventas.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Trazado Exacto de Servidumbres y Caminos</div>
+                <div class="benefit-desc">Transparencia total para el comprador: reconoce accesos de 3 y 6 metros, áreas verdes y geometría real.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="media-frame">
+          <img src="images/kmz-viewer.jpg" alt="Visor Satelital KMZ Plotify" id="mapViewerImg" />
+          <div class="media-caption">
+            <span id="mapViewerCaption">Visor Satelital de Loteo en Vivo — Fundo Los Maquis</span>
+            <span class="tag-live" id="mapViewerRoleTag">Modo Vendedor Activo</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: FICHA TÉCNICA DE LA PARCELA -->
+    <section class="slide" data-slide="3">
+      <div class="split-layout reverse">
+        <div class="parcel-sheet-mockup">
+          <div class="parcel-header">
+            <div>
+              <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase;">Proyecto Los Maquis</div>
+              <div style="font-family: var(--font-display); font-size: 23px; font-weight: 700; color: #fff;">Parcela Lote 14</div>
+            </div>
+            <div class="parcel-tag-available">● DISPONIBLE</div>
+          </div>
+
+          <div class="parcel-stat-row">
+            <div class="parcel-stat-item">
+              <div class="parcel-stat-label">Superficie Útil</div>
+              <div class="parcel-stat-value">5.000,00 m²</div>
+            </div>
+            <div class="parcel-stat-item">
+              <div class="parcel-stat-label">Servidumbre</div>
+              <div class="parcel-stat-value">312,40 m²</div>
+            </div>
+            <div class="parcel-stat-item">
+              <div class="parcel-stat-label">Rol Matriz SII</div>
+              <div class="parcel-stat-value">544-595</div>
+            </div>
+          </div>
+
+          <div style="font-size: 11.5px; font-weight: 600; color: var(--brand-green-hover); margin-bottom: 6px;">
+            DESLINDES OFICIALES MATEMÁTICOS (PARA NOTARÍA):
+          </div>
+          <div class="deslindes-box">
+            <strong>• NORTE:</strong> en 50,20 metros con Lote 12.<br>
+            <strong>• SUR:</strong> en 48,15 metros con Servidumbre de Tránsito.<br>
+            <strong>• ORIENTE:</strong> en 102,40 metros con Lote 15.<br>
+            <strong>• PONIENTE:</strong> en 101,80 metros con Camino de Acceso.
+          </div>
+
+          <div style="background: rgba(22, 163, 74, 0.12); border: 1px solid rgba(22, 163, 74, 0.3); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div>
+              <div style="font-size: 10.5px; color: var(--text-muted);">Certificación de Subdivisión</div>
+              <div style="font-size: 12.5px; font-weight: 600; color: #fff;">Resolución SAG N° 1945 / CBR Fs 1723</div>
+            </div>
+            <span style="color: var(--brand-green-hover); font-weight: 700; font-size: 13px;">✓ Verificado</span>
+          </div>
+
+          <button class="btn-copy-chip" onclick="copyParcelWhatsApp()" title="Copiar ficha oficial para enviar por WhatsApp">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span>Copiar Ficha para WhatsApp</span>
+          </button>
+        </div>
+
+        <div>
+          <div class="eyebrow">Certeza Jurídica y Técnica</div>
+          <h2 class="headline" style="font-size: 33px;">La Ficha de la Parcela: Información completa en 1 clic</h2>
+          <p class="subheadline" style="font-size: 15.5px;">
+            Cada lote tiene su radiografía legal y física lista para presentar al comprador. No más búsquedas en carpetas ni dudas sobre los metros cuadrados reales.
+          </p>
+
+          <div class="benefit-list">
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Deslindes Automáticos Sin Error Humano</div>
+                <div class="benefit-desc">El sistema calcula los linderos exactos midiendo directamente la geometría, evitando reclamos vecinales o rechazos notariales.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Ficha Comercial para Enviar por WhatsApp</div>
+                <div class="benefit-desc">Tus vendedores pueden compartir la ficha con croquis, medidas, orientación y precio al prospecto en segundos.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Superficie Útil vs Servidumbre Desglosada</div>
+                <div class="benefit-desc">Claridad absoluta para el comprador sobre cuántos metros puede construir y cuánto corresponde a caminos.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: EL ESTUDIO DE TÍTULOS DIGITAL (NUEVA SLIDE CLAVE) -->
+    <section class="slide" data-slide="4">
+      <div class="split-layout">
+        <div>
+          <div class="eyebrow">Seguridad Jurídica Total</div>
+          <h2 class="headline" style="font-size: 33px;">Estudio de Títulos Digital: Tus vendedores cierran con certeza</h2>
+          <p class="subheadline" style="font-size: 15px;">
+            El comprador de parcelas siempre pregunta: <em>"¿están los papeles al día?"</em>. Con Plotify, tus vendedores llevan el Estudio de Título en su celular para exhibirlo o compartirlo en el instante.
+          </p>
+
+          <div class="benefit-list">
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Estudio de Títulos Integrado al Proyecto</div>
+                <div class="benefit-desc">Carga la historia de dominio de 10 años, inscripciones del CBR, certificados de hipotecas y gravámenes (GP) y resoluciones SAG.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Entrega Inmediata al Comprador en Terreno</div>
+                <div class="benefit-desc">El vendedor puede enviar el informe de títulos al WhatsApp del cliente mientras recorren el predio, disipando cualquier desconfianza al instante.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Alimento Directo para la Escritura Notarial</div>
+                <div class="benefit-desc">Las fojas, números, años, CBR y personerías del Estudio de Título se transfieren automáticamente a la cláusula de títulos de la escritura.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-highlight" style="padding: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+            <div style="font-family: var(--font-display); font-size: 18px; font-weight: 700; color: #fff;">Carpeta Legal del Proyecto</div>
+            <span style="background: rgba(22, 163, 74, 0.15); color: #4ade80; border: 1px solid rgba(22, 163, 74, 0.3); padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">● TÍTULOS VIGENTES</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">Inscripción de Dominio CBR</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Fs. 1.723 N° 671 año 2019 • CBR Curicó</div>
+              </div>
+              <span style="color: var(--brand-green-hover); font-weight: 700; font-size: 12px;">✓ Verificado</span>
+            </div>
+
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">Resolución SAG de Subdivisión</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Certificado SAG N° 1945 / 87 Lotes Aprobados</div>
+              </div>
+              <span style="color: var(--brand-green-hover); font-weight: 700; font-size: 12px;">✓ Aprobado</span>
+            </div>
+
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">Certificado de Hipotecas y Gravámenes</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Libre de litigios y embargos vigentes</div>
+              </div>
+              <span style="color: var(--brand-green-hover); font-weight: 700; font-size: 12px;">✓ Limpio</span>
+            </div>
+
+            <div style="background: var(--bg-surface); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">Rol Matriz de Avalúo SII</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Rol 544-595 en trámite de roles individuales</div>
+              </div>
+              <span style="color: var(--brand-green-hover); font-weight: 700; font-size: 12px;">✓ Vigente</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--brand-green-hover); display: flex; align-items: center; gap: 8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Disponible en 1 toque en la app móvil de cada vendedor</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: TELEGRAM MINI APP (VENDEDOR EN TERRENO) -->
+    <section class="slide" data-slide="5">
+      <div class="split-layout">
+        <div>
+          <div class="eyebrow">Fuerza de Ventas en Terreno</div>
+          <h2 class="headline" style="font-size: 34px;">Tu inventario en el celular de cada vendedor</h2>
+          <p class="subheadline" style="font-size: 15.5px;">
+            El 90% de las decisiones de compra ocurren caminando sobre la parcela. Plotify funciona directo en Telegram, sin descargar aplicaciones ni recordar contraseñas.
+          </p>
+
+          <div class="benefit-list">
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Reserva Inmediata con RUT en 30 Segundos</div>
+                <div class="benefit-desc">El vendedor selecciona el lote junto al cliente, ingresa su RUT y solicita la reserva. El lote se bloquea al instante para todo el equipo.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Fin de las Llamadas a la Oficina</div>
+                <div class="benefit-desc">El vendedor ya no necesita preguntar si una parcela está disponible; el mapa satelital se actualiza en vivo al segundo.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Gestión de Corredores Externos</div>
+                <div class="benefit-desc">Asigna a tus vendedores o corredores asociados solo a los proyectos que tienen autorizados vender, protegiendo tu información.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phone-container">
+          <div class="phone-bezel">
+            <!-- Notch -->
+            <div class="phone-notch">
+              <div class="phone-speaker"></div>
+            </div>
+
+            <!-- Telegram Top Header -->
+            <div class="tg-header">
+              <div class="tg-back" onclick="resetReservationDemo()">‹ Cerrar</div>
+              <div class="tg-title-box">
+                <div class="tg-app-title">Plotify Bot</div>
+                <div class="tg-app-sub">@plotify_bot</div>
+              </div>
+              <div class="tg-more">•••</div>
+            </div>
+
+            <!-- Mini App Screen View -->
+            <div class="miniapp-screen" id="miniappScreen">
+              <!-- Project Header -->
+              <div class="miniapp-bar">
+                <div class="miniapp-project-name">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-green-hover); display: inline-block; vertical-align: -1px; margin-right: 2px;"><polygon points="12 2 17 8 14 8 19 15 15 15 20 21 4 21 9 15 5 15 10 8 7 8 12 2"/><line x1="12" y1="21" x2="12" y2="23"/></svg> Los Maquis, Curicó
+                </div>
+                <span class="miniapp-badge-live">● EN VIVO</span>
+              </div>
+
+              <!-- Selected Parcel Card -->
+              <div class="miniapp-lot-card">
+                <div class="miniapp-lot-header">
+                  <div>
+                    <div class="miniapp-lot-id">PARCELA #14</div>
+                    <div class="miniapp-lot-sqm">5.000 m² totales • 4.650 m² útiles</div>
+                  </div>
+                  <span class="miniapp-status-pill available" id="lotStatusPill">DISPONIBLE</span>
+                </div>
+
+                <div class="miniapp-lot-grid">
+                  <div class="miniapp-mini-stat">
+                    <span class="lbl">Rol SII</span>
+                    <span class="val">544-595</span>
+                  </div>
+                  <div class="miniapp-mini-stat">
+                    <span class="lbl">SAG Subdiv.</span>
+                    <span class="val">Cert. 1945</span>
+                  </div>
+                  <div class="miniapp-mini-stat">
+                    <span class="lbl">Precio Lista</span>
+                    <span class="val highlight">UF 1.250</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Buyer Data Form -->
+              <div class="miniapp-form">
+                <div class="miniapp-form-label">Datos de Reserva en Terreno</div>
+                <div class="miniapp-input-box">
+                  <span class="input-tag">RUT</span>
+                  <span class="input-val">18.432.910-K</span>
+                </div>
+                <div class="miniapp-input-box">
+                  <span class="input-tag">Cliente</span>
+                  <span class="input-val">Valentina Edwards M.</span>
+                </div>
+              </div>
+
+              <!-- Action Area: Telegram Main Button -->
+              <div class="miniapp-action-area">
+                <button class="tg-main-button" id="btnSimulateReserve" onclick="simulateReservation()">
+                  <span class="btn-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  </span>
+                  <span class="btn-text" id="btnReserveText">Bloquear y Reservar Lote 14</span>
+                </button>
+                <div class="miniapp-hint">Haz clic: simula 1 toque en terreno con bloqueo atómico</div>
+              </div>
+
+              <!-- Success Overlay (Animated on click) -->
+              <div class="miniapp-success-overlay" id="reserveSuccessOverlay">
+                <div class="success-icon-wrap">
+                  <svg class="success-svg" viewBox="0 0 52 52">
+                    <circle class="success-circle" cx="26" cy="26" r="23" />
+                    <path class="success-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                  </svg>
+                </div>
+                <div class="success-title">¡Reserva Atómica Exitosa!</div>
+                <div class="success-desc">
+                  <strong>Lote 14 BLOQUEADO</strong> para todo el equipo en tiempo real.<br />
+                  Notificación enviada al Administrador para aprobación y minuta.
+                </div>
+                <div class="success-meta">
+                  <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline; vertical-align:-1px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Tiempo: 0.8s</span>
+                  <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline; vertical-align:-1px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Cero Doble Venta</span>
+                </div>
+                <button class="btn-reset-demo" onclick="resetReservationDemo()">
+                  ↺ Probar de nuevo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: CENTRO DE MANDO Y APROBACIÓN PARA DUEÑOS -->
+    <section class="slide" data-slide="6">
+      <div class="split-layout reverse">
+        <div class="media-frame">
+          <img src="images/owner-dashboard.jpg" alt="Panel de Control Ejecutivo Plotify" />
+          <div class="media-caption">
+            <span>Bandeja de Aprobación y KPIs de Ventas en Tiempo Real</span>
+            <span class="tag-live">Control Total</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="eyebrow">Control Ejecutivo y Gerencial</div>
+          <h2 class="headline" style="font-size: 34px;">Centro de Mando: Tú apruebas, tú tienes el control</h2>
+          <p class="subheadline" style="font-size: 15.5px;">
+            Desde tu computador o teléfono puedes supervisar el avance comercial del loteo, validar reservas y autorizar contratos con un solo clic.
+          </p>
+
+          <div class="benefit-list">
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Métricas de Venta y Avance en Vivo</div>
+                <div class="benefit-desc">Conoce al instante cuántas parcelas quedan, el porcentaje de avance del loteo y los ingresos comprometidos.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Bandeja de Aprobación en 1 Clic</div>
+                <div class="benefit-desc">Cuando un vendedor ingresa una reserva, te llega una alerta inmediata para que apruebes el precio y las condiciones de pago.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item">
+              <div class="benefit-bullet">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              </div>
+              <div>
+                <div class="benefit-title">Auditoría y Trazabilidad Notarial</div>
+                <div class="benefit-desc">Registro histórico inmutable de quién vendió, a qué hora, qué comprador reservó y qué documento se generó.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: DIAGRAMA DEL CICLO COMPLETO DE VENTA (NUEVO DIAGRAMA VISUAL) -->
+    <section class="slide" data-slide="7">
+      <div class="eyebrow">El Circuito Operativo en Acción</div>
+      <h2 class="headline">De la venta en terreno al contrato en mano: Flujo instantáneo</h2>
+      <p class="subheadline">
+        Cómo interactúan el vendedor, el administrador y el comprador en un proceso 100% digital, trazable y sin demoras.
+      </p>
+
+      <!-- LÍNEA CONECTORA CON DESTELLO ANIMADO (PASO 1 AL PASO 5) -->
+      <div class="lifecycle-track-container">
+        <div class="lifecycle-track-line">
+          <div class="lifecycle-beam"></div>
+        </div>
+        <div class="lifecycle-nodes">
+          <div class="lifecycle-node active" title="Paso 1: Venta en Celular">1</div>
+          <div class="lifecycle-node active" title="Paso 2: Alerta Inmediata">2</div>
+          <div class="lifecycle-node active" title="Paso 3: Aprobación y Caja">3</div>
+          <div class="lifecycle-node active" title="Paso 4: Minuta Automática">4</div>
+          <div class="lifecycle-node active" title="Paso 5: Contrato en Mano">5</div>
+        </div>
+      </div>
+
+      <div class="lifecycle-diagram">
+        <div class="lifecycle-step active">
+          <div class="lifecycle-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+          </div>
+          <div class="lifecycle-badge">PASO 1 • TERRENO</div>
+          <div class="lifecycle-title">Venta en Celular</div>
+          <div class="lifecycle-desc">El vendedor abre Telegram, muestra el mapa y el Estudio de Títulos al cliente, y solicita la reserva con su RUT.</div>
+        </div>
+
+        <div class="lifecycle-step active">
+          <div class="lifecycle-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          </div>
+          <div class="lifecycle-badge">PASO 2 • ALERTA</div>
+          <div class="lifecycle-title">Notificación Admin</div>
+          <div class="lifecycle-desc">El administrador recibe aviso inmediato en su panel y teléfono con los datos del comprador y la parcela.</div>
+        </div>
+
+        <div class="lifecycle-step active">
+          <div class="lifecycle-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="lifecycle-badge">PASO 3 • CONTROL</div>
+          <div class="lifecycle-title">Aprobación & Caja</div>
+          <div class="lifecycle-desc">El dueño o gerente aprueba en 1 clic. La venta queda contabilizada automáticamente en los KPIs financieros.</div>
+        </div>
+
+        <div class="lifecycle-step active">
+          <div class="lifecycle-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="lifecycle-badge">PASO 4 • MOTOR LEGAL</div>
+          <div class="lifecycle-title">Minuta Generada</div>
+          <div class="lifecycle-desc">El sistema fusiona Estudio de Título + Deslindes KMZ + Comprador y genera la promesa en Word (.docx) en 2 minutos.</div>
+        </div>
+
+        <div class="lifecycle-step active">
+          <div class="lifecycle-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg>
+          </div>
+          <div class="lifecycle-badge">PASO 5 • CIERRE</div>
+          <div class="lifecycle-title">Comprador al Instante</div>
+          <div class="lifecycle-desc">El comprador recibe el contrato oficial en su WhatsApp/correo listo para firma. Cero días de espera ni arrepentimiento.</div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top: 14px;">
+        <div class="card" style="padding: 14px 18px;">
+          <div style="font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-green-hover);"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Cero Fricción en el Cierre</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">El cliente firma el contrato mientras tiene el entusiasmo de compra.</div>
+        </div>
+        <div class="card" style="padding: 14px 18px;">
+          <div style="font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-green-hover);"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Bloqueo Atómico Inmediato</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">El lote queda marcado como reservado para todo el equipo al instante.</div>
+        </div>
+        <div class="card" style="padding: 14px 18px;">
+          <div style="font-size: 13px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-green-hover);"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            <span>Contabilidad al Segundo</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">La gerencia ve la recaudación y stock actualizado sin pedir reportes.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: ¿CÓMO SE CREA LA ESCRITURA? (MESA LEGAL) -->
+    <section class="slide" data-slide="8">
+      <div class="split-layout">
+        <div>
+          <div class="eyebrow">El Motor Notarial en Acción</div>
+          <h2 class="headline" style="font-size: 32px;">¿Cómo se crea la escritura en Plotify?</h2>
+          <p class="subheadline" style="font-size: 14.5px; margin-bottom: 14px;">
+            Plotify integra una <strong>plantilla genérica especializada para escrituras de loteos</strong>. Tu abogado <strong>no debe cargar ningún documento previamente</strong>: el sistema fusiona todos los antecedentes legales y técnicos, entregando una minuta lista para revisar y editar.
+          </p>
+
+          <div class="benefit-list" style="gap: 9px;">
+            <div class="benefit-item" style="padding: 9px 13px;">
+              <div class="benefit-bullet">1</div>
+              <div>
+                <div class="benefit-title">Plantilla Canónica Especializada (De Fábrica)</div>
+                <div class="benefit-desc">Estructura legal estándar para parcelaciones chilenas ya incorporada. Cero trabajo previo de configuración o carga para el abogado.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item" style="padding: 9px 13px;">
+              <div class="benefit-bullet">2</div>
+              <div>
+                <div class="benefit-title">Fusión Inteligente de Documentos</div>
+                <div class="benefit-desc">Extrae y cruza los antecedentes del Estudio de Títulos, resolución SAG, rol SII matriz, certificados CBR, deslindes KMZ y datos del comprador.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item" style="padding: 9px 13px;">
+              <div class="benefit-bullet">3</div>
+              <div>
+                <div class="benefit-title">Minuta Pre-Rellenada al 95% en Word (.docx)</div>
+                <div class="benefit-desc">Genera el contrato notarial completo en 2 minutos con precios en palabras (*"Treinta y cinco millones..."*), servidumbres y coordenadas oficiales.</div>
+              </div>
+            </div>
+
+            <div class="benefit-item" style="padding: 9px 13px;">
+              <div class="benefit-bullet">4</div>
+              <div>
+                <div class="benefit-title">Criterio y Edición Libre del Abogado</div>
+                <div class="benefit-desc">El abogado conserva el 100% del control: abre el archivo Word (.docx) y puede editar, agregar o quitar cláusulas según su criterio antes de firmar.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="media-frame">
+          <img src="images/escritura-generator.jpg" alt="Generador de Escrituras y Minutas Plotify" />
+          <div class="media-caption">
+            <span>Mesa de Escrituración — Variables Inyectadas y Minuta Word (.docx)</span>
+            <span class="tag-live">Generación Automática</span>
+          </div>
+          <button class="btn-action btn-primary" onclick="simulateDocxDownload()" style="margin-top: 10px; width: 100%; font-size: 13px; padding: 10px 14px; justify-content: center; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            <span>Descargar Minuta Word (.docx) Lista para Notaría</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: TABLA COMPARATIVA -->
+    <section class="slide" data-slide="9">
+      <div class="eyebrow">Por Qué Plotify</div>
+      <h2 class="headline">La diferencia entre operar a ciegas o con control total</h2>
+      <p class="subheadline">
+        Plotify no es un CRM genérico importado del extranjero; está diseñado para las leyes, planos y forma de vender parcelas en Chile.
+      </p>
+
+      <div class="table-responsive">
+        <table class="compare-table">
+        <thead>
+          <tr>
+            <th style="width: 28%;">Aspecto Clave</th>
+            <th style="width: 24%;">Forma Tradicional (Excel / WhatsApp)</th>
+            <th style="width: 24%;">CRMs Genéricos (HubSpot, etc.)</th>
+            <th class="highlight-col" style="width: 24%;">Plotify (Especializado en Loteos)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Visor Satelital de Lotes</strong></td>
+            <td><span class="check-no">✕ Planos en PDF desfasados</span></td>
+            <td><span class="check-no">✕ No incluye mapas GIS</span></td>
+            <td class="highlight-col"><span class="check-yes">✓ Masterplan satelital en vivo</span></td>
+          </tr>
+          <tr>
+            <td><strong>Estudio de Títulos en Celular</strong></td>
+            <td><span class="check-no">✕ En carpetas de oficina</span></td>
+            <td><span class="check-no">✕ No gestiona títulos legales</span></td>
+            <td class="highlight-col"><span class="check-yes">✓ A la mano para mostrar al cliente</span></td>
+          </tr>
+          <tr>
+            <td><strong>Venta en Terreno (Celular)</strong></td>
+            <td><span class="check-no">✕ Preguntar por chat grupal</span></td>
+            <td><span class="check-no">✕ App compleja con login</span></td>
+            <td class="highlight-col"><span class="check-yes">✓ Telegram Mini App en 30 seg</span></td>
+          </tr>
+          <tr>
+            <td><strong>Cálculo de Deslindes Notariales</strong></td>
+            <td><span class="check-no">✕ Redacción manual propenso a error</span></td>
+            <td><span class="check-no">✕ No calcula geometría</span></td>
+            <td class="highlight-col"><span class="check-yes">✓ 100% automático desde el plano</span></td>
+          </tr>
+          <tr>
+            <td><strong>Emisión de Promesas en Word</strong></td>
+            <td><span class="check-no">✕ 1 a 3 semanas con abogado</span></td>
+            <td><span class="check-no">✕ Plantillas básicas en PDF</span></td>
+            <td class="highlight-col"><span class="check-yes">✓ Minuta Word (.docx) en 2 min</span></td>
+          </tr>
+          <tr>
+            <td><strong>Seguridad Anti-Doble Venta</strong></td>
+            <td><span class="check-no">✕ Riesgo constante</span></td>
+            <td><span class="check-no">✕ Bloqueos manuales tardíos</span></td>
+            <td class="highlight-col"><span class="check-yes">✓ Bloqueo atómico inmediato</span></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="table-scroll-hint">Desliza horizontalmente para ver la tabla completa ➔</div>
+    </section>
+
+    <!-- SLIDE 11: CIERRE Y PILOTO COMERCIAL -->
+    <section class="slide" data-slide="10">
+      <div class="eyebrow">Próximos Pasos</div>
+      <h2 class="headline">Pon a prueba Plotify con uno de tus proyectos</h2>
+      <p class="subheadline">
+        La forma más rápida de comprobar el valor es verlo en tu propio loteo. Sin compromiso y sin alterar tu operación actual.
+      </p>
+
+      <div class="grid-3" style="margin-bottom: 20px;">
+        <div class="card card-highlight">
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--brand-green-hover); font-weight: 700; margin-bottom: 6px;">PASO 1</div>
+          <div class="card-title">Envíanos tu KMZ y Títulos</div>
+          <div class="card-body">
+            Cargamos tu plano de parcelación y antecedentes de títulos (CBR y SAG) en menos de 24 a 48 horas.
+          </div>
+        </div>
+
+        <div class="card card-highlight">
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--brand-green-hover); font-weight: 700; margin-bottom: 6px;">PASO 2</div>
+          <div class="card-title">Demostración en tu Celular</div>
+          <div class="card-body">
+            Te abrimos la Mini App en Telegram para que camines tu proyecto en terreno y veas cómo tus vendedores reservan parcelas en vivo.
+          </div>
+        </div>
+
+        <div class="card card-highlight">
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--brand-green-hover); font-weight: 700; margin-bottom: 6px;">PASO 3</div>
+          <div class="card-title">Emisión de tu Primera Minuta</div>
+          <div class="card-body">
+            Simulamos una venta y descargamos la promesa de compraventa en Word generada con tus cláusulas notariales.
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="background: linear-gradient(135deg, rgba(22, 163, 74, 0.16) 0%, rgba(18, 20, 26, 0.98) 100%); border-color: rgba(22, 163, 74, 0.45); text-align: center; padding: 26px 24px;">
+        <h3 style="font-family: var(--font-display); font-size: 24px; color: #fff; margin-bottom: 6px;">
+          ¿Agendamos una demostración con tu plano real?
+        </h3>
+        <p style="font-size: 14.5px; color: var(--text-muted); max-width: 580px; margin: 0 auto 16px auto;">
+          Conversemos 20 minutos. Te mostraremos tu loteo funcionando en vivo en Plotify y cómo puedes acelerar tus cierres desde este fin de semana.
+        </p>
+        <button class="btn-action btn-primary" style="font-size: 15px; padding: 12px 28px; margin: 0 auto;" onclick="showToast('Solicitud enviada: Nos contactaremos hoy mismo para coordinar tu demostración.')">
+          Agendar Demostración de mi Loteo
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation -->
+  <footer>
+    <div class="slide-counter">
+      Diapositiva <span id="currentSlideNum">1</span> de <span id="totalSlidesNum">11</span>
+    </div>
+
+    <div class="dots-nav" id="dotsContainer"></div>
+
+    <div class="nav-buttons">
+      <button class="btn-action" id="prevBtn" onclick="prevSlide()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        Anterior
+      </button>
+      <button class="btn-action btn-primary" id="nextBtn" onclick="nextSlide()">
+        Siguiente
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Floating Toast Notification -->
+  <div id="plotifyToast" class="plotify-toast" role="status" aria-live="polite">
+    <div class="toast-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <span id="toastMessage">Acción completada</span>
+  </div>
+
+  <!-- Speaker Notes Drawer ("Modo Presentador") -->
+  <aside id="speakerNotesDrawer" class="speaker-notes-drawer" aria-label="Notas del presentador">
+    <div class="notes-header">
+      <div>
+        <div class="notes-title">Modo Presentador (Guía Comercial)</div>
+        <div class="notes-subtitle" id="notesSlideIndicator">Diapositiva 1 de 11</div>
+      </div>
+      <button class="btn-close-notes" onclick="toggleSpeakerNotes()" aria-label="Cerrar notas">✕</button>
+    </div>
+    <div class="notes-body" id="notesContent">
+      <!-- Dynamic Content rendered based on current slide -->
+    </div>
+  </aside>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+
+    const progressBar = document.getElementById('progressBar');
+    const currentSlideNum = document.getElementById('currentSlideNum');
+    const totalSlidesNum = document.getElementById('totalSlidesNum');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const dotsContainer = document.getElementById('dotsContainer');
+
+    totalSlidesNum.textContent = totalSlides;
+
+    slides.forEach((_, idx) => {
+      const dot = document.createElement('div');
+      dot.className = `nav-dot ${idx === 0 ? 'active' : ''}`;
+      dot.addEventListener('click', () => goToSlide(idx));
+      dotsContainer.appendChild(dot);
+    });
+
+    const dots = document.querySelectorAll('.nav-dot');
+
+    /* Speaker Notes Dataset */
+    const speakerNotes = [
+      {
+        title: "Portada — Plotify",
+        goal: "Posicionar a Plotify como el sistema operativo integral para loteos en Chile, no como un simple software.",
+        talkingPoints: [
+          "Saludar y agradecer el tiempo. Abrir con una pregunta: '¿Cuánto tiempo pasa hoy desde que un cliente dice sí en el cerro hasta que tiene la promesa firmada?'.",
+          "Destacar que Plotify conecta el plano técnico (KMZ), la venta en terreno (celular) y la redacción legal (Word) en un solo flujo continuo.",
+          "Subrayar que está 100% adaptado a la normativa chilena: SAG, SII, Conservador de Bienes Raíces y notarías."
+        ],
+        objection: "Si preguntan si es un CRM como HubSpot: Aclarar que un CRM genérico no entiende de roles matrices, deslindes matemáticos ni resoluciones SAG; Plotify es una solución de nicho inmobiliario rural."
+      },
+      {
+        title: "El Dolor del Negocio",
+        goal: "Validar las frustraciones diarias del dueño o gerente de loteo.",
+        talkingPoints: [
+          "El 90% de las ventas se pierden por lentitud e incertidumbre: el cliente se enfría camino a su casa.",
+          "El caos de las reservas por WhatsApp genera el peor error comercial: la doble venta o reservas pisadas entre corredores.",
+          "Las semanas de espera con abogados redactando promesas desde cero generan fricción y cancelaciones."
+        ],
+        objection: "Si dicen 'mi equipo se maneja bien con Excel': Preguntar cuántas veces han tenido que llamar a la oficina en domingo para confirmar si una parcela sigue disponible o a qué precio."
+      },
+      {
+        title: "Visor KMZ Satelital",
+        goal: "Demostrar que el KMZ que ya tienen se convierte en una herramienta viva de ventas.",
+        talkingPoints: [
+          "Usar el selector de vistas para mostrar la diferencia: el vendedor ve un mapa liviano en su celular con colores verde/ámbar/gris.",
+          "El dueño o administrador tiene la consola de mando: control de etapas, fijación de precios en UF y asignación de permisos exclusivos.",
+          "Muestra accesos reales de 3 y 6 metros, servidumbres y caminos sin confusiones."
+        ],
+        objection: "Si preguntan '¿qué pasa si no tengo KMZ?': Explicar que cualquier topógrafo o proyectista entrega el KMZ/KML del loteo y Plotify lo procesa en minutos."
+      },
+      {
+        title: "Ficha Técnica de la Parcela",
+        goal: "Mostrar la precisión matemática y la comodidad para el vendedor.",
+        talkingPoints: [
+          "Demostrar el botón 'Copiar Ficha para WhatsApp': en terreno el vendedor copia y pega la ficha completa al prospecto en 3 segundos.",
+          "Deslindes calculados automáticamente por geometría; cero error de tipeo en notaría.",
+          "Desglose exacto entre superficie útil y servidumbre: transparencia que genera confianza inmediata en el comprador."
+        ],
+        objection: "Si preguntan si Notaría acepta estos deslindes: Sí, están calculados según las coordenadas y rumbos oficiales del plano aprobado."
+      },
+      {
+        title: "Estudio de Títulos Digital",
+        goal: "Eliminar el mayor freno de compra: el miedo a problemas legales.",
+        talkingPoints: [
+          "El comprador rural siempre duda de los papeles. Con Plotify, el vendedor lleva la historia de dominio, el SAG y el certificado de hipotecas en su teléfono.",
+          "Entregar los títulos en el mismo recorrido físico transforma una conversación defensiva en una demostración de solvencia y seriedad.",
+          "Toda esta data alimenta directamente la futura promesa notarial."
+        ],
+        objection: "¿Quién sube el estudio de títulos?: Se carga una sola vez al inicio del proyecto (fojas, año, CBR, SAG) y queda activo para todas las parcelas."
+      },
+      {
+        title: "Telegram Mini App (Vendedor en Terreno)",
+        goal: "Hacer una demostración interactiva en vivo con el botón de reserva.",
+        talkingPoints: [
+          "Invitar a hacer clic en 'Bloquear y Reservar': mostrar la animación de bloqueo en 0.8 segundos.",
+          "Cero fricción de adopción: funciona directo en Telegram. No hay que descargar apps pesadas ni lidiar con contraseñas olvidadas.",
+          "Bloqueo atómico: si dos vendedores intentan reservar el mismo lote con milisegundos de diferencia, el sistema otorga la reserva a uno y notifica al otro."
+        ],
+        objection: "¿Y si no hay señal 4G en el loteo?: La app guarda en caché el plano satelital y sincroniza el bloqueo apenas recupera conectividad básica."
+      },
+      {
+        title: "Centro de Mando para Dueños",
+        goal: "Vender la tranquilidad y el control ejecutivo total.",
+        talkingPoints: [
+          "El dueño o administrador no tiene que llamar a nadie: la bandeja de entrada muestra reservas pendientes con 1 clic de aprobación.",
+          "Control financiero en tiempo real: recaudación proyectada, porcentaje de venta del loteo y auditoría de qué corredor vendió cada lote.",
+          "Posibilidad de activar o pausar etapas comerciales para maximizar plusvalía."
+        ],
+        objection: "¿Pueden los corredores ver los datos de los otros proyectos?: No, el sistema aísla por permisos estrictos a cada corredor o empresa externa."
+      },
+      {
+        title: "Ciclo Completo de Venta",
+        goal: "Recorrer el circuito de 5 pasos para evidenciar la reducción drástica de tiempos.",
+        talkingPoints: [
+          "Guiar el ojo por los nodos 1 al 5 con la línea conectora animada.",
+          "Paso 1 (Terreno) -> Paso 2 (Alerta) -> Paso 3 (Aprobación) -> Paso 4 (Motor Notarial) -> Paso 5 (Contrato en mano).",
+          "Pasamos de un proceso artesanal de 2 a 3 semanas a un circuito digital de minutos."
+        ],
+        objection: "¿Se puede integrar con firma electrónica avanzada?: Sí, el documento Word o PDF resultante puede enviarse a plataformas de firma digital o imprimirse para notaría."
+      },
+      {
+        title: "¿Cómo se crea la escritura?",
+        goal: "Aclarar de forma contundente cómo funciona la plantilla legal de Plotify.",
+        talkingPoints: [
+          "Énfasis clave: La plantilla es CANÓNICA y ESPECIALIZADA, viene de fábrica en Plotify.",
+          "Tu abogado NO debe cargar ningún documento antes: el sistema fusiona títulos + plano + comprador automáticamente.",
+          "El resultado es un Word (.docx) estándar: el abogado lo abre, revisa y puede agregar, quitar o afinar lo que estime conveniente con total libertad."
+        ],
+        objection: "Si el abogado dice 'yo uso mi propio formato': Explicar que la plantilla canónica sigue la estructura notarial estándar chilena; el abogado ahorra el 95% del tipeo y solo aplica su criterio."
+      },
+      {
+        title: "Tabla Comparativa",
+        goal: "Consolidar el valor único frente a alternativas precarias o genéricas.",
+        talkingPoints: [
+          "Contrapunto: WhatsApp/Excel es gratis pero cuesta millones en ventas caídas y descontrol.",
+          "Contrapunto: CRMs extranjeros (HubSpot, Salesforce) cuestan miles de dólares y no saben qué es un conservador ni un deslinde.",
+          "Plotify es la única herramienta diseñada desde cero para la venta de loteos y parcelaciones en Chile."
+        ],
+        objection: "Si mencionan el costo: Destacar que evitar una sola doble venta o acelerar dos promesas paga el costo de la plataforma por años."
+      },
+      {
+        title: "Cierre y Piloto Comercial",
+        goal: "Cerrar la reunión agendando un piloto de 48 horas sin riesgo.",
+        talkingPoints: [
+          "Proponer un plan de acción concreto: 'Mándenos el KMZ de su proyecto y los antecedentes del SAG/CBR hoy mismo'.",
+          "En 24 a 48 horas lo montamos en Plotify y le habilitamos la Mini App a su equipo para que lo prueben en terreno.",
+          "Sin compromiso de permanencia: el valor se demuestra operando con su plano real."
+        ],
+        objection: "¿Qué pasa si mis vendedores no se adaptan?: Telegram es una herramienta que ya usan; la curva de aprendizaje es de menos de 10 minutos."
+      }
+    ];
+
+    function updateSpeakerNotes(idx) {
+      const note = speakerNotes[idx];
+      const indicator = document.getElementById('notesSlideIndicator');
+      const content = document.getElementById('notesContent');
+      if (!indicator || !content || !note) return;
+
+      indicator.textContent = `Diapositiva ${idx + 1} de ${totalSlides} • ${note.title}`;
+
+      let pointsHtml = note.talkingPoints.map(p => `<li>${p}</li>`).join('');
+
+      content.innerHTML = `
+        <div class="note-section">
+          <div class="note-label">Objetivo de la diapositiva</div>
+          <div class="note-text" style="color: #fff; font-weight: 600;">${note.goal}</div>
+        </div>
+
+        <div class="note-section">
+          <div class="note-label">Puntos clave de discurso (Talking Points)</div>
+          <ul class="note-points">
+            ${pointsHtml}
+          </ul>
+        </div>
+
+        <div class="note-section">
+          <div class="note-label">Manejo de objeción típica</div>
+          <div class="note-objection">
+            <strong>Objeción común:</strong> ${note.objection}
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleSpeakerNotes() {
+      const drawer = document.getElementById('speakerNotesDrawer');
+      const btn = document.getElementById('btnNotesToggle');
+      if (!drawer) return;
+      const isOpen = drawer.classList.toggle('open');
+      if (btn) btn.classList.toggle('active', isOpen);
+      if (isOpen) {
+        updateSpeakerNotes(currentSlide);
+      }
+    }
+
+    function updateDeck() {
+      slides.forEach((slide, idx) => {
+        slide.classList.toggle('active', idx === currentSlide);
+      });
+
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === currentSlide);
+      });
+
+      const progressPercent = ((currentSlide + 1) / totalSlides) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+      currentSlideNum.textContent = currentSlide + 1;
+
+      prevBtn.disabled = currentSlide === 0;
+      nextBtn.disabled = currentSlide === totalSlides - 1;
+
+      updateSpeakerNotes(currentSlide);
+    }
+
+    function goToSlide(index) {
+      if (index >= 0 && index < totalSlides) {
+        currentSlide = index;
+        updateDeck();
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) {
+        currentSlide++;
+        updateDeck();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateDeck();
+      }
+    }
+
+    /* Keyboard Shortcuts */
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      } else if (e.key === 'p' || e.key === 'P') {
+        toggleSpeakerNotes();
+      } else if (e.key === 'Home') {
+        goToSlide(0);
+      } else if (e.key === 'End') {
+        goToSlide(totalSlides - 1);
+      }
+    });
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let touchStartY = 0;
+    let touchEndY = 0;
+
+    window.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].clientX;
+      touchStartY = e.changedTouches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].clientX;
+      touchEndY = e.changedTouches[0].clientY;
+
+      const diffX = touchStartX - touchEndX;
+      const diffY = touchStartY - touchEndY;
+
+      // Navegación táctil inteligente: sólo cambia de diapositiva si el deslizamiento
+      // es predominantemente horizontal (> 50px y 1.8x mayor al movimiento vertical)
+      // Esto previene que el scroll vertical de lectura dentro de una diapositiva cambie de pantalla.
+      if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.8) {
+        if (diffX > 0) nextSlide();
+        else prevSlide();
+      }
+    }, { passive: true });
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn('Fullscreen request failed:', err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    /* Toast Notification System */
+    let toastTimeout = null;
+    function showToast(msg) {
+      const toast = document.getElementById('plotifyToast');
+      const toastMsg = document.getElementById('toastMessage');
+      if (!toast || !toastMsg) return;
+
+      toastMsg.textContent = msg;
+      toast.classList.add('show');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3400);
+    }
+
+    /* Slide 3: View Switcher between Seller and Admin */
+    function switchMapView(view) {
+      const tabVendor = document.getElementById('tabVendorView');
+      const tabAdmin = document.getElementById('tabAdminView');
+      const cardVendor = document.getElementById('cardVendorRole');
+      const cardAdmin = document.getElementById('cardAdminRole');
+      const caption = document.getElementById('mapViewerCaption');
+      const roleTag = document.getElementById('mapViewerRoleTag');
+      const img = document.getElementById('mapViewerImg');
+
+      if (view === 'admin') {
+        if (tabVendor) { tabVendor.classList.remove('active'); tabVendor.setAttribute('aria-selected', 'false'); }
+        if (tabAdmin) { tabAdmin.classList.add('active'); tabAdmin.setAttribute('aria-selected', 'true'); }
+        if (cardVendor) cardVendor.style.opacity = '0.5';
+        if (cardAdmin) { cardAdmin.style.opacity = '1'; cardAdmin.style.borderColor = 'var(--brand-green)'; }
+        if (caption) caption.textContent = 'Consola de Mando — Control de Etapas, Precios UF y Permisos de Corredores';
+        if (roleTag) { roleTag.textContent = 'Modo Administrador'; roleTag.style.background = 'rgba(59, 130, 246, 0.2)'; roleTag.style.color = '#93c5fd'; }
+        if (img) img.src = 'images/owner-dashboard.jpg';
+        showToast('Vista cambiada: Consola de Mando para Dueños y Gerencia');
+      } else {
+        if (tabAdmin) { tabAdmin.classList.remove('active'); tabAdmin.setAttribute('aria-selected', 'false'); }
+        if (tabVendor) { tabVendor.classList.add('active'); tabVendor.setAttribute('aria-selected', 'true'); }
+        if (cardVendor) { cardVendor.style.opacity = '1'; cardVendor.style.borderColor = 'var(--border-subtle)'; }
+        if (cardAdmin) { cardAdmin.style.opacity = '0.5'; cardAdmin.style.borderColor = 'var(--border-subtle)'; }
+        if (caption) caption.textContent = 'Visor Satelital de Loteo en Vivo — Fundo Los Maquis';
+        if (roleTag) { roleTag.textContent = 'Modo Vendedor Activo'; roleTag.style.background = 'rgba(22, 163, 74, 0.2)'; roleTag.style.color = 'var(--brand-green-hover)'; }
+        if (img) img.src = 'images/kmz-viewer.jpg';
+        showToast('Vista cambiada: Visor Ligero para Vendedores en Terreno');
+      }
+    }
+
+    /* Slide 4: Copy Parcel Info to Clipboard for WhatsApp */
+    function copyParcelWhatsApp() {
+      const text = `*PARCELA LOTE 14 - PROYECTO FUNDO LOS MAQUIS*\n` +
+        `• Superficie Útil: 5.000,00 m²\n` +
+        `• Servidumbre: 312,40 m²\n` +
+        `• Rol Matriz SII: 544-595\n` +
+        `• Estado: DISPONIBLE (Reserva inmediata)\n` +
+        `• Certificación SAG: Resolución SAG N° 1945\n` +
+        `• Deslindes Notariales:\n` +
+        `  - Norte: 50,20 m con Lote 12\n` +
+        `  - Sur: 48,15 m con Servidumbre\n` +
+        `  - Oriente: 102,40 m con Lote 15\n` +
+        `  - Poniente: 101,80 m con Acceso Principal\n\n` +
+        `Consulta disponibilidad en vivo y reserva con RUT en Plotify.`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('Ficha de Parcela Lote 14 copiada al portapapeles para WhatsApp');
+        }).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('Ficha de Parcela Lote 14 copiada al portapapeles para WhatsApp');
+      } catch (err) {
+        showToast('Ficha lista para compartir');
+      }
+      document.body.removeChild(ta);
+    }
+
+    /* Slide 6: Telegram Mini App Simulation */
+    function simulateReservation() {
+      const btn = document.getElementById('btnSimulateReserve');
+      const overlay = document.getElementById('reserveSuccessOverlay');
+      const pill = document.getElementById('lotStatusPill');
+
+      if (!btn || btn.classList.contains('loading')) return;
+
+      btn.classList.add('loading');
+      btn.innerHTML = '<div class="mini-spinner"></div><span>Bloqueando en tiempo real...</span>';
+
+      setTimeout(() => {
+        btn.classList.remove('loading');
+        btn.innerHTML = '<span class="btn-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Lote 14 Reservado</span>';
+        if (pill) {
+          pill.className = 'miniapp-status-pill reserved';
+          pill.textContent = 'RESERVADO';
+        }
+        if (overlay) {
+          overlay.classList.add('show');
+        }
+        showToast('¡Reserva confirmada! Lote 14 bloqueado atómicamente');
+      }, 850);
+    }
+
+    function resetReservationDemo() {
+      const btn = document.getElementById('btnSimulateReserve');
+      const overlay = document.getElementById('reserveSuccessOverlay');
+      const pill = document.getElementById('lotStatusPill');
+
+      if (overlay) overlay.classList.remove('show');
+      if (pill) {
+        pill.className = 'miniapp-status-pill available';
+        pill.textContent = 'DISPONIBLE';
+      }
+      if (btn) {
+        btn.classList.remove('loading');
+        btn.innerHTML = '<span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><span class="btn-text" id="btnReserveText">Bloquear y Reservar Lote 14</span>';
+      }
+    }
+
+    /* Slide 9: Simulated Word Deed Generation */
+    function simulateDocxDownload() {
+      showToast('Generando Minuta Notarial en Word (.docx) con cláusulas fusionadas...');
+      setTimeout(() => {
+        const dummyDocx = "PLOTIFY - MINUTA NOTARIAL DE PROMESA DE COMPRAVENTA\n" +
+          "Proyecto: Fundo Los Maquis, Curicó\n" +
+          "Lote Prometido: Parcela N° 14\n" +
+          "Comprador: Valentina Edwards M. (18.432.910-K)\n" +
+          "Superficie Útil: 5.000,00 m²\n" +
+          "Resolución SAG: N° 1945\n" +
+          "CBR Matriz: Fs. 1.723 N° 671 año 2019 Curicó\n" +
+          "Deslindes Oficiales: Norte 50,20m Lote 12; Sur 48,15m Serv.; Oriente 102,40m Lote 15; Poniente 101,80m Acceso.\n" +
+          "Precio: UF 1.250 (Treinta y ocho millones setecientos cincuenta mil pesos aprox.)\n\n" +
+          "Documento generado listo para revisión y libre edición del abogado habilitado.";
+
+        const blob = new Blob([dummyDocx], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'Minuta_Promesa_Lote_14_LosMaquis.docx';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Minuta descargada: Minuta_Promesa_Lote_14_LosMaquis.docx');
+      }, 950);
+    }
+
+    updateDeck();
+  </script>
+</body>
+</html>
