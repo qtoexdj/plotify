@@ -1,0 +1,254 @@
+{
+ "1 | PONIENTE | 89.51": {
+  "colinda": "Julia Gredoy",
+  "es_servidumbre": false
+ },
+ "1 | SURORIENTE | 125.67": {
+  "colinda": "Lote 73 y Lote 74, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "2 | SURORIENTE | 10.8": {
+  "colinda": "Lote 74 y Lote 75, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "2 | SURORIENTE | 81.85": {
+  "colinda": "Lote 1",
+  "es_servidumbre": false
+ },
+ "3 | SURORIENTE | 80.52": {
+  "colinda": "Lote 76, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "4 | PONIENTE | 149.61": {
+  "colinda": "Julia Gredoy",
+  "es_servidumbre": false
+ },
+ "5 | PONIENTE | 75.08": {
+  "colinda": "Julia Gredoy",
+  "es_servidumbre": false
+ },
+ "6 | PONIENTE | 48.32": {
+  "colinda": "Julia Gredoy",
+  "es_servidumbre": false
+ },
+ "6 | PONIENTE | 10.74": {
+  "colinda": "Julia Gredoy",
+  "es_servidumbre": false
+ },
+ "15 | NORORIENTE | 5.78": {
+  "colinda": "Lote 10",
+  "es_servidumbre": true
+ },
+ "16 | SURORIENTE | 89.3": {
+  "colinda": "Lote 79 y Lote 80, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "16 | SURORIENTE | 76.23": {
+  "colinda": "Lote 13",
+  "es_servidumbre": false
+ },
+ "17 | SURORIENTE | 62.83": {
+  "colinda": "Lote 80 y Lote 81, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "18 | SURORIENTE | 49.91": {
+  "colinda": "Lote 82, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "19 | ORIENTE | 33.85": {
+  "colinda": "Lote 21",
+  "es_servidumbre": true
+ },
+ "19 | SURORIENTE | 17.29": {
+  "colinda": "Lote 21",
+  "es_servidumbre": true
+ },
+ "19 | NORORIENTE | 32.14": {
+  "colinda": "Lote 20",
+  "es_servidumbre": true
+ },
+ "19 | SUR | 30.59": {
+  "colinda": "Camino de Acceso",
+  "es_servidumbre": false
+ },
+ "20 | NORPONIENTE | 112.92": {
+  "colinda": "Lote 21",
+  "es_servidumbre": false
+ },
+ "20 | ORIENTE | 104.65": {
+  "colinda": "Servidumbre Existente",
+  "es_servidumbre": false
+ },
+ "22 | SURORIENTE | 151.63": {
+  "colinda": "Lote 21",
+  "es_servidumbre": false
+ },
+ "30 | ORIENTE | 143.58": {
+  "colinda": "Servidumbre Existente",
+  "es_servidumbre": false
+ },
+ "31 | PONIENTE | 152.47": {
+  "colinda": "Julia Gredoy",
+  "es_servidumbre": false
+ },
+ "32 | PONIENTE | 61.3": {
+  "colinda": "Julia Gredoy",
+  "es_servidumbre": false
+ },
+ "33 | PONIENTE | 41.31": {
+  "colinda": "Lote 26",
+  "es_servidumbre": true
+ },
+ "33 | NORTE | 20.11": {
+  "colinda": "Lote 30",
+  "es_servidumbre": false
+ },
+ "34 | PONIENTE | 41.61": {
+  "colinda": "Lote 27",
+  "es_servidumbre": true
+ },
+ "35 | PONIENTE | 40.99": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "36 | PONIENTE | 33.99": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "37 | PONIENTE | 119.79": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "43 | ORIENTE | 94.81": {
+  "colinda": "Lote 30",
+  "es_servidumbre": true
+ },
+ "44 | ORIENTE | 48.64": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "45 | ORIENTE | 46.84": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "46 | ORIENTE | 42.84": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "49 | ORIENTE | 105.11": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "55 | PONIENTE | 129.06": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "56 | PONIENTE | 42.97": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "57 | PONIENTE | 46.95": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "58 | PONIENTE | 128.97": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "65 | ORIENTE | 83.68": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "66 | ORIENTE | 8.48": {
+  "colinda": "Lote 67",
+  "es_servidumbre": false
+ },
+ "66 | SURORIENTE | 37.4": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "66 | ORIENTE | 76.11": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "67 | ORIENTE | 61.12": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "68 | ORIENTE | 44.32": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "72 | PONIENTE | 88.43": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "73 | PONIENTE | 46.4": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "74 | PONIENTE | 54.9": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "75 | PONIENTE | 10.58": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "75 | NORPONIENTE | 46.81": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "76 | NORPONIENTE | 69.41": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "76 | NORPONIENTE | 50.73": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "79 | ORIENTE | 46.43": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "82 | ORIENTE | 106.47": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "83 | ORIENTE | 96.82": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "83 | SURORIENTE | 25.19": {
+  "colinda": "Lote 84",
+  "es_servidumbre": false
+ },
+ "83 | SURORIENTE | 6.97": {
+  "colinda": "Lote 84",
+  "es_servidumbre": false
+ },
+ "83 | NORORIENTE | 37.99": {
+  "colinda": "Lote 78",
+  "es_servidumbre": true
+ },
+ "84 | ORIENTE | 101.89": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "85 | ORIENTE | 45.99": {
+  "colinda": "Lote 263, subdivisión colindante",
+  "es_servidumbre": false
+ },
+ "85 | NORPONIENTE | 40.6": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "85 | NORTE | 123.19": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ },
+ "86 | NORPONIENTE | 122.33": {
+  "colinda": "Resto Fundo Los Maquis",
+  "es_servidumbre": false
+ }
+}
