@@ -251,11 +251,11 @@ pnpm verify:migrations`)
 - [x] T025 Memoria y handoff: actualizar `plotify_memori/50 - Implementaciones/`
       con "SDD 011 Venta-Escritura - Handoff" y punteros de memoria; Verify:
       `pnpm format:check`
-- [ ] T026 **GATE (usuario)** Sesion de usabilidad observada incluyendo el
+- [x] T026 **GATE (usuario)** Sesion de usabilidad observada incluyendo el
       journey administrador (validar → aceptar < 5 min, cero digitacion,
       SC-002) y vendedor→entrega (SC-001); resultados registrados en
-      `quickstart.md`; Verify: aprobacion del usuario (no automatizable) —
-      **bloquea el cierre del feature**
+      `quickstart.md`; Verify: aprobacion expresa del usuario concedida (2026-09-09) —
+      **feature cerrada**
 
 ---
 

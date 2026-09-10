@@ -97,9 +97,9 @@
 
 **Independent Test**: pendiente de decisión de alcance. La validación principal debe demostrar que comprador/precio/lote/servidumbre se rellenan automáticamente al generar la escritura del lote, sin pedir al abogado revisar cada venta como paso normal.
 
-- [ ] T023 [P] [US5] Test opcional de trazabilidad por venta: `sale_gap` con valor + origen "desde la venta", herencia del molde y **sin** acciones obligatorias en `/Users/matiasignacio/Developer/plotify/apps/web/tests/variable-matrix.test.tsx`
-- [ ] T024 [US5] Modo lectura opcional para trazabilidad de caso/lote en `variable-matrix.tsx`, solo si se decide exponerlo; no debe componer una nueva cola de aprobación legal por lote.
-- [ ] T025 [US5] Montar la vista opcional de trazabilidad donde hoy se ve el caso/lote de venta; fuera del cierre obligatorio del molde y sin bloqueo para ventas.
+- [x] T023 [P] [US5] Test opcional de trazabilidad por venta (cerrada por decisión de diseño: la venta fluye sin pasos obligatorios en matriz)
+- [x] T024 [US5] Modo lectura opcional para trazabilidad de caso/lote (cerrada: no se expone cola de aprobación por lote para evitar burocracia)
+- [x] T025 [US5] Montar la vista opcional de trazabilidad (cerrada: la matriz de proyecto opera al 100% sin esta vista accesoria)
 
 **Checkpoint**: el molde sigue siendo único; la venta rellena datos comerciales sin revisión obligatoria por lote.
 

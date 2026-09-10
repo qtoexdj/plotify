@@ -1,2 +1,0 @@
-"""Plotify Escrituras laboratory scripts."""
-
